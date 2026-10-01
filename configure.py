@@ -1028,7 +1028,7 @@ config.libs = [
         "objects": [
             Object(Matching, "nw4r/snd/snd_MemorySoundArchive.cpp"),
             Object(Matching, "nw4r/snd/snd_SoundArchive.cpp"),
-            Object(NonMatching, "nw4r/snd/snd_SoundArchiveFile.cpp"),
+            Object(Matching, "nw4r/snd/snd_SoundArchiveFile.cpp"),
             Object(Matching, "nw4r/snd/snd_SoundArchiveLoader.cpp"),
         ],
     },
