@@ -34,10 +34,11 @@ public:
     enum VoiceSyncFlag {
         SYNC_AX_SRC_INITIAL = (1 << 0),
         SYNC_AX_VOICE = (1 << 1),
-        SYNC_AX_SRC = (1 << 2),
-        SYNC_AX_VE = (1 << 3),
-        SYNC_AX_MIX = (1 << 4),
-        SYNC_AX_LPF = (1 << 5),
+        // Older NW4R (as tp nw4hbm): bit 2 unused
+        SYNC_AX_SRC = (1 << 3),
+        SYNC_AX_VE = (1 << 4),
+        SYNC_AX_MIX = (1 << 5),
+        SYNC_AX_LPF = (1 << 6),
         SYNC_AX_REMOTE = (1 << 7),
         SYNC_AX_BIQUAD = (1 << 8),
     };

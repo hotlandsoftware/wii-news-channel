@@ -1025,7 +1025,7 @@ config.libs = [
         "cflags": cflags_nw4r,
         "progress_category": "sdk",
         "objects": [
-            Object(NonMatching, "nw4r/snd/snd_AxManager.cpp"),
+            Object(Matching, "nw4r/snd/snd_AxManager.cpp"),
             Object(NonMatching, "nw4r/snd/snd_AxVoice.cpp"),
             Object(Matching, "nw4r/snd/snd_AxfxImpl.cpp"),
             Object(NonMatching, "nw4r/snd/snd_Bank.cpp"),
