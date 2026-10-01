@@ -10,7 +10,13 @@ namespace ut {
 struct Color : public GXColor {
     static const u32 WHITE = 0xFFFFFFFF;
 
+    // The NW4R libraries (lyt) default-construct colours as white;
+    // the game code's headers have an empty constructor.
+#ifdef NW4R_UT_COLOR_DEFAULT_WHITE
+    Color() { *this = WHITE; }
+#else
     Color() {}
+#endif
     Color(u32 color) { *this = color; }
     Color(const GXColor& color) { *this = color; }
     Color(u8 red, u8 green, u8 blue, u8 alpha) { Set(red, green, blue, alpha); }

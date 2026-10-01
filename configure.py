@@ -291,6 +291,17 @@ cflags_nw4r = [
     "-ipa file",
 ]
 
+# nw4r::lyt is built with the NW4R math types that have no destructors
+# (VEC2 is returned in r3/r4, see docs/platform_layer_map.md)
+cflags_nw4r_lyt = [
+    *cflags_nw4r,
+    "-DNW4R_MATH_VEC2_NO_DTOR",
+    "-DNW4R_MATH_VEC3_NO_DTOR",
+    "-DNW4R_MATH_MTX34_NO_DTOR",
+    "-DNW4R_UT_COLOR_DEFAULT_WHITE",
+    "-DNW4R_UT_RECT_DEFAULT_ZERO",
+]
+
 # RVL SDK libraries; flags as in doldecomp/ogws
 cflags_rvl = [
     *cflags_base,
@@ -727,6 +738,28 @@ config.libs = [
         "progress_category": "sdk",
         "objects": [
             Object(Matching, "revolution/BASE/PPCArch.c"),
+        ],
+    },
+    {
+        "lib": "nw4r_lyt",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_nw4r_lyt,
+        "progress_category": "sdk",
+        "objects": [
+            Object(Matching, "nw4r/lyt/lyt_init.cpp"),
+            Object(Matching, "nw4r/lyt/lyt_pane.cpp"),
+            Object(Matching, "nw4r/lyt/lyt_group.cpp"),
+            Object(Matching, "nw4r/lyt/lyt_layout.cpp"),
+            Object(Matching, "nw4r/lyt/lyt_picture.cpp"),
+            Object(Matching, "nw4r/lyt/lyt_textBox.cpp"),
+            Object(NonMatching, "nw4r/lyt/lyt_window.cpp"),
+            Object(Matching, "nw4r/lyt/lyt_bounding.cpp"),
+            Object(Matching, "nw4r/lyt/lyt_material.cpp"),
+            Object(Matching, "nw4r/lyt/lyt_drawInfo.cpp"),
+            Object(Matching, "nw4r/lyt/lyt_animation.cpp"),
+            Object(Matching, "nw4r/lyt/lyt_resourceAccessor.cpp"),
+            Object(Matching, "nw4r/lyt/lyt_arcResourceAccessor.cpp"),
+            Object(Matching, "nw4r/lyt/lyt_common.cpp"),
         ],
     },
 ]

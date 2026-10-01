@@ -28,6 +28,15 @@ inline MTX34* MTX34RotXYZDeg(MTX34* out, f32 dx, f32 dy, f32 dz) {
                            dz * (256.0f / 360.0f));
 }
 
+// Added for lyt (Task 15)
+inline f32 SinDeg(f32 deg) {
+    return SinFIdx(deg * (256.0f / 360.0f));
+}
+
+inline f32 CosDeg(f32 deg) {
+    return CosFIdx(deg * (256.0f / 360.0f));
+}
+
 inline f32 SinRad(f32 rad) {
     return SinFIdx(rad * (256.0f / (2.0f * 3.1415927f)));
 }

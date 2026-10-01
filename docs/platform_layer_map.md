@@ -48,8 +48,8 @@ Anything matched there can be reused directly.
 | `0x800BA03C–0x800CE740` | 0x14704 | nw4r::g3d | — | **ogws** | most used files 84–100% |
 | `0x800CE740–0x800E84D8` | 0x19D98 | nw4r::snd (old, `Channel`-based) | — | ogws | ~40–60% per file |
 | `0x800E84D8–0x800F02A8` | 0x7DD0 | nw4r::ut | — | **tp `nw4hbm/ut`** + ogws | 46% (tp), many files 100% |
-| `0x800F02A8–0x800F0F50` | 0xCA8 | nw4r::math | — | tp `nw4hbm/math` / smg / ogws | triangular 100% |
-| `0x800F0F50–0x800FB9EC` | 0xAA9C | nw4r::lyt | — | **tp `nw4hbm/lyt`** | 84% (ogws only 45%) |
+| `0x800F02A8–0x800F0B58` | 0x8B0 | nw4r::math | — | tp `nw4hbm/math` / smg / ogws | triangular 100% |
+| `0x800F0B58–0x800FB9EC` | 0xAE94 | nw4r::lyt | — | **tp `nw4hbm/lyt`** | 13/14 files matching (Task 15) |
 | `0x800FB9EC–0x800FBB58` | 0x16C | BASE (`PPCArch.c`) | — | ogws/smg | 97% |
 | `0x800FBB58–0x80109434` | 0xD8DC | OS (+ `__ppc_eabi_init` at `0x80109380`) | Jun 28 2007 | smg / ogws | 90% / 88% |
 | `0x80109434–0x8010B188` | 0x1D54 | EXI | Jun 6 2007 | ogws/smg | 65% |
@@ -176,25 +176,46 @@ The NW4R revision here has out-of-line `CharWriter`/`TextWriterBase` accessors, 
 | `ut_TextWriterBase.cpp` | `≈0x800EDA28–0x800F02A8`† | tp 30% (template instantiations differ) |
 | `math_arithmetic.cpp`? | `0x800F02A8–0x800F0324` | — |
 | `math_triangular.cpp` | `0x800F0324–0x800F0618` | tp/smg 100% |
-| `math_types.cpp` | `0x800F0618–0x800F0F50` | ogws (MTX34 helpers) |
+| `math_types.cpp` | `0x800F0618–0x800F0B58` | ogws (MTX34 helpers); lyt starts at `0x800F0B58` |
 
-### nw4r::lyt (`0x800F0F50–0x800FB9EC`, tp `nw4hbm/lyt`)
+### nw4r::lyt (`0x800F0B58–0x800FB9EC`, tp `nw4hbm/lyt`) — Task 15
 
-| File | Range | tp drop-in |
+lyt starts at `0x800F0B58` (`LytInit`), not `0x800F0F50`: `math_types.cpp` ends at `0x800F0B58` (`.sdata2` pool restarts at `0x80359BE8`).
+Sources are in `src/nw4r/lyt/`, ported from tp `nw4hbm/lyt` (namespace `nw4hbm` → `nw4r`, asserts dropped).
+All files are built with GC/3.0a5.2 and `cflags_nw4r_lyt` (= `cflags_nw4r` + the defines below).
+
+| File | Range | Status |
 | --- | --- | --- |
-| `lyt_pane.cpp` | `0x800F0F50–0x800F1A48`† | 64% |
-| `lyt_group.cpp` | `0x800F1A48–0x800F1D68` | 89% |
-| `lyt_layout.cpp` | `0x800F1D68–≈0x800F2D80` | 98% |
-| `lyt_picture.cpp` | `≈0x800F2D80–0x800F2EF8`† | 98% |
-| `lyt_textBox.cpp` | `0x800F2EF8–0x800F44B0`† | 76% |
-| `lyt_window.cpp` | `0x800F44B0–0x800F692C`† | 94% |
-| `lyt_bounding.cpp` | `0x800F692C–0x800F69D8`† | 77% |
-| `lyt_material.cpp` | `0x800F69D8–0x800F9DA0` | 84% (ogws 10%) |
-| `lyt_drawInfo.cpp` | `0x800F9DA0–0x800F9E54` | 100% |
-| `lyt_animation.cpp` | `0x800F9E54–0x800FA9C4` | 97% |
-| `lyt_resourceAccessor.cpp` | `0x800FA9C4–0x800FAA1C` | 100% |
-| `lyt_arcResourceAccessor.cpp` | `0x800FAA1C–0x800FADA4` | 59% |
-| `lyt_common.cpp` | `0x800FADA4–0x800FB9EC` | 84% |
+| `lyt_init.cpp` | `0x800F0B58–0x800F0B8C` | Matching (`LytInit` = `OSInitFastCast` only, no version string) |
+| `lyt_pane.cpp` | `0x800F0B8C–0x800F1A48`† | Matching |
+| `lyt_group.cpp` | `0x800F1A48–0x800F1D68` | Matching |
+| `lyt_layout.cpp` | `0x800F1D68–0x800F29D8` | Matching |
+| `lyt_picture.cpp` | `0x800F29D8–0x800F2EF8`† | Matching |
+| `lyt_textBox.cpp` | `0x800F2EF8–0x800F44B0`† | Matching |
+| `lyt_window.cpp` | `0x800F44B0–0x800F692C`† | NonMatching 99.7% (`DrawFrame` 98.2%: callee-saved register numbering only) |
+| `lyt_bounding.cpp` | `0x800F692C–0x800F69D8`† | Matching |
+| `lyt_material.cpp` | `0x800F69D8–0x800F9DA0` | Matching |
+| `lyt_drawInfo.cpp` | `0x800F9DA0–0x800F9E54` | Matching |
+| `lyt_animation.cpp` | `0x800F9E54–0x800FA9C4` | Matching |
+| `lyt_resourceAccessor.cpp` | `0x800FA9C4–0x800FAA1C` | Matching |
+| `lyt_arcResourceAccessor.cpp` | `0x800FAA1C–0x800FADA4` | Matching |
+| `lyt_common.cpp` | `0x800FADA4–0x800FB9EC` | Matching |
+
+Findings:
+
+- **lyt is built with different NW4R basics than the game.** The game's headers prove `VEC2`/`VEC3`/`MTX34` have empty destructors, `ut::Color()` is empty and `ut::Rect()` is empty. lyt needs the tp `nw4hbm` versions: no math destructors (an 8-byte `VEC2` is returned in `r3`/`r4`, e.g. `Pane::GetVtxPos`), `Color()` stores white (`ut::Color mVtxColors[4]` etc.; `__construct_array` calls the weak game copy at `0x80021808`) and `Rect()` zero-initialises.
+  These are switched by defines in `cflags_nw4r_lyt`: `NW4R_MATH_VEC2_NO_DTOR`, `NW4R_MATH_VEC3_NO_DTOR`, `NW4R_MATH_MTX34_NO_DTOR`, `NW4R_UT_COLOR_DEFAULT_WHITE`, `NW4R_UT_RECT_DEFAULT_ZERO` (defaults unchanged for the game).
+- `lyt::Size` has a user copy constructor (as tp): `detail::GetTextureSize` returns it through a hidden pointer. The game is unaffected.
+- `ut::LinkListNode` derives from `ut::NonCopyable` (`ut_NonCopyable.h`). Without it MWCC drops the node's zeroing stores in front of `LinkListImpl::Initialize_` (`ArcResourceAccessor` ctor). `LinkListNode`/`LinkListImpl` got tp's constructors.
+- `Layout::BuildPaneObj` is `NO_INLINE` (as tp); `Pane::DrawSelf` and `Bounding::DrawSelf` are empty (no debug drawing in this revision). `TextBox::GetTextColor`/`SetTextColor` are weak out-of-line copies.
+- **dtk function splits.** `Pane::GetColorElement`/`SetColorElement` end in a dead `blr` after their tail call, which dtk split off as separate 4-byte functions (merged back into 0x28-byte functions). `TextBox::GetVtxColor` (`srwi; b`) tail-branches into the weak `GetTextColor` right after it; dtk had merged the two (split again).
+- `lyt_common`'s `.bss` is only `0x20` (`texCoords`); `0x802F25F0–0x802F2600` is alignment padding before the next object.
+- Weak `Pane::GetRuntimeTypeInfo` is emitted first by game code at `0x8000A0F0` (named so; otherwise `PaneButton.o` would keep its copy and shift `.text`).
+- `Material`: only the non-const `GetTexSRTAry`/`GetTexCoordGenAry`/`GetIndTexSRTAry` are referenced; `SetTextureNoWrap` comes before `SetTexture(u8, const GXTexObj&)`.
+- `CharWriter`'s real field layout (tp) is needed: `TextBox` copies `TextWriterBase<wchar_t>` objects (`CalcLineStrNum`).
+- **Headers touched outside `include/nw4r/lyt/`** (all additive or behind defines; game objects unchanged): `ut_LinkList.h` (tp constructors, `NonCopyable` base, `operator--`, `Insert`/`Erase`/`PushBack`/`GetNodeFromPointer`), `ut_RuntimeTypeInfo.h` (`NW4R_UT_RUNTIME_TYPEINFO` macros), `ut_Color.h`/`ut_Rect.h` (default-constructor defines; `Rect::MoveTo`/`SetWidth`/`SetHeight`), `ut_Font.h` (constructor, `mReaderFunc`, `GetCharStrmReader`, `FontEncoding`), `ut_CharWriter.h` (real field layout replaces the `u8 mData[0x4C]` placeholder; more accessors), `ut_TextWriterBase.h` (more accessors, `mTagProcessor` typed), new `ut_NonCopyable.h`, `ut_algorithm.h`, `ut_CharStrmReader.h`, `ut_ResFont.h` (minimal), `math_types.h` (destructor defines, `VEC2::operator f32*`, inline `MTX34Mult`/`MTX34Copy`/`MTX34Identity`), `math_triangular.h` (`SinDeg`/`CosDeg`), new `math_arithmetic.h` (minimal `FSelect`/`FAbs`/`FNAbs`), `gx/GXTexture.h` (`GXInitTexObjUserData`, `GXGetTexObjUserData`, `GXInitTexObjWrapMode`, `GXGetTexObjWidth/Height/WrapS/WrapT`), `gx/GXGeometry.h` (inline `GXSetTexCoordGen`), and a `<new>` shim (`include/new`, placement new).
+  The ut task should replace the minimal `ut_ResFont.h`/`math_arithmetic.h` with full versions, keeping these declarations.
+- Names given outside lyt for linking: ARC (`ARCInitHandle` …), GX texture/TEV/indirect functions, `PSMTXScale`/`PSMTXRotRad`/`PSMTXTransApply`, `MEMAllocFromAllocator`, `TPLBind`/`TPLGet`, and the ut functions lyt calls (`ResFont` ctor/`SetResource`, `CharWriter::SetColorMapping`/`SetGradationMode`/`SetTextColor(Color, Color)`/`SetFontSize`/`IsWidthFixed`/`GetFixedWidth`, `Font::GetCharStrmReader`, `TextWriterBase<wchar_t>::GetLineHeight`/`SetLineSpace`/`SetTagProcessor`/`GetTagProcessor`/`Print(const wchar_t*, int)`).
 
 ### RVL SDK
 

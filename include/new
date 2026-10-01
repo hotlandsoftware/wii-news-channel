@@ -1,0 +1,15 @@
+#ifndef _NEW
+#define _NEW
+
+// Minimal <new> shim (placement new), as in MSL_C++.
+#include <stddef.h>
+
+inline void* operator new(size_t, void* ptr) {
+    return ptr;
+}
+
+inline void* operator new[](size_t, void* ptr) {
+    return ptr;
+}
+
+#endif

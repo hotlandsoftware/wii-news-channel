@@ -13,7 +13,14 @@ struct VEC2 : public Vec2 {
         x = fx;
         y = fy;
     }
+    operator f32*() { return reinterpret_cast<f32*>(this); }
+    operator const f32*() const { return reinterpret_cast<const f32*>(this); }
+
+    // NW4R library code (lyt) is built without the VEC2/MTX34 destructors:
+    // there an 8-byte VEC2 is returned in r3/r4 (Pane::GetVtxPos).
+#ifndef NW4R_MATH_VEC2_NO_DTOR
     ~VEC2() {}
+#endif
 };
 
 struct VEC3 : public Vec {
@@ -83,7 +90,9 @@ struct MTX34 {
     };
 
     MTX34() {}
+#ifndef NW4R_MATH_MTX34_NO_DTOR
     ~MTX34() {}
+#endif
 
     operator f32*() { return a; }
     operator const f32*() const { return a; }
@@ -109,6 +118,22 @@ struct MTX44 {
     operator f32*() { return a; }
     operator const f32*() const { return a; }
 };
+
+// Inline MTX34 helpers (added for lyt, Task 15; as in tp nw4hbm math/types.h)
+inline MTX34* MTX34Mult(MTX34* pOut, const MTX34* p1, const MTX34* p2) {
+    PSMTXConcat(p1->mtx, p2->mtx, pOut->mtx);
+    return pOut;
+}
+
+inline MTX34* MTX34Copy(MTX34* pOut, const MTX34* p) {
+    PSMTXCopy(p->mtx, pOut->mtx);
+    return pOut;
+}
+
+inline MTX34* MTX34Identity(MTX34* pOut) {
+    PSMTXIdentity(pOut->mtx);
+    return pOut;
+}
 
 MTX44* MTX44Identity(MTX44* pOut);
 VEC4* VEC3Transform(VEC4* pOut, const MTX44* pM, const VEC3* pV);
