@@ -502,6 +502,16 @@ nw4r/snd/snd_MemorySoundArchive.cpp:
 	.text       start:0x800D5DC8 end:0x800D61FC
 	.data       start:0x801CE098 end:0x801CE118
 
+nw4r/snd/snd_MidiSeqPlayer.cpp:
+	.text       start:0x800D61FC end:0x800D6260
+
+nw4r/snd/snd_MmlParser.cpp:
+	.text       start:0x800D6260 end:0x800D710C
+	.data       start:0x801CE118 end:0x801CE348
+	.sdata      start:0x80356F98 end:0x80356FA8
+	.sbss       start:0x80357C88 end:0x80357C90
+	.sdata2     start:0x80359A30 end:0x80359A50
+
 nw4r/snd/snd_MmlSeqTrack.cpp:
 	.text       start:0x800D710C end:0x800D71CC
 	.data       start:0x801CE348 end:0x801CE358
@@ -530,6 +540,9 @@ nw4r/snd/snd_SeqPlayer.cpp:
 	.data       start:0x801CE370 end:0x801CE3C8
 	.bss        start:0x802D5D30 end:0x802D5D68
 	.sdata2     start:0x80359A50 end:0x80359A60
+
+nw4r/snd/snd_SeqSoundHandle.cpp:
+	.text       start:0x800D902C end:0x800D916C
 
 nw4r/snd/snd_SeqTrack.cpp:
 	.text       start:0x800D916C end:0x800DA150

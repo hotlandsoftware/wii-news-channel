@@ -153,11 +153,12 @@ private:
     bool ParseNextTick(bool doNoteOn) DECOMP_DONT_INLINE;
 
 private:
-    bool mActiveFlag;   // at 0x7C
-    bool mPreparedFlag; // at 0x7D
-    bool mStartedFlag;  // at 0x7E
-    bool mPauseFlag;    // at 0x7F
-    bool mSkipFlag;     // at 0x80
+    // u8, not bool: the inline IsXxx() getters convert with `!= 0`
+    u8 mActiveFlag;   // at 0x7C
+    u8 mPreparedFlag; // at 0x7D
+    u8 mStartedFlag;  // at 0x7E
+    u8 mPauseFlag;    // at 0x7F
+    u8 mSkipFlag;     // at 0x80
 
     f32 mPanRange;                                   // at 0x84
     f32 mTempoRatio;                                 // at 0x88

@@ -133,7 +133,6 @@ ParseResult MmlParser::Parse(MmlSeqTrack* pTrack, bool doNoteOn) const {
             break;
         }
 
-        case 0xB0:
         case 0xC0:
         case 0xD0: {
             u8 arg = ReadArg(&rTrackParam.currentAddr, pPlayer, pTrack,
@@ -160,7 +159,9 @@ ParseResult MmlParser::Parse(MmlSeqTrack* pTrack, bool doNoteOn) const {
             break;
         }
 
-        case 0x90: {
+        // (0xB0 commands take no argument in this older revision)
+        case 0x90:
+        case 0xB0: {
             if (doExecCommand) {
                 CommandProc(pTrack, cmd, arg1, arg2);
             }
@@ -181,8 +182,7 @@ ParseResult MmlParser::Parse(MmlSeqTrack* pTrack, bool doNoteOn) const {
         case 0xF0: {
             switch (cmd) {
             case MML_ALLOCTRACK: {
-                // Skip command argument ("must use alloctrack in startup code")
-                (void)Read16(&rTrackParam.currentAddr);
+                // (this older revision does not skip the command argument)
                 break;
             }
 
@@ -252,10 +252,6 @@ void MmlParser::CommandProc(MmlSeqTrack* pTrack, u32 command, s32 arg1,
         switch (command) {
         case MML_SET_TEMPO: {
             rPlayerParam.tempo = arg1;
-            break;
-        }
-        case MML_SET_TIMEBASE: {
-            rPlayerParam.timebase = arg1;
             break;
         }
 
@@ -368,10 +364,6 @@ void MmlParser::CommandProc(MmlSeqTrack* pTrack, u32 command, s32 arg1,
             break;
         }
 
-        case MML_SET_DAMPER: {
-            rTrackParam.damperFlag = static_cast<u8>(arg1) >= 64;
-            break;
-        }
 
         case MML_SET_TIE: {
             rMmlParam.tieFlag = arg1;
