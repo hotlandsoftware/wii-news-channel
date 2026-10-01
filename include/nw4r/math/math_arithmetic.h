@@ -36,6 +36,7 @@ f32 FLog(f32 x);
 } // namespace detail
 
 f32 FrSqrt(f32 x);
+u32 CntBit1(u32 x); // added for ut (Task 14)
 
 inline f32 FExp(f32 x) {
     return detail::FExp(x);
