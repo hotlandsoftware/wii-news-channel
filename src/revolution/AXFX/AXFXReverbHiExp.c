@@ -18,6 +18,27 @@ static void __FreeDelayLine(AXFX_REVERBHI_EXP* reverb);
 static void __BzeroDelayLines(AXFX_REVERBHI_EXP* reverb);
 static BOOL __InitParams(AXFX_REVERBHI_EXP* reverb);
 
+u32 AXFXReverbHiExpGetMemSize(AXFX_REVERBHI_EXP* reverb) {
+    u32 ch, i;
+    s32 size = __EarlySizeTable[8 - 1][2] + (s32)(32000.0f * reverb->preDelayTimeMax);
+
+    for (i = 0; i < 3; i++) {
+        size += __FilterSizeTable[6][i];
+    }
+
+    for (i = 0; i < 2; i++) {
+        size += __FilterSizeTable[6][3 + i];
+    }
+
+    size *= 3;
+
+    for (ch = 0; ch < 3; ch++) {
+        size += __FilterSizeTable[6][5 + ch];
+    }
+
+    return size * sizeof(f32);
+}
+
 BOOL AXFXReverbHiExpInit(AXFX_REVERBHI_EXP* reverb) {
     u32 ch, i;
     BOOL result = TRUE;
@@ -61,6 +82,24 @@ BOOL AXFXReverbHiExpInit(AXFX_REVERBHI_EXP* reverb) {
         return FALSE;
     }
 
+    reverb->active &= ~1;
+    OSRestoreInterrupts(mask);
+    return TRUE;
+}
+
+BOOL AXFXReverbHiExpSettings(AXFX_REVERBHI_EXP* reverb) {
+    BOOL mask = OSDisableInterrupts();
+
+    reverb->active |= 1;
+    AXFXReverbHiExpShutdown(reverb);
+
+    if (!AXFXReverbHiExpInit(reverb)) {
+        AXFXReverbHiExpShutdown(reverb);
+        OSRestoreInterrupts(mask);
+        return FALSE;
+    }
+
+    reverb->active |= 2;
     reverb->active &= ~1;
     OSRestoreInterrupts(mask);
     return TRUE;
@@ -141,7 +180,8 @@ void AXFXReverbHiExpCallback(AXFX_BUFFERUPDATE* bufferUpdate, AXFX_REVERBHI_EXP*
             earlyOut = earlyLine[reverb->earlyPos[0]] * reverb->earlyCoef[0] + earlyLine[reverb->earlyPos[1]] * reverb->earlyCoef[1] +
                        earlyLine[reverb->earlyPos[2]] * reverb->earlyCoef[2];
 
-            earlyLine[reverb->earlyPos[2]] = data;
+            // The May 2007 SDK does not write the input to the early reflection line
+            // (tp: only under SDK_AUG2010).
 
             if (reverb->preDelayLength != 0) {
                 preDelayLine = reverb->preDelayLine[ch];
@@ -325,6 +365,11 @@ static void __FreeDelayLine(AXFX_REVERBHI_EXP* reverb) {
             reverb->lastAllpassLine[ch] = NULL;
         }
     }
+}
+
+// Unreferenced (dead-stripped); puts -3.0f before 10.0 in .sdata2, as in tp.
+f32 dummy_1(void) {
+    return -3.0f;
 }
 
 static BOOL __InitParams(AXFX_REVERBHI_EXP* reverb) {

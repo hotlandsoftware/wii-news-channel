@@ -537,7 +537,7 @@ config.libs = [
         "progress_category": "sdk",
         "objects": [
             Object(Matching, "revolution/AXFX/AXFXReverbHi.c"),
-            Object(NonMatching, "revolution/AXFX/AXFXReverbHiExp.c"),
+            Object(Matching, "revolution/AXFX/AXFXReverbHiExp.c"),
             Object(Matching, "revolution/AXFX/AXFXHooks.c"),
         ],
     },
