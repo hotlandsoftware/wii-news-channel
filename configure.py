@@ -526,7 +526,7 @@ config.libs = [
             Object(Matching, "revolution/OS/OSMemory.c"),
             Object(Matching, "revolution/OS/OSMutex.c"),
             Object(Matching, "revolution/OS/OSReboot.c"),
-            Object(NonMatching, "revolution/OS/OSReset.c"),
+            Object(Matching, "revolution/OS/OSReset.c"),
             Object(Matching, "revolution/OS/OSRtc.c"),
             Object(Matching, "revolution/OS/OSSync.c"),
             Object(Matching, "revolution/OS/OSThread.c"),

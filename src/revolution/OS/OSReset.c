@@ -136,10 +136,10 @@ u8 __OSGetDiscState(u8 last) {
     if (__DVDGetCoverStatus() != 2) {
         return 3;
     } else {
-        if ((last == 1) && (__OSGetRTCFlags(&flags) && !flags)) {
-            return 1;
-        } else {
+        if (last != 1 || (__OSGetRTCFlags(&flags) && flags)) {
             return 2;
+        } else {
+            return 1;
         }
     }
 }
@@ -211,7 +211,7 @@ void OSRestart(u32 resetCode) {
         OSDisableScheduler();
         __OSShutdownDevices(4);
         OSEnableScheduler();
-        __OSRelaunchTitle(resetCode);
+        __OSRelaunchTitle();
     } else if (type == 0x80) {
         OSDisableScheduler();
         __OSShutdownDevices(4);
@@ -265,7 +265,7 @@ void __OSReturnToMenu(u8 menuMode) {
 
 void OSReturnToMenu(void) {
     __OSReturnToMenu(0);
-    OSPanic(__FILE__, 0x348, "OSReturnToMenu(): Falied to boot system menu.\n");
+    OSPanic(__FILE__, 0x342, "OSReturnToMenu(): Falied to boot system menu.\n");
 }
 
 void OSReturnToDataManager(void) {
@@ -307,7 +307,7 @@ void OSReturnToSetting(u8 setting) {
     }
     default: {
         OSReport("OSReturnToSetting(): You can't specify %d.  \n", setting);
-        OSPanic(__FILE__, 0x394, "");
+        OSPanic(__FILE__, 0x38E, "");
         // NOT REACHED
     }
     }
@@ -326,7 +326,7 @@ void __OSReturnToMenuForError(void) {
     OSDisableScheduler();
     __VISetRGBModeImm();
     __OSHotResetForError();
-    OSPanic(__FILE__, 0x3BB, "__OSReturnToMenu(): Falied to boot system menu.\n");
+    OSPanic(__FILE__, 0x3B5, "__OSReturnToMenu(): Falied to boot system menu.\n");
 }
 
 void __OSHotResetForError(void) {
@@ -336,7 +336,7 @@ void __OSHotResetForError(void) {
 
     __OSHotReset();
 
-    OSPanic(__FILE__, 0x3D3, "__OSHotReset(): Falied to reset system.\n");
+    OSPanic(__FILE__, 0x3CD, "__OSHotReset(): Falied to reset system.\n");
 }
 
 u32 OSGetResetCode(void) {
@@ -352,7 +352,7 @@ u32 OSGetResetCode(void) {
 }
 
 void OSResetSystem(int, u32, int) {
-    OSPanic(__FILE__, 1130, "OSResetSystem() is obsoleted. It doesn't work any longer.\n");
+    OSPanic(__FILE__, 1124, "OSResetSystem() is obsoleted. It doesn't work any longer.\n");
 }
 
 u32 OSSetBootDol(u32 dolOffset) {
