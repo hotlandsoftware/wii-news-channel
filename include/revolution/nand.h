@@ -142,6 +142,10 @@ s32 NANDWriteAsync(NANDFileInfo*, const void*, u32, NANDCallback, NANDCommandBlo
 
 s32 NANDSeekAsync(NANDFileInfo*, s32, s32, NANDCallback, NANDCommandBlock*);
 
+// Added for nw4r::snd (Task 12)
+typedef enum NANDSeekOrigin { NAND_SEEK_BEG, NAND_SEEK_CUR, NAND_SEEK_END } NANDSeekOrigin;
+s32 NANDSeek(NANDFileInfo*, s32, s32);
+
 BOOL nandIsInitialized(void);
 s32 nandConvertErrorCode(const ISFSError);
 

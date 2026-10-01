@@ -7,6 +7,13 @@
 
 #include <cstring>
 
+// WPAD speaker commands (not declared in revolution/wpad.h yet)
+#ifndef WPAD_SPEAKER_OFF
+#define WPAD_SPEAKER_OFF 0
+#define WPAD_SPEAKER_ON 1
+#define WPAD_SPEAKER_PLAY 4
+#endif
+
 namespace nw4r {
 namespace snd {
 
@@ -57,7 +64,7 @@ bool RemoteSpeaker::Setup(WPADCallback pCallback) {
     InitParam();
 
     if (mWpadCallback != NULL) {
-        mWpadCallback(mChannelIndex, WPAD_ERR_OK);
+        mWpadCallback(mChannelIndex, WPAD_ERR_NONE);
         mValidCallbackFlag = false;
     }
 
@@ -74,7 +81,7 @@ void RemoteSpeaker::Shutdown(WPADCallback pCallback) {
     ClearParam();
 
     if (mWpadCallback != NULL) {
-        mWpadCallback(mChannelIndex, WPAD_ERR_OK);
+        mWpadCallback(mChannelIndex, WPAD_ERR_NONE);
         mValidCallbackFlag = false;
     }
 
@@ -100,21 +107,7 @@ bool RemoteSpeaker::IsEnabledOutput() const {
     return mEnableFlag;
 }
 
-void RemoteSpeaker::Update() {
-    if (mCommandBusyFlag) {
-        return;
-    }
-
-    SpeakerCommand command =
-        mUserCommand != COMMAND_NONE ? mUserCommand : mInternalCommand;
-
-    mUserCommand = COMMAND_NONE;
-    mInternalCommand = COMMAND_NONE;
-
-    ExecCommand(command);
-}
-
-void RemoteSpeaker::ExecCommand(SpeakerCommand command) {
+inline void RemoteSpeaker::ExecCommand(SpeakerCommand command) {
     switch (command) {
     case COMMAND_NONE: {
         break;
@@ -145,6 +138,20 @@ void RemoteSpeaker::ExecCommand(SpeakerCommand command) {
         break;
     }
     }
+}
+
+void RemoteSpeaker::Update() {
+    if (mCommandBusyFlag) {
+        return;
+    }
+
+    SpeakerCommand command =
+        mUserCommand != COMMAND_NONE ? mUserCommand : mInternalCommand;
+
+    mUserCommand = COMMAND_NONE;
+    mInternalCommand = COMMAND_NONE;
+
+    ExecCommand(command);
 }
 
 void RemoteSpeaker::UpdateStreamData(const s16* pRmtSamples) {
@@ -178,7 +185,7 @@ void RemoteSpeaker::UpdateStreamData(const s16* pRmtSamples) {
 
         s32 result = WPADSendStreamData(mChannelIndex, adpcmBuffer,
                                         SAMPLES_PER_ENCODED_PACKET);
-        if (result != WPAD_ERR_OK) {
+        if (result != WPAD_ERR_NONE) {
             mInternalCommand = COMMAND_SPEAKER_ON;
             mState = STATE_INVALID;
             InitParam();
@@ -233,7 +240,7 @@ void RemoteSpeaker::SpeakerOnCallback(s32 chan, s32 result) {
         detail::RemoteSpeakerManager::GetInstance().GetRemoteSpeaker(chan);
 
     switch (result) {
-    case WPAD_ERR_OK: {
+    case WPAD_ERR_NONE: {
         r.mFirstEncodeFlag = true;
         std::memset(&r.mEncodeInfo, 0, sizeof(WENCInfo));
 
@@ -263,7 +270,7 @@ void RemoteSpeaker::SpeakerOnCallback(s32 chan, s32 result) {
     }
     }
 
-    if (result != WPAD_ERR_OK && result != WPAD_ERR_BUSY) {
+    if (result != WPAD_ERR_NONE && result != WPAD_ERR_BUSY) {
         r.NotifyCallback(chan, result);
     }
 
@@ -275,7 +282,7 @@ void RemoteSpeaker::SpeakerPlayCallback(s32 chan, s32 result) {
         detail::RemoteSpeakerManager::GetInstance().GetRemoteSpeaker(chan);
 
     switch (result) {
-    case WPAD_ERR_OK: {
+    case WPAD_ERR_NONE: {
         r.mState = STATE_SPEAKER_PLAY;
         break;
     }
@@ -313,7 +320,7 @@ void RemoteSpeaker::SpeakerOffCallback(s32 chan, s32 result) {
         detail::RemoteSpeakerManager::GetInstance().GetRemoteSpeaker(chan);
 
     switch (result) {
-    case WPAD_ERR_OK: {
+    case WPAD_ERR_NONE: {
         r.mState = STATE_SPEAKER_OFF;
         break;
     }

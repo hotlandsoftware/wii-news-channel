@@ -6,6 +6,10 @@
 #include <cstring>
 #include <new>
 
+// revolution/mem/heapCommon.h (via snd_AxfxImpl.h) defines RoundUp/RoundDown macros
+#undef RoundUp
+#undef RoundDown
+
 namespace nw4r {
 namespace snd {
 

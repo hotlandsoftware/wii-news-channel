@@ -502,6 +502,20 @@ nw4r/snd/snd_MemorySoundArchive.cpp:
 	.text       start:0x800D5DC8 end:0x800D61FC
 	.data       start:0x801CE098 end:0x801CE118
 
+nw4r/snd/snd_NandSoundArchive.cpp:
+	.text       start:0x800D72F0 end:0x800D733C
+
+nw4r/snd/snd_RemoteSpeaker.cpp:
+	.text       start:0x800D733C end:0x800D7B50
+
+nw4r/snd/snd_RemoteSpeakerManager.cpp:
+	.text       start:0x800D7B50 end:0x800D7D8C
+	.bss        start:0x802D5A58 end:0x802D5D30
+	.sbss       start:0x80357C90 end:0x80357C98
+
+nw4r/snd/snd_SeqFile.cpp:
+	.text       start:0x800D7D8C end:0x800D7E08
+
 nw4r/snd/snd_SoundArchive.cpp:
 	.text       start:0x800DA150 end:0x800DA738
 	.data       start:0x801CE440 end:0x801CE460
