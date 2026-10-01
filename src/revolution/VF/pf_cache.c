@@ -902,6 +902,16 @@ s32 VFiPFCACHE_FlushFATCache(struct PF_VOLUME* p_vol) {
     return err;
 }
 
+s32 VFiPFCACHE_FlushDataCache(struct PF_VOLUME* p_vol) {
+    s32 err;
+
+    err = VFiPFCACHE_DoFlushCache(p_vol, p_vol->cache.p_current_data);
+    if (!err) {
+        return 0;
+    }
+    return err;
+}
+
 s32 VFiPFCACHE_FlushDataCacheSpecific(struct PF_VOLUME* p_vol, void* signature) {
     s32 err;
     struct PF_CACHE_PAGE* p_head;

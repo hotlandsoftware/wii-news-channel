@@ -36,6 +36,7 @@ s32 VFiPFCACHE_WriteFATSectorAndFreeIfNeeded(struct PF_VOLUME* p_vol, const u8* 
 s32 VFiPFCACHE_WriteDataNumSectorAndFreeIfNeeded(struct PF_VOLUME* p_vol, const u8* p_buf, u32 sector, u32 num_sector, u32* p_num_success);
 struct PF_CACHE_PAGE* VFiPFCACHE_SearchDataCache(struct PF_VOLUME* p_vol, u32 sector);
 s32 VFiPFCACHE_FlushFATCache(struct PF_VOLUME* p_vol);
+s32 VFiPFCACHE_FlushDataCache(struct PF_VOLUME* p_vol);
 s32 VFiPFCACHE_FlushDataCacheSpecific(struct PF_VOLUME* p_vol, void* signature);
 s32 VFiPFCACHE_FlushAllCaches(struct PF_VOLUME* p_vol);
 void VFiPFCACHE_FreeAllCaches(struct PF_VOLUME* p_vol);
