@@ -171,5 +171,11 @@ MSL_C/string.c:
 	extabindex  start:0x80006E38 end:0x80006E5C
 	.text       start:0x80182070 end:0x8018261C
 
+MSL_C/strtoul.c:
+	extab       start:0x80006870 end:0x800068A0
+	extabindex  start:0x80006E68 end:0x80006EB0
+	.text       start:0x80183A10 end:0x80184620
+	.data       start:0x801ED760 end:0x801ED7E8
+
 MSL_C/wstring.c:
 	.text       start:0x801881BC end:0x801882C4

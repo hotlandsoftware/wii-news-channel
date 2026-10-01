@@ -77,3 +77,6 @@ So each file ends with a `__sinit` that constructs it, and the `.ctors` table (`
 - **Constants in `fmuls`.** In plain expressions MWCC tends to put the constant on the left of `fmuls`, but `x *= c` keeps `x` on the left.
 - **`fmr` before arithmetic.** This often means the original re-read the same field (CSE'd), not a copied local.
 - **`__fabsf` vs `__fabs`.** `__fabsf` gives `fabs` without `frsp`; `__fabs` adds an `frsp`.
+- `MSL_C/strtoul.c`: `__strtoull` (99.15%). The original hoists `li r31, -1` (used by `ULLONG_MAX - value`) before the jump-table `lis`; ours hoists it after `addi r29, _current_locale`. Declaration order, `const`, literal vs `ullmax` local and comparison forms made no difference.
+- **MSL is built with `-Cpp_exceptions on`.** Every MSL function with a stack frame has an extab/extabindex entry; without the flag the DOL comes out 0x20 bytes short.
+- **MSL ctype.** `isspace`/`isdigit`/`isalpha`/`toupper` are inline functions over `_current_locale.ctype_cmpt_ptr` (`0x801ED3A8`, field `+0x38`), with a `(c < 0 || c >= 256)` guard.
