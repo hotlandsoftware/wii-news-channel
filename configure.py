@@ -497,7 +497,7 @@ config.libs = [
     {
         "lib": "vf_pf",
         "mw_version": "GC/3.0a5",
-        "cflags": cflags_rvl,
+        "cflags": [*cflags_rvl, "-fp off"],
         "progress_category": "sdk",
         "objects": [
             Object(Matching, "revolution/VF/pf_clib.c"),
@@ -522,7 +522,7 @@ config.libs = [
             Object(Matching, "revolution/VF/pf_fat32.c"),
             Object(Matching, "revolution/VF/pf_fatfs.c"),
             Object(Matching, "revolution/VF/pf_file.c"),
-            Object(NonMatching, "revolution/VF/pf_path.c"),
+            Object(Matching, "revolution/VF/pf_path.c"),
             Object(Matching, "revolution/VF/pf_sector.c"),
             Object(NonMatching, "revolution/VF/pf_volume.c"),
             Object(Matching, "revolution/VF/pf_cp932.c"),

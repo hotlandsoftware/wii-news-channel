@@ -15,6 +15,8 @@ s32 VFiPFPATH_cmpTailSFN(const s8* sfn_name, const s8* pattern);
 void VFiPFPATH_InitTokenOfPath(struct PF_STR* p_str, s8* path, u32 code_mode);
 s32 VFiPFPATH_GetNextTokenOfPath(struct PF_STR* p_str, u32 wildcard);
 s32 VFiPFPATH_SplitPath(struct PF_STR* p_path, struct PF_STR* p_dir_path, struct PF_STR* p_filename);
+s32 VFiPFPATH_SplitPathWildcard(struct PF_STR* p_path, struct PF_STR* p_dir_path, struct PF_STR* p_filename);  // name guessed
+void VFiPFPATH_GetSearchPattern(s8* p_oem, u16* p_uni, struct PF_STR* p_pattern);  // name guessed
 struct PF_VOLUME* VFiPFPATH_GetVolumeFromPath(struct PF_STR* p_path);
 u32 VFiPFPATH_MatchFileNameWithPattern(const s8* file_name, struct PF_STR* p_pattern, u32 is_long_name);
 s32 VFiPFPATH_putShortName(u8* pDirEntry, const s8* short_name, u8 attr);
