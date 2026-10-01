@@ -9,6 +9,8 @@ static u32 IpcNumUnIssuedReqs = 0;
 static void AddReqInfo(void*, s32);
 static void DelReqInfo(void*, s32);
 
+// Unreferenced in HAGE (mwld dead-strips it), but it must be compiled: MWCC
+// lays out .bss by first use, and this puts IpcFdArray before IpcReqPtrArray.
 s32 IPCGetQueueStatus(u32 i) {
     if (i > 32) {
         return -1;

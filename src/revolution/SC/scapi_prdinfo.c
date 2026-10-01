@@ -20,7 +20,6 @@ static SCProductAreaAndString ProductAreaAndStringTbl[] = {
     8, "ASI",
     9, "LTN",
     10, "SAF",
-    11, "CHN",
     -1
 };
 
@@ -114,8 +113,6 @@ static SCProductGameRegionAndString ProductGameRegionAndStringTbl[] = {
     0, "JP",
     1, "US",
     2, "EU",
-    4, "KR",
-    5, "CN",
     -1
 };
 

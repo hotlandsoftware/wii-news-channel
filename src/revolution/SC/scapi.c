@@ -1,4 +1,19 @@
 #include <revolution/sc.h>
+#include <revolution/os.h>
+#include <string.h>
+
+typedef struct SCParentalControlInfo {
+    u8 data[0x4A];
+} SCParentalControlInfo;
+
+typedef struct SCSimpleAddress {
+    u32 id;
+    u8 data[0x1004];
+} SCSimpleAddress;
+
+static SCSimpleAddress TempSimpleAddress;
+
+static BOOL SCGetSimpleAddressData(SCSimpleAddress* address);
 
 u8 SCGetAspectRatio(void) {
     u8 ratio;
@@ -68,6 +83,15 @@ u8 SCGetLanguage(void) {
     }
 
     return lang;
+}
+
+BOOL SCSetLanguage(u8 lang) {
+#pragma unused(lang)
+    return FALSE;
+}
+
+BOOL SCGetParentalControl(SCParentalControlInfo* info) {
+    return SCFindByteArrayItem(info, sizeof(*info), SC_ITEM_ID_IPL_PARENTAL_CONTROL);
 }
 
 u8 SCGetProgressiveMode(void) {
@@ -202,4 +226,63 @@ u8 SCGetWpadSpeakerVolume(void) {
 
 BOOL SCSetWpadSpeakerVolume(u8 volume) {
     return SCReplaceU8Item(volume, SC_ITEM_ID_BT_SPEAKER_VOLUME);
+}
+
+u32 SCGetSimpleAddressID(void) {
+    if (SCGetSimpleAddressData(&TempSimpleAddress)) {
+        return TempSimpleAddress.id;
+    }
+    return 0xFFFFFFFF;
+}
+
+static BOOL SCGetSimpleAddressData(SCSimpleAddress* address) {
+    BOOL enabled;
+    u32 id;
+
+    if (SCFindByteArrayItem(address, sizeof(*address), SC_ITEM_ID_IPL_SIMPLE_ADDRESS) && address->id != 0xFFFFFFFF &&
+        (address->id & 0xFF000000) != 0 && (address->id & 0xFF000000) != 0xFF000000 &&
+        (address->id & 0x00FF0000) != 0xFF0000) {
+        enabled = OSDisableInterrupts();
+        id = address->id;
+
+        if ((address->id & 0x00FF0000) == 0) {
+            memset(address, 0, sizeof(*address));
+            address->id = id;
+        }
+
+        OSRestoreInterrupts(enabled);
+        return TRUE;
+    } else {
+        return FALSE;
+    }
+}
+
+u32 SCGetNetContentRestrictions(void) {
+    u32 item;
+
+    if (!SCFindU32Item(&item, SC_ITEM_ID_NET_CONTENT_RESTRICTIONS)) {
+        item = 0;
+    }
+
+    return item;
+}
+
+BOOL SCGetEULA(void) {
+    BOOL item;
+
+    if (!SCFindBoolItem(&item, SC_ITEM_ID_IPL_EULA)) {
+        item = FALSE;
+    }
+
+    return item;
+}
+
+u32 SCGetWCFlags(void) {
+    u32 item;
+
+    if (!SCFindU32Item(&item, SC_ITEM_ID_NET_WC_FLAGS)) {
+        item = 0;
+    }
+
+    return item;
 }

@@ -129,7 +129,6 @@ s32 ESP_OpenContentFile(u32);
 s32 ESP_ReadContentFile(s32, void *, u32);
 s32 ESP_SeekContentFile(s32, s32, s32);
 s32 ESP_CloseContentFile(s32);
-s32 ESP_ListTitleContentsOnCard(ESTitleId, ESContentId *, u32 *);
 s32 ESP_DiGetTicketView(const void *, ESTicketView *);
 s32 ESP_DiGetTmd(ESTitleMeta *, u32 *);
 s32 ESP_GetTmdView(ESTitleId, ESTmdView *, u32 *);

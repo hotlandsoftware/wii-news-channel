@@ -714,10 +714,10 @@ config.libs = [
         "cflags": cflags_rvl,
         "progress_category": "sdk",
         "objects": [
-            Object(NonMatching, "revolution/NAND/nand.c"),
-            Object(NonMatching, "revolution/NAND/NANDOpenClose.c"),
-            Object(NonMatching, "revolution/NAND/NANDCore.c"),
-            Object(NonMatching, "revolution/NAND/NANDLogging.c"),
+            Object(Matching, "revolution/NAND/nand.c"),
+            Object(Matching, "revolution/NAND/NANDOpenClose.c"),
+            Object(Matching, "revolution/NAND/NANDCore.c"),
+            Object(Matching, "revolution/NAND/NANDLogging.c"),
         ],
     },
     {
@@ -726,9 +726,9 @@ config.libs = [
         "cflags": cflags_rvl,
         "progress_category": "sdk",
         "objects": [
-            Object(NonMatching, "revolution/SC/scsystem.c"),
-            Object(NonMatching, "revolution/SC/scapi.c"),
-            Object(NonMatching, "revolution/SC/scapi_prdinfo.c"),
+            Object(Matching, "revolution/SC/scsystem.c"),
+            Object(Matching, "revolution/SC/scapi.c"),
+            Object(Matching, "revolution/SC/scapi_prdinfo.c"),
         ],
     },
     {
@@ -737,7 +737,7 @@ config.libs = [
         "cflags": cflags_rvl,
         "progress_category": "sdk",
         "objects": [
-            Object(NonMatching, "revolution/ESP/esp.c"),
+            Object(Matching, "revolution/ESP/esp.c"),
         ],
     },
     {
@@ -747,9 +747,9 @@ config.libs = [
         "progress_category": "sdk",
         "objects": [
             Object(Matching, "revolution/IPC/ipcMain.c"),
-            Object(NonMatching, "revolution/IPC/ipcclt.c"),
-            Object(NonMatching, "revolution/IPC/memory.c"),
-            Object(NonMatching, "revolution/IPC/ipcProfile.c"),
+            Object(Matching, "revolution/IPC/ipcclt.c"),
+            Object(Matching, "revolution/IPC/memory.c"),
+            Object(Matching, "revolution/IPC/ipcProfile.c"),
         ],
     },
     {
@@ -758,7 +758,7 @@ config.libs = [
         "cflags": cflags_rvl,
         "progress_category": "sdk",
         "objects": [
-            Object(NonMatching, "revolution/FS/fs.c"),
+            Object(Matching, "revolution/FS/fs.c"),
         ],
     },
     {

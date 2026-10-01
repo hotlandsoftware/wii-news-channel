@@ -632,6 +632,7 @@ out:
     return rc;
 }
 
+#if 0 // not present in HAGE (stripped by the linker)
 s32 ISFS_RenameAsync(const u8* oldName, const u8* newName, ISFSCallback cb, void* fsCtxt) {
     ISFSError rc = ISFS_ERROR_OK;
     ISFSPathsArgs* pathsArgs;
@@ -663,7 +664,9 @@ s32 ISFS_RenameAsync(const u8* oldName, const u8* newName, ISFSCallback cb, void
 out:
     return rc;
 }
+#endif
 
+#if 0 // not present in HAGE (stripped by the linker)
 s32 ISFS_GetUsage(const u8* dname, u32* nblocks, u32* ninodes) {
     ISFSError rc = ISFS_ERROR_OK;
     IOSIoVector* v = 0;
@@ -715,6 +718,7 @@ out:
 
     return rc;
 }
+#endif
 
 s32 ISFS_CreateFile(const u8* fname, u32 fileAttr, u32 ownerAcc, u32 groupAcc, u32 othersAcc) {
     ISFSError rc = ISFS_ERROR_OK;
@@ -872,6 +876,7 @@ out:
     return rc;
 }
 
+#if 0 // not present in HAGE (stripped by the linker)
 s32 ISFS_GetFileStatsAsync(IOSFd fd, ISFSFileStats* stats, ISFSCallback cb, void* fsCtxt) {
     ISFSError rc = ISFS_ERROR_OK;
     __isfsCtxt* ctxt;
@@ -896,6 +901,7 @@ s32 ISFS_GetFileStatsAsync(IOSFd fd, ISFSFileStats* stats, ISFSCallback cb, void
 out:
     return rc;
 }
+#endif
 
 s32 ISFS_Seek(IOSFd fd, s32 offset, u32 whence) {
     return IOS_Seek(fd, offset, whence);

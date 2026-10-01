@@ -367,7 +367,7 @@ s32 nandSafeClose(NANDFileInfo* info, BOOL simple_flag) {
         OSReport("Illegal NANDFileInfo.\n");
     }
 
-    return NAND_RESULT_INVALID;
+    return NAND_RESULT_FATAL_ERROR;
 }
 
 static void nandCloseCallback(ISFSError result, void* ctxt) {
