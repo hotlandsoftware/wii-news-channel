@@ -110,6 +110,22 @@ struct MTX44 {
     operator const f32*() const { return a; }
 };
 
+// Inline MTX34 helpers (added for lyt, Task 15; as in tp nw4hbm math/types.h)
+inline MTX34* MTX34Mult(MTX34* pOut, const MTX34* p1, const MTX34* p2) {
+    PSMTXConcat(p1->mtx, p2->mtx, pOut->mtx);
+    return pOut;
+}
+
+inline MTX34* MTX34Copy(MTX34* pOut, const MTX34* p) {
+    PSMTXCopy(p->mtx, pOut->mtx);
+    return pOut;
+}
+
+inline MTX34* MTX34Identity(MTX34* pOut) {
+    PSMTXIdentity(pOut->mtx);
+    return pOut;
+}
+
 MTX44* MTX44Identity(MTX44* pOut);
 VEC4* VEC3Transform(VEC4* pOut, const MTX44* pM, const VEC3* pV);
 

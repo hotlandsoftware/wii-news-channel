@@ -2,9 +2,114 @@
 #define NW4R_LYT_TYPES_H
 
 #include <types.h>
+#include <stddef.h>
+#include <revolution/gx.h>
+#include <nw4r/math/math_types.h>
 
 namespace nw4r {
 namespace lyt {
+
+static const u32 RESOURCE_TYPE_ANIMATION = 'anim';
+static const u32 RESOURCE_TYPE_LAYOUT = 'blyt';
+static const u32 RESOURCE_TYPE_FONT = 'font';
+static const u32 RESOURCE_TYPE_TEXTURE = 'timg';
+
+enum {
+    VERTEXCOLOR_LT = 0,
+    VERTEXCOLOR_RT,
+    VERTEXCOLOR_LB,
+    VERTEXCOLOR_RB,
+    VERTEXCOLOR_MAX
+};
+
+enum {
+    TEVCOLOR_REG0 = 0,
+    TEVCOLOR_REG1,
+    TEVCOLOR_REG2,
+    TEVCOLOR_MAX
+};
+
+enum {
+    HORIZONTALPOSITION_LEFT = 0,
+    HORIZONTALPOSITION_CENTER,
+    HORIZONTALPOSITION_RIGHT,
+    HORIZONTALPOSITION_MAX
+};
+
+enum {
+    VERTICALPOSITION_TOP = 0,
+    VERTICALPOSITION_CENTER,
+    VERTICALPOSITION_BOTTOM,
+    VERTICALPOSITION_MAX
+};
+
+enum {
+    ORIGINTYPE_TOPLEFT = 0,
+    ORIGINTYPE_CENTER,
+    ORIGINTYPE_MAX
+};
+
+enum {
+    TEXTCOLOR_TOP = 0,
+    TEXTCOLOR_BOTTOM,
+    TEXTCOLOR_MAX
+};
+
+enum {
+    WINDOWFRAME_LT = 0,
+    WINDOWFRAME_RT,
+    WINDOWFRAME_LB,
+    WINDOWFRAME_RB,
+    WINDOWFRAME_L,
+    WINDOWFRAME_R,
+    WINDOWFRAME_T,
+    WINDOWFRAME_B,
+    WINDOWFRAME_MAX
+};
+
+enum {
+    TEXTUREFLIP_NONE,
+    TEXTUREFLIP_H,
+    TEXTUREFLIP_V,
+    TEXTUREFLIP_90,
+    TEXTUREFLIP_180,
+    TEXTUREFLIP_270,
+    TEXTUREFLIP_MAX
+};
+
+enum {
+    FLIPINDEX_X,
+    FLIPINDEX_Y,
+    FLIPINDEX_MAX
+};
+
+namespace detail {
+
+template <typename T> inline const T* ConvertOffsToPtr(const void* baseAddress, unsigned offset) {
+    return reinterpret_cast<const T*>(reinterpret_cast<unsigned>(baseAddress) + offset);
+}
+
+template <typename T> inline T* ConvertOffsToPtr(void* baseAddress, unsigned offset) {
+    return reinterpret_cast<T*>(reinterpret_cast<unsigned>(baseAddress) + offset);
+}
+
+template <typename T> inline void SetBit(T* bits, int pos, bool val) {
+    T mask = T(~(1 << pos));
+    *bits &= mask;
+    *bits |= (val ? 1 : 0) << pos;
+}
+
+template <typename T> inline bool TestBit(T bits, int pos) {
+    const T mask = (T)(1 << pos);
+    return 0 != (bits & mask);
+}
+
+template <typename T> inline T GetBits(T bits, int pos, int len) {
+    T mask = static_cast<T>(~(-1 << len));
+    return static_cast<T>((bits >> pos) & mask);
+}
+
+} // namespace detail
 
 struct Size {
     f32 width;  // at 0x0
@@ -12,6 +117,274 @@ struct Size {
 
     Size() : width(0.0f), height(0.0f) {}
     Size(f32 w, f32 h) : width(w), height(h) {}
+
+    friend bool operator==(const Size& a, const Size& b) {
+        return a.width == b.width && a.height == b.height;
+    }
+};
+
+struct TexSRT {
+    math::VEC2 translate; // at 0x00
+    f32 rotate;           // at 0x08
+    math::VEC2 scale;     // at 0x0C
+};
+
+class TexCoordGen {
+public:
+    TexCoordGen() : reserve(0) { Set(GX_TG_MTX2x4, GX_TG_TEX0, GX_IDENTITY); }
+
+    u32 GetTexMtx() const { return texMtx; }
+    GXTexGenType GetTexGenType() const { return static_cast<GXTexGenType>(texGenType); }
+    GXTexGenSrc GetTexGenSrc() const { return static_cast<GXTexGenSrc>(texGenSrc); }
+
+    void Set(GXTexGenType aTexGenType, GXTexGenSrc aTexGenSrc, u32 aTexMtx) {
+        texGenType = aTexGenType;
+        texGenSrc = aTexGenSrc;
+        texMtx = aTexMtx;
+    }
+
+private:
+    u8 texGenType; // at 0x0
+    u8 texGenSrc;  // at 0x1
+    u8 texMtx;     // at 0x2
+    u8 reserve;    // at 0x3
+};
+
+class IndirectStage {
+public:
+    IndirectStage() { Set(GX_TEXCOORD0, GX_TEXMAP0, GX_ITS_1, GX_ITS_1); }
+
+    GXTexCoordID GetTexCoordGen() const { return static_cast<GXTexCoordID>(texCoordGen); }
+    GXTexMapID GetTexMap() const { return static_cast<GXTexMapID>(texMap); }
+    GXIndTexScale GetScaleS() const { return static_cast<GXIndTexScale>(scaleS); }
+    GXIndTexScale GetScaleT() const { return static_cast<GXIndTexScale>(scaleT); }
+
+    void Set(GXTexCoordID aTexCoordGen, GXTexMapID aTexMap, GXIndTexScale aScaleS,
+             GXIndTexScale aScaleT) {
+        texCoordGen = aTexCoordGen;
+        texMap = aTexMap;
+        scaleS = aScaleS;
+        scaleT = aScaleT;
+    }
+
+private:
+    u8 texCoordGen; // at 0x0
+    u8 texMap;      // at 0x1
+    u8 scaleS;      // at 0x2
+    u8 scaleT;      // at 0x3
+};
+
+class TevSwapMode {
+public:
+    GXTevColorChan GetR() const { return static_cast<GXTevColorChan>((swap) & 0x03); }
+    GXTevColorChan GetG() const { return static_cast<GXTevColorChan>((swap >> 2) & 0x03); }
+    GXTevColorChan GetB() const { return static_cast<GXTevColorChan>((swap >> 4) & 0x03); }
+    GXTevColorChan GetA() const { return static_cast<GXTevColorChan>((swap >> 6) & 0x03); }
+
+    void Set(GXTevColorChan r, GXTevColorChan g, GXTevColorChan b, GXTevColorChan a) {
+        swap = r | g << 2 | b << 4 | a << 6;
+    }
+
+private:
+    u8 swap; // at 0x0
+};
+
+class TevStageInOp {
+public:
+    u8 GetA() const { return ab & 0x0F; }
+    u8 GetB() const { return (ab >> 4) & 0x0F; }
+    u8 GetC() const { return cd & 0x0F; }
+    u8 GetD() const { return (cd >> 4) & 0x0F; }
+
+    u8 GetScale() const { return (op >> 6) & 0x03; }
+    u8 GetBias() const { return (op >> 4) & 0x03; }
+    u8 GetOp() const { return op & 0x0F; }
+
+    u8 GetKSel() const { return (cl >> 3) & 0x1F; }
+    u8 GetOutReg() const { return (cl >> 1) & 0x03; }
+    bool IsClamp() const { return static_cast<bool>(cl & 0x01); }
+
+    void SetIn(u8 a, u8 b, u8 c, u8 d) {
+        ab = a | b << 4;
+        cd = c | d << 4;
+    }
+
+    void SetOp(u8 aOp, u8 bias, u8 scale, bool clamp, u8 outReg, u8 kSel) {
+        op = aOp | bias << 4 | scale << 6;
+        cl = (clamp ? 1 : 0) | outReg << 1 | kSel << 3;
+    }
+
+private:
+    u8 ab; // at 0x0
+    u8 cd; // at 0x1
+    u8 op; // at 0x2
+    u8 cl; // at 0x3
+};
+
+class TevStage {
+public:
+    TevStage() {
+        SetOrder(GX_TEXCOORD_NULL, GX_TEXMAP_NULL, GX_COLOR0A0, GX_TEV_SWAP0, GX_TEV_SWAP0);
+        SetColorIn(GX_CC_ZERO, GX_CC_ZERO, GX_CC_ZERO, GX_CC_RASC);
+        SetAlphaIn(GX_CA_ZERO, GX_CA_ZERO, GX_CA_ZERO, GX_CA_RASA);
+        SetColorOp(GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, true, GX_TEVPREV, GX_TEV_KCSEL_K0);
+        SetAlphaOp(GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, true, GX_TEVPREV, GX_TEV_KASEL_K0_R);
+        SetIndirect(GX_INDTEXSTAGE0, GX_ITF_8, GX_ITB_NONE, GX_ITM_OFF, GX_ITW_OFF, GX_ITW_OFF, false,
+                    false, GX_ITBA_OFF);
+    }
+
+    GXTexCoordID GetTexCoordGen() const { return static_cast<GXTexCoordID>(texCoordGen); }
+    GXChannelID GetColorChan() const { return static_cast<GXChannelID>(colChan); }
+    GXTexMapID GetTexMap() const { return static_cast<GXTexMapID>((swapSel & 1) << 8 | texMap); }
+    GXTevSwapSel GetTexSwapSel() const { return static_cast<GXTevSwapSel>((swapSel >> 3) & 0x03); }
+    GXTevSwapSel GetRasSwapSel() const { return static_cast<GXTevSwapSel>((swapSel >> 1) & 0x03); }
+
+    GXTevColorArg GetColorInA() const { return static_cast<GXTevColorArg>(colIn.GetA()); }
+    GXTevColorArg GetColorInB() const { return static_cast<GXTevColorArg>(colIn.GetB()); }
+    GXTevColorArg GetColorInC() const { return static_cast<GXTevColorArg>(colIn.GetC()); }
+    GXTevColorArg GetColorInD() const { return static_cast<GXTevColorArg>(colIn.GetD()); }
+    GXTevOp GetColorOp() const { return static_cast<GXTevOp>(colIn.GetOp()); }
+    GXTevBias GetColorBias() const { return static_cast<GXTevBias>(colIn.GetBias()); }
+    GXTevScale GetColorScale() const { return static_cast<GXTevScale>(colIn.GetScale()); }
+    bool IsColorClamp() const { return colIn.IsClamp(); }
+    GXTevRegID GetColorOutReg() const { return static_cast<GXTevRegID>(colIn.GetOutReg()); }
+    GXTevKColorSel GetKColorSel() const { return static_cast<GXTevKColorSel>(colIn.GetKSel()); }
+
+    GXTevAlphaArg GetAlphaInA() const { return static_cast<GXTevAlphaArg>(alpIn.GetA()); }
+    GXTevAlphaArg GetAlphaInB() const { return static_cast<GXTevAlphaArg>(alpIn.GetB()); }
+    GXTevAlphaArg GetAlphaInC() const { return static_cast<GXTevAlphaArg>(alpIn.GetC()); }
+    GXTevAlphaArg GetAlphaInD() const { return static_cast<GXTevAlphaArg>(alpIn.GetD()); }
+    GXTevOp GetAlphaOp() const { return static_cast<GXTevOp>(alpIn.GetOp()); }
+    GXTevBias GetAlphaBias() const { return static_cast<GXTevBias>(alpIn.GetBias()); }
+    GXTevScale GetAlphaScale() const { return static_cast<GXTevScale>(alpIn.GetScale()); }
+    bool IsAlphaClamp() const { return alpIn.IsClamp(); }
+    GXTevRegID GetAlphaOutReg() const { return static_cast<GXTevRegID>(alpIn.GetOutReg()); }
+    GXTevKAlphaSel GetKAlphaSel() const { return static_cast<GXTevKAlphaSel>(alpIn.GetKSel()); }
+
+    GXIndTexStageID GetIndStage() const { return static_cast<GXIndTexStageID>(indStage); }
+    GXIndTexMtxID GetIndMtxSel() const { return static_cast<GXIndTexMtxID>((indBiMt >> 3) & 0x0F); }
+    GXIndTexBiasSel GetIndBiasSel() const { return static_cast<GXIndTexBiasSel>(indBiMt & 0x07); }
+    GXIndTexWrap GetIndWrapS() const { return static_cast<GXIndTexWrap>(indWrap & 0x07); }
+    GXIndTexWrap GetIndWrapT() const { return static_cast<GXIndTexWrap>((indWrap >> 3) & 0x07); }
+    GXIndTexAlphaSel GetIndAlphaSel() const {
+        return static_cast<GXIndTexAlphaSel>((indFoAdUtAl >> 4) & 0x03);
+    }
+    bool IsIndUtcLod() const { return static_cast<bool>((indFoAdUtAl >> 3) & 0x01); }
+    bool IsIndAddPrev() const { return static_cast<bool>((indFoAdUtAl >> 2) & 0x01); }
+    GXIndTexFormat GetIndFormat() const { return static_cast<GXIndTexFormat>(indFoAdUtAl & 0x03); }
+
+    void SetOrder(GXTexCoordID aTexCoordGen, GXTexMapID aTexMap, GXChannelID aColChan,
+                  GXTevSwapSel rasSel, GXTevSwapSel texSel) {
+        texCoordGen = aTexCoordGen;
+        colChan = aColChan;
+        texMap = aTexMap;
+        swapSel = aTexMap >> 8 | rasSel << 1 | texSel << 3;
+    }
+
+    void SetColorIn(GXTevColorArg a, GXTevColorArg b, GXTevColorArg c, GXTevColorArg d) {
+        colIn.SetIn(a, b, c, d);
+    }
+
+    void SetColorOp(GXTevOp op, GXTevBias bias, GXTevScale scale, bool clamp, GXTevRegID outReg,
+                    GXTevKColorSel kSel) {
+        colIn.SetOp(op, bias, scale, clamp, outReg, kSel);
+    }
+
+    void SetAlphaIn(GXTevAlphaArg a, GXTevAlphaArg b, GXTevAlphaArg c, GXTevAlphaArg d) {
+        alpIn.SetIn(a, b, c, d);
+    }
+
+    void SetAlphaOp(GXTevOp op, GXTevBias bias, GXTevScale scale, bool clamp, GXTevRegID outReg,
+                    GXTevKAlphaSel kSel) {
+        alpIn.SetOp(op, bias, scale, clamp, outReg, kSel);
+    }
+
+    void SetIndirect(GXIndTexStageID stage, GXIndTexFormat format, GXIndTexBiasSel biasSel,
+                     GXIndTexMtxID mtxSel, GXIndTexWrap wrapS, GXIndTexWrap wrapT, bool addPrev,
+                     bool utcLod, GXIndTexAlphaSel alphaSel) {
+        indStage = stage;
+        indBiMt = biasSel | mtxSel << 3;
+        indWrap = wrapS | wrapT << 3;
+        indFoAdUtAl = format | (addPrev ? 1 : 0) << 2 | (utcLod ? 1 : 0) << 3 | alphaSel << 4;
+    }
+
+private:
+    u8 texCoordGen;     // at 0x0
+    u8 colChan;         // at 0x1
+    u8 texMap;          // at 0x2
+    u8 swapSel;         // at 0x3
+    TevStageInOp colIn; // at 0x4
+    TevStageInOp alpIn; // at 0x8
+    u8 indStage;        // at 0xC
+    u8 indBiMt;         // at 0xD
+    u8 indWrap;         // at 0xE
+    u8 indFoAdUtAl;     // at 0xF
+};
+
+class ChanCtrl {
+public:
+    ChanCtrl() : reserve1(0), reserve2(0) { Set(GX_SRC_VTX, GX_SRC_VTX); }
+
+    GXColorSrc GetColorSrc() const { return static_cast<GXColorSrc>(matSrcCol); }
+    GXColorSrc GetAlphaSrc() const { return static_cast<GXColorSrc>(matSrcAlp); }
+
+    void Set(GXColorSrc colSrc, GXColorSrc alpSrc) {
+        matSrcCol = colSrc;
+        matSrcAlp = alpSrc;
+    }
+
+private:
+    u8 matSrcCol; // at 0x0
+    u8 matSrcAlp; // at 0x1
+    u8 reserve1;  // at 0x2
+    u8 reserve2;  // at 0x3
+};
+
+class AlphaCompare {
+public:
+    AlphaCompare() { Set(GX_ALWAYS, 0, GX_AOP_AND, GX_ALWAYS, 0); }
+
+    GXCompare GetComp0() const { return static_cast<GXCompare>(comp & 0x0F); }
+    GXCompare GetComp1() const { return static_cast<GXCompare>((comp >> 4) & 0x0F); }
+    GXAlphaOp GetOp() const { return static_cast<GXAlphaOp>(op); }
+    u8 GetRef0() const { return ref0; }
+    u8 GetRef1() const { return ref1; }
+
+    void Set(GXCompare aComp0, u8 aRef0, GXAlphaOp aOp, GXCompare aComp1, u8 aRef1) {
+        comp = aComp0 | aComp1 << 4;
+        op = aOp;
+        ref0 = aRef0;
+        ref1 = aRef1;
+    }
+
+private:
+    u8 comp; // at 0x0
+    u8 op;   // at 0x1
+    u8 ref0; // at 0x2
+    u8 ref1; // at 0x3
+};
+
+class BlendMode {
+public:
+    BlendMode() { Set(GX_BM_BLEND, GX_BL_SRCALPHA, GX_BL_INVSRCALPHA, GX_LO_SET); }
+
+    GXBlendMode GetType() const { return static_cast<GXBlendMode>(type); }
+    GXBlendFactor GetSrcFactor() const { return static_cast<GXBlendFactor>(srcFactor); }
+    GXBlendFactor GetDstFactor() const { return static_cast<GXBlendFactor>(dstFactor); }
+    GXLogicOp GetOp() const { return static_cast<GXLogicOp>(op); }
+
+    void Set(GXBlendMode aType, GXBlendFactor aSrcFactor, GXBlendFactor aDstFactor, GXLogicOp aOp) {
+        type = aType;
+        srcFactor = aSrcFactor;
+        dstFactor = aDstFactor;
+        op = aOp;
+    }
+
+private:
+    u8 type;      // at 0x0
+    u8 srcFactor; // at 0x1
+    u8 dstFactor; // at 0x2
+    u8 op;        // at 0x3
 };
 
 } // namespace lyt

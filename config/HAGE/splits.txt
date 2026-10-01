@@ -158,6 +158,85 @@ nw4r/ut/ut_list.cpp:
 nw4r/ut/ut_LinkList.cpp:
 	.text       start:0x800E8774 end:0x800E88E0
 
+nw4r/lyt/lyt_init.cpp:
+	.text       start:0x800F0B58 end:0x800F0B8C
+
+nw4r/lyt/lyt_pane.cpp:
+	.text       start:0x800F0B8C end:0x800F1A48
+	.ctors      start:0x80191FB8 end:0x80191FBC
+	.data       start:0x801CFAE8 end:0x801CFB50
+	.sbss       start:0x80357D20 end:0x80357D28
+	.sdata2     start:0x80359BE8 end:0x80359C08
+
+nw4r/lyt/lyt_group.cpp:
+	.text       start:0x800F1A48 end:0x800F1D68
+	.data       start:0x801CFB50 end:0x801CFB60
+
+nw4r/lyt/lyt_layout.cpp:
+	.text       start:0x800F1D68 end:0x800F29D8
+	.data       start:0x801CFB60 end:0x801CFB98
+	.sbss       start:0x80357D28 end:0x80357D30
+	.sdata2     start:0x80359C08 end:0x80359C10
+
+nw4r/lyt/lyt_picture.cpp:
+	.text       start:0x800F29D8 end:0x800F2EF8
+	.ctors      start:0x80191FBC end:0x80191FC0
+	.data       start:0x801CFB98 end:0x801CFC08
+	.sbss       start:0x80357D30 end:0x80357D38
+	.sdata2     start:0x80359C10 end:0x80359C18
+
+nw4r/lyt/lyt_textBox.cpp:
+	.text       start:0x800F2EF8 end:0x800F44B0
+	.ctors      start:0x80191FC0 end:0x80191FC4
+	.data       start:0x801CFC08 end:0x801CFC80
+	.sdata      start:0x80356FB8 end:0x80356FC0
+	.sbss       start:0x80357D38 end:0x80357D40
+	.sdata2     start:0x80359C18 end:0x80359C30
+
+nw4r/lyt/lyt_window.cpp:
+	.text       start:0x800F44B0 end:0x800F692C
+	.ctors      start:0x80191FC4 end:0x80191FC8
+	.data       start:0x801CFC80 end:0x801CFD38
+	.sbss       start:0x80357D40 end:0x80357D48
+	.sdata2     start:0x80359C30 end:0x80359C48
+
+nw4r/lyt/lyt_bounding.cpp:
+	.text       start:0x800F692C end:0x800F69D8
+	.ctors      start:0x80191FC8 end:0x80191FCC
+	.data       start:0x801CFD38 end:0x801CFDA0
+	.sbss       start:0x80357D48 end:0x80357D50
+
+nw4r/lyt/lyt_material.cpp:
+	.text       start:0x800F69D8 end:0x800F9DA0
+	.data       start:0x801CFDA0 end:0x801CFE08
+	.sdata2     start:0x80359C48 end:0x80359C68
+	.sbss2      start:0x8035A6B8 end:0x8035A6C0
+
+nw4r/lyt/lyt_drawInfo.cpp:
+	.text       start:0x800F9DA0 end:0x800F9E54
+	.data       start:0x801CFE08 end:0x801CFE18
+	.sdata2     start:0x80359C68 end:0x80359C70
+
+nw4r/lyt/lyt_animation.cpp:
+	.text       start:0x800F9E54 end:0x800FA9C4
+	.data       start:0x801CFE18 end:0x801CFE38
+	.sdata2     start:0x80359C70 end:0x80359C90
+
+nw4r/lyt/lyt_resourceAccessor.cpp:
+	.text       start:0x800FA9C4 end:0x800FAA1C
+	.data       start:0x801CFE38 end:0x801CFE50
+
+nw4r/lyt/lyt_arcResourceAccessor.cpp:
+	.text       start:0x800FAA1C end:0x800FADA4
+	.data       start:0x801CFE50 end:0x801CFE68
+	.sdata      start:0x80356FC0 end:0x80356FC8
+
+nw4r/lyt/lyt_common.cpp:
+	.text       start:0x800FADA4 end:0x800FB9EC
+	.bss        start:0x802F25D0 end:0x802F2600
+	.sbss       start:0x80357D50 end:0x80357D58
+	.sdata2     start:0x80359C90 end:0x80359CA0
+
 revolution/OS/OSArena.c:
 	.text       start:0x800FD9F8 end:0x800FDACC
 	.sdata      start:0x80356FF8 end:0x80357000

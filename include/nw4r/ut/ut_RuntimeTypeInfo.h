@@ -3,6 +3,18 @@
 
 #include <types.h>
 
+// Declares an inline GetRuntimeTypeInfo override and the static typeInfo member.
+#define NW4R_UT_RUNTIME_TYPEINFO                                                                   \
+    virtual const nw4r::ut::detail::RuntimeTypeInfo* GetRuntimeTypeInfo() const {                 \
+        return &typeInfo;                                                                          \
+    }                                                                                              \
+    static const nw4r::ut::detail::RuntimeTypeInfo typeInfo
+
+#define NW4R_UT_GET_RUNTIME_TYPEINFO(T) const nw4r::ut::detail::RuntimeTypeInfo T::typeInfo(NULL);
+
+#define NW4R_UT_GET_DERIVED_RUNTIME_TYPEINFO(T, D)                                                 \
+    const nw4r::ut::detail::RuntimeTypeInfo T::typeInfo(&D::typeInfo);
+
 namespace nw4r {
 namespace ut {
 namespace detail {
