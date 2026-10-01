@@ -1,6 +1,13 @@
-#ifndef PF_REMOVE_H
-#define PF_REMOVE_H
+#ifndef RVL_SDK_VF_PF_REMOVE_H
+#define RVL_SDK_VF_PF_REMOVE_H
+#include <types.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-int VFipf2_remove(const char* path);
+int VFipf2_remove(const s8* path);
 
+#ifdef __cplusplus
+}
+#endif
 #endif

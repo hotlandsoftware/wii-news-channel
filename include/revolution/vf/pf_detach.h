@@ -1,8 +1,13 @@
-#ifndef PF_DETACH_H
-#define PF_DETACH_H
+#ifndef RVL_SDK_VF_PF_DETACH_H
+#define RVL_SDK_VF_PF_DETACH_H
+#include <types.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-#include <revolution.h>
+int VFipf2_detach(s8 drive);
 
-int VFipf2_detach(s8);
-
-#endif  // PF_DETACH_H
+#ifdef __cplusplus
+}
+#endif
+#endif

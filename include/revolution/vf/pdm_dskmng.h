@@ -1,14 +1,17 @@
-#ifndef PDM_DSKMNG_H
-#define PDM_DSKMNG_H
-
-#include <revolution/vf/vf_struct.h>
+#ifndef RVL_SDK_VF_PDM_DSKMNG_H
+#define RVL_SDK_VF_PDM_DSKMNG_H
+#include <types.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 s32 VFipdm_init_diskmanager(u32 config, void* param);
-s32 VFipdm_open_disk(PDM_INIT_DISK* p_init_disk_tbl, PDM_DISK** pp_disk);
-s32 VFipdm_close_disk(PDM_DISK* p_disk);
-s32 VFipdm_open_partition(PDM_DISK* p_disk, s32 part_id, PDM_PARTITION** pp_part);
-s32 VFipdm_close_partition(PDM_PARTITION* p_part);
+s32 VFipdm_open_disk(struct PDM_INIT_DISK* p_init_disk_tbl, struct PDM_DISK** pp_disk);
+s32 VFipdm_close_disk(struct PDM_DISK* p_disk);
+s32 VFipdm_open_partition(struct PDM_DISK* p_disk, s32 part_id, struct PDM_PARTITION** pp_part);
+s32 VFipdm_close_partition(struct PDM_PARTITION* p_part);
 
-extern PDM_DISK_SET VFipdm_disk_set;
-
-#endif  // PDM_DSKMNG_H
+#ifdef __cplusplus
+}
+#endif
+#endif

@@ -1,6 +1,13 @@
-#ifndef PF_ERRNUM_H
-#define PF_ERRNUM_H
+#ifndef RVL_SDK_VF_PF_ERRNUM_H
+#define RVL_SDK_VF_PF_ERRNUM_H
+#include <types.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-int VFip2f_errnum(void);
+int VFipf2_errnum();
 
-#endif  // PF_ERRNUM_H
+#ifdef __cplusplus
+}
+#endif
+#endif

@@ -1,10 +1,14 @@
-#ifndef PF_FILELOCK_H
-#define PF_FILELOCK_H
-
-#include <revolution/vf/vf_struct.h>
+#ifndef RVL_SDK_VF_PF_FILELOCK_H
+#define RVL_SDK_VF_PF_FILELOCK_H
+#include <types.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 void VFiPF_InitLockFile();
-s32 VFiPF_LockFile(PF_FILE* p_file);
-s32 VFiPF_UnLockFile(PF_FILE* p_file);
+s32 VFiPF_UnLockFile(struct PF_FILE* p_file);
 
-#endif  // PF_FILELOCK_H
+#ifdef __cplusplus
+}
+#endif
+#endif

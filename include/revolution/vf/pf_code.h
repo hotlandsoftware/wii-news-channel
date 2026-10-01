@@ -1,10 +1,14 @@
-#ifndef PF_CODE_H
-#define PF_CODE_H
-
+#ifndef RVL_SDK_VF_PF_CODE_H
+#define RVL_SDK_VF_PF_CODE_H
 #include <types.h>
-#include <macros.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-int VFiPFCODE_Combine_Width(s16, s16);
-void VFiPFCODE_Divide_Width(u32, s16*, s16*);
+s32 VFiPFCODE_Combine_Width(s16 oem_width, s16 uni_width);
+void VFiPFCODE_Divide_Width(s32 width, s16* oem_width, s16* uni_width);
 
-#endif  // PF_CODE_H
+#ifdef __cplusplus
+}
+#endif
+#endif

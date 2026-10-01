@@ -1,8 +1,18 @@
-#ifndef PF_DIR_H
-#define PF_DIR_H
+#ifndef RVL_SDK_VF_PF_DIR_H
+#define RVL_SDK_VF_PF_DIR_H
+#include <types.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-#include <revolution/vf/vf_struct.h>
+void VFiPFDIR_FinalizeAllDirs(struct PF_VOLUME* p_vol);
 
-void VFiPFDIR_FinalizeAllDirs(PF_VOLUME* p_vol);
+// Not in ogws; names are guesses (from the VFipf2_* wrappers).
+s32 VFiPFDIR_fsfirst(struct PF_STR* p_path, u8 attr, struct PF_DIRENT* p_dirent);
+s32 VFiPFDIR_fsnext(struct PF_DIRENT* p_dirent);
+s32 VFiPFDIR_mkdir(struct PF_STR* p_path);
 
-#endif  // PF_DIR_H
+#ifdef __cplusplus
+}
+#endif
+#endif

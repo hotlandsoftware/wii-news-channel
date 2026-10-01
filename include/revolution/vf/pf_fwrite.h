@@ -1,10 +1,13 @@
-#ifndef PF_FWRITE_H
-#define PF_FWRITE_H
-
+#ifndef RVL_SDK_VF_PF_FWRITE_H
+#define RVL_SDK_VF_PF_FWRITE_H
 #include <types.h>
-#include <macros.h>
-#include <revolution/vf/vf_struct.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-u32 VFipf2_fwrite(u8* p_buf, u32 size, u32 count, PF_FILE* p_file);
+u32 VFipf2_fwrite(void* p_buf, u32 size, u32 count, struct PF_FILE* p_file);
 
+#ifdef __cplusplus
+}
+#endif
 #endif

@@ -1,8 +1,13 @@
-#ifndef PF_FINFO_H
-#define PF_FINFO_H
+#ifndef RVL_SDK_VF_PF_FINFO_H
+#define RVL_SDK_VF_PF_FINFO_H
+#include <types.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-#include <revolution/vf/vf_struct.h>
+int VFipf2_finfo(struct PF_FILE* p_file, struct PF_INFO* p_info);
 
-s32 VFipf2_finfo(PF_FILE* p_file, PF_INFO* p_info);
-
+#ifdef __cplusplus
+}
+#endif
 #endif

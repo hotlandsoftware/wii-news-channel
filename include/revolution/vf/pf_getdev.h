@@ -1,10 +1,13 @@
-#ifndef PF_GETDEV_H
-#define PF_GETDEV_H
-
+#ifndef RVL_SDK_VF_PF_GETDEV_H
+#define RVL_SDK_VF_PF_GETDEV_H
 #include <types.h>
-#include <macros.h>
-#include <revolution/vf/vf_struct.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-s32 VFipf2_devinf(s8 drv_char, PF_DEV_INF* dev_inf);
+int VFipf2_devinf(s8 drv_char, struct PF_DEV_INF* dev_inf);
 
+#ifdef __cplusplus
+}
+#endif
 #endif

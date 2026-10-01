@@ -1,8 +1,13 @@
-#ifndef PF_FCLOSE_H
-#define PF_FCLOSE_H
+#ifndef RVL_SDK_VF_PF_FCLOSE_H
+#define RVL_SDK_VF_PF_FCLOSE_H
+#include <types.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-#include <revolution/vf/vf_struct.h>
+int VFipf2_fclose(struct PF_FILE* p_file);
 
-s32 VFipf2_errnum(PF_FILE* p_file);
-
+#ifdef __cplusplus
+}
+#endif
 #endif

@@ -1,16 +1,15 @@
-#ifndef PF_CLUSTER_H
-#define PF_CLUSTER_H
+#ifndef RVL_SDK_VF_PF_CLUSTER_H
+#define RVL_SDK_VF_PF_CLUSTER_H
+#include <types.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-#include <revolution/vf/vf_struct.h>
+void VFiPFCLUSTER_UpdateLastAccessCluster(struct PF_FILE* p_file, u32 sector);
+s32 VFiPFCLUSTER_AppendCluster(struct PF_FILE* p_file, u32 byte, u32* p_success, u32* sector);
+s32 VFiPFCLUSTER_GetAppendSize(struct PF_FILE* p_file, u32* p_size);
 
-void VFiPFCLUSTER_UpdateLastAccessCluster(PF_FILE* p_file, u32 sector);
-
-void VFiPFCLUSTER_SetLastAccessCluster(PF_FILE*);
-
-s32 VFiPFCLUSTER_AppendCluster(PF_FILE* p_file, u32 byte, u32* p_success, u32* sector);
-
-void VFiPFCLUSTER_InitLastAccessCluster(PF_FILE* p_file);
-
-s32 VFiPFCLUSTER_GetAppendSize(PF_FILE* p_file, u32* p_size);
-
-#endif  // PF_CLUSTER_H
+#ifdef __cplusplus
+}
+#endif
+#endif

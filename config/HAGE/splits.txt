@@ -152,6 +152,157 @@ news/PaneButton.cpp:
 	.sdata      start:0x80356C60 end:0x80356C90
 	.sdata2     start:0x80358EE0 end:0x80358F18
 
+revolution/VF/pf_clib.c:
+	.text       start:0x80053274 end:0x80053574
+
+revolution/VF/pf_code.c:
+	.text       start:0x80053574 end:0x80053590
+	.rodata     start:0x801A6930 end:0x801A6990
+
+revolution/VF/pf_service.c:
+	.text       start:0x80053590 end:0x800536B8
+
+revolution/VF/pf_str.c:
+	.text       start:0x800536B8 end:0x80053C40
+
+revolution/VF/pf_w_clib.c:
+	.text       start:0x80053C40 end:0x80053CD4
+
+revolution/VF/pf_driver.c:
+	.text       start:0x80053CD4 end:0x800546D0
+
+revolution/VF/pdm_bpb.c:
+	.text       start:0x800546D0 end:0x80054FF0
+
+revolution/VF/pdm_disk.c:
+	.text       start:0x80054FF0 end:0x80056550
+
+revolution/VF/pdm_partition.c:
+	.text       start:0x80056550 end:0x80057998
+
+revolution/VF/pdm_mbr.c:
+	.text       start:0x80057998 end:0x80057F58
+
+revolution/VF/pdm_dskmng.c:
+	.text       start:0x80057F58 end:0x8005817C
+	.bss        start:0x8021E938 end:0x8021F4A0
+
+revolution/VF/pf_cache.c:
+	.text       start:0x8005817C end:0x8005A0E4
+
+revolution/VF/pf_cluster.c:
+	.text       start:0x8005A0E4 end:0x8005A59C
+
+revolution/VF/pf_dir.c:
+	.text       start:0x8005A59C end:0x8005B694
+	.sdata      start:0x80356CD0 end:0x80356CD8
+
+revolution/VF/pf_entry.c:
+	.text       start:0x8005B694 end:0x8005D238
+	.data       start:0x801CADD8 end:0x801CADE8
+	.sdata2     start:0x80359050 end:0x80359058
+
+revolution/VF/pf_entry_iterator.c:
+	.text       start:0x8005D238 end:0x8005EC5C
+	.sdata      start:0x80356CD8 end:0x80356D00
+
+revolution/VF/pf_fat.c:
+	.text       start:0x8005EC5C end:0x80061B30
+	.rodata     start:0x801A6990 end:0x801A69D0
+
+revolution/VF/pf_fat12.c:
+	.text       start:0x80061B30 end:0x80062618
+
+revolution/VF/pf_fat16.c:
+	.text       start:0x80062618 end:0x80062B90
+
+revolution/VF/pf_fat32.c:
+	.text       start:0x80062B90 end:0x800631D0
+
+revolution/VF/pf_fatfs.c:
+	.text       start:0x800631D0 end:0x800631D4
+
+revolution/VF/pf_file.c:
+	.text       start:0x800631D4 end:0x80066778
+
+revolution/VF/pf_path.c:
+	.text       start:0x80066778 end:0x800695D4
+	.sdata      start:0x80356D00 end:0x80356D30
+	.sdata2     start:0x80359058 end:0x80359068
+
+revolution/VF/pf_sector.c:
+	.text       start:0x800695D4 end:0x80069CC4
+
+revolution/VF/pf_volume.c:
+	.text       start:0x80069CC4 end:0x8006BA6C
+	.bss        start:0x8021F4A0 end:0x80247460
+
+revolution/VF/pf_cp932.c:
+	.text       start:0x8006BA6C end:0x8006BF7C
+	.rodata     start:0x801A69D0 end:0x801AAC48
+
+revolution/VF/pf_api_util.c:
+	.text       start:0x8006BF7C end:0x8006C0E8
+	.data       start:0x801CADE8 end:0x801CAE88
+
+revolution/VF/pf_attach.c:
+	.text       start:0x8006C0E8 end:0x8006C16C
+
+revolution/VF/pf_detach.c:
+	.text       start:0x8006C16C end:0x8006C194
+
+revolution/VF/pf_errnum.c:
+	.text       start:0x8006C194 end:0x8006C1B8
+
+revolution/VF/pf_fclose.c:
+	.text       start:0x8006C1B8 end:0x8006C1DC
+
+revolution/VF/pf_finfo.c:
+	.text       start:0x8006C1DC end:0x8006C200
+
+revolution/VF/pf_fopen.c:
+	.text       start:0x8006C200 end:0x8006C29C
+
+revolution/VF/pf_format.c:
+	.text       start:0x8006C29C end:0x8006C2C4
+
+revolution/VF/pf_fread.c:
+	.text       start:0x8006C2C4 end:0x8006C2EC
+
+revolution/VF/pf_fseek.c:
+	.text       start:0x8006C2EC end:0x8006C310
+
+revolution/VF/pf_fsfirst.c:
+	.text       start:0x8006C310 end:0x8006C384
+
+revolution/VF/pf_fsnext.c:
+	.text       start:0x8006C384 end:0x8006C3A8
+
+revolution/VF/pf_fwrite.c:
+	.text       start:0x8006C3A8 end:0x8006C3D0
+
+revolution/VF/pf_getdev.c:
+	.text       start:0x8006C3D0 end:0x8006C3F8
+
+revolution/VF/pf_init_prfile2.c:
+	.text       start:0x8006C3F8 end:0x8006C438
+
+revolution/VF/pf_mkdir.c:
+	.text       start:0x8006C438 end:0x8006C488
+
+revolution/VF/pf_remove.c:
+	.text       start:0x8006C488 end:0x8006C4D8
+
+revolution/VF/pf_unmount.c:
+	.text       start:0x8006C4D8 end:0x8006C528
+
+revolution/VF/pf_filelock.c:
+	.text       start:0x8006C528 end:0x8006C53C
+	.sbss       start:0x80357800 end:0x80357808
+
+revolution/VF/pf_system.c:
+	.text       start:0x8006C53C end:0x8006C5B4
+
 nw4r/ut/ut_list.cpp:
 	.text       start:0x800E84D8 end:0x800E8774
 
