@@ -329,6 +329,7 @@ revolution/IPC/ipcMain.c:
 
 revolution/PAD/Pad.c:
 	.text       start:0x80134BDC end:0x80134C38
+	.sbss       start:0x80358310 end:0x80358318
 
 Runtime.PPCEABI.H/__va_arg.c:
 	.text       start:0x80179F80 end:0x8017A048

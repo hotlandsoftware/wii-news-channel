@@ -55,7 +55,7 @@ static __OSExceptionHandler* OSExceptionTable;
 static void OSExceptionInit(void);
 void OSDefaultExceptionHandler( __OSException exception, OSContext* context );
 
-static const char* __OSVersion = "<< RVL_SDK - OS \trelease build: Jan 30 2008 01:38:43 (0x4199_60831) >>";
+const char* __OSVersion = "<< RVL_SDK - OS \trelease build: Jun 28 2007 02:03:56 (0x4199_60831) >>";
 
 asm void __OSFPRInit(void) {
     nofralloc
@@ -348,7 +348,7 @@ static void CheckTargets(void) {
             break;
         case 0x81:
             OSReport("OS ERROR: boot program is not for RVL target. Please use correct boot program.\n");
-            OSPanic(__FILE__, 0x47E, "Failed to run app");
+            OSPanic(__FILE__, 0x46F, "Failed to run app");
             break;
         default:
             break;
@@ -359,7 +359,7 @@ static void CheckTargets(void) {
             break;
         case 0x81:
             OSReport("OS ERROR: apploader[D].img is not for RVL target. Please use correct apploader[D].img.\n");
-            OSPanic(__FILE__, 0x490, "Failed to run app");
+            OSPanic(__FILE__, 0x481, "Failed to run app");
             break;
         default:
             break;
@@ -382,7 +382,7 @@ static void ReportOSInfo(void) {
     void* MEM2Lo;
 
     OSReport("\nRevolution OS\n");
-    OSReport("Kernel built : %s %s\n", "Jan 30 2008", "01:38:43");
+    OSReport("Kernel built : %s %s\n", "Jun 28 2007", "02:03:56");
     OSReport("Console Type : " );
 
     consoleType = OSGetConsoleType();
@@ -398,9 +398,6 @@ static void ReportOSInfo(void) {
                     break;
                 case 0x20:
                     OSReport("Pre-production board 2-2\n");
-                    break;
-                case 0x100:
-                    OSReport("RVA 1\n");
                     break;
                 default:
                     OSReport("Retail %d\n", consoleType);
@@ -615,12 +612,6 @@ void OSInit(void) {
         else if (!__OSDeviceCode) {
             DCInvalidateRange(&DriveInfo, sizeof(DriveInfo));
             DVDInquiryAsync(&DriveBlock, &DriveInfo, InquiryCallback);
-        }
-
-        if (OSGetAppType() == 0x80 && !__OSInReboot) {
-            if (!__DVDCheckDevice()) {
-                OSReturnToMenu();
-            }
         }
     }
 

@@ -509,7 +509,7 @@ config.libs = [
         "cflags": cflags_rvl,
         "progress_category": "sdk",
         "objects": [
-            Object(NonMatching, "revolution/OS/OS.c"),
+            Object(Matching, "revolution/OS/OS.c"),
             Object(Matching, "revolution/OS/OSAlarm.c"),
             Object(Matching, "revolution/OS/OSAlloc.c"),
             Object(Matching, "revolution/OS/OSArena.c"),
