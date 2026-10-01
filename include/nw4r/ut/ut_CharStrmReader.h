@@ -24,6 +24,14 @@ public:
     u16 ReadNextCharCP1252();
     u16 ReadNextCharSJIS();
 
+    template <typename T> T GetChar(int offset) const {
+        return static_cast<const T*>(mCharStrm)[offset];
+    }
+
+    template <typename T> void StepStrm(int offset) {
+        static_cast<const T*>(mCharStrm) += offset;
+    }
+
     const void* mCharStrm;    // at 0x0
     const ReadFunc mReadFunc; // at 0x4
 };

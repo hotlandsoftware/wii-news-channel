@@ -504,6 +504,96 @@ nw4r/ut/ut_list.cpp:
 nw4r/ut/ut_LinkList.cpp:
 	.text       start:0x800E8774 end:0x800E88E0
 
+nw4r/ut/ut_binaryFileFormat.cpp:
+	.text       start:0x800E88E0 end:0x800E8954
+
+nw4r/ut/ut_CharStrmReader.cpp:
+	.text       start:0x800E8954 end:0x800E8A64
+
+nw4r/ut/ut_TagProcessorBase.cpp:
+	.text       start:0x800E8A64 end:0x800E9224
+	.data       start:0x801CE6A8 end:0x801CE6D0
+	.sdata2     start:0x80359B70 end:0x80359B78
+
+nw4r/ut/ut_IOStream.cpp:
+	.text       start:0x800E9224 end:0x800E924C
+	.ctors      start:0x80191FA0 end:0x80191FA4
+	.sbss       start:0x80357CE8 end:0x80357CF0
+
+nw4r/ut/ut_FileStream.cpp:
+	.text       start:0x800E924C end:0x800E9360
+	.ctors      start:0x80191FA4 end:0x80191FA8
+	.sbss       start:0x80357CF0 end:0x80357CF8
+
+nw4r/ut/ut_DvdFileStream.cpp:
+	.text       start:0x800E9360 end:0x800E9930
+	.ctors      start:0x80191FA8 end:0x80191FAC
+	.data       start:0x801CE6D0 end:0x801CE738
+	.sbss       start:0x80357CF8 end:0x80357D00
+
+nw4r/ut/ut_DvdLockedFileStream.cpp:
+	.text       start:0x800E9930 end:0x800E9B64
+	.ctors      start:0x80191FAC end:0x80191FB0
+	.data       start:0x801CE738 end:0x801CE7A0
+	.bss        start:0x802F2560 end:0x802F2578
+	.sbss       start:0x80357D00 end:0x80357D08
+
+nw4r/ut/ut_LockedCache.cpp:
+	.text       start:0x800E9B64 end:0x800E9D10
+	.ctors      start:0x80191FB0 end:0x80191FB4
+	.bss        start:0x802F2578 end:0x802F2598
+
+nw4r/ut/ut_Font.cpp:
+	.text       start:0x800E9D10 end:0x800E9DB8
+	.data       start:0x801CE7A0 end:0x801CE7D0
+
+nw4r/ut/ut_RomFont.cpp:
+	.text       start:0x800E9DB8 end:0x800E9DF8
+	.data       start:0x801CE7D0 end:0x801CE828
+
+nw4r/ut/ut_ResFontBase.cpp:
+	.text       start:0x800E9DF8 end:0x800EA4BC
+	.data       start:0x801CE828 end:0x801CE890
+
+nw4r/ut/ut_ResFont.cpp:
+	.text       start:0x800EA4BC end:0x800EA7C0
+	.data       start:0x801CE890 end:0x801CE8E8
+
+nw4r/ut/ut_ArchiveFontBase.cpp:
+	.text       start:0x800EA7C0 end:0x800EBBCC
+	.data       start:0x801CE8E8 end:0x801CE940
+
+nw4r/ut/ut_ArchiveFont.cpp:
+	.text       start:0x800EBBCC end:0x800EC4D8
+	.data       start:0x801CE940 end:0x801CE9D0
+
+nw4r/ut/ut_CharWriter.cpp:
+	.text       start:0x800EC4D8 end:0x800EDFF8
+	.bss        start:0x802F2598 end:0x802F25B8
+	.sbss       start:0x80357D08 end:0x80357D10
+	.sdata2     start:0x80359B78 end:0x80359B98
+
+nw4r/ut/ut_TextWriterBase.cpp:
+	.text       start:0x800EDFF8 end:0x800F02A8
+	.ctors      start:0x80191FB4 end:0x80191FB8
+	.bss        start:0x802F25B8 end:0x802F25D0
+	.sdata      start:0x80356FB0 end:0x80356FB8
+	.sbss       start:0x80357D10 end:0x80357D20
+	.sdata2     start:0x80359B98 end:0x80359BB0
+
+nw4r/math/math_arithmetic.cpp:
+	.text       start:0x800F02A8 end:0x800F0324
+	.sdata2     start:0x80359BB0 end:0x80359BB8
+
+nw4r/math/math_triangular.cpp:
+	.text       start:0x800F0324 end:0x800F0618
+	.data       start:0x801CE9D0 end:0x801CFAE8
+	.sdata2     start:0x80359BB8 end:0x80359BD8
+
+nw4r/math/math_types.cpp:
+	.text       start:0x800F0618 end:0x800F0B58
+	.sdata2     start:0x80359BD8 end:0x80359BE8
+
 nw4r/lyt/lyt_init.cpp:
 	.text       start:0x800F0B58 end:0x800F0B8C
 

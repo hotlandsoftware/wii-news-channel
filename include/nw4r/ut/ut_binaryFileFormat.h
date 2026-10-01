@@ -4,6 +4,14 @@
 // From ogws include/nw4r/ut/ut_binaryFileFormat.h (added for g3d, Task 10)
 #include <types.h>
 
+#ifndef NW4R_VERSION
+#define NW4R_VERSION(major, minor) ((major & 0xFF) << 8 | minor & 0xFF)
+#endif
+
+#define NW4R_BYTEORDER_BIG 0xFEFF
+#define NW4R_BYTEORDER_LITTLE 0xFFFE
+#define NW4R_BYTEORDER_NATIVE NW4R_BYTEORDER_BIG
+
 namespace nw4r {
 namespace ut {
 

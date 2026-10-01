@@ -3,6 +3,7 @@
 
 #include <types.h>
 #include <macros.h>
+#include <revolution/gx.h>
 #include <nw4r/ut/ut_CharStrmReader.h>
 
 namespace nw4r {
@@ -16,28 +17,50 @@ enum FontEncoding {
     NUM_OF_FONT_ENCODING
 };
 
+struct CharWidths {
+    s8 left;       // at 0x0
+    u8 glyphWidth; // at 0x1
+    s8 charWidth;  // at 0x2
+};
+
+struct Glyph {
+    void* pTexture;     // at 0x0
+    CharWidths widths;  // at 0x4
+    u8 height;          // at 0x7
+    GXTexFmt texFormat; // at 0x8
+    u16 texWidth;       // at 0xC
+    u16 texHeight;      // at 0xE
+    u16 cellX;          // at 0x10
+    u16 cellY;          // at 0x12
+};
+
+// From ogws ut_Font.h; the virtual layout matches the vtables in the DOL.
 class Font {
 public:
-    // Added for lyt (Task 15): constructor, reader function member (as in tp nw4hbm)
-    Font() : mReaderFunc(&CharStrmReader::ReadNextCharCP1252) {}
+    enum Type { TYPE_NULL, TYPE_ROM, TYPE_RESOURCE, TYPE_PAIR };
 
-    virtual ~Font();                          // at 0x08
-    virtual int GetWidth() const = 0;         // at 0x0C
-    virtual int GetHeight() const = 0;        // at 0x10
-    virtual int GetAscent() const = 0;        // at 0x14
-    virtual int GetDescent() const = 0;       // at 0x18
-    virtual int GetBaselinePos() const = 0;   // at 0x1C
-    virtual int GetCellHeight() const = 0;    // at 0x20
-    virtual int GetCellWidth() const = 0;     // at 0x24
-    virtual int GetMaxCharWidth() const = 0;  // at 0x28
-    virtual int GetType() const = 0;          // at 0x2C
-    virtual int GetTextureFormat() const = 0; // at 0x30
-    virtual int GetLineFeed() const = 0;      // at 0x34
-    virtual void GetDefaultCharWidths() const = 0;  // at 0x38
-    virtual void SetDefaultCharWidths() = 0;  // at 0x3C
-    virtual bool SetAlternateChar(u16 c) = 0; // at 0x40
-    virtual void SetLineFeed(int lf) = 0;     // at 0x44
-    virtual int GetCharWidth(u16 c) const = 0; // at 0x48
+    Font() : mReaderFunc(&CharStrmReader::ReadNextCharCP1252) {}
+    virtual ~Font() {} // at 0x08
+
+    virtual int GetWidth() const = 0;                                 // at 0x0C
+    virtual int GetHeight() const = 0;                                // at 0x10
+    virtual int GetAscent() const = 0;                                // at 0x14
+    virtual int GetDescent() const = 0;                               // at 0x18
+    virtual int GetBaselinePos() const = 0;                           // at 0x1C
+    virtual int GetCellHeight() const = 0;                            // at 0x20
+    virtual int GetCellWidth() const = 0;                             // at 0x24
+    virtual int GetMaxCharWidth() const = 0;                          // at 0x28
+    virtual Type GetType() const = 0;                                 // at 0x2C
+    virtual GXTexFmt GetTextureFormat() const = 0;                    // at 0x30
+    virtual int GetLineFeed() const = 0;                              // at 0x34
+    virtual CharWidths GetDefaultCharWidths() const = 0;              // at 0x38
+    virtual void SetDefaultCharWidths(const CharWidths& rWidths) = 0; // at 0x3C
+    virtual bool SetAlternateChar(u16 c) = 0;                         // at 0x40
+    virtual void SetLineFeed(int lf) = 0;                             // at 0x44
+    virtual int GetCharWidth(u16 c) const = 0;                        // at 0x48
+    virtual CharWidths GetCharWidths(u16 c) const = 0;                // at 0x4C
+    virtual void GetGlyph(Glyph* pGlyph, u16 c) const = 0;            // at 0x50
+    virtual FontEncoding GetEncoding() const = 0;                     // at 0x54
 
     void InitReaderFunc(FontEncoding encoding);
 
