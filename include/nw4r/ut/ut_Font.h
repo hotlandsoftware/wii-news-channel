@@ -2,12 +2,25 @@
 #define NW4R_UT_FONT_H
 
 #include <types.h>
+#include <macros.h>
+#include <nw4r/ut/ut_CharStrmReader.h>
 
 namespace nw4r {
 namespace ut {
 
+enum FontEncoding {
+    FONT_ENCODING_UTF8,
+    FONT_ENCODING_UTF16,
+    FONT_ENCODING_SJIS,
+    FONT_ENCODING_CP1252,
+    NUM_OF_FONT_ENCODING
+};
+
 class Font {
 public:
+    // Added for lyt (Task 15): constructor, reader function member (as in tp nw4hbm)
+    Font() : mReaderFunc(&CharStrmReader::ReadNextCharCP1252) {}
+
     virtual ~Font();                          // at 0x08
     virtual int GetWidth() const = 0;         // at 0x0C
     virtual int GetHeight() const = 0;        // at 0x10
@@ -25,6 +38,16 @@ public:
     virtual bool SetAlternateChar(u16 c) = 0; // at 0x40
     virtual void SetLineFeed(int lf) = 0;     // at 0x44
     virtual int GetCharWidth(u16 c) const = 0; // at 0x48
+
+    void InitReaderFunc(FontEncoding encoding);
+
+    CharStrmReader GetCharStrmReader() const NO_INLINE {
+        CharStrmReader reader(mReaderFunc);
+        return reader;
+    }
+
+private:
+    CharStrmReader::ReadFunc mReaderFunc; // at 0x04
 };
 
 } // namespace ut

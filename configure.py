@@ -299,6 +299,7 @@ cflags_nw4r_lyt = [
     "-DNW4R_MATH_VEC3_NO_DTOR",
     "-DNW4R_MATH_MTX34_NO_DTOR",
     "-DNW4R_UT_COLOR_DEFAULT_WHITE",
+    "-DNW4R_UT_RECT_DEFAULT_ZERO",
 ]
 
 # RVL SDK libraries; flags as in doldecomp/ogws
