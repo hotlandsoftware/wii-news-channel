@@ -1,6 +1,8 @@
 #include <nw4r/snd.h>
 #include <nw4r/ut.h>
 
+#include <nw4r/snd/snd_VoiceManager.h>
+
 namespace nw4r {
 namespace snd {
 namespace detail {
@@ -9,7 +11,7 @@ void SeqTrack::SetPlayerTrackNo(int no) {
     mPlayerTrackNo = no;
 }
 
-SeqTrack::SeqTrack() : mOpenFlag(false), mPlayer(NULL), mChannelList(NULL) {
+SeqTrack::SeqTrack() : mPlayer(NULL), mChannelList(NULL) {
     InitParam();
 }
 
@@ -18,6 +20,8 @@ SeqTrack::~SeqTrack() {
 }
 
 void SeqTrack::InitParam() {
+    mOpenFlag = false;
+
     mExtVolume = 1.0f;
     mExtPitch = 1.0f;
     mExtPan = 0.0f;
@@ -47,7 +51,6 @@ void SeqTrack::InitParam() {
     mParserTrackParam.silenceFlag = false;
     mParserTrackParam.noteFinishWait = false;
     mParserTrackParam.portaFlag = false;
-    mParserTrackParam.damperFlag = false;
 
     mParserTrackParam.volume = 127;
     mParserTrackParam.volume2 = 127;
@@ -95,8 +98,6 @@ void SeqTrack::Open() {
 }
 
 void SeqTrack::Close() {
-    SoundThread::AutoLock lock;
-
     ReleaseAllChannel(-1);
     FreeAllChannel();
 
@@ -104,8 +105,6 @@ void SeqTrack::Close() {
 }
 
 void SeqTrack::UpdateChannelLength() {
-    SoundThread::AutoLock lock;
-
     if (!mOpenFlag) {
         return;
     }
@@ -115,9 +114,11 @@ void SeqTrack::UpdateChannelLength() {
 
         if (pIt->GetLength() > 0) {
             pIt->SetLength(pIt->GetLength() - 1);
-        }
 
-        UpdateChannelRelease(pIt);
+            if (pIt->GetLength() == 0) {
+                pIt->Release();
+            }
+        }
 
         if (!pIt->IsAutoUpdateSweep()) {
             pIt->UpdateSweep(1);
@@ -125,33 +126,21 @@ void SeqTrack::UpdateChannelLength() {
     }
 }
 
-void SeqTrack::UpdateChannelRelease(Channel* pChannel) {
-    SoundThread::AutoLock lock;
-
-    if (pChannel->GetLength() == 0 && !pChannel->IsRelease() &&
-        !mParserTrackParam.damperFlag) {
-
-        pChannel->Release();
-    }
-}
-
 int SeqTrack::ParseNextTick(bool doNoteOn) {
-    SoundThread::AutoLock lock;
-
     if (!mOpenFlag) {
         return 0;
     }
 
     if (mParserTrackParam.noteFinishWait) {
         if (mChannelList != NULL) {
-            return 1;
+            return 0;
         }
 
         mParserTrackParam.noteFinishWait = false;
     }
 
     if (mParserTrackParam.wait > 0 && --mParserTrackParam.wait > 0) {
-        return 1;
+        return 0;
     }
 
     if (mParserTrackParam.currentAddr != NULL) {
@@ -168,7 +157,7 @@ int SeqTrack::ParseNextTick(bool doNoteOn) {
 }
 
 void SeqTrack::StopAllChannel() {
-    SoundThread::AutoLock lock;
+    ut::AutoInterruptLock lock;
 
     for (Channel* pIt = mChannelList; pIt != NULL;
          pIt = pIt->GetNextTrackChannel()) {
@@ -181,9 +170,10 @@ void SeqTrack::StopAllChannel() {
 }
 
 void SeqTrack::ReleaseAllChannel(int release) {
-    SoundThread::AutoLock lock;
-
     UpdateChannelParam();
+
+    ut::AutoInterruptLock lock;
+    VoiceManager::GetInstance().LockUpdateVoicePriority();
 
     for (Channel* pIt = mChannelList; pIt != NULL;
          pIt = pIt->GetNextTrackChannel()) {
@@ -196,10 +186,12 @@ void SeqTrack::ReleaseAllChannel(int release) {
             pIt->Release();
         }
     }
+
+    VoiceManager::GetInstance().UnlockUpdateVoicePriority();
 }
 
 void SeqTrack::PauseAllChannel(bool flag) {
-    SoundThread::AutoLock lock;
+    ut::AutoInterruptLock lock;
 
     for (Channel* pIt = mChannelList; pIt != NULL;
          pIt = pIt->GetNextTrackChannel()) {
@@ -211,15 +203,13 @@ void SeqTrack::PauseAllChannel(bool flag) {
 }
 
 void SeqTrack::AddChannel(Channel* pChannel) {
-    SoundThread::AutoLock lock;
+    ut::AutoInterruptLock lock;
 
     pChannel->SetNextTrackChannel(mChannelList);
     mChannelList = pChannel;
 }
 
 void SeqTrack::UpdateChannelParam() {
-    SoundThread::AutoLock lock;
-
     if (!mOpenFlag) {
         return;
     }
@@ -258,13 +248,16 @@ void SeqTrack::UpdateChannelParam() {
     surroundPan += mExtSurroundPan;
     surroundPan += mPlayer->GetSurroundPan();
 
+    f32 unk18 = 0.0f;
+    unk18 += mPlayer->GetUnk18();
+
+    f32 unk1C = 0.0f;
+    unk1C += mPlayer->GetUnk1C();
+
     f32 lpfFreq = 0.0f;
     lpfFreq += (mParserTrackParam.lpfFreq - 64) / 64.0f;
     lpfFreq += mExtLpfFreq;
     lpfFreq += mPlayer->GetLpfFreq();
-
-    int remoteFilter = 0;
-    remoteFilter += mPlayer->GetRemoteFilter();
 
     f32 mainSend = 0.0f;
     mainSend += (mParserTrackParam.mainSend / 127.0f) - 1.0f;
@@ -289,6 +282,8 @@ void SeqTrack::UpdateChannelParam() {
         remoteFxSend[i] += mPlayer->GetRemoteFxSend(i);
     }
 
+    ut::AutoInterruptLock lock;
+
     for (Channel* pIt = mChannelList; pIt != NULL;
          pIt = pIt->GetNextTrackChannel()) {
 
@@ -297,8 +292,9 @@ void SeqTrack::UpdateChannelParam() {
         pIt->SetUserPitchRatio(pitchRatio);
         pIt->SetUserPan(pan);
         pIt->SetUserSurroundPan(surroundPan);
+        pIt->SetUserUnk48(unk18);
+        pIt->SetUserUnk4C(unk1C);
         pIt->SetUserLpfFreq(lpfFreq);
-        pIt->SetRemoteFilter(remoteFilter);
         pIt->SetOutputLine(mPlayer->GetOutputLine());
         pIt->SetMainOutVolume(mPlayer->GetMainOutVolume());
         pIt->SetMainSend(mainSend);
@@ -320,7 +316,7 @@ void SeqTrack::UpdateChannelParam() {
 }
 
 void SeqTrack::FreeAllChannel() {
-    SoundThread::AutoLock lock;
+    ut::AutoInterruptLock lock;
 
     for (Channel* pIt = mChannelList; pIt != NULL;
          pIt = pIt->GetNextTrackChannel()) {
@@ -334,7 +330,6 @@ void SeqTrack::FreeAllChannel() {
 void SeqTrack::ChannelCallbackFunc(Channel* pDropChannel,
                                    Channel::ChannelCallbackStatus status,
                                    u32 callbackArg) {
-    SoundThread::AutoLock lock;
     SeqTrack* p = reinterpret_cast<SeqTrack*>(callbackArg);
 
     switch (status) {
@@ -353,6 +348,8 @@ void SeqTrack::ChannelCallbackFunc(Channel* pDropChannel,
         p->mPlayer->ChannelCallback(pDropChannel);
     }
 
+    ut::AutoInterruptLock lock;
+
     if (p->mChannelList == pDropChannel) {
         p->mChannelList = pDropChannel->GetNextTrackChannel();
         return;
@@ -369,7 +366,7 @@ void SeqTrack::ChannelCallbackFunc(Channel* pDropChannel,
 }
 
 void SeqTrack::SetMute(SeqMute mute) {
-    SoundThread::AutoLock lock;
+    ut::AutoInterruptLock lock;
 
     switch (mute) {
     case MUTE_OFF: {
@@ -414,8 +411,6 @@ volatile s16* SeqTrack::GetVariablePtr(int idx) {
 }
 
 Channel* SeqTrack::NoteOn(int key, int velocity, s32 length, bool tie) {
-    SoundThread::AutoLock lock;
-
     SeqPlayer* pPlayer = GetSeqPlayer();
     Channel* pChannel = NULL;
 
@@ -485,9 +480,6 @@ Channel* SeqTrack::NoteOn(int key, int velocity, s32 length, bool tie) {
     mParserTrackParam.portaKey = key;
 
     pChannel->SetSilence(mParserTrackParam.silenceFlag != 0, 0);
-    pChannel->SetReleasePriorityFix(mPlayer->IsReleasePriorityFix());
-    pChannel->SetPanMode(mPlayer->GetPanMode());
-    pChannel->SetPanCurve(mPlayer->GetPanCurve());
 
     return pChannel;
 }

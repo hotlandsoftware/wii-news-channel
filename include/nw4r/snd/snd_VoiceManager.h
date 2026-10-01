@@ -33,6 +33,11 @@ public:
     void ChangeVoicePriority(Voice* pVoice);
     void UpdateAllVoicesSync(u32 syncFlag);
 
+    // Older revision (names guessed): stop/resume re-sorting the voice
+    // priority list while several voices change (SeqTrack::ReleaseAllChannel)
+    void LockUpdateVoicePriority();
+    void UnlockUpdateVoicePriority();
+
     const VoiceList& GetVoiceList() const {
         return mPrioVoiceList;
     }

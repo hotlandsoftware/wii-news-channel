@@ -2,6 +2,8 @@
 #define NW4R_SND_INSTANCE_POOL_H
 #include <nw4r/types_nw4r.h>
 
+#include <new>
+
 namespace nw4r {
 namespace snd {
 namespace detail {

@@ -20,9 +20,10 @@ public:
     virtual bool Start() = 0;           // at 0xC
     virtual void Stop() = 0;            // at 0x10
     virtual void Pause(bool flag) = 0;  // at 0x14
-    virtual bool IsActive() const = 0;  // at 0x18
-    virtual bool IsStarted() const = 0; // at 0x1C
-    virtual bool IsPause() const = 0;   // at 0x20
+    virtual bool IsActive() const = 0;   // at 0x18
+    virtual bool IsPrepared() const = 0; // at 0x1C
+    virtual bool IsStarted() const = 0;  // at 0x20
+    virtual bool IsPause() const = 0;    // at 0x24
 
     void InitParam();
 
@@ -59,6 +60,14 @@ public:
     }
     void SetSurroundPan(f32 pan) {
         mSurroundPan = pan;
+    }
+
+    // CONFLICT (ogws): two extra parameters in this older revision
+    f32 GetUnk18() const {
+        return mUnk18;
+    }
+    f32 GetUnk1C() const {
+        return mUnk1C;
     }
 
     f32 GetLpfFreq() const {
@@ -98,26 +107,8 @@ public:
     f32 GetRemoteSend(int remote) const;
     f32 GetRemoteFxSend(int remote) const;
 
-    int GetRemoteFilter() const {
-        return mRemoteFilter;
-    }
-    void SetRemoteFilter(int filter) {
-        mRemoteFilter = ut::Clamp(filter, 0, REMOTE_FILTER_MAX);
-    }
 
-    PanMode GetPanMode() const {
-        return mPanMode;
-    }
-    void SetPanMode(PanMode mode) {
-        mPanMode = mode;
-    }
 
-    PanCurve GetPanCurve() const {
-        return mPanCurve;
-    }
-    void SetPanCurve(PanCurve curve) {
-        mPanCurve = curve;
-    }
 
 private:
     u32 mId; // at 0x4
@@ -126,19 +117,18 @@ private:
     f32 mPitch;       // at 0xC
     f32 mPan;         // at 0x10
     f32 mSurroundPan; // at 0x14
-    f32 mLpfFreq;     // at 0x18
-    char UNK_0x1C[0x4];
+    f32 mUnk18;       // at 0x18
+    f32 mUnk1C;       // at 0x1C
+    f32 mLpfFreq;     // at 0x20
+    char UNK_0x24[0x4];
 
-    int mOutputLine;                            // at 0x20
-    f32 mMainOutVolume;                         // at 0x24
-    f32 mMainSend;                              // at 0x28
-    f32 mFxSend[AUX_BUS_NUM];                   // at 0x2C
-    f32 mRemoteOutVolume[WPAD_MAX_CONTROLLERS]; // at 0x38
-    f32 mRemoteSend[WPAD_MAX_CONTROLLERS];      // at 0x48
-    f32 mRemoteFxSend[WPAD_MAX_CONTROLLERS];    // at 0x58
-    u8 mRemoteFilter;                           // at 0x68
-    PanMode mPanMode;                           // at 0x6C
-    PanCurve mPanCurve;                         // at 0x70
+    int mOutputLine;                            // at 0x28
+    f32 mMainOutVolume;                         // at 0x2C
+    f32 mMainSend;                              // at 0x30
+    f32 mFxSend[AUX_BUS_NUM];                   // at 0x34
+    f32 mRemoteOutVolume[WPAD_MAX_CONTROLLERS]; // at 0x40
+    f32 mRemoteSend[WPAD_MAX_CONTROLLERS];      // at 0x50
+    f32 mRemoteFxSend[WPAD_MAX_CONTROLLERS];    // at 0x60
 };
 
 } // namespace detail

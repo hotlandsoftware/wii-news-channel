@@ -49,6 +49,9 @@ public:
         return mActiveFlag != 0;
     } // at 0x18
 
+    // (BasicPlayer::IsPrepared is pure in this older revision)
+    virtual bool IsPrepared() const;
+
     virtual bool IsStarted() const {
         return mStartedFlag != 0;
     } // at 0x1C

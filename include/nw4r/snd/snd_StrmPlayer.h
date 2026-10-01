@@ -66,9 +66,9 @@ public:
         Stop();
     } // at 0x14
 
-    bool IsPrepared() const {
+    virtual bool IsPrepared() const {
         return mPreparedFlag;
-    }
+    } // (virtual in this older revision)
 
     void SetTaskErrorFlag() {
         mTaskErrorFlag = true;

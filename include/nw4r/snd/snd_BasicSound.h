@@ -78,7 +78,7 @@ public:
     virtual void SetAutoStopCounter(int count); // at 0x20
     virtual void FadeIn(int frames);            // at 0x24
     virtual void Shutdown();                    // at 0x28
-    virtual bool IsPrepared() const = 0;        // at 0x2C
+    virtual bool IsPrepared() const;            // at 0x2C
     virtual bool IsPause() const;               // at 0x30
 
     virtual void SetInitialVolume(f32 vol);       // at 0x34
@@ -88,16 +88,14 @@ public:
     virtual void SetSurroundPan(f32 pan);         // at 0x44
     virtual void SetLpfFreq(f32 freq);            // at 0x48
     virtual void SetPlayerPriority(int priority); // at 0x4C
-    virtual void SetRemoteFilter(int filter);     // at 0x50
-    virtual void SetPanMode(PanMode mode);        // at 0x54
-    virtual void SetPanCurve(PanCurve curve);     // at 0x58
+    // (no SetRemoteFilter/SetPanMode/SetPanCurve in this older revision)
 
-    virtual bool IsAttachedTempSpecialHandle() = 0; // at 0x5C
-    virtual void DetachTempSpecialHandle() = 0;     // at 0x60
+    virtual bool IsAttachedTempSpecialHandle() = 0; // at 0x50
+    virtual void DetachTempSpecialHandle() = 0;     // at 0x54
 
-    virtual void InitParam();                              // at 0x64
-    virtual BasicPlayer& GetBasicPlayer() = 0;             // at 0x68
-    virtual const BasicPlayer& GetBasicPlayer() const = 0; // at 0x6C
+    virtual void InitParam();                              // at 0x58
+    virtual BasicPlayer& GetBasicPlayer() = 0;             // at 0x5C
+    virtual const BasicPlayer& GetBasicPlayer() const = 0; // at 0x60
 
     PlayerHeap* GetPlayerHeap() {
         return mHeap;

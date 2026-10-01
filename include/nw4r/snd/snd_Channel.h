@@ -102,8 +102,11 @@ public:
         mUserLpfFreq = freq;
     }
 
-    void SetRemoteFilter(int filter) {
-        mRemoteFilter = filter;
+    void SetUserUnk48(f32 value) {
+        mUserUnk48 = value;
+    }
+    void SetUserUnk4C(f32 value) {
+        mUserUnk4C = value;
     }
     void SetOutputLine(int flag) {
         mOutputLineFlag = flag;
@@ -163,12 +166,6 @@ public:
         mLength = length;
     }
 
-    void SetPanMode(PanMode mode) {
-        mPanMode = mode;
-    }
-    void SetPanCurve(PanCurve curve) {
-        mPanCurve = curve;
-    }
 
     Channel* GetNextTrackChannel() const {
         return mNextLink;
@@ -209,45 +206,45 @@ private:
     f32 mUserPitchRatio;  // at 0x3C
     f32 mUserPan;         // at 0x40
     f32 mUserSurroundPan; // at 0x44
-    f32 mUserLpfFreq;     // at 0x48
+    // CONFLICT (ogws): this older revision has two more user parameters here
+    // (set from BasicPlayer +0x18/+0x1C) and no remote filter
+    f32 mUserUnk48;       // at 0x48
+    f32 mUserUnk4C;       // at 0x4C
+    f32 mUserLpfFreq;     // at 0x50
 
-    int mRemoteFilter;   // at 0x4C
-    int mOutputLineFlag; // at 0x50
+    int mOutputLineFlag; // at 0x54
 
-    f32 mMainOutVolume;       // at 0x54
-    f32 mMainSend;            // at 0x58
-    f32 mFxSend[AUX_BUS_NUM]; // at 0x5C
+    f32 mMainOutVolume;       // at 0x58
+    f32 mMainSend;            // at 0x5C
+    f32 mFxSend[AUX_BUS_NUM]; // at 0x60
 
-    f32 mRemoteOutVolume[WPAD_MAX_CONTROLLERS]; // at 0x68
-    f32 mRemoteSend[WPAD_MAX_CONTROLLERS];      // at 0x78
-    f32 mRemoteFxSend[WPAD_MAX_CONTROLLERS];    // at 0x88
+    f32 mRemoteOutVolume[WPAD_MAX_CONTROLLERS]; // at 0x6C
+    f32 mRemoteSend[WPAD_MAX_CONTROLLERS];      // at 0x7C
+    f32 mRemoteFxSend[WPAD_MAX_CONTROLLERS];    // at 0x8C
 
-    f32 mUserPitch;    // at 0x98
-    f32 mSweepPitch;   // at 0x9C
-    int mSweepCounter; // at 0xA0
-    int mSweepLength;  // at 0xA4
+    f32 mUserPitch;    // at 0x9C
+    f32 mSweepPitch;   // at 0xA0
+    int mSweepCounter; // at 0xA4
+    int mSweepLength;  // at 0xA8
 
-    f32 mInitVolume;                   // at 0xA8
-    f32 mInitPan;                      // at 0xAC
-    f32 mInitSurroundPan;              // at 0xB0
-    f32 mTune;                         // at 0xB4
-    MoveValue<u8, u16> mSilenceVolume; // at 0xB8
+    f32 mInitVolume;                   // at 0xAC
+    f32 mInitPan;                      // at 0xB0
+    f32 mInitSurroundPan;              // at 0xB4
+    f32 mTune;                         // at 0xB8
+    MoveValue<u8, u16> mSilenceVolume; // at 0xBC
 
-    int mKey;         // at 0xC0
-    int mOriginalKey; // at 0xC4
-    int mLength;      // at 0xC8
+    int mKey;         // at 0xC4
+    int mOriginalKey; // at 0xC8
+    int mLength;      // at 0xCC
 
-    PanMode mPanMode;   // at 0xCC
-    PanCurve mPanCurve; // at 0xD0
+    ChannelCallback mCallback; // at 0xD0
+    u32 mCallbackData;         // at 0xD4
 
-    ChannelCallback mCallback; // at 0xD4
-    u32 mCallbackData;         // at 0xD8
-
-    Voice* mVoice;      // at 0xDC
-    Channel* mNextLink; // at 0xE0
+    Voice* mVoice;      // at 0xD8
+    Channel* mNextLink; // at 0xDC
 
 public:
-    NW4R_UT_LINKLIST_NODE_DECL(); // at 0xE4
+    NW4R_UT_LINKLIST_NODE_DECL(); // at 0xE0
 };
 
 NW4R_UT_LINKLIST_TYPEDEF_DECL(Channel);
