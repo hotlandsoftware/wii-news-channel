@@ -28,6 +28,7 @@ public:
 
     void Init();
     bool Bind(ResFile file);
+    bool Bind() { return Bind(*this); }
     ResMdl GetResMdl(int idx) const;
 };
 

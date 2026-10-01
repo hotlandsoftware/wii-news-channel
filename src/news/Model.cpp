@@ -17,7 +17,7 @@ Model::Model(void* brres)
     : mPos(0.0f, 0.0f, 0.0f), mRotate(0.0f, 0.0f, 0.0f), mScale(21.0f, 21.0f, 21.0f) {
     g3d::ResFile file(brres);
     file.Init();
-    file.Bind(file);
+    file.Bind();
     mResMdl = file.GetResMdl(0);
     u32 size;
     mScnMdl = g3d::ScnMdlSimple::Construct(&gMdlAllocator, &size, mResMdl, 1);
