@@ -12,7 +12,7 @@
 namespace nw4r {
 namespace g3d {
 
-extern const math::FRUSTUM* gpCullingFrustum;
+// (no gpCullingFrustum: this NW4R version has no culling)
 
 enum ResMdlDrawMode {
     RESMDL_DRAWMODE_SORT_OPA_NONE = 0,
@@ -136,14 +136,8 @@ public:
     void EnableScnObjCallbackTiming(Timing timing);
     void EnableScnObjCallbackExecOp(ExecOp op);
 
-    bool SetBoundingVolume(ScnObjBoundingVolumeType type,
-                           const math::AABB* pAABB);
-    bool GetBoundingVolume(ScnObjBoundingVolumeType type,
-                           math::AABB* pAABB) const;
-
-    bool SetBoundingVolume(const math::AABB* pAABB) {
-        return SetBoundingVolume(BOUNDINGVOLUME_AABB_LOCAL, pAABB);
-    }
+    // This NW4R version has no bounding volumes (culling): no mAABB,
+    // SetBoundingVolume/GetBoundingVolume or OPTID_ENABLE_CULLING.
 
 protected:
     enum ScnObjFlag {
@@ -198,19 +192,18 @@ protected:
     inline void CheckCallback_DRAW_XLU(Timing timing, u32 param, void* pInfo);
 
 protected:
-    math::MTX34 mMtxArray[MTX_TYPE_MAX];  // at 0xC
-    math::AABB mAABB[BOUNDINGVOLUME_MAX]; // at 0x9C
+    math::MTX34 mMtxArray[MTX_TYPE_MAX]; // at 0xC
 
 private:
-    u32 mScnObjFlags;               // at 0xCC
-    u8 mPriorityDrawOpa;            // at 0xD0
-    u8 mPriorityDrawXlu;            // at 0xD1
-    u8 PADDING_0xD2;                // at 0xD2
-    u8 PADDING_0xD3;                // at 0xD3
-    IScnObjCallback* mpFuncObjExec; // at 0xD4
-    u8 mCallbackTiming;             // at 0xD8
-    u8 mCallbackDeleteOption;       // at 0xD9
-    u16 mCallbackExecOpMask;        // at 0xDA
+    u32 mScnObjFlags;               // at 0x9C
+    u8 mPriorityDrawOpa;            // at 0xA0
+    u8 mPriorityDrawXlu;            // at 0xA1
+    u8 PADDING_0xD2;                // at 0xA2
+    u8 PADDING_0xD3;                // at 0xA3
+    IScnObjCallback* mpFuncObjExec; // at 0xA4
+    u8 mCallbackTiming;             // at 0xA8
+    u8 mCallbackDeleteOption;       // at 0xA9
+    u16 mCallbackExecOpMask;        // at 0xAA
 
     NW4R_G3D_RTTI_DECL_DERIVED(ScnObj, G3dObj);
 };
@@ -234,7 +227,8 @@ public:
 public:
     virtual ~IScnObjGather() {} // at 0x8
 
-    virtual CullingStatus Add(ScnObj* pObj, bool opa, bool xlu) = 0; // at 0xC
+    // void in this NW4R version (no culling)
+    virtual void Add(ScnObj* pObj, bool opa, bool xlu) = 0; // at 0xC
     virtual void Clear() = 0;                                        // at 0x10
     virtual void ZSort() = 0;                                        // at 0x14
 

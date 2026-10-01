@@ -13,7 +13,6 @@ NW4R_G3D_RTTI_DEF(ScnObj);
 NW4R_G3D_RTTI_DEF(ScnLeaf);
 NW4R_G3D_RTTI_DEF(ScnGroup);
 
-const math::FRUSTUM* gpCullingFrustum = NULL;
 
 /******************************************************************************
  *
@@ -35,11 +34,6 @@ void ScnObj::CalcWorldMtx(const math::MTX34* pParent, u32* pParam) {
         }
     } else {
         math::MTX34Copy(&mMtxArray[MTX_WORLD], &mMtxArray[MTX_LOCAL]);
-    }
-
-    if (TestScnObjFlag(SCNOBJFLAG_ENABLE_CULLING)) {
-        mAABB[BOUNDINGVOLUME_AABB_WORLD].Set(&mAABB[BOUNDINGVOLUME_AABB_LOCAL],
-                                             &mMtxArray[MTX_WORLD]);
     }
 }
 
@@ -64,11 +58,6 @@ ScnObj::ScnObj(MEMAllocator* pAllocator)
     math::MTX34Identity(&mMtxArray[MTX_LOCAL]);
     math::MTX34Identity(&mMtxArray[MTX_WORLD]);
     math::MTX34Identity(&mMtxArray[MTX_VIEW]);
-
-    mAABB[BOUNDINGVOLUME_AABB_LOCAL].min = math::VEC3(0.0f, 0.0f, 0.0f);
-    mAABB[BOUNDINGVOLUME_AABB_LOCAL].max = math::VEC3(0.0f, 0.0f, 0.0f);
-    mAABB[BOUNDINGVOLUME_AABB_WORLD].min = math::VEC3(0.0f, 0.0f, 0.0f);
-    mAABB[BOUNDINGVOLUME_AABB_WORLD].max = math::VEC3(0.0f, 0.0f, 0.0f);
 }
 
 ScnObj::~ScnObj() {
@@ -126,13 +115,6 @@ bool ScnObj::SetScnObjOption(u32 option, u32 value) {
         break;
     }
 
-#if defined(VERSION_RSPE01_01)
-    case OPTID_ENABLE_CULLING: {
-        SetScnObjFlag(SCNOBJFLAG_ENABLE_CULLING, value);
-        break;
-    }
-#endif
-
     default: {
         return false;
     }
@@ -186,13 +168,6 @@ bool ScnObj::GetScnObjOption(u32 option, u32* pValue) const {
         *pValue = TestScnObjFlag(SCNOBJFLAG_DISABLE_UPDATEFRAME);
         break;
     }
-
-#if defined(VERSION_RSPE01_01)
-    case OPTID_ENABLE_CULLING: {
-        *pValue = TestScnObjFlag(SCNOBJFLAG_ENABLE_CULLING);
-        break;
-    }
-#endif
 
     default: {
         return false;
@@ -279,34 +254,6 @@ void ScnObj::EnableScnObjCallbackExecOp(ExecOp op) {
     mCallbackExecOpMask |= static_cast<u16>(op);
 }
 
-bool ScnObj::SetBoundingVolume(ScnObjBoundingVolumeType type,
-                               const math::AABB* pAABB) {
-    if (pAABB != NULL) {
-        if (type < BOUNDINGVOLUME_MAX) {
-            mAABB[type] = *pAABB;
-            return SetScnObjOption(OPTID_ENABLE_CULLING, TRUE);
-        }
-
-        return false;
-    }
-
-    return SetScnObjOption(OPTID_ENABLE_CULLING, FALSE);
-}
-
-bool ScnObj::GetBoundingVolume(ScnObjBoundingVolumeType type,
-                               math::AABB* pAABB) const {
-    if (pAABB != NULL) {
-        if (type < BOUNDINGVOLUME_MAX) {
-            *pAABB = mAABB[type];
-            return true;
-        }
-
-        return false;
-    }
-
-    return false;
-}
-
 /******************************************************************************
  *
  * ScnLeaf
@@ -363,11 +310,6 @@ void ScnLeaf::CalcWorldMtx(const math::MTX34* pParent, u32* pParam) {
 
     ScnObj::CalcWorldMtx(pParent, pParam);
     math::MTX34Scale(&mMtxArray[MTX_WORLD], &mMtxArray[MTX_WORLD], &mScale);
-
-    if (TestScnObjFlag(SCNOBJFLAG_ENABLE_CULLING)) {
-        mAABB[BOUNDINGVOLUME_AABB_WORLD].Set(&mAABB[BOUNDINGVOLUME_AABB_LOCAL],
-                                             &mMtxArray[MTX_WORLD]);
-    }
 }
 
 ScnLeaf::ScaleProperty ScnLeaf::GetScaleProperty() const {
@@ -470,31 +412,19 @@ ScnObj::ForEachResult ScnGroup::ForEach(ForEachFunc pFunc, void* pInfo,
     }
 }
 
-void ScnGroup::ScnGroup_G3DPROC_GATHER_SCNOBJ(u32 param,
-                                              IScnObjGather* pCollection) {
-    IScnObjGather::CullingStatus status =
-        pCollection->Add(this, !TestScnObjFlag(SCNOBJFLAG_NOT_GATHER_DRAW_OPA),
-                         !TestScnObjFlag(SCNOBJFLAG_NOT_GATHER_DRAW_XLU));
+// In this NW4R version (as in Wii Sports rev 0) the ScnGroup_G3DPROC_*
+// helpers are all inlined into DefG3dProcScnGroup, and there is no culling.
+inline void ScnGroup::ScnGroup_G3DPROC_GATHER_SCNOBJ(u32 param,
+                                                     IScnObjGather* pCollection) {
+    pCollection->Add(this, !TestScnObjFlag(SCNOBJFLAG_NOT_GATHER_DRAW_OPA),
+                     !TestScnObjFlag(SCNOBJFLAG_NOT_GATHER_DRAW_XLU));
 
-    if (status == IScnObjGather::CULLINGSTATUS_INTERSECT) {
-        for (u32 i = 0; i < mNumScnObj; i++) {
-            mpScnObjArray[i]->G3dProc(G3DPROC_GATHER_SCNOBJ, param,
-                                      pCollection);
-        }
-    } else if (status == IScnObjGather::CULLINGSTATUS_INSIDE) {
-        const math::FRUSTUM* pTemp = gpCullingFrustum;
-        gpCullingFrustum = NULL;
-        {
-            for (u32 i = 0; i < mNumScnObj; i++) {
-                mpScnObjArray[i]->G3dProc(G3DPROC_GATHER_SCNOBJ, param,
-                                          pCollection);
-            }
-        }
-        gpCullingFrustum = pTemp;
+    for (u32 i = 0; i < mNumScnObj; i++) {
+        mpScnObjArray[i]->G3dProc(G3DPROC_GATHER_SCNOBJ, param, pCollection);
     }
 }
 
-void ScnGroup::ScnGroup_G3DPROC_CALC_WORLD(u32 param,
+inline void ScnGroup::ScnGroup_G3DPROC_CALC_WORLD(u32 param,
                                            const math::MTX34* pParent) {
     CheckCallback_CALC_WORLD(CALLBACK_TIMING_A, param,
                              const_cast<math::MTX34*>(pParent));
@@ -514,7 +444,7 @@ void ScnGroup::ScnGroup_G3DPROC_CALC_WORLD(u32 param,
                              const_cast<math::MTX34*>(pParent));
 }
 
-void ScnGroup::ScnGroup_G3DPROC_CALC_MAT(u32 param, void* pInfo) {
+inline void ScnGroup::ScnGroup_G3DPROC_CALC_MAT(u32 param, void* pInfo) {
     CheckCallback_CALC_MAT(CALLBACK_TIMING_A, param, pInfo);
 
     for (u32 i = 0; i < mNumScnObj; i++) {
@@ -524,7 +454,7 @@ void ScnGroup::ScnGroup_G3DPROC_CALC_MAT(u32 param, void* pInfo) {
     CheckCallback_CALC_MAT(CALLBACK_TIMING_C, param, pInfo);
 }
 
-void ScnGroup::ScnGroup_G3DPROC_CALC_VIEW(u32 param,
+inline void ScnGroup::ScnGroup_G3DPROC_CALC_VIEW(u32 param,
                                           const math::MTX34* pCamera) {
     CheckCallback_CALC_VIEW(CALLBACK_TIMING_A, param,
                             const_cast<math::MTX34*>(pCamera));
@@ -553,7 +483,6 @@ void ScnGroup::G3dProc(u32 task, u32 param, void* pInfo) {
 
 void ScnGroup::DefG3dProcScnGroup(u32 task, u32 param, void* pInfo) {
     switch (task) {
-    //! TODO(texline) This case is inlined in Rev 0
     case G3DPROC_GATHER_SCNOBJ: {
         ScnGroup_G3DPROC_GATHER_SCNOBJ(param,
                                        static_cast<IScnObjGather*>(pInfo));
