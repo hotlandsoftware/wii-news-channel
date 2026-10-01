@@ -8,39 +8,29 @@ namespace nw4r {
 namespace snd {
 namespace detail {
 
+// Older NW4R: a fixed array of AxVoice indexed by AXVPB::index
 class AxVoiceManager {
-public:
-    static const int VOICE_MARGIN = 16;
-    static const int VOICE_MAX = AX_VOICE_MAX + VOICE_MARGIN;
-    static const int WORK_SIZE_MAX = VOICE_MAX * sizeof(AxVoice);
-
 public:
     static AxVoiceManager& GetInstance();
 
     u32 GetRequiredMemSize();
     void Setup(void* pBuffer, u32 size);
-    void Shutdown();
 
     AxVoice* AcquireAxVoice(u32 priority, AxVoice::AxVoiceCallback pCallback,
                             void* pArg);
     void FreeAxVoice(AxVoice* pVoice);
 
-    void ReserveForFreeAxVoice(AxVoice* pVoice);
-    void FreeAllReservedAxVoice();
+    AxVoice* GetAxVoice(u32 index) {
+        return &mVoices[index];
+    }
 
 private:
-    AxVoiceManager();
-
-    AxVoice* Alloc();
-    void Free(AxVoice* pVoice);
-    void ReserveForFree(AxVoice* pVoice);
+    AxVoiceManager() : mInitialized(false) {}
 
 private:
-    AxVoiceList mActiveVoiceList;       // at 0x0
-    AxVoiceList mFreeVoiceList;         // at 0xC
-    AxVoiceList mFreeReservedVoiceList; // at 0x18
-    bool mInitialized;                  // at 0x24
-    int mVoiceCount;                    // at 0x28
+    bool mInitialized;  // at 0x0
+    u32 mVoiceCount;    // at 0x4
+    AxVoice* mVoices;   // at 0x8
 };
 
 } // namespace detail

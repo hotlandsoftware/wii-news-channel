@@ -143,6 +143,10 @@ private:
  * AxVoice
  *
  ******************************************************************************/
+// Older NW4R (Channel-based snd): AxVoice wraps a raw AXVPB* (no
+// AxVoiceParamBlock), voices live in an array owned by AxVoiceManager and are
+// indexed by AXVPB::index. AxVoiceParamBlock above is the newer (ogws) class
+// and is not used by this revision.
 class AxVoice {
     friend class AxVoiceManager;
 
@@ -203,19 +207,9 @@ public:
 
 public:
     AxVoice();
-    ~AxVoice();
 
-    bool IsRun() const {
-        return mVpb.IsRun();
-    }
-    void Run() {
-        mVpb.SetVoiceStateRun();
-    }
-    void Stop() {
-        mVpb.SetVoiceStateStop();
-    }
-    void Sync() {
-        mVpb.Sync();
+    bool IsActive() const {
+        return mVpb != NULL;
     }
 
     Format GetFormat() const {
@@ -226,67 +220,96 @@ public:
         mWaveData = pBase;
     }
 
+    // These take their own interrupt lock
+    bool IsRun() const {
+        ut::AutoInterruptLock lock;
+
+        if (mVpb == NULL) {
+            return false;
+        }
+
+        return mVpb->pb.state == AX_VOICE_RUN;
+    }
+
+    u32 GetCurrentPlayingDspAddress() const {
+        ut::AutoInterruptLock lock;
+
+        const AXPB* pPb = &mVpb->pb;
+        if (pPb == NULL) {
+            return 0;
+        }
+
+        return (pPb->addr.currentAddressHi << 16) + pPb->addr.currentAddressLo;
+    }
+
+    u32 GetLoopEndDspAddress() const {
+        ut::AutoInterruptLock lock;
+
+        const AXPB* pPb = &mVpb->pb;
+        if (pPb == NULL) {
+            return 0;
+        }
+
+        return (pPb->addr.endAddressHi << 16) + pPb->addr.endAddressLo;
+    }
+
     f32 GetDspRatio(f32 ratio) const {
+        ut::AutoInterruptLock lock;
         return (ratio * mSampleRate) / AX_SAMPLE_RATE;
     }
 
     void Setup(const void* pWave, Format fmt, int rate);
-
     bool IsPlayFinished() const;
+
     void SetLoopStart(const void* pBase, u32 samples);
     void SetLoopEnd(const void* pBase, u32 samples);
     void SetLoopFlag(bool loop);
     void StopAtPoint(const void* pBase, u32 samples);
 
+    bool IsCurrentAddressCovered(const void* pBegin, const void* pEnd) const;
     bool IsDataAddressCoverd(const void* pBegin, const void* pEnd) const;
+
     u32 GetCurrentPlayingSample() const;
-    u32 GetCurrentPlayingDspAddress() const;
-    u32 GetLoopEndDspAddress() const;
+
+    void Run();
+    void Stop();
 
     void SetPriority(u32 priority);
     void SetVoiceType(VoiceType type);
-    void EnableRemote(bool enable);
-    void ResetDelta();
-    void SetAddr(bool loop, const void* pWave, u32 offset, u32 loopStart,
-                 u32 loopEnd);
+    void SetRmtMix(const AXPBRMTMIX& rMix);
+    void EnableRemote();
+    void DisableRemote();
+
+    void SetAddr(bool loop, const void* pWave, u32 loopStart, u32 loopEnd);
     void SetSrcType(SrcType type, f32 pitch);
     void SetAdpcm(const AdpcmParam* pParam);
     void SetAdpcmLoop(const AdpcmLoopParam* pParam);
     bool SetMix(const MixParam& rParam);
-    void SetRmtMix(const RemoteMixParam& rParam);
     void SetSrc(f32 ratio, bool initial);
-    void SetVe(f32 volume, f32 initVolume);
+    bool SetVe(f32 volume, f32 initVolume);
     void SetLpf(u16 freq);
-    void SetRemoteFilter(u8 filter);
 
     static u32 GetDspAddressBySample(const void* pBase, u32 samples,
                                      Format fmt);
     static u32 GetSampleByDspAddress(const void* pBase, u32 addr, Format fmt);
     static u32 GetSampleByByte(u32 addr, Format fmt);
 
-    static void CalcOffsetAdpcmParam(u16* pPredScale, u16* pYN1, u16* pYN2,
-                                     u32 offset, const void* pData,
-                                     const AdpcmParam& rParam);
-
 private:
     static void VoiceCallback(void* pArg);
 
 private:
-    AxVoiceParamBlock mVpb;    // at 0x0
-    const void* mWaveData;     // at 0x10
-    Format mFormat;            // at 0x14
-    int mSampleRate;           // at 0x18
-    bool mFirstMixUpdateFlag;  // at 0x1C
-    bool mReserveForFreeFlag;  // at 0x1D
-    MixParam mMixPrev;         // at 0x1E
-    AxVoiceCallback mCallback; // at 0x38
-    void* mCallbackData;       // at 0x3C
-
-public:
-    NW4R_UT_LINKLIST_NODE_DECL(); // at 0x40
+    AXVPB* mVpb;               // at 0x0
+    const void* mWaveData;     // at 0x4
+    Format mFormat;            // at 0x8
+    int mSampleRate;           // at 0xC
+    bool mActiveFlag;          // at 0x10
+    bool mFirstVeUpdateFlag;   // at 0x11
+    bool mFirstMixUpdateFlag;  // at 0x12
+    u16 mVolumePrev;           // at 0x14
+    MixParam mMixPrev;         // at 0x16
+    AxVoiceCallback mCallback; // at 0x30
+    void* mCallbackData;       // at 0x34
 };
-
-NW4R_UT_LINKLIST_TYPEDEF_DECL(AxVoice);
 
 } // namespace detail
 } // namespace snd

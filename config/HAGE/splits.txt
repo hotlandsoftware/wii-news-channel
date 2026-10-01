@@ -505,10 +505,13 @@ nw4r/snd/snd_AxManager.cpp:
 	.sdata2     start:0x80359920 end:0x80359938
 
 nw4r/snd/snd_AxVoice.cpp:
-	.text       start:0x800CFBC4 end:0x800D19F0
+	.text       start:0x800CFBC4 end:0x800D17FC
+	.sdata2     start:0x80359938 end:0x80359958
+
+nw4r/snd/snd_AxVoiceManager.cpp:
+	.text       start:0x800D17FC end:0x800D19F0
 	.bss        start:0x802D5A00 end:0x802D5A10
 	.sbss       start:0x80357C58 end:0x80357C60
-	.sdata2     start:0x80359938 end:0x80359958
 
 nw4r/snd/snd_AxfxImpl.cpp:
 	.text       start:0x800D19F0 end:0x800D1B60
