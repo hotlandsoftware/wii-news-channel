@@ -1,12 +1,15 @@
-#ifndef PF_SYSTEM_H
-#define PF_SYSTEM_H
-
+#ifndef RVL_SDK_VF_PF_SYSTEM_H
+#define RVL_SDK_VF_PF_SYSTEM_H
 #include <types.h>
-#include <macros.h>
-#include <revolution/vf/vf_struct.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-void VFiPFSYS_initializeSYS(void);
-s32 VFiPFSYS_GetCurrentContextID(s32 *context_id);
-void VFiPFSYS_TimeStamp(PF_SYS_DATE *sdate, PF_SYS_TIME *stime); 
+void VFiPFSYS_initializeSYS();
+s32 VFiPFSYS_GetCurrentContextID(s32* context_id);
+void VFiPFSYS_TimeStamp(struct PF_SYS_DATE* sdate, struct PF_SYS_TIME* stime);
 
+#ifdef __cplusplus
+}
+#endif
 #endif

@@ -1,9 +1,13 @@
-#ifndef PF_UNMOUNT_H
-#define PF_UNMOUNT_H
-
+#ifndef RVL_SDK_VF_PF_UNMOUNT_H
+#define RVL_SDK_VF_PF_UNMOUNT_H
 #include <types.h>
-#include <macros.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-s32 VFipf2_unmount(s8 drv_char, u32 mode);
+int VFipf2_unmount(s8 drive, u32 mode);
 
+#ifdef __cplusplus
+}
+#endif
 #endif

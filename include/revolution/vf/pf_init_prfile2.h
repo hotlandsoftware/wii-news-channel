@@ -1,9 +1,13 @@
-#ifndef PF_INIT_PRFILE2_H
-#define PF_INIT_PRFILE2_H
-
+#ifndef RVL_SDK_VF_PF_INIT_PRFILE2_H
+#define RVL_SDK_VF_PF_INIT_PRFILE2_H
 #include <types.h>
-#include <macros.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-s32 VFipf2_init_prfile2(s32 config, void* param);
+int VFipf2_init_prfile2(s32 config, void* param);
 
+#ifdef __cplusplus
+}
+#endif
 #endif

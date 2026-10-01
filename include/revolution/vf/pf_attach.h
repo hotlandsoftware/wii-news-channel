@@ -1,8 +1,13 @@
-#ifndef PF_ATTACH_H
-#define PF_ATTACH_H
+#ifndef RVL_SDK_VF_PF_ATTACH_H
+#define RVL_SDK_VF_PF_ATTACH_H
+#include <types.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-#include <revolution/vf/vf_struct.h>
+int VFipf2_attach(struct PF_DRV_TBL** drv_tbl);
 
-int VFipf2_attach(PF_DRV_TBL**);
-
-#endif  // PF_ATTACH_H
+#ifdef __cplusplus
+}
+#endif
+#endif

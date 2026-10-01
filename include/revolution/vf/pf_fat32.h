@@ -1,12 +1,16 @@
-#ifndef PF_FAT32_H
-#define PF_FAT32_H
+#ifndef RVL_SDK_VF_PF_FAT32_H
+#define RVL_SDK_VF_PF_FAT32_H
+#include <types.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-#include <revolution/vf/vf_struct.h>
+s32 VFiPFFAT32_ReadFATEntry(struct PF_VOLUME* p_vol, u32 cluster, u32* p_value);
+s32 VFiPFFAT32_ReadFATEntryPage(struct PF_VOLUME* p_vol, u32 cluster, u32* p_value, struct PF_CACHE_PAGE** pp_page);
+s32 VFiPFFAT32_WriteFATEntry(struct PF_VOLUME* p_vol, u32 cluster, u32 value);
+s32 VFiPFFAT32_WriteFATEntryPage(struct PF_VOLUME* p_vol, u32 cluster, u32 value, struct PF_CACHE_PAGE** pp_page);
 
-s32 VFiPFFAT32_ReadFATEntry(PF_VOLUME* p_vol, u32 cluster, u32* p_value);
-
-s32 VFiPFFAT32_ReadFATEntryPage(PF_VOLUME* p_vol, u32 cluster, u32* p_value, PF_CACHE_PAGE** pp_page);
-
-s32 VFiPFFAT32_WriteFATEntry(PF_VOLUME* p_vol, u32 cluster, u32 value);
-
-#endif  // PF_FAT32_H
+#ifdef __cplusplus
+}
+#endif
+#endif
