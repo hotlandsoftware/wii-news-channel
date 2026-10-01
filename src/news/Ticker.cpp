@@ -9,7 +9,9 @@
 
 using namespace nw4r;
 
+#pragma explicit_zero_data on
 static f32 sOrigin[2] = {0.0f, 0.0f};
+#pragma explicit_zero_data reset
 
 inline f32 Ticker::GetTextHeight(f32 scale) {
     return scale * (mFontScale * mWriter->GetFont()->GetHeight());
@@ -210,7 +212,7 @@ void Ticker::DrawSeparator(const f32& offsetX, const f32& alpha) {
     Draw2D_Line(line[0], line[1], 6, color, color);
 }
 
-void Ticker::Layout(const math::VEC2& pos) {
+void Ticker::Layout(math::VEC2& pos) {
     f32 minY = 0.0f;
     f32 maxY = 456.0f;
     f32 height = CalcRowHeight(mTextScale);
@@ -219,14 +221,14 @@ void Ticker::Layout(const math::VEC2& pos) {
     unk0 = 0;
     mLeft = (pos.x + mTextX) - 5.0f;
     mTop = pos.y + mTextY;
-    f32 width = 10.0f + (GetScreenWidth() - GetSideMargin() * 2);
+    mRight = mLeft + (10.0f + (GetScreenWidth() - GetSideMargin() * 2));
     mBottom = mTop + height;
-    mRight = mLeft + width;
     mHidden = !(mBottom > minY && mTop < maxY);
 
     if (!mHidden) {
         f32 s = mFontScale * mTextScale;
-        mWriter->SetCharSpace(s * gCharSpaceScale);
+        f32 space = gCharSpaceScale;
+        mWriter->SetCharSpace(s * space);
         mWriter->SetScale(s);
         mTextWidth = CalcTextWidth(mArticle->mHeadline);
         if (mArticle->GetTexture()) {
@@ -358,11 +360,12 @@ void Ticker::StateReturn() {
     }
 }
 
-f32 Ticker::SetLayout(math::VEC2& pos, f64 scale) {
+f32 Ticker::SetLayout(math::VEC2& pos, f32 scale) {
     if (mArticle->GetTexture()) {
         mThumbLeft = unk24 - 80.0f;
         mThumbTop = pos.y;
-        if (mArticle->GetTexture()->width < mArticle->GetTexture()->height) {
+        const NewsTexture* tex = mArticle->GetTexture();
+        if (tex->width < mArticle->GetTexture()->height) {
             mThumbScale = 80.0f / mArticle->GetTexture()->height;
             mThumbPosX = mThumbLeft + 0.5f * (80.0f - mThumbScale * mArticle->GetTexture()->width);
             mThumbPosY = mThumbTop;
@@ -378,7 +381,8 @@ f32 Ticker::SetLayout(math::VEC2& pos, f64 scale) {
     mTextX = pos.x;
     mTextY = pos.y;
     unk64 = unk60 + CalcRowHeight(mTextScale);
-    return pos.y = 5.0f + unk64;
+    pos.y = 5.0f + unk64;
+    return pos.y;
 }
 
 void Ticker::Dummy() {}
@@ -414,12 +418,7 @@ void Ticker::TruncateText() {
             width += w;
             *++dst = 0;
             if (width > maxWidth) {
-                f32 ellipsis;
-                if (i < mNumChars) {
-                    ellipsis = s * font->GetCharWidth(0x2026);
-                } else {
-                    ellipsis = s * font->GetCharWidth(0x2026);
-                }
+                f32 ellipsis = ((i < mNumChars) ? s : s2) * font->GetCharWidth(0x2026);
                 dst[-1] = 0;
                 dst -= 2;
                 f32 removed = s * font->GetCharWidth(*dst);
@@ -445,16 +444,11 @@ void Ticker::TruncateText() {
             width += w;
             *++dst = 0;
             if (width > maxWidth) {
-                f32 dots;
-                if (i < mNumChars) {
-                    dots = 2.0f * space + s * (3.0f * font->GetCharWidth('.'));
-                } else {
-                    dots = 2.0f * space + s * (3.0f * font->GetCharWidth('.'));
-                }
+                width = 2.0f * space + ((i < mNumChars) ? s : s2) * (3.0f * font->GetCharWidth('.'));
                 dst[-1] = 0;
                 dst -= 2;
                 f32 removed = s * font->GetCharWidth(*dst);
-                while (removed < dots) {
+                while (removed < width) {
                     removed += space + s * font->GetCharWidth(*--dst);
                 }
                 dst[0] = 0;

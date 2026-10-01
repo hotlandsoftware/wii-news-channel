@@ -28,7 +28,7 @@ public:
     void Draw(const nw4r::math::VEC2& pos, const f32& offsetX, const f32& scale,
               const f32& alpha);
     void DrawSeparator(const f32& offsetX, const f32& alpha);
-    void Layout(const nw4r::math::VEC2& pos);
+    void Layout(nw4r::math::VEC2& pos);
     u32 UpdateHover(const nw4r::math::VEC2& pos);
     void Update();
 
@@ -36,7 +36,7 @@ public:
     void StateScroll();
     void StateReturn();
 
-    f32 SetLayout(nw4r::math::VEC2& pos, f64 scale);
+    f32 SetLayout(nw4r::math::VEC2& pos, f32 scale);
     void Dummy();
     void GetOrigin(nw4r::math::VEC2& out);
     void TruncateText();
