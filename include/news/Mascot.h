@@ -34,6 +34,7 @@ public:
     ~Mascot();
 
     void Reset();
+    void Init();
     void Update();
     void UpdateState();
     void UpdateAnim();
