@@ -338,7 +338,7 @@ config.libs = [
             Object(Matching, "news/SmallTextButton.cpp"),
             Object(Matching, "news/Scroller.cpp"),
             Object(Matching, "news/Ticker.cpp"),
-            Object(NonMatching, "news/HeadlineList.cpp"),
+            Object(Matching, "news/HeadlineList.cpp"),
             Object(Matching, "news/Locale.cpp"),
             Object(NonMatching, "news/PointerEffect.cpp"),
             Object(Matching, "news/ErrorScreen.cpp"),

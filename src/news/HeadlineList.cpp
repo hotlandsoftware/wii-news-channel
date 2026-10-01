@@ -29,6 +29,10 @@ inline const wchar_t* GetLocalizedMsg(const wchar_t** table) {
     }
 }
 
+inline const wchar_t* GetChooseLanguageMsg() {
+    return GetLocalizedMsg(gMsgChooseLanguage);
+}
+
 inline void HeadlineList::UpdatePosition() {
     mBasePos.x = mPos.x;
     mBasePos.y = mPos.y;
@@ -142,6 +146,34 @@ inline void HeadlineList::SnapInline() {
     mScrollTarget = GetOffset(mIndex);
 }
 
+// The constructor's refresh uses variants of the helpers above; their
+// declaration order and inline depth set the stack slots and registers.
+inline void HeadlineList::CalcTotalHeight() {
+    RecalcTotalHeight();
+}
+
+inline void HeadlineList::RelayoutItems() {
+    if (mNumItems != 0) {
+        s32 i;
+        Ticker* item = mItems;
+        math::VEC2 pos(0.0f, 0.0f);
+        for (i = 0; i < mNumItems; i++, item++) {
+            f32 height = item->SetLayout(pos, mScale);
+            item->Dummy();
+            pos.y += height;
+        }
+    }
+}
+
+inline void HeadlineList::ClearItemStates() {
+    if (mNumItems != 0) {
+        Ticker* item = mItems;
+        for (s32 i = 0; i < mNumItems; i++, item++) {
+            item->ResetState();
+        }
+    }
+}
+
 HeadlineList::HeadlineList(Category* category, ut::TextWriterBase<wchar_t>* writer,
                            math::VEC2& pos, math::VEC2& size, s32 pageIndex)
     : mCategory(category),
@@ -229,7 +261,7 @@ HeadlineList::HeadlineList(Category* category, ut::TextWriterBase<wchar_t>* writ
     }
 
     if (mMode != MODE_SECTION && gLanguageSelectable) {
-        const wchar_t* label = GetLocalizedMsg(gMsgChooseLanguage);
+        const wchar_t* label = GetChooseLanguageMsg();
         mLanguageButton = new SmallTextButton(label, math::VEC2(300.0f, 60.0f), 0, true, 0, 0.7f);
         if (mLanguageButton == NULL) {
             gAllocFailed = true;
@@ -303,7 +335,12 @@ HeadlineList::HeadlineList(Category* category, ut::TextWriterBase<wchar_t>* writ
     }
 
     LayoutItems();
-    Refresh();
+    mLanguagePressed = false;
+    CalcTotalHeight();
+    mScrollTarget = GetOffset(mIndex);
+    mScroll = mScrollTarget;
+    RelayoutItems();
+    ClearItemStates();
 }
 
 HeadlineList::~HeadlineList() {
@@ -334,14 +371,12 @@ void HeadlineList::ResetItems() {
 }
 
 void HeadlineList::Draw(f32 alpha, f32 headerAlpha, const f32& offsetX) {
-    u8 a;
-    u8 headerA;
-    headerA = 255.0f * headerAlpha;
-    a = 255.0f * alpha;
     math::VEC3 line[2];
     ut::Rect rect;
     ut::Color lineColor = gSeparatorColor;
     math::VEC2 basePos(offsetX + (mOrigin.x + mScrollX), mOrigin.y + mScroll);
+    u8 a = 255.0f * alpha;
+    u8 headerA = 255.0f * headerAlpha;
     f32 contentW = GetContentWidth();
     ut::Color barColor(48, 72, 54, a);
     f32 barH = 45.0f;
