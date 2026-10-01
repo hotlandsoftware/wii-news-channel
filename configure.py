@@ -303,6 +303,15 @@ config.libs = [
         ],
     },
     {
+        "lib": "MSL_C",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_runtime,
+        "progress_category": "sdk",
+        "objects": [
+            Object(Matching, "MSL_C/wstring.c"),
+        ],
+    },
+    {
         "lib": "news",
         "mw_version": "GC/3.0a5.2",
         "cflags": cflags_game,
