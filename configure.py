@@ -732,6 +732,15 @@ config.libs = [
         ],
     },
     {
+        "lib": "wenc",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_rvl,
+        "progress_category": "sdk",
+        "objects": [
+            Object(Matching, "revolution/WENC/wenc.c"),
+        ],
+    },
+    {
         "lib": "esp",
         "mw_version": "GC/3.0a5.2",
         "cflags": cflags_rvl,
