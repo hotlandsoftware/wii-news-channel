@@ -29,14 +29,14 @@ public:
               const f32& alpha);
     void DrawSeparator(const f32& offsetX, const f32& alpha);
     void Layout(const nw4r::math::VEC2& pos);
-    u32 UpdateHover();
+    u32 UpdateHover(const nw4r::math::VEC2& pos);
     void Update();
 
     void StateWait();
     void StateScroll();
     void StateReturn();
 
-    void SetLayout(nw4r::math::VEC2& pos, f64 scale);
+    f32 SetLayout(nw4r::math::VEC2& pos, f64 scale);
     void Dummy();
     void GetOrigin(nw4r::math::VEC2& out);
     void TruncateText();
@@ -56,6 +56,15 @@ private:
     }
 
     BOOL IsState(StateFunc state) { return mState == state; }
+
+public:
+    // unk0/unk4 link the visible tickers of a HeadlineList.
+    Ticker* GetPrev() const { return reinterpret_cast<Ticker*>(unk0); }
+    Ticker* GetNext() const { return reinterpret_cast<Ticker*>(unk4); }
+    void SetPrev(Ticker* prev) { unk0 = reinterpret_cast<u32>(prev); }
+    void SetNext(Ticker* next) { unk4 = reinterpret_cast<u32>(next); }
+
+private:
 
     f32 GetScale() const { return mFontScale * mTextScale; }
     f32 GetScrollWidth() const { return mViewWidth - 30.0f * GetScale(); }
