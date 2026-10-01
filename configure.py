@@ -562,7 +562,7 @@ config.libs = [
         "progress_category": "sdk",
         "objects": [
             Object(NonMatching, "revolution/CX/CXStreamingUncompression.c"),
-            Object(NonMatching, "revolution/CX/CXUncompression.c"),
+            Object(Matching, "revolution/CX/CXUncompression.c"),
         ],
     },
     {
