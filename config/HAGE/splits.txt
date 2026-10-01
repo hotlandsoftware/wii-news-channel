@@ -778,6 +778,86 @@ revolution/PAD/Pad.c:
 	.text       start:0x80134BDC end:0x80134C38
 	.sbss       start:0x80358310 end:0x80358318
 
+revolution/BTE/btm_acl.c:
+	.text       start:0x8015526C end:0x80156FB0
+	.data       start:0x801E85A0 end:0x801E89C0
+
+revolution/BTE/btm_dev.c:
+	.text       start:0x80156FB0 end:0x8015767C
+
+revolution/BTE/btm_devctl.c:
+	.text       start:0x8015767C end:0x80159004
+	.data       start:0x801E89C0 end:0x801E8C20
+	.sdata      start:0x803573D8 end:0x803573F0
+
+revolution/BTE/btm_discovery.c:
+	.text       start:0x80159004 end:0x80159138
+
+revolution/BTE/btm_inq.c:
+	.text       start:0x80159138 end:0x8015ABD0
+	.data       start:0x801E8C20 end:0x801E8E30
+	.sdata2     start:0x8035A048 end:0x8035A050
+
+revolution/BTE/btm_main.c:
+	.text       start:0x8015ABD0 end:0x8015AC2C
+	.bss        start:0x8034BB78 end:0x8034E340
+
+revolution/BTE/btm_pm.c:
+	.text       start:0x8015AC2C end:0x8015B8C0
+	.rodata     start:0x801AE9D8 end:0x801AE9E8
+	.data       start:0x801E8E30 end:0x801E8E70
+	.sdata2     start:0x8035A050 end:0x8035A058
+
+revolution/BTE/btm_sco.c:
+	.text       start:0x8015B8C0 end:0x8015C6F8
+	.rodata     start:0x801AE9E8 end:0x801AE9F8
+	.data       start:0x801E8E70 end:0x801E9170
+
+revolution/BTE/btm_sec.c:
+	.text       start:0x8015C6F8 end:0x8015F6BC
+	.data       start:0x801E9170 end:0x801E9B80
+	.sdata2     start:0x8035A058 end:0x8035A060
+
+revolution/BTE/btu_hcif.c:
+	.text       start:0x8015F6BC end:0x80160918
+	.data       start:0x801E9B80 end:0x801E9C10
+
+revolution/BTE/btu_init.c:
+	.text       start:0x80160918 end:0x80160990
+	.sdata2     start:0x8035A060 end:0x8035A068
+
+revolution/BTE/wbt_ext.c:
+	.text       start:0x80160990 end:0x80160A70
+
+revolution/BTE/gap_api.c:
+	.text       start:0x80160A70 end:0x80160AD0
+
+revolution/BTE/gap_conn.c:
+	.text       start:0x80160AD0 end:0x8016160C
+	.data       start:0x801E9C10 end:0x801E9CE0
+	.sdata      start:0x803573F0 end:0x803573F8
+
+revolution/BTE/gap_utils.c:
+	.text       start:0x8016160C end:0x80161C28
+	.data       start:0x801E9CE0 end:0x801E9FD0
+	.bss        start:0x8034E340 end:0x8034E6F0
+
+revolution/BTE/hcicmds.c:
+	.text       start:0x80161C28 end:0x80164344
+	.rodata     start:0x801AE9F8 end:0x801AEA08
+
+revolution/BTE/hidd_api.c:
+	.text       start:0x80164344 end:0x801643AC
+
+revolution/BTE/hidd_conn.c:
+	.text       start:0x801643AC end:0x8016446C
+	.data       start:0x801E9FD0 end:0x801EA000
+
+revolution/BTE/hidd_mgmt.c:
+	.text       start:0x8016446C end:0x80164534
+	.data       start:0x801EA000 end:0x801EA020
+	.bss        start:0x8034E6F0 end:0x8034E838
+
 Runtime.PPCEABI.H/__va_arg.c:
 	.text       start:0x80179F80 end:0x8017A048
 

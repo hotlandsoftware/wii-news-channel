@@ -185,4 +185,14 @@
 #define IS_REF_NONNULL(r) (&(r) != NULL)
 #endif
 
+// Petari macros used by the BTE sources (same as ARRAY_SIZEU / a ?: to 0/1)
+#ifndef ARRAY_LENGTH
+#define ARRAY_LENGTH(x) (sizeof(x) / sizeof((x)[0]))
+#endif
+
+#ifndef BOOLIFY_TERNARY
+#define BOOLIFY_TERNARY(expr_) ((expr_) ? 1 : 0)
+#define BOOLIFY_TERNARY_FALSE(expr_) ((expr_) ? 0 : 1)
+#endif
+
 #endif
