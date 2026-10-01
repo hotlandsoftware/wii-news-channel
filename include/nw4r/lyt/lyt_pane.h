@@ -78,6 +78,9 @@ public:
     PaneList& GetChildList() { return mChildList; }
 
     const math::VEC3& GetTranslate() const { return mTranslate; }
+
+    const math::VEC2& GetScale() const { return mScale; }
+    void SetScale(const math::VEC2& value) { mScale = value; }
     void SetTranslate(const math::VEC3& value) { mTranslate = value; }
 
     const Size& GetSize() const { return mSize; }

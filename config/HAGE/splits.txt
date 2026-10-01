@@ -77,6 +77,21 @@ news/HeadlineList.cpp:
 	.sbss       start:0x80357540 end:0x80357550
 	.sdata2     start:0x80358A80 end:0x80358B18
 
+news/LayoutScreen.cpp:
+	.text       start:0x80036ABC end:0x80039750
+	.rodata     start:0x80192418 end:0x80192468
+	.data       start:0x801B2248 end:0x801B2260
+	.sdata      start:0x803569E0 end:0x80356A18
+	.sbss       start:0x80357628 end:0x80357630
+	.sdata2     start:0x80358C40 end:0x80358CC8
+
+news/Camera.cpp:
+	.text       start:0x80039750 end:0x8003A0B4
+	.ctors      start:0x80191F38 end:0x80191F3C
+	.data       start:0x801B2260 end:0x801B2270
+	.bss        start:0x801EE3B0 end:0x801EE3C8
+	.sdata2     start:0x80358CC8 end:0x80358D18
+
 news/Locale.cpp:
 	.text       start:0x8003A0B4 end:0x8003A14C
 	.data       start:0x801B2270 end:0x801B22A0

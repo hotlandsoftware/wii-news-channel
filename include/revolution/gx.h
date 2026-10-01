@@ -59,6 +59,15 @@ typedef enum _GXProjectionType {
     GX_ORTHOGRAPHIC,
 } GXProjectionType;
 
+typedef enum _GXCullMode {
+    GX_CULL_NONE,
+    GX_CULL_FRONT,
+    GX_CULL_BACK,
+    GX_CULL_ALL,
+} GXCullMode;
+
+void GXSetCullMode(GXCullMode mode);
+
 typedef enum _GXPosNrmMtx {
     GX_PNMTX0 = 0,
     GX_PNMTX1 = 3,

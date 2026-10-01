@@ -89,6 +89,30 @@ struct MTX34 {
     operator const f32*() const { return a; }
 };
 
+struct VEC4 {
+    f32 x, y, z, w;
+};
+
+struct MTX44 {
+    union {
+        struct {
+            f32 _00, _01, _02, _03;
+            f32 _10, _11, _12, _13;
+            f32 _20, _21, _22, _23;
+            f32 _30, _31, _32, _33;
+        };
+        f32 m[4][4];
+        f32 a[16];
+        Mtx44 mtx;
+    };
+
+    operator f32*() { return a; }
+    operator const f32*() const { return a; }
+};
+
+MTX44* MTX44Identity(MTX44* pOut);
+VEC4* VEC3Transform(VEC4* pOut, const MTX44* pM, const VEC3* pV);
+
 } // namespace math
 } // namespace nw4r
 
