@@ -21,11 +21,8 @@ struct AxfxImpl {
     bool CreateHeap(void* pBuffer, u32 size);
     void DestroyHeap();
 
+    // Older NW4R: no NULL check
     u32 GetHeapTotalSize() {
-        if (mHeap == NULL) {
-            return 0;
-        }
-
         return reinterpret_cast<u32>(mHeap->heapEnd) - reinterpret_cast<u32>(mHeap);
     }
 
