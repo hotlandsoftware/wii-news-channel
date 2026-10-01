@@ -3,7 +3,7 @@
 extern PF_VOLUME_SET VFipf_vol_set;
 
 // Not in ogws (dead-stripped there); the name is a guess from the PrFILE2 API file order.
-int VFipf2_fsfirst(const s8* path, u8 attr, struct PF_DIRENT* p_dirent) {
+int VFipf2_fsfirst(const s8* path, u32 attr, struct PF_DIRENT* p_dirent) {
     s32 err;
     struct PF_STR path_str;
 

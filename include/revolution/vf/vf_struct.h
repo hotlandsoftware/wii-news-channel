@@ -5,8 +5,6 @@
 extern "C" {
 #endif
 
-struct PF_DIRENT;
-
 struct PR_BINHEADER {
     // total size: 0x20
     s8 signature[4];     // offset 0x0, size 0x4
@@ -409,6 +407,31 @@ typedef struct PF_DEV_INF {
     unsigned long bps;  // offset 0x8, size 0x4
     unsigned long spc;  // offset 0xC, size 0x4
 } PF_DEV_INF;
+
+// Directory search state for VFipf2_fsfirst/fsnext. Not in ogws (Wii Sports dead-strips the
+// code that uses it); the layout comes from the News Channel's pf_dir.c, the names are guesses.
+typedef struct PF_DIRENT {
+    // total size: 0x870
+    unsigned long reserved[2];              // offset 0x0, size 0x8
+    struct PF_VOLUME* p_vol;                // offset 0x8, size 0x4
+    unsigned long dir_start_cluster;        // offset 0xC, size 0x4
+    unsigned long index;                    // offset 0x10, size 0x4
+    unsigned long stat;                     // offset 0x14, size 0x4
+    unsigned char num_entry_LFNs;           // offset 0x18, size 0x1
+    unsigned char ordinal;                  // offset 0x19, size 0x1
+    unsigned char check_sum;                // offset 0x1A, size 0x1
+    unsigned char attr_required;            // offset 0x1B, size 0x1
+    signed char pattern[520];               // offset 0x1C, size 0x208
+    unsigned short modify_time;             // offset 0x224, size 0x2
+    unsigned short modify_date;             // offset 0x226, size 0x2
+    unsigned long file_size;                // offset 0x228, size 0x4
+    unsigned char attr;                     // offset 0x22C, size 0x1
+    signed char short_name[13];             // offset 0x22D, size 0xD
+    signed char long_name[522];             // offset 0x23A, size 0x20A
+    unsigned short pattern_uni[260];        // offset 0x444, size 0x208
+    unsigned short short_name_uni[13];      // offset 0x64C, size 0x1A
+    unsigned short long_name_uni[261];      // offset 0x666, size 0x20A
+} PF_DIRENT;
 
 typedef struct PF_STR {
     // total size: 0x10

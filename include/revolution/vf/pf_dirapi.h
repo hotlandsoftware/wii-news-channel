@@ -10,7 +10,7 @@ extern "C" {
 struct PF_DIRENT;
 
 int VFipf2_format(s8 drv_char, const u8* param);
-int VFipf2_fsfirst(const s8* path, u8 attr, struct PF_DIRENT* p_dirent);
+int VFipf2_fsfirst(const s8* path, u32 attr, struct PF_DIRENT* p_dirent);
 int VFipf2_fsnext(struct PF_DIRENT* p_dirent);
 int VFipf2_mkdir(const s8* path);
 int VFipf2_sync(s8 drv_char, u32 mode);
