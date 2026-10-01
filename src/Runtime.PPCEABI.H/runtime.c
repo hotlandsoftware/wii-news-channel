@@ -657,7 +657,7 @@ L_8017AB4C:
     blr
 }
 
-asm void __cvt_dbl_usll(void) {
+asm void __cvt_dbl_ull(void) {
     nofralloc
     stwu r1, -0x10(r1)
     stfd f1, 0x8(r1)

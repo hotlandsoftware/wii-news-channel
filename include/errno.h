@@ -9,6 +9,7 @@ extern int errno;
 
 #define EDOM 33
 #define ERANGE 34
+#define EFPOS 40
 
 #ifdef __cplusplus
 }
