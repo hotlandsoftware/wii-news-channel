@@ -3,55 +3,53 @@
 #include <nw4r/types_nw4r.h>
 
 #include <nw4r/snd/snd_InstancePool.h>
+
 #include <nw4r/snd/snd_ut.h>
 
-#include <revolution/os.h>
-
+#include <new>
 
 namespace nw4r {
 namespace snd {
 namespace detail {
 
+// This NW4R revision's SoundInstanceManager (cf. TP's nw4hbm): no mutex, the
+// interrupt lock protects the priority list
 template <typename T> class SoundInstanceManager {
 public:
-    SoundInstanceManager() {
-        OSInitMutex(&mMutex);
-    }
-
     u32 Create(void* pBuffer, u32 size) {
-        ut::detail::AutoLock<OSMutex> lock(mMutex);
         return mPool.Create(pBuffer, size);
     }
 
     void Destroy(void* pBuffer, u32 size) {
-        ut::detail::AutoLock<OSMutex> lock(mMutex);
         mPool.Destroy(pBuffer, size);
     }
 
     T* Alloc(int priority) {
-        ut::detail::AutoLock<OSMutex> lock(mMutex);
-        T* pSound = NULL;
+        ut::AutoInterruptLock lock;
 
-        while (pSound == NULL) {
-            void* pBuffer = mPool.Alloc();
+        T* pSound;
+        void* pBuffer = mPool.Alloc();
 
-            if (pBuffer != NULL) {
-                pSound = new (pBuffer) T(this);
-            } else {
-                T* pLowest = GetLowestPrioritySound();
-
-                if (pLowest == NULL) {
-                    return NULL;
-                }
-
-                if (priority < pLowest->CalcCurrentPlayerPriority()) {
-                    return NULL;
-                }
-
-                OSUnlockMutex(&mMutex);
-                pLowest->Stop(0);
-                OSLockMutex(&mMutex);
+        if (pBuffer != NULL) {
+            pSound = new (pBuffer) T(this);
+        } else {
+            if (mPriorityList.IsEmpty()) {
+                return NULL;
             }
+
+            pSound = &mPriorityList.GetFront();
+            if (pSound == NULL) {
+                return NULL;
+            }
+
+            if (priority < pSound->CalcCurrentPlayerPriority()) {
+                return NULL;
+            }
+
+            pSound->Stop();
+
+            pBuffer = mPool.Alloc();
+            pSound = new (pBuffer) T(this);
         }
 
         InsertPriorityList(pSound, priority);
@@ -59,7 +57,7 @@ public:
     }
 
     void Free(T* pSound) {
-        ut::detail::AutoLock<OSMutex> lock(mMutex);
+        ut::AutoInterruptLock lock;
 
         if (mPriorityList.IsEmpty()) {
             return;
@@ -104,7 +102,6 @@ public:
 
     void SortPriorityList() {
         TPrioList listsByPrio[T::PRIORITY_MAX + 1];
-        ut::detail::AutoLock<OSMutex> lock(mMutex);
 
         while (!mPriorityList.IsEmpty()) {
             T& rSound = mPriorityList.GetFront();
@@ -122,8 +119,6 @@ public:
     }
 
     void UpdatePriority(T* pSound, int priority) {
-        ut::detail::AutoLock<OSMutex> lock(mMutex);
-
         RemovePriorityList(pSound);
         InsertPriorityList(pSound, priority);
     }
@@ -134,7 +129,6 @@ private:
 private:
     MemoryPool<T> mPool;     // at 0x0
     TPrioList mPriorityList; // at 0x4
-    mutable OSMutex mMutex;  // at 0x10
 };
 
 } // namespace detail

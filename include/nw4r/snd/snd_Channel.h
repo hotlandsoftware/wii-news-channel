@@ -10,6 +10,8 @@
 
 #include <nw4r/snd/snd_ut.h>
 
+#include <revolution/wpad.h>
+
 namespace nw4r {
 namespace snd {
 namespace detail {
@@ -17,6 +19,8 @@ namespace detail {
 // Forward declarations
 struct WaveData;
 
+// This NW4R revision's Channel (cf. TP's nw4hbm Channel, without the leading
+// LinkedInstance node; the instance node is at the end)
 class Channel {
 public:
     enum ChannelCallbackStatus {
@@ -38,7 +42,8 @@ public:
 
     void InitParam(ChannelCallback pCallback, u32 callbackArg);
     void Update(bool periodic);
-    void Start(const WaveData& rData, int length, u32 offset);
+
+    void Start(const WaveData& rData, s32 length);
     void Release();
     void Stop();
 
@@ -54,6 +59,7 @@ public:
     void SetRelease(int release) {
         mEnvelope.SetRelease(release);
     }
+
     bool IsRelease() const {
         return mEnvelope.GetStatus() == EnvGenerator::STATUS_RELEASE;
     }
@@ -69,13 +75,10 @@ public:
         mPauseFlag = pause;
         mVoice->Pause(pause);
     }
-    void SetReleasePriorityFix(bool fix) {
-        mReleasePriorityFixFlag = fix;
-    }
-
     bool IsPause() const {
         return mPauseFlag != false;
     }
+
     bool IsActive() const {
         return mActiveFlag;
     }
@@ -86,9 +89,6 @@ public:
     void SetUserVolume(f32 volume) {
         mUserVolume = volume;
     }
-    void SetUserPitch(f32 pitch) {
-        mUserPitch = pitch;
-    }
     void SetUserPitchRatio(f32 ratio) {
         mUserPitchRatio = ratio;
     }
@@ -98,17 +98,22 @@ public:
     void SetUserSurroundPan(f32 pan) {
         mUserSurroundPan = pan;
     }
+    void SetUserPan2(f32 pan) {
+        mUserPan2 = pan;
+    }
+    void SetUserSurroundPan2(f32 pan) {
+        mUserSurroundPan2 = pan;
+    }
     void SetUserLpfFreq(f32 freq) {
         mUserLpfFreq = freq;
     }
-
-    void SetRemoteFilter(int filter) {
-        mRemoteFilter = filter;
+    void SetUserPitch(f32 pitch) {
+        mUserPitch = pitch;
     }
+
     void SetOutputLine(int flag) {
         mOutputLineFlag = flag;
     }
-
     void SetMainOutVolume(f32 volume) {
         mMainOutVolume = volume;
     }
@@ -118,7 +123,6 @@ public:
     void SetFxSend(AuxBus bus, f32 send) {
         mFxSend[bus] = send;
     }
-
     void SetRemoteOutVolume(int remote, f32 volume) {
         mRemoteOutVolume[remote] = volume;
     }
@@ -131,7 +135,6 @@ public:
 
     void UpdateSweep(int count);
     void SetSweepParam(f32 pitch, int time, bool autoUpdate);
-    f32 GetSweepValue() const;
 
     void SetInitVolume(f32 volume) {
         mInitVolume = volume;
@@ -144,9 +147,6 @@ public:
     }
     void SetTune(f32 tune) {
         mTune = tune;
-    }
-    void SetSilence(bool silence, int fadeTime) {
-        mSilenceVolume.SetTarget(silence ? 0 : SILENCE_VOLUME_MAX, fadeTime);
     }
 
     void SetKey(int key) {
@@ -163,13 +163,6 @@ public:
         mLength = length;
     }
 
-    void SetPanMode(PanMode mode) {
-        mPanMode = mode;
-    }
-    void SetPanCurve(PanCurve curve) {
-        mPanCurve = curve;
-    }
-
     Channel* GetNextTrackChannel() const {
         return mNextLink;
     }
@@ -182,72 +175,47 @@ public:
     static void FreeChannel(Channel* pChannel);
 
 private:
-    static const u8 SILENCE_VOLUME_MAX = 255;
-
-    static const int KEY_INIT = 60;
-    static const int ORIGINAL_KEY_INIT = 60;
-
-    static const int PRIORITY_RELEASE = 1;
-
-private:
-    static void VoiceCallbackFunc(Voice* pDropVoice,
-                                  Voice::VoiceCallbackStatus status,
-                                  void* pCallbackArg);
-
-private:
     EnvGenerator mEnvelope; // at 0x0
     Lfo mLfo;               // at 0x18
     u8 mLfoTarget;          // at 0x30
+    bool mPauseFlag;        // at 0x31
+    bool mActiveFlag;       // at 0x32
+    bool mAllocFlag;        // at 0x33
+    bool mAutoSweep;        // at 0x34
 
-    bool mPauseFlag;              // at 0x31
-    bool mActiveFlag;             // at 0x32
-    bool mAllocFlag;              // at 0x33
-    bool mAutoSweep;              // at 0x34
-    bool mReleasePriorityFixFlag; // at 0x35
-
-    f32 mUserVolume;      // at 0x38
-    f32 mUserPitchRatio;  // at 0x3C
-    f32 mUserPan;         // at 0x40
-    f32 mUserSurroundPan; // at 0x44
-    f32 mUserLpfFreq;     // at 0x48
-
-    int mRemoteFilter;   // at 0x4C
-    int mOutputLineFlag; // at 0x50
-
-    f32 mMainOutVolume;       // at 0x54
-    f32 mMainSend;            // at 0x58
-    f32 mFxSend[AUX_BUS_NUM]; // at 0x5C
-
-    f32 mRemoteOutVolume[WPAD_MAX_CONTROLLERS]; // at 0x68
-    f32 mRemoteSend[WPAD_MAX_CONTROLLERS];      // at 0x78
-    f32 mRemoteFxSend[WPAD_MAX_CONTROLLERS];    // at 0x88
-
-    f32 mUserPitch;    // at 0x98
-    f32 mSweepPitch;   // at 0x9C
-    int mSweepCounter; // at 0xA0
-    int mSweepLength;  // at 0xA4
-
-    f32 mInitVolume;                   // at 0xA8
-    f32 mInitPan;                      // at 0xAC
-    f32 mInitSurroundPan;              // at 0xB0
-    f32 mTune;                         // at 0xB4
-    MoveValue<u8, u16> mSilenceVolume; // at 0xB8
-
-    int mKey;         // at 0xC0
-    int mOriginalKey; // at 0xC4
-    int mLength;      // at 0xC8
-
-    PanMode mPanMode;   // at 0xCC
-    PanCurve mPanCurve; // at 0xD0
-
-    ChannelCallback mCallback; // at 0xD4
-    u32 mCallbackData;         // at 0xD8
-
-    Voice* mVoice;      // at 0xDC
-    Channel* mNextLink; // at 0xE0
+    f32 mUserVolume;                            // at 0x38
+    f32 mUserPitchRatio;                        // at 0x3C
+    f32 mUserPan;                               // at 0x40
+    f32 mUserSurroundPan;                       // at 0x44
+    f32 mUserPan2;                              // at 0x48
+    f32 mUserSurroundPan2;                      // at 0x4C
+    f32 mUserLpfFreq;                           // at 0x50
+    int mOutputLineFlag;                        // at 0x54
+    f32 mMainOutVolume;                         // at 0x58
+    f32 mMainSend;                              // at 0x5C
+    f32 mFxSend[AUX_BUS_NUM];                   // at 0x60
+    f32 mRemoteOutVolume[WPAD_MAX_CONTROLLERS]; // at 0x6C
+    f32 mRemoteSend[WPAD_MAX_CONTROLLERS];      // at 0x7C
+    f32 mRemoteFxSend[WPAD_MAX_CONTROLLERS];    // at 0x8C
+    f32 mUserPitch;                             // at 0x9C
+    f32 mSweepPitch;                            // at 0xA0
+    s32 mSweepCounter;                          // at 0xA4
+    s32 mSweepLength;                           // at 0xA8
+    f32 mInitVolume;                            // at 0xAC
+    f32 mInitPan;                               // at 0xB0
+    f32 mInitSurroundPan;                       // at 0xB4
+    f32 mTune;                                  // at 0xB8
+    MoveValue<u8, u16> mSilenceVolume;          // at 0xBC
+    int mKey;                                   // at 0xC4
+    int mOriginalKey;                           // at 0xC8
+    s32 mLength;                                // at 0xCC
+    ChannelCallback mCallback;                  // at 0xD0
+    u32 mCallbackData;                          // at 0xD4
+    Voice* mVoice;                              // at 0xD8
+    Channel* mNextLink;                         // at 0xDC
 
 public:
-    NW4R_UT_LINKLIST_NODE_DECL(); // at 0xE4
+    NW4R_UT_LINKLIST_NODE_DECL(); // at 0xE0
 };
 
 NW4R_UT_LINKLIST_TYPEDEF_DECL(Channel);

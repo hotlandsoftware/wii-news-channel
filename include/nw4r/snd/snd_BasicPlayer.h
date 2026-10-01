@@ -12,17 +12,21 @@ namespace nw4r {
 namespace snd {
 namespace detail {
 
+// This NW4R revision's BasicPlayer (layout from BasicPlayer::InitParam):
+// IsPrepared() is virtual, there is a second pan pair, and no remote
+// filter / pan mode / pan curve
 class BasicPlayer {
 public:
     BasicPlayer();
     virtual ~BasicPlayer() {} // at 0x8
 
-    virtual bool Start() = 0;           // at 0xC
-    virtual void Stop() = 0;            // at 0x10
-    virtual void Pause(bool flag) = 0;  // at 0x14
-    virtual bool IsActive() const = 0;  // at 0x18
-    virtual bool IsStarted() const = 0; // at 0x1C
-    virtual bool IsPause() const = 0;   // at 0x20
+    virtual bool Start() = 0;            // at 0xC
+    virtual void Stop() = 0;             // at 0x10
+    virtual void Pause(bool flag) = 0;   // at 0x14
+    virtual bool IsActive() const = 0;   // at 0x18
+    virtual bool IsPrepared() const = 0; // at 0x1C
+    virtual bool IsStarted() const = 0;  // at 0x20
+    virtual bool IsPause() const = 0;    // at 0x24
 
     void InitParam();
 
@@ -59,6 +63,20 @@ public:
     }
     void SetSurroundPan(f32 pan) {
         mSurroundPan = pan;
+    }
+
+    f32 GetPan2() const {
+        return mPan2;
+    }
+    void SetPan2(f32 pan) {
+        mPan2 = pan;
+    }
+
+    f32 GetSurroundPan2() const {
+        return mSurroundPan2;
+    }
+    void SetSurroundPan2(f32 pan) {
+        mSurroundPan2 = pan;
     }
 
     f32 GetLpfFreq() const {
@@ -98,47 +116,23 @@ public:
     f32 GetRemoteSend(int remote) const;
     f32 GetRemoteFxSend(int remote) const;
 
-    int GetRemoteFilter() const {
-        return mRemoteFilter;
-    }
-    void SetRemoteFilter(int filter) {
-        mRemoteFilter = ut::Clamp(filter, 0, REMOTE_FILTER_MAX);
-    }
-
-    PanMode GetPanMode() const {
-        return mPanMode;
-    }
-    void SetPanMode(PanMode mode) {
-        mPanMode = mode;
-    }
-
-    PanCurve GetPanCurve() const {
-        return mPanCurve;
-    }
-    void SetPanCurve(PanCurve curve) {
-        mPanCurve = curve;
-    }
-
 private:
-    u32 mId; // at 0x4
-
-    f32 mVolume;      // at 0x8
-    f32 mPitch;       // at 0xC
-    f32 mPan;         // at 0x10
-    f32 mSurroundPan; // at 0x14
-    f32 mLpfFreq;     // at 0x18
-    char UNK_0x1C[0x4];
-
-    int mOutputLine;                            // at 0x20
-    f32 mMainOutVolume;                         // at 0x24
-    f32 mMainSend;                              // at 0x28
-    f32 mFxSend[AUX_BUS_NUM];                   // at 0x2C
-    f32 mRemoteOutVolume[WPAD_MAX_CONTROLLERS]; // at 0x38
-    f32 mRemoteSend[WPAD_MAX_CONTROLLERS];      // at 0x48
-    f32 mRemoteFxSend[WPAD_MAX_CONTROLLERS];    // at 0x58
-    u8 mRemoteFilter;                           // at 0x68
-    PanMode mPanMode;                           // at 0x6C
-    PanCurve mPanCurve;                         // at 0x70
+    u32 mId;                                    // at 0x4
+    f32 mVolume;                                // at 0x8
+    f32 mPitch;                                 // at 0xC
+    f32 mPan;                                   // at 0x10
+    f32 mSurroundPan;                           // at 0x14
+    f32 mPan2;                                  // at 0x18
+    f32 mSurroundPan2;                          // at 0x1C
+    f32 mLpfFreq;                               // at 0x20
+    u32 UNK_0x24;                               // at 0x24
+    int mOutputLine;                            // at 0x28
+    f32 mMainOutVolume;                         // at 0x2C
+    f32 mMainSend;                              // at 0x30
+    f32 mFxSend[AUX_BUS_NUM];                   // at 0x34
+    f32 mRemoteOutVolume[WPAD_MAX_CONTROLLERS]; // at 0x40
+    f32 mRemoteSend[WPAD_MAX_CONTROLLERS];      // at 0x50
+    f32 mRemoteFxSend[WPAD_MAX_CONTROLLERS];    // at 0x60
 };
 
 } // namespace detail
