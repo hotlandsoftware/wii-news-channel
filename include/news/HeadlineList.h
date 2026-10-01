@@ -52,6 +52,9 @@ private:
     void ResetItemsInline();
     void SnapInline();
     s32 GetMaxIndexInline();
+    void CalcTotalHeight();
+    void RelayoutItems();
+    void ClearItemStates();
 
 public:
     Category* mCategory;                         // at 0x00
