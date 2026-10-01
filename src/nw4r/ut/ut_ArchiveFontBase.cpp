@@ -212,7 +212,7 @@ ArchiveFontBase::ConstructOpAnalyzeGLGR(ConstructContext* pContext, CachedStream
     const u32 offsetUseSheets = (RoundUp)(offsetSizeCMAP + pBlock->body.numCMAP * sizeof(u32), 4);
     const u32 bytesPerSet = (numSheet + 31) / 32 * sizeof(u32);
     const u32 sizeAdjustTable = (RoundUp)(numSheet * sizeof(u16), 4);
-    const u32* pUseSheets = reinterpret_cast<const u32*>(pFileTop + offsetUseSheets);
+    const u32* pUseSheets = reinterpret_cast<const u32*>(offsetUseSheets + reinterpret_cast<u32>(pFileTop));
 
     const u32 remain = pContext->GetRemain();
     if (remain < (pBlockEnd - pFileTop) + sizeAdjustTable) {
@@ -226,7 +226,7 @@ ArchiveFontBase::ConstructOpAnalyzeGLGR(ConstructContext* pContext, CachedStream
     }
 
     for (int set = 0; set < pBlock->body.numSet; set++) {
-        const char* setName = reinterpret_cast<const char*>(pFileTop) + pBlock->body.nameOffsets[set];
+        const char* setName = reinterpret_cast<const char*>(pBlock->body.nameOffsets[set] + reinterpret_cast<u32>(pFileTop));
 
         if (pContext->pGlyphGroups[0] != '\0' && !IncludeName(pContext->pGlyphGroups, setName)) {
             continue;
