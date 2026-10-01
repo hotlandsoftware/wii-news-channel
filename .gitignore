@@ -37,3 +37,6 @@ compile_commands.json
 # Original WAD
 wad/
 .venv/
+
+# Claude Code local state
+.claude/

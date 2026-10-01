@@ -47,6 +47,8 @@ public:
 
     static void GetAnim(Anim* anim, s32 id);
 
+    s32 GetAnimId() const { return mAnimId; }
+
     s32 mState;                    // at 0x00
     s32 mTimer;                    // at 0x04
     f32 mX;                        // at 0x08

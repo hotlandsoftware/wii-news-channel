@@ -16,14 +16,16 @@ Mascot::Mascot() {
     s32 time = sWalkInTime;
     mState = STATE_WALK_IN;
     mTimer = time;
-    mX = time * sWalkInSpeed + (250.0f + 0.5f * GetScreenWidth());
+    f32 offset = time * sWalkInSpeed;
+    f32 center = 250.0f + 0.5f * GetScreenWidth();
+    mSpeed = sWalkInSpeed;
+    mY = 88.0f;
     mFlip = 0;
     mDirection = 0;
     mAnimId = 0;
-    mY = 88.0f;
-    mSpeed = sWalkInSpeed;
-    mAnimTime = 0.0f;
     mFrame = FRAME_NONE;
+    mX = offset + center;
+    mAnimTime = 0.0f;
 }
 
 Mascot::~Mascot() {}
@@ -32,14 +34,16 @@ void Mascot::Reset() {
     s32 time = sWalkInTime;
     mState = STATE_WALK_IN;
     mTimer = time;
-    mX = time * sWalkInSpeed + (250.0f + 0.5f * GetScreenWidth());
+    f32 offset = time * sWalkInSpeed;
+    f32 center = 250.0f + 0.5f * GetScreenWidth();
+    mSpeed = sWalkInSpeed;
+    mY = 88.0f;
     mFlip = 0;
     mDirection = 0;
     mAnimId = 0;
-    mY = 88.0f;
-    mSpeed = sWalkInSpeed;
-    mAnimTime = 0.0f;
     mFrame = FRAME_NONE;
+    mX = offset + center;
+    mAnimTime = 0.0f;
 }
 
 void Mascot::Update() {
@@ -173,7 +177,7 @@ void Mascot::UpdateAnim() {
         }
         break;
     case STATE_WALK_IN:
-        switch (mAnimId) {
+        switch (GetAnimId()) {
         case 2:
             anim = 4;
             break;
