@@ -416,12 +416,7 @@ void Ticker::TruncateText() {
             width += w;
             *++dst = 0;
             if (width > maxWidth) {
-                f32 ellipsis;
-                if (i < mNumChars) {
-                    ellipsis = s * font->GetCharWidth(0x2026);
-                } else {
-                    ellipsis = s * font->GetCharWidth(0x2026);
-                }
+                f32 ellipsis = ((i < mNumChars) ? s : s2) * font->GetCharWidth(0x2026);
                 dst[-1] = 0;
                 dst -= 2;
                 f32 removed = s * font->GetCharWidth(*dst);
@@ -447,16 +442,11 @@ void Ticker::TruncateText() {
             width += w;
             *++dst = 0;
             if (width > maxWidth) {
-                f32 dots;
-                if (i < mNumChars) {
-                    dots = 2.0f * space + s * (3.0f * font->GetCharWidth('.'));
-                } else {
-                    dots = 2.0f * space + s * (3.0f * font->GetCharWidth('.'));
-                }
+                width = 2.0f * space + ((i < mNumChars) ? s : s2) * (3.0f * font->GetCharWidth('.'));
                 dst[-1] = 0;
                 dst -= 2;
                 f32 removed = s * font->GetCharWidth(*dst);
-                while (removed < dots) {
+                while (removed < width) {
                     removed += space + s * font->GetCharWidth(*--dst);
                 }
                 dst[0] = 0;
