@@ -247,6 +247,13 @@ cflags_rel = [
     "-sdata2 0",
 ]
 
+# News Channel game code
+cflags_game = [
+    *cflags_base,
+    "-inline noauto",
+    "-i include/nw4r",
+]
+
 config.linker_version = "GC/3.0a5.2"
 
 
@@ -293,6 +300,15 @@ config.libs = [
         "objects": [
             Object(NonMatching, "Runtime.PPCEABI.H/global_destructor_chain.c"),
             Object(NonMatching, "Runtime.PPCEABI.H/__init_cpp_exceptions.cpp"),
+        ],
+    },
+    {
+        "lib": "news",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_game,
+        "progress_category": "game",
+        "objects": [
+            Object(Matching, "news/TextButton.cpp"),
         ],
     },
 ]
