@@ -585,6 +585,22 @@ config.libs = [
             Object(Matching, "revolution/PAD/Pad.c"),
         ],
     },
+    {
+        "lib": "vf_drv",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_rvl,
+        "progress_category": "sdk",
+        "objects": [
+            Object(Matching, "revolution/VF/d_vf.c"),
+            Object(Matching, "revolution/VF/d_vf_sys.c"),
+            Object(Matching, "revolution/VF/d_hash.c"),
+            Object(Matching, "revolution/VF/d_time.c"),
+            Object(Matching, "revolution/VF/d_common.c"),
+            Object(Matching, "revolution/VF/nand_drv.c"),
+            Object(Matching, "revolution/VF/ram_drv.c"),
+            Object(Matching, "revolution/VF/sd_drv.c"),
+        ],
+    },
 ]
 
 

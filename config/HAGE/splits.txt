@@ -306,6 +306,42 @@ revolution/VF/pf_filelock.c:
 revolution/VF/pf_system.c:
 	.text       start:0x8006C53C end:0x8006C5B4
 
+revolution/VF/d_vf.c:
+	.text       start:0x8006C5B4 end:0x8006D734
+	.bss        start:0x80247460 end:0x802AF480
+	.sbss       start:0x80357808 end:0x80357810
+
+revolution/VF/d_vf_sys.c:
+	.text       start:0x8006D734 end:0x800700A8
+	.data       start:0x801CAE88 end:0x801CAE98
+	.bss        start:0x802AF480 end:0x802AF5B8
+	.sdata      start:0x80356D30 end:0x80356D40
+	.sbss       start:0x80357810 end:0x80357828
+
+revolution/VF/d_hash.c:
+	.text       start:0x800700A8 end:0x80070728
+	.bss        start:0x802AF5B8 end:0x802AF7F8
+
+revolution/VF/d_time.c:
+	.text       start:0x80070728 end:0x80070808
+
+revolution/VF/d_common.c:
+	.text       start:0x80070808 end:0x80071500
+	.bss        start:0x802AF7F8 end:0x802AFA00
+
+revolution/VF/nand_drv.c:
+	.text       start:0x80071500 end:0x80074470
+	.rodata     start:0x801AAC48 end:0x801AAC68
+	.bss        start:0x802AFA00 end:0x802AFBA0
+	.sbss       start:0x80357828 end:0x80357830
+
+revolution/VF/ram_drv.c:
+	.text       start:0x80074470 end:0x80074ADC
+	.rodata     start:0x801AAC68 end:0x801AAC88
+
+revolution/VF/sd_drv.c:
+	.text       start:0x80074ADC end:0x80074AE0
+
 nw4r/ut/ut_list.cpp:
 	.text       start:0x800E84D8 end:0x800E8774
 
