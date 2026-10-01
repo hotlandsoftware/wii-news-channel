@@ -12,6 +12,8 @@ Project-specific findings. Read this before decompiling a file.
 | `0x80179F64`–`0x8018C7C0` | MSL / Runtime.PPCEABI.H. |
 | `0x8018C7C0`–`0x80191F00` | MetroTRK. |
 
+See `docs/platform_layer_map.md` for the per-library and per-file map of the platform layer, the closest reference decomp for each library, and the porting plan.
+
 **File boundaries.** Almost every game file includes a header that defines a static white `nw4r::ut::Color`.
 So each file ends with a `__sinit` that constructs it, and the `.ctors` table (`0x80191F04`, one entry per file in link order) gives the end of every game file.
 

@@ -18,6 +18,8 @@ public:
     ~LinkListImpl();
 
     class Iterator {
+        friend class LinkListImpl;
+
     public:
         Iterator() : mPointer(NULL) {}
         explicit Iterator(LinkListNode* node) : mPointer(node) {}
@@ -39,6 +41,12 @@ public:
     Iterator GetEndIter() { return Iterator(&mNode); }
 
     u32 GetSize() const { return mSize; }
+
+    Iterator Insert(Iterator it, LinkListNode* node);
+    Iterator Erase(Iterator it);
+    Iterator Erase(LinkListNode* node);
+    Iterator Erase(Iterator begin, Iterator end);
+    void Clear();
 
 protected:
     u32 mSize;          // at 0x0

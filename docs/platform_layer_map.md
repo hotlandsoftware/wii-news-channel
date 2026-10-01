@@ -1,0 +1,287 @@
+# Platform layer map (0x80051D4C–0x80179F64, MetroTRK 0x8018C7C0–0x80191F00)
+
+This is a plan for decompiling everything in `main.dol` that is not News Channel game code, MSL or the runtime.
+The plan is to port code from other public decomps.
+
+## How this was made
+
+- **Function sizes.** The size sequence of every function in our DOL was matched against the `symbols.txt` and `splits.txt` of the reference decomps (runs of 3–5 consecutive equal sizes).
+  This gives names and file boundaries wherever the code is unchanged.
+- **Version strings.** The `<< RVL_SDK - XX release build: ... >>` strings in `.data` give the SDK build date of each library.
+- **`.ctors`.** Static initialisers (`__sinit_*`) mark exact file ends for NW4R and HBM files (see below).
+- **Call-graph cuts.** Addresses that no call or shared-data edge crosses mark likely library boundaries.
+- **Compiling the references.** Each reference source file was compiled and compared function by function against the DOL, with relocations masked.
+  This is what `tools/decomp/refcmp.py` does.
+  "Drop-in %" below is the share of the reference file's compiled bytes that are byte-identical (relocations masked) to a same-size function in our range.
+  It is a lower bound: reference functions that are dead-stripped in our DOL count as misses.
+
+Reference checkouts live in `/home/admin/decomp-refs/` (shallow clones; never commit them):
+
+| Name | Repo | Game / SDK era | Useful for |
+| --- | --- | --- | --- |
+| `ogws` | doldecomp/ogws | Wii Sports US Rev1, SDK Nov 2006–Apr 2007, NW4R ~2006 | GX, AX, OS, VF, g3d, ef, snd, MetroTRK |
+| `smg` | SMGCommunity/Petari | Super Mario Galaxy, SDK Aug 2007–Feb 2008 | OS, DVD, NAND, SC, IPC, WPAD, NWC24, RSO, ARC, MEM, BTE |
+| `tp` | zeldaret/tp (RZDE01) | Twilight Princess Wii, SDK Sep 2006, `homebuttonLib` + `nw4hbm` | HBM, **nw4r::lyt / ut / math** (via `nw4hbm`) |
+| `mkw` | doldecomp/mkw | Mario Kart Wii, SDK Aug–Dec 2007 | SO (`soCommon.c`), names |
+| `ss` | zeldaret/ss | Skyward Sword (2011) | HBM file list (`hbm/homebutton/*`, `hbm/sound/*`), names |
+| `fc` | /home/admin/forecast (read-only) | Forecast Channel, **same SDK build** | Function boundaries only (almost all `fn_`), 100% size match with ours |
+| `spm` | SeekyCt/spm-decomp | Super Paper Mario | Names only (little lib source) |
+| `brawl` | doldecomp/brawl | SSBB | Not useful (no named SDK/NW4R) |
+
+The Forecast Channel DOL contains the same platform libraries byte for byte (the same function sizes everywhere, including HBM), shifted (by 0xD2A0 at the start of RSO; the offset changes from library to library).
+Anything matched there can be reused directly.
+
+## Top-level map (link order)
+
+| Range | Size | Library | Build date (version string) | Best reference | Drop-in % (best ref) |
+| --- | --- | --- | --- | --- | --- |
+| `0x80051D4C–0x80052D5C` | 0x1010 | RSO (`RSOLink.c`) | — | smg `RVL_SDK/rso/RSOLink.c` | 80% |
+| `0x80052D5C–0x80053274` | 0x518 | CNT (`cnt.c`) | May 10 2007 | ogws / fc | 29% (ogws), sizes 100% fc |
+| `0x80053274–0x800750DC` | 0x21E68 | VF (PrFILE2 + `d_*`, `nand_drv`, `sd_drv`) | — | **ogws** | 94% (42/49 files 100%) |
+| `0x800750DC–0x800767C8` | 0x16EC | SO + NCD | Jun 28 2007 (both), REX 2.0.4.0 | mkw `rvl/so/soCommon.c` | ~74% by size |
+| `0x800767C8–0x8007FE28` | 0x9660 | NWC24 | Jun 28 2007 | smg (Dec 2007) + ogws | 50% / 39% |
+| `0x8007FE28–0x8008A0A4` | 0xA27C | **Unidentified** self-contained lib (big unrolled functions, tables at `.rodata 0x801AACF0`) | — | none | — |
+| `0x8008A0A4–0x8008AA44` | 0x9A0 | ARC (`arc.c`) | — | **smg** | 100% |
+| `0x8008AA44–0x80096D2C` | 0xC2E8 | HBM core (`homebutton::*`) | HBM May 16 2007 (0x4199_60726) | tp `homebuttonLib` | GUIManager 91%, Anm/FrameController 100%, RemoteSpk 82%, Controller 51%, Base 22% |
+| `0x80096D2C–0x8009C720` | 0x59F4 | HBM sound (HBMAxSound / `mix`/`syn*`/`seq`; contains `vcmv_main.cpp`) | (HBM) | none (ss has the file list only) | — |
+| `0x8009C720–0x800BA03C` | 0x1D91C | nw4r::ef | — | ogws | ~50% |
+| `0x800BA03C–0x800CE740` | 0x14704 | nw4r::g3d | — | **ogws** | most used files 84–100% |
+| `0x800CE740–0x800E84D8` | 0x19D98 | nw4r::snd (old, `Channel`-based) | — | ogws | ~40–60% per file |
+| `0x800E84D8–0x800F02A8` | 0x7DD0 | nw4r::ut | — | **tp `nw4hbm/ut`** + ogws | 46% (tp), many files 100% |
+| `0x800F02A8–0x800F0F50` | 0xCA8 | nw4r::math | — | tp `nw4hbm/math` / smg / ogws | triangular 100% |
+| `0x800F0F50–0x800FB9EC` | 0xAA9C | nw4r::lyt | — | **tp `nw4hbm/lyt`** | 84% (ogws only 45%) |
+| `0x800FB9EC–0x800FBB58` | 0x16C | BASE (`PPCArch.c`) | — | ogws/smg | 97% |
+| `0x800FBB58–0x80109434` | 0xD8DC | OS (+ `__ppc_eabi_init` at `0x80109380`) | Jun 28 2007 | smg / ogws | 90% / 88% |
+| `0x80109434–0x8010B188` | 0x1D54 | EXI | Jun 6 2007 | ogws/smg | 65% |
+| `0x8010B188–0x8010C270` | 0x10E8 | SI | May 8 2007 | smg | 96% |
+| `0x8010C270–0x8010C358` | 0xE8 | DB | — | ogws/smg | 100% |
+| `0x8010C358–0x80110DBC` | 0x4A64 | VI (`vi.c`, `i2c.c`, `vi3in1.c`) | Jun 6 2007 | smg | 86% |
+| `0x80110DBC–0x80112208` | 0x144C | MTX | — | ogws | 91% |
+| `0x80112208–0x8011B478` | 0x9270 | GX | May 8 2007 | **ogws** | 97% |
+| `0x8011B478–0x801239C8` | 0x8550 | DVD | Jun 21 2007 | smg | 76% |
+| `0x801239C8–0x80123F2C` | 0x564 | AI | May 8 2007 | ogws/smg | 90% |
+| `0x80123F2C–0x80127930` | 0x3A04 | AX | May 8 2007 | **ogws** | 97% |
+| `0x80127930–0x80128994` | 0x1064 | AXFX | — | smg | 65% |
+| `0x80128994–0x8012AA20` | 0x208C | MEM | — | **smg** | 100% |
+| `0x8012AA20–0x8012B540` | 0xB20 | DSP | May 8 2007 | ogws | 98% |
+| `0x8012B540–0x8012E488` | 0x2F48 | NAND | May 8 2007 | smg | 71% |
+| `0x8012E488–0x80130ACC` | 0x2644 | SC | May 8 2007 | **smg** | 99.8% |
+| `0x80130ACC–0x801314E4` | 0xA18 | ESP | — | smg | 100% |
+| `0x801314E4–0x80133608` | 0x2124 | IPC | — | smg | 99.6% |
+| `0x80133608–0x80134BDC` | 0x15D4 | FS | — | smg | 89% |
+| `0x80134BDC–0x80134C38` | 0x5C | PAD | — | ogws/smg | 100% |
+| `0x80134C38–0x80143634` | 0xE9FC | WPAD | Jun 28 2007 | smg | 86% |
+| `0x80143634–0x8014590C` | 0x22D8 | KPAD | Jun 28 2007 | smg (Jun 2008) | 49% (hard) |
+| `0x8014590C–0x80145C7C` | 0x370 | EUART | — | ogws/smg | 100% |
+| `0x80145C7C–0x80146DA8` | 0x112C | USB | — | smg | 35% |
+| `0x80146DA8–0x8014BCF0` | 0x4F48 | WUD | — | smg | 72% |
+| `0x8014BCF0–0x80179290` | 0x2D5A0 | BTE (Broadcom stack) | — | smg (also tp, ss, mkw) | spot checks 77–100% |
+| `0x80179290–0x801794A4` | 0x214 | TPL | — | ogws/smg | 100% |
+| `0x801794A4–0x80179F64` | 0xAC0 | NdevExi2AD (`DebuggerDriver.c`, `exi2.c`) | — | ogws | 99.9% |
+| `0x80179F64–0x80179F80` | 0x1C | `strlen` (Runtime `__mem.c`) | — | — | — |
+| `0x8018C7C0–0x80191F00` | 0x5740 | MetroTRK | — | ogws | 28 files, all size-identical (another agent) |
+
+HBM's `.data` starts at `0x801CB670` and the SDK `.data` at `0x801CFEA0` (OS).
+Platform `.rodata` follows game `.rodata` (`0x80192498`–`0x801AEB40`).
+Use `tools/decomp/refs.py START END` to get each file's data ranges.
+
+## Per-library detail
+
+Ranges are file starts as found by matching.
+Rows marked ≈ are inferred and need checking (boundary functions are often static helpers).
+Exact ends from `.ctors`/`__sinit` are marked †.
+
+### RSO, CNT, VF, SO/NCD, NWC24, ARC
+
+- **RSO** `0x80051D4C`: `RSONotifyPostRSOLink`… `RSOLink`, `RSORelocate`, `RSOListInit`, `RSOLinkList`, then RSO getters up to `0x80052D5C`.
+- **CNT** `0x80052D5C`: `CNTInit` (calls ESP init + `OSRegisterVersion`), `contentInitHandleNAND` (`0x80052DA4`, calls `ARCInitHandle`), `contentFastOpenNAND` `0x80052F50` …
+- **VF** (ogws file order, all confirmed): `pf_clib 0x80053274`, `pf_code 0x80053574`, `pf_service 0x80053590`, `pf_str 0x800536B8`, `pf_w_clib 0x80053C40`, `pf_driver 0x80053CD4`, `pdm_bpb 0x800546D0`, `pdm_disk 0x80054FF0`, `pdm_partition 0x80056550`, `pdm_mbr 0x80057998`, `pdm_dskmng 0x80057F58`, `pf_cache 0x8005817C`, `pf_cluster 0x8005A0E4`, `pf_dir ≈0x8005B2A8`, `pf_entry 0x8005B694`, `pf_entry_iterator 0x8005D238`, `pf_fat 0x8005EC5C`, `pf_fat12 0x80061B30`, `pf_fat16 0x80062618`, `pf_fat32 0x80062B90`, `pf_fatfs 0x800631D0`, `pf_file 0x800631D4`, `pf_path 0x80066778`, `pf_sector 0x800695D4`, `pf_volume 0x80069CC4`, `pf_cp932 0x8006BA6C`, `pf_api_util 0x8006BF7C`, `pf_attach … pf_unmount 0x8006C0E8–0x8006C528` (one function each), `pf_filelock 0x8006C528`, `pf_system 0x8006C53C`, `d_vf 0x8006C5B4`, `d_vf_sys 0x8006D734`, `d_hash 0x800700A8`, `d_time 0x80070728`, `d_common 0x80070808`, `nand_drv 0x80071500`, `sd_drv ≈0x80074470`.
+- **SO** `0x800750DC` (`SOiAlloc` `0x8007528C` … `SOiWaitForDHCPEx`), **NCD** ≈`0x80075C34` (`NCDiGetEnabledConfigList` `0x80075D38`) to ≈`0x800767C8`.
+- **NWC24** (Petari order): `NWC24StdAPI ≈0x800767C8` (`STD_strnlen`, `Mail_memset`, `convNum`, `Mail_sprintf`, `Mail_vsprintf`), `NWC24FileAPI 0x8007732C`, `NWC24Config 0x800789B0`, `NWC24Utils ≈0x80078C9C`, `NWC24Manage 0x80078FEC`, `NWC24MBoxCtrl ≈0x80079998`, scheduler/download-now `≈0x8007A82C`, `NWC24Schedule 0x8007AF78`, `NWC24DateParser ≈0x8007B430`, `NWC24FriendList 0x8007BA20`, `NWC24SecretFList 0x8007BB3C`, `NWC24Time 0x8007BC58`, `NWC24Ipc 0x8007C0E8`, then the download-task list (`NWC24iOpenDlTaskList` `0x8007EB24`, …) and `NWC24System` (`NWC24Shutdown` `0x8007FD58`) up to `0x8007FE28`.
+  The News Channel links much more of NWC24 than Wii Sports does (the DlTask code), and no `MsgObj`/`Mime`/`Parser`.
+- **Unidentified** `0x8007FE28–0x8008A0A4` (41 KB).
+  It is self-contained (only `memcpy`/`memset` and one `OSPanic`-like call out), and only game code calls it: `fn_8004E794` calls `fn_80081348`, `fn_80081554`, `fn_800816B4`.
+  It has many large near-duplicate functions (0x590–0x76C) and `.rodata` tables `0x801AACF0` (0x100), `0x801AADF0`/`0x801AAE04` (0x14), `0x801AAE18` (0x40), `0x801AAE58` (0x100).
+  This is probably a decompression or crypto library used on downloaded news data. Identify it before porting.
+- **ARC** `0x8008A0A4` (`ARCInitHandle`) to `0x8008AA44`. Petari's `arc.c` is 100%.
+
+### HBM (`0x8008AA44–0x8009C720`)
+
+The HBM here is the May 2007 `homebuttonLib`. It is linked against the regular `nw4r::lyt`/`ut`/`snd` (no `nw4hbm` copy in this DOL).
+
+| File (ss/tp naming) | Start | Reference |
+| --- | --- | --- |
+| `HBMBase.cpp` | `0x8008AA44` (`HBMAllocMem`/`HBMFreeMem` wrappers, then `HBMCreate` `0x8008AA5C`) | tp (22% drop-in; `calc`, `update`, `startPointEvent`, `startTrigEvent` changed a lot) |
+| `HBMAnmController.cpp` | `0x8009430C` | tp/ogws 100% |
+| `HBMFrameController.cpp` | `0x80094418` | tp 100% |
+| `HBMGUIManager.cpp` | `0x800945B8` | tp 91% |
+| `HBMController.cpp` | `0x800959F0` | tp 51% |
+| `HBMRemoteSpk.cpp` | `0x80096BAC` | tp 82% |
+| `HBMAxSound.cpp` / `HBMCommon.cpp` | ≈`0x80096D2C`, a C++ file ends at `0x8009A3D0`† | none |
+| `mix`, `syn`, `synctrl`, `synenv`, `synmix`, `synpitch`, `synsample`, `synvoice`, `seq` | ≈`0x8009A3D0–0x8009C720` | none (ss has names and order only) |
+
+### nw4r::ef (`0x8009C720–0x800BA03C`, ogws)
+
+`ef_draworder` ≈`0x8009C720`, `ef_effect` ends `0x8009E0D8`†, `ef_effectsystem` `0x8009E0D8–0x8009E6B8`†, `ef_emitter` `0x8009E6B8`, `ef_animcurve` `0x800A6FD0` (100%), `ef_particle` `0x800A8498`, `ef_particlemanager` `–0x800AB0F8`†, `ef_resource` `0x800AB0F8–0x800ABAE0`†, `ef_util` `0x800ABAE0` (97%), `ef_emitterform`/`emform` (90%) to `0x800ADD94`†, then `ef_creationqueue`/`ef_handle`/`emform/*`, `ef_drawstrategybuilder` `0x800B2D10`, `ef_drawstrategyimpl` `0x800B2E90` (86%), another file ends `0x800B4A78`† (billboard/directional/free strategies), `ef_drawlinestrategy` `0x800B776C` (85%), `ef_drawpointstrategy` `0x800B7C48` (83%), `ef_drawstripestrategy` `0x800B7F3C`.
+
+### nw4r::g3d (`0x800BA03C–0x800CE740`, ogws, GC/3.0a5.2)
+
+`res/g3d_resmdl 0x800BA03C`, `res/g3d_resmat 0x800BB1C8` (46%), `res/g3d_resvtx 0x800BBEDC`, `res/g3d_restex 0x800BBF7C` (100%), `res/g3d_resnode 0x800BC118` (100%), `g3d_anmscn 0x800BCF8C` (100%), `g3d_obj 0x800BD2DC`, `g3d_anmobj 0x800BD3F8`, `platform/g3d_gpu 0x800BD410` (100%), `platform/g3d_cpu 0x800BD920` (100%), `g3d_state 0x800BDAC4–0x800C1300`† (87%), `g3d_draw1mat1shp ≈0x800C1368` (100%), `g3d_calcview 0x800C1930` (84%), `g3d_dcc 0x800C37B8` (100%), `g3d_workmem 0x800C3840` (100%), `g3d_calcworld 0x800C3E14`, `g3d_draw 0x800C40F0` (100%), `g3d_camera 0x800C5F30` (93%), `g3d_basic 0x800C6CE8` (100%), `g3d_maya 0x800C6E50` (100%), `g3d_xsi 0x800C7B0C` (100%), `g3d_3dsmax 0x800C86C8` (100%), `g3d_scnobj 0x800CA0D8`, `g3d_scnroot 0x800CA604` (80%), `g3d_scnmdlsmpl 0x800CBD64` (58%), `g3d_fog 0x800CDC20` (100%), `g3d_light 0x800CDD94` (87%).
+Animation-resource files (`res/g3d_resanm*`, `g3d_anm*`) are mostly dead-stripped here.
+
+### nw4r::snd (`0x800CE740–0x800E84D8`, ogws)
+
+This is an older snd than Wii Sports' (no `AxVoice`, `Channel`-based voices).
+Anchors (ogws order): `snd_AxManager 0x800CE740`, `snd_AxfxImpl 0x800D19F0` (100%), `snd_Bank 0x800D1B60`, `snd_BankFile 0x800D1D84` (94%), `snd_BasicPlayer 0x800D218C`, `snd_BasicSound 0x800D22D4–0x800D335C`†, `snd_Channel 0x800D335C`, `snd_DvdSoundArchive 0x800D44EC` (82%), `snd_EnvGenerator 0x800D4C38`, `snd_ExternalSoundPlayer 0x800D4EBC`, `snd_FrameHeap 0x800D4F9C`, `snd_InstancePool 0x800D5B1C`, `snd_Lfo 0x800D5BC0` (85%), `snd_MemorySoundArchive 0x800D5DC8` (92%), `snd_MidiSeqPlayer ≈0x800D61FC`, `snd_MmlParser ≈0x800D6F88`, `snd_MmlSeqTrack 0x800D710C`, `snd_MmlSeqTrackAllocator 0x800D71CC`, `snd_RemoteSpeaker 0x800D7494`, `snd_RemoteSpeakerManager 0x800D7B50`, `snd_SeqFile ≈0x800D7D8C`, `snd_SeqPlayer` ends `0x800D8BC8`†, `snd_SeqSound` ends `0x800D902C`†, `snd_SeqSoundHandle 0x800D902C`, `snd_SeqTrack 0x800D916C`, `snd_SoundArchive 0x800DA150` (89%), `snd_SoundArchiveFile 0x800DA738`, `snd_SoundArchiveLoader 0x800DB4E8` (94%), `snd_SoundArchivePlayer 0x800DC00C`, `snd_SoundHandle 0x800DE7B0`, `snd_SoundHeap 0x800DE84C`, `snd_StrmChannel 0x800E0198` (99%), `snd_StrmFile 0x800E03B8`, `snd_StrmPlayer` ends `0x800E23E0`†, `snd_StrmSound` ends `0x800E274C`†, then `StrmSoundHandle`/`Task*`/`Util`/`WaveFile`, a file ending `0x800E6E7C`† (`WavePlayer`?), `snd_WaveSound` ends `0x800E71C8`†, `snd_WaveSoundHandle 0x800E71C8`, `snd_WsdFile 0x800E7200` (93%), a file ending `0x800E7BD4`† (`WsdPlayer`?), and the rest to `0x800E84D8`.
+
+### nw4r::ut / math (`0x800E84D8–0x800F0F50`)
+
+The NW4R revision here has out-of-line `CharWriter`/`TextWriterBase` accessors, like TP's `nw4hbm` fork. For `ut`, `lyt` and `math` use `tp libs/revolution/src/homebuttonLib/nw4hbm/*` (rename `nw4hbm` → `nw4r`) as the first reference and ogws as the second.
+
+| File | Range | Status / best ref |
+| --- | --- | --- |
+| `ut_list.cpp` | `0x800E84D8–0x800E8774` | **done** (ogws) |
+| `ut_LinkList.cpp` | `0x800E8774–0x800E88E0` | **done** (ogws) |
+| `ut_binaryFileFormat.cpp` | `0x800E88E0–0x800E8954` | tp/ogws 100% |
+| `ut_CharStrmReader.cpp` | `0x800E8954–0x800E8A64` | tp/ogws 100% |
+| `ut_TagProcessorBase.cpp` | `0x800E8A64–≈0x800E9224` | tp 77% |
+| `ut_IOStream.cpp` | `≈0x800E9224–0x800E924C`† | ogws 100% |
+| `ut_FileStream.cpp` | `0x800E924C–0x800E9360`† | ogws |
+| `ut_DvdFileStream.cpp` | `0x800E9360–0x800E9930`† | ogws |
+| `ut_DvdLockedFileStream.cpp` | `0x800E9930–0x800E9B58` | ogws 100% |
+| `ut_NandFileStream.cpp` | `0x800E9B58–0x800E9B64`† | ogws (one function linked) |
+| `ut_LockedCache.cpp` | `0x800E9B64–0x800E9D10`† | ogws 100% |
+| `ut_Font.cpp`, `ut_RomFont.cpp`?, `ut_ResFontBase.cpp`, `ut_ResFont.cpp` | `0x800E9D10–≈0x800ED3xx` | tp: Font 100%, ResFontBase 81%; ogws ResFont 100% |
+| `ut_CharWriter.cpp` | `≈0x800ED3xx–≈0x800EDA28` | tp 77% (ogws 31%) |
+| `ut_TextWriterBase.cpp` | `≈0x800EDA28–0x800F02A8`† | tp 30% (template instantiations differ) |
+| `math_arithmetic.cpp`? | `0x800F02A8–0x800F0324` | — |
+| `math_triangular.cpp` | `0x800F0324–0x800F0618` | tp/smg 100% |
+| `math_types.cpp` | `0x800F0618–0x800F0F50` | ogws (MTX34 helpers) |
+
+### nw4r::lyt (`0x800F0F50–0x800FB9EC`, tp `nw4hbm/lyt`)
+
+| File | Range | tp drop-in |
+| --- | --- | --- |
+| `lyt_pane.cpp` | `0x800F0F50–0x800F1A48`† | 64% |
+| `lyt_group.cpp` | `0x800F1A48–0x800F1D68` | 89% |
+| `lyt_layout.cpp` | `0x800F1D68–≈0x800F2D80` | 98% |
+| `lyt_picture.cpp` | `≈0x800F2D80–0x800F2EF8`† | 98% |
+| `lyt_textBox.cpp` | `0x800F2EF8–0x800F44B0`† | 76% |
+| `lyt_window.cpp` | `0x800F44B0–0x800F692C`† | 94% |
+| `lyt_bounding.cpp` | `0x800F692C–0x800F69D8`† | 77% |
+| `lyt_material.cpp` | `0x800F69D8–0x800F9DA0` | 84% (ogws 10%) |
+| `lyt_drawInfo.cpp` | `0x800F9DA0–0x800F9E54` | 100% |
+| `lyt_animation.cpp` | `0x800F9E54–0x800FA9C4` | 97% |
+| `lyt_resourceAccessor.cpp` | `0x800FA9C4–0x800FAA1C` | 100% |
+| `lyt_arcResourceAccessor.cpp` | `0x800FAA1C–0x800FADA4` | 59% |
+| `lyt_common.cpp` | `0x800FADA4–0x800FB9EC` | 84% |
+
+### RVL SDK
+
+**OS** (ogws/smg order): `OS.c 0x800FBB58`, `OSAlarm 0x800FCF0C` (ogws 100%), `OSAlloc 0x800FD6F0` (100%), `OSArena 0x800FD9F8` (**done**), `OSAudioSystem 0x800FDACC` (100%), `OSCache 0x800FDF80`, `OSContext 0x800FE5B0` (100%), `OSError 0x800FEE38`, `OSExec 0x800FF568`, `OSFatal 0x80101738` (100%), `OSFont 0x8010235C`, `OSInterrupt 0x80103024` (100%), `OSLink 0x801037A8`, `OSMessage 0x801037C0`, `OSMemory 0x801039C4`, `OSMutex 0x801041D8` (100%), `OSReboot 0x801044DC`, `OSReset 0x8010455C`, `OSRtc 0x80104DC0`, `OSSync 0x8010584C`, `OSThread 0x801058CC` (smg 93%), `OSTime 0x80106E84`, `OSUtf 0x80107538`, `OSIpc 0x80107770`, `OSStateTM 0x80107798`, `OSPlayRecord 0x80107F28`, `OSStateFlags 0x80108620`, `OSNet 0x8010882C`, `OSNandbootInfo 0x801088E0`, `OSPlayTime 0x80108AE8`, `__ppc_eabi_init 0x80109380`.
+
+**EXI** `EXIBios 0x80109434`, `EXIUart 0x8010ACC8`, `EXICommon 0x8010AFFC`. **SI** `SIBios 0x8010B188`, `SISamplingRate 0x8010C190`. **DB** `0x8010C270`. **VI** `vi 0x8010C358`, `i2c 0x8010ECFC`, `vi3in1 0x8010F718`. **MTX** `mtx 0x80110DBC`, `mtxvec 0x80111A24`, `mtx44 0x80111A78`, `vec 0x80111C98`, `quat 0x80111EA0`.
+
+**GX** `GXInit 0x80112208`, `GXFifo 0x801133D4`, `GXAttr 0x80113D90` (100%), `GXMisc 0x80114FB4`, `GXGeometry 0x80115720`, `GXFrameBuf 0x80115CE0`, `GXLight 0x80116720`, `GXTexture 0x80116E30`, `GXBump 0x80117CB0`, `GXTev 0x801180FC`, `GXPixel 0x8011877C`, `GXDraw 0x80118EE0`, `GXDisplayList 0x8011A324`, `GXTransform 0x8011A398`, `GXPerf 0x8011A8E4`.
+
+**DVD** `dvdfs 0x8011B478`, `dvd 0x8011BEB4` (smg 95%), `dvdqueue 0x80120988`, `dvderror 0x80120BE0`, `dvdidutils 0x801214E4`, `dvdFatal 0x801215D4`, `dvd_broadway 0x80121710`. **AI** `0x801239C8`.
+
+**AX** `AX 0x80123F2C`, `AXAlloc 0x80123F80`, `AXAux 0x80124438`, `AXCL 0x80124C50`, `AXOut 0x801256D4`, `AXSPB 0x80125EC0`, `AXVPB 0x801262E0` (ogws 98%), `AXProf 0x801278F0`. **AXFX** `AXFXReverbHi 0x80127930`, `AXFXReverbHiExp 0x80127A2C`, `AXFXHooks 0x8012895C`.
+
+**MEM** `mem_heapCommon 0x80128994`, `mem_expHeap 0x80128E00`, `mem_frameHeap 0x801296C0`, `mem_allocator 0x80129C0C`, `mem_list ≈0x80129C90`. **DSP** `dsp 0x8012AA20`, `dsp_debug 0x8012AC5C`, `dsp_task 0x8012ACAC`.
+
+**NAND** `nand 0x8012B540`, `NANDOpenClose 0x8012C664`, `NANDCore ≈0x8012D0D8`, `NANDLogging ≈0x8012DEB8`. **SC** `scsystem 0x8012E488`, `scapi 0x8012FF5C`, `scapi_prdinfo 0x80130580`. **ESP** `0x80130ACC`. **IPC** `ipcMain 0x801314E4`, `ipcclt 0x801315B0`, `memory 0x80132F20`, `ipcProfile 0x80133444`. **FS** `0x80133608`. **PAD** `0x80134BDC`.
+
+**WPAD** `WPAD 0x80134C38`, `WPADHIDParser 0x8013C398`, `WPADEncrypt 0x80141838`, `debug_msg 0x801428E0`. **KPAD** `0x80143634`. **EUART** `0x8014590C`. **USB** `0x80145C7C`. **WUD** `WUD 0x80146DA8`, `WUDHidHost 0x8014B6A4`, `debug_msg 0x8014BCA0`.
+
+**BTE** (Petari/tp file names): `gki_buffer 0x8014BCF0`, `gki_time 0x8014D134`, `gki_ppc 0x8014D68C`, `hcisu_h2 0x8014D91C`, `uusb_ppc 0x8014DFB8`, `bte_hcisu ≈0x8014EAC0`, `bte_logmsg ≈0x8014EC94`, `bte_main 0x8014EDF8`, `btu_task1 0x8014EF50`, `bta_sys_conn 0x8014F474`, `bta_sys_main 0x8014F6C8`, `ptim 0x8014F90C`, `bta_dm_act 0x8014FB30`, `bta_dm_api 0x80151E6C`, `bta_dm_main 0x801522D8`, `bta_dm_pm 0x80152438`, `bta_hh_act 0x80152E54`, `bta_hh_api 0x8015459C`, `bta_hh_main 0x8015496C`, `bta_hh_utils 0x80154EC0`, `btm_acl 0x8015526C`, `btm_dev 0x80156FB0`, `btm_devctl 0x8015767C`, `btm_discovery 0x80159004`, `btm_inq 0x80159138`, `btm_pm 0x8015AC2C`, `btm_sco 0x8015B8C0`, `btm_sec 0x8015C6F8`, `btu_hcif 0x8015F6BC`, `gap_conn 0x80160AD0`, `gap_utils 0x8016160C`, `hcicmds 0x80161C28`, `hidd_pm 0x80164534`, `hidh_api 0x801648B0`, `hidh_conn 0x80165630`, `l2c_api 0x80167670`, `l2c_csm 0x8016823C`, `l2c_link 0x80169718`, `l2c_main 0x8016A8A4`, `l2c_utils 0x8016B8D4`, `port_rfc 0x8016D7E8`, `port_utils 0x8016EBE4`, `rfc_l2cap_if 0x8016F1BC`, `rfc_mx_fsm 0x8016FAF0`, `rfc_port_fsm 0x80170734`, `rfc_port_if 0x801718D4`, `rfc_ts_frames 0x80171E00`, `rfc_utils 0x80173448`, `sdp_api 0x80173C28`, `sdp_db 0x80174A90`, `sdp_discovery 0x8017575C`, `sdp_main 0x801769D4`, `sdp_server 0x80177540`, `sdp_utils 0x80178250`.
+Some small `*_cfg.c`, `btu_*` and `hcicmds` neighbours are not listed; take boundaries from Petari's `splits.txt`.
+
+**TPL** `0x80179290`, **NdevExi2AD** `DebuggerDriver 0x801794A4`, `exi2 0x801797D8–0x80179F64`.
+
+### MetroTRK (`0x8018C7C0–0x80191F00`, ogws, sizes identical)
+
+`mainloop 0x8018C7C0`, `nubevent 0x8018C8B8`, `nubinit 0x8018CAE0`, `msg 0x8018CC64`, `msgbuf 0x8018CC90`, `serpoll 0x8018D4CC`, `usr_put 0x8018D678`, `dispatch 0x8018D704`, `msghndlr 0x8018D84C`, `support 0x8018E928`, `mutex_TRK 0x8018EFDC`, `notify 0x8018EFF4`, `flush_cache 0x8018F08C`, `mem_TRK 0x8018F0C4`, `string_TRK 0x8018F17C`, `targimpl 0x8018F198`, `targsupp 0x80190BB0`, `mpc_7xx_603e 0x80190BD0`, `mslsupp 0x80190F40`, `dolphin_trk 0x801910B8`, `main_TRK 0x801913D4`, `dolphin_trk_glue 0x80191418`, `targcont 0x801918D8`, `target_options 0x8019190C`, `UDP_Stubs 0x80191928`, `main (gdev exi2) 0x80191970`, `CircleBuffer 0x80191C30`, `MWCriticalSection_gc 0x80191E98–0x80191F00`.
+MetroTRK is handled by another agent.
+
+## Compiler and flags
+
+- **What was verified to 100%.** `ut_list.cpp`, `ut_LinkList.cpp` and `OSArena.c` (now in the tree) all match with **`GC/3.0a5.2`** and `cflags_base + -fp_contract off -ipa file`.
+  These are the ogws NW4R/RVL flags, added to `configure.py` as `cflags_nw4r` and `cflags_rvl`.
+- **Compiler version barely matters.** In the quick-compare sweep, GC/3.0a3 and GC/3.0a5.2 gave identical results for every SDK and NW4R file tried except Petari's `WPAD.c`, where 3.0a5.2 was much better (77% vs 33%).
+  Default to GC/3.0a5.2. Try GC/3.0a3 (Petari's default for SDK and NW4R) on a file that is stuck.
+- **`-ipa file` is needed.** Static helpers are inlined into callers defined before them.
+- **Petari flags.** Petari's SDK flags are `-inline auto,level=3 -ipa file -sdata 8 -sdata2 8` (and `-O3` for EXI, `-fp off` for WPAD, `-O4,s` for NET).
+  `-inline auto,level=3` did not change anything in the files tried, but keep it in mind.
+- **HBM.** tp builds it with `-fp_contract off -sym on -inline auto -ipa file`; ogws builds its mini-lib with `-sdata 0 -sdata2 0`.
+  Check `.sdata` usage in our HBM before choosing.
+- **ogws version defines.** ogws headers are version-conditional: `math_arithmetic.h` needs `VERSION_RSPE01_00`/`_01`.
+  `refcmp.py` defines `VERSION_RSPE01_01`.
+  When copying ogws headers, resolve such `#if`s to whichever variant matches.
+- **SDK version strings.** Copy them exactly from the DOL (`.data` `0x801CFEA0`…); the dates in the reference sources are different.
+
+## Version differences found
+
+- **NW4R.** NW4R is older than Wii Sports': accessors are out of line, snd has no `AxVoice`, and `lyt_material` is far from ogws.
+  TP's `nw4hbm` fork is the closest public source for `lyt`/`ut`/`math`.
+- **HBM.** The May 2007 HBM is between TP's (Sep 2006) and later versions.
+  Small classes match TP; `HomeButton::calc`/`update`/`startPointEvent`/`startTrigEvent` grew.
+  The HBM sound engine (`0x80096D2C–0x8009C720`) has no public source.
+- **SDK.** Core libraries are May–June 2007, between ogws (≤ Apr 2007) and Petari (Aug 2007–Feb 2008).
+  For each file, try both with `refcmp.py` and take the better one.
+- **SC.** SC matches the Forecast Channel's `May 8 2007` build exactly.
+- **NWC24 and KPAD.** These are newer than ogws and older than Petari, with real code changes: NWC24 ~50% drop-in, KPAD ~49%.
+- **Unidentified library.** The 41 KB library at `0x8007FE28` has no reference at all.
+
+## Headers
+
+Game code uses lowercase `include/revolution/*.h` (`os.h`, `gx.h` …) and `include/nw4r/<lib>/*.h`.
+Petari's and TP's SDK headers are also lowercase (`revolution/os.h`, `revolution/gx.h` plus subdirectories).
+ogws's are uppercase (`revolution/OS.h`); on case-insensitive file systems these would clash with ours, so don't copy ogws's SDK header tree.
+Recommended: import Petari's `libs/RVL_SDK/include/revolution` tree (lowercase) once, merging our existing declarations into it.
+Do this as task 0 before the SDK tasks, so parallel agents do not edit the same headers.
+For NW4R, each library task owns `include/nw4r/<lib>/`. Other agents may only add declarations to it, never change existing ones (game code depends on the current layouts).
+
+## Tools
+
+- `tools/decomp/refcmp.py REF SRC START END [--mw VER] -- FLAGS` compiles a reference file and reports per-function drop-in % against our range.
+  Use it to pick the best reference and flags for each file before copying it.
+
+## Recommended task partition
+
+Each task is one library or 20–40 KB of contiguous code, with its own `src/` files, `configure.py` lib entry and `splits.txt` entries, so tasks can run in parallel.
+Task 0 should land first. After that, tasks only append to shared headers.
+Difficulty: E = mostly drop-in, M = drop-in plus version fixes, H = little or no usable source.
+
+| # | Task | Range | Size | Reference | Diff. |
+| --- | --- | --- | --- | --- | --- |
+| 0 | Import SDK headers (Petari tree, lowercase), keep game matching | — | — | smg | M |
+| 1 | VF part 1: `pf_*`, `pdm_*` | `0x80053274–0x8006C5B4` | 103 KB | ogws (42/49 files exact) | E |
+| 2 | VF part 2: `d_vf*`, `d_hash/time/common`, `nand_drv`, `sd_drv` | `0x8006C5B4–0x800750DC` | 35 KB | ogws, smg | E |
+| 3 | RSO + CNT + ARC + SO/NCD | `0x80051D4C–0x80053274`, `0x8008A0A4–0x8008AA44`, `0x800750DC–0x800767C8` | 13 KB | smg, ogws/fc, mkw | E–M |
+| 4 | NWC24 | `0x800767C8–0x8007FE28` | 38 KB | smg + ogws | M |
+| 5 | Identify and decompile the unknown library | `0x8007FE28–0x8008A0A4` | 41 KB | none | H |
+| 6 | HBM core | `0x8008AA44–0x80096D2C` | 49 KB | tp `homebuttonLib` | M–H |
+| 7 | HBM sound | `0x80096D2C–0x8009C720` | 23 KB | none | H |
+| 8 | ef part 1: draworder … resource | `0x8009C720–0x800ABAE0` | 62 KB | ogws | M |
+| 9 | ef part 2: util, emform, drawstrategy | `0x800ABAE0–0x800BA03C` | 58 KB | ogws | M |
+| 10 | g3d | `0x800BA03C–0x800CE740` | 84 KB | ogws | E–M |
+| 11 | snd part 1: AxManager … Lfo | `0x800CE740–0x800D5DC8` | 30 KB | ogws | M |
+| 12 | snd part 2: MemorySoundArchive … SoundArchiveLoader | `0x800D5DC8–0x800DC00C` | 25 KB | ogws | M |
+| 13 | snd part 3: SoundArchivePlayer … end | `0x800DC00C–0x800E84D8` | 50 KB | ogws | M |
+| 14 | ut + math (rest) | `0x800E88E0–0x800F0F50` | 34 KB | tp `nw4hbm`, ogws | M |
+| 15 | lyt | `0x800F0F50–0x800FB9EC` | 43 KB | tp `nw4hbm/lyt` | E–M |
+| 16 | BASE + OS (rest) + `__ppc_eabi_init` | `0x800FB9EC–0x80109434` | 55 KB | ogws/smg | E–M |
+| 17 | EXI, SI, DB, VI, MTX | `0x80109434–0x80112208` | 36 KB | ogws/smg | M |
+| 18 | GX | `0x80112208–0x8011B478` | 37 KB | ogws | E |
+| 19 | DVD + AI | `0x8011B478–0x80123F2C` | 35 KB | smg | M |
+| 20 | AX, AXFX, MEM, DSP | `0x80123F2C–0x8012B540` | 30 KB | ogws (AX/DSP), smg (MEM/AXFX) | E |
+| 21 | NAND, SC, ESP, IPC, FS, PAD | `0x8012B540–0x80134C38` | 38 KB | smg | E–M |
+| 22 | WPAD | `0x80134C38–0x80143634` | 60 KB | smg (GC/3.0a5.2) | M |
+| 23 | KPAD, EUART, USB, WUD, TPL, NdevExi2AD | `0x80143634–0x8014BCF0`, `0x80179290–0x80179F64` | 38 KB | smg, ogws | M–H (KPAD, USB) |
+| 24 | BTE part 1: gki, hcisu, bte, bta | `0x8014BCF0–0x8015526C` | 38 KB | smg | E–M |
+| 25 | BTE part 2: btm, btu, gap, hci | `0x8015526C–0x80164534` | 61 KB | smg | E–M |
+| 26 | BTE part 3: hid, l2c, port/rfc, sdp | `0x80164534–0x80179290` | 85 KB | smg | E–M |
+| — | MetroTRK | `0x8018C7C0–0x80191F00` | 22 KB | ogws | E (other agent) |
+
+Suggested order: 0, then the easy, high-yield tasks 1, 2, 18, 20, 16, 15, 10, 21 and 24–26, then the M tasks, and 5–7 last.
