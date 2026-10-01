@@ -17,10 +17,10 @@ class FxBase;
 class SoundSystem {
 public:
     static const int DEFAULT_DVD_THREAD_PRIORITY = 3;
-    static const int DEFAULT_DVD_THREAD_STACK_SIZE = OS_MEM_KB_TO_B(16);
+    static const int DEFAULT_DVD_THREAD_STACK_SIZE = 16 * 1024;
 
     static const int DEFAULT_SOUND_THREAD_PRIORITY = 4;
-    static const int DEFAULT_SOUND_THREAD_STACK_SIZE = OS_MEM_KB_TO_B(16);
+    static const int DEFAULT_SOUND_THREAD_STACK_SIZE = 16 * 1024;
 
     struct SoundSystemParam {
         s32 soundThreadPriority;  // at 0x0
@@ -36,6 +36,10 @@ public:
     };
 
 public:
+    // Size of the static work area that InitSoundSystem(s32, s32) uses:
+    // both thread stacks plus the AxVoice, Voice and Channel manager work
+    static const int DEFAULT_WORK_SIZE = 0x15D88;
+
     static void InitSoundSystem(s32 soundThreadPrio, s32 dvdThreadPriority);
     static u32 GetRequiredMemSize(const SoundSystemParam& rParam);
 
@@ -76,7 +80,7 @@ public:
     }
 
 private:
-    static detail::TaskThread sTaskThread;
+    // TaskThread is a singleton in this NW4R revision (no sTaskThread)
 };
 
 } // namespace snd
