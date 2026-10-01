@@ -1,0 +1,17 @@
+#ifndef NEWS_SMOOTH_VALUE_H
+#define NEWS_SMOOTH_VALUE_H
+
+#include <types.h>
+
+// A value that moves towards a target by a fixed step every update.
+class SmoothValue {
+public:
+    SmoothValue();
+    void Update();
+
+    f32 mValue;  // at 0x0
+    f32 mTarget; // at 0x4
+    f32 mStep;   // at 0x8
+};
+
+#endif

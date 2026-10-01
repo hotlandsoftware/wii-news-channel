@@ -112,6 +112,17 @@ news/DrawUtil.cpp:
 	.sbss       start:0x80357638 end:0x80357640
 	.sdata2     start:0x80358DC8 end:0x80358DD8
 
+news/SmoothValue.cpp:
+	.text       start:0x80045238 end:0x80045298
+	.sdata2     start:0x80358ED8 end:0x80358EE0
+
+news/PaneButton.cpp:
+	.text       start:0x80045298 end:0x80047B50
+	.ctors      start:0x80191F48 end:0x80191F4C
+	.bss        start:0x8020DCB8 end:0x8020DE08
+	.sdata      start:0x80356C60 end:0x80356C90
+	.sdata2     start:0x80358EE0 end:0x80358F18
+
 Runtime.PPCEABI.H/__va_arg.c:
 	.text       start:0x80179F80 end:0x8017A048
 

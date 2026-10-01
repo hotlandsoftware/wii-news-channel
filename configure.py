@@ -345,6 +345,8 @@ config.libs = [
             Object(NonMatching, "news/Model.cpp"),
             Object(NonMatching, "news/main.cpp"),
             Object(Matching, "news/DrawUtil.cpp"),
+            Object(Matching, "news/SmoothValue.cpp"),
+            Object(Matching, "news/PaneButton.cpp", extra_cflags=["-inline auto", "-ipa file"]),
         ],
     },
 ]

@@ -6,6 +6,7 @@
 namespace nw4r {
 namespace math {
 
+f32 SinFIdx(f32 fidx);
 f32 Atan2FIdx(f32 y, f32 x);
 
 f32 CosFIdx(f32 fidx);
@@ -25,6 +26,10 @@ MTX34* MTX34RotXYZFIdx(MTX34* out, f32 fx, f32 fy, f32 fz);
 inline MTX34* MTX34RotXYZDeg(MTX34* out, f32 dx, f32 dy, f32 dz) {
     return MTX34RotXYZFIdx(out, dx * (256.0f / 360.0f), dy * (256.0f / 360.0f),
                            dz * (256.0f / 360.0f));
+}
+
+inline f32 SinRad(f32 rad) {
+    return SinFIdx(rad * (256.0f / (2.0f * 3.1415927f)));
 }
 
 } // namespace math
