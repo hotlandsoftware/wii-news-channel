@@ -1,8 +1,21 @@
 #include <revolution/os/OSTime.h>
 #include <revolution/os.h>
+#define USEC_MAX 1000
+#define MSEC_MAX 1000
+#define MONTH_MAX 12
+#define WEEK_DAY_MAX 7
+#define YEAR_DAY_MAX 365
 
-static int YearDays[] = { 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334 };
-static int LeapYearDays[] = { 0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335 };
+#define SECS_IN_MIN 60
+#define SECS_IN_HOUR (SECS_IN_MIN * 60)
+#define SECS_IN_DAY (SECS_IN_HOUR * 24)
+#define SECS_IN_YEAR (SECS_IN_DAY * 365)
+
+#define BIAS 0xB2575
+
+
+static s32 YearDays[] = { 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334 };
+static s32 LeapYearDays[] = { 0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335 };
 
 asm OSTime OSGetTime(void) {
     nofralloc
@@ -44,68 +57,97 @@ OSTime __OSTimeToSystemTime(OSTime time) {
     return res;
 }
 
-static BOOL IsLeapYear(int year) {
-    return (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
+static BOOL IsLeapYear(s32 year) {
+    return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
 }
 
-static int GetLeapDays(int year) {
+static s32 GetYearDays(s32 year, s32 mon) {
+    return (IsLeapYear(year) ? LeapYearDays : YearDays)[mon];
+}
+
+static s32 GetLeapDays(s32 year) {
     if (year < 1) {
         return 0;
     }
-
-    return (year + 3) / 4 - (year - 1) / 100 + (year - 1) / 400; 
+    return (year + 3) / 4 - (year - 1) / 100 + (year - 1) / 400;
 }
 
-static void GetDates(s32 days, OSCalendarTime *pTime) NO_INLINE;
+static void GetDates(s32 days, OSCalendarTime* cal) NO_INLINE {
+    s32 year;
+    s32 totalDays;
+    s32* p_days;
+    s32 month;
 
-void OSTicksToCalendarTime(OSTime ticks, OSCalendarTime *pTime) {
-    int numDays;
-    int numSecs;
-    OSTime ticksAfter;
+    cal->wday = (days + 6) % WEEK_DAY_MAX;
 
-    ticksAfter = ticks % OSSecondsToTicks(1);
-
-    if (ticksAfter < 0) {
-        ticksAfter += OSSecondsToTicks(1);
+    // WTF??
+    for (year = days / YEAR_DAY_MAX;
+         days < (totalDays = year * YEAR_DAY_MAX + GetLeapDays(year)); year--) {
+        ;
     }
+    days -= totalDays;
+    cal->year = year;
+    cal->yday = days;
 
-    pTime->usec = (int)(OSTicksToMicroseconds(ticksAfter) % 1000);
-    pTime->msec = (int)(OSTicksToMilliseconds(ticksAfter) % 1000);
-
-    ticks -= ticksAfter;
-
-    numDays = (int)(OSTicksToSeconds(ticks) / 86400 + 0xB2575);
-    numSecs = (int)(OSTicksToSeconds(ticks) % 86400);
-
-    if (numSecs < 0) {
-        numDays -= 1;
-        numSecs += 86400;
+    p_days = IsLeapYear(year) ? LeapYearDays : YearDays;
+    for (month = MONTH_MAX; days < p_days[--month];) {
+        ;
     }
-
-    GetDates(numDays, pTime);
-    pTime->hour = numSecs / 60 / 60;
-    pTime->min = (numSecs / 60) % 60;
-    pTime->sec = numSecs % 60;
+    cal->mon = month;
+    cal->mday = days - p_days[month] + 1;
 }
 
-static void GetDates(s32 days, OSCalendarTime *pTime) {
-    int year;
-    int dayCount;
-    int month;
-    int* monthArr;
+void OSTicksToCalendarTime(s64 ticks, OSCalendarTime* cal) {
+    s32 days, secs;
+    s64 d;
 
-    pTime->wday = (days + 6) % 7;
+    d = ticks % OSSecondsToTicks(1);
+    if (d < 0) {
+        d += OSSecondsToTicks(1);
+    }
 
-    for (year = days / 365; days < (dayCount = GetLeapDays(year) + 365 * year); --year);
+    cal->usec = OSTicksToMicroseconds(d) % USEC_MAX;
+    cal->msec = OSTicksToMilliseconds(d) % MSEC_MAX;
+    ticks -= d;
 
-    days -= dayCount;
-    pTime->year = year;
-    pTime->yday = days;
+    days = (OSTicksToSeconds(ticks) / SECS_IN_DAY) + BIAS;
+    secs = OSTicksToSeconds(ticks) % SECS_IN_DAY;
+    if (secs < 0) {
+        days -= 1;
+        secs += SECS_IN_DAY;
+    }
 
-    monthArr = IsLeapYear(year) ? LeapYearDays : YearDays;
+    GetDates(days, cal);
+    cal->hour = secs / 60 / 60;
+    cal->min = secs / 60 % 60;
+    cal->sec = secs % 60;
+}
 
-    for (month = 12; days < monthArr[--month];);
+s64 OSCalendarTimeToTicks(const OSCalendarTime* cal) {
+    s64 seconds;
+    s32 month;
+    s32 ovMon;
+    s32 year;
 
-    pTime->mon = month;
-    pTime->mday = days - monthArr[month] + 1;
+    ovMon = cal->mon / MONTH_MAX;
+    month = cal->mon - (ovMon * MONTH_MAX);
+
+    if (month < 0) {
+        month += MONTH_MAX;
+        ovMon--;
+    }
+
+    year = cal->year + ovMon;
+
+    // clang-format off
+    seconds = (s64)SECS_IN_YEAR * year +
+              (s64)SECS_IN_DAY * (cal->mday + GetLeapDays(year) + GetYearDays(year, month) - 1) +
+              (s64)SECS_IN_HOUR * cal->hour +
+              (s64)SECS_IN_MIN * cal->min +
+              cal->sec -
+              (s64)0xEB1E1BF80ULL;
+    // clang-format on
+
+    return OSSecondsToTicks(seconds) + OSMillisecondsToTicks((s64)cal->msec) +
+           OSMicrosecondsToTicks((s64)cal->usec);
 }

@@ -251,6 +251,19 @@ asm void LCDisable(void) {
     blr
 }
 
+asm void LCLoadBlocks(register void* dst, register const void* src, register u32 blocks) {
+    nofralloc
+    rlwinm r6, blocks, 30, 27, 31
+    clrlwi src, src, 3
+    or r6, r6, src
+    mtspr DMA_U, r6
+    rlwinm r6, blocks, 2, 28, 29
+    or r6, r6, dst
+    ori r6, r6, 0x12
+    mtspr DMA_L, r6
+    blr
+}
+
 asm void LCStoreBlocks(register void *pDest, register void *pSrc, register u32 num) {
     nofralloc
     /* set the upper bits of the DMA length (num) */
@@ -286,6 +299,13 @@ u32 LCStoreData(void *pDest, void *pSrc, u32 num) {
     }
 
     return v1;
+}
+
+asm u32 LCQueueLength(void) {
+    nofralloc
+    mfspr r4, 0x398
+    rlwinm r3, r4, 8, 28, 31
+    blr
 }
 
 asm void LCQueueWait(register u32 length) {
