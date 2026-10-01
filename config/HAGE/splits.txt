@@ -23,6 +23,20 @@ news/Mascot.cpp:
 	.sbss       start:0x80357460 end:0x80357468
 	.sdata2     start:0x80358460 end:0x803584F0
 
+news/NewsArticle.cpp:
+	.text       start:0x8000FA38 end:0x80010EB4
+	.rodata     start:0x80192178 end:0x801921B8
+	.sdata      start:0x803567D0 end:0x803567D8
+
+news/LanguageSelect.cpp:
+	.text       start:0x80010EB4 end:0x80012ABC
+	.ctors      start:0x80191F0C end:0x80191F10
+	.data       start:0x801B11C0 end:0x801B1290
+	.bss        start:0x801EDDA8 end:0x801EDDD0
+	.sdata      start:0x803567D8 end:0x803567F8
+	.sbss       start:0x80357480 end:0x80357490
+	.sdata2     start:0x803586E0 end:0x80358720
+
 news/TextButton.cpp:
 	.text       start:0x8001F994 end:0x80020254
 	.ctors      start:0x80191F14 end:0x80191F18
