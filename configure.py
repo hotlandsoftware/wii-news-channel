@@ -317,6 +317,8 @@ config.libs = [
             Object(Matching, "MSL_C/setjmp.c"),
             Object(Matching, "MSL_C/mem.c", extra_cflags=["-Cpp_exceptions on"]),
             Object(Matching, "MSL_C/mem_funcs.c", extra_cflags=["-Cpp_exceptions on"]),
+            Object(Matching, "MSL_C/math_api.c", extra_cflags=["-Cpp_exceptions on"]),
+            Object(Matching, "MSL_C/misc_io.c", extra_cflags=["-Cpp_exceptions on"]),
             Object(Matching, "MSL_C/string.c", extra_cflags=["-Cpp_exceptions on"]),
             Object(Matching, "MSL_C/wstring.c"),
         ],

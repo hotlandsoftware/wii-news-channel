@@ -158,6 +158,14 @@ MSL_C/mem.c:
 MSL_C/mem_funcs.c:
 	.text       start:0x8017DFF0 end:0x8017E2C0
 
+MSL_C/math_api.c:
+	extab       start:0x800067A8 end:0x800067B8
+	extabindex  start:0x80006D3C end:0x80006D54
+	.text       start:0x8017E2C0 end:0x8017E358
+
+MSL_C/misc_io.c:
+	.text       start:0x8017E358 end:0x8017E368
+
 MSL_C/string.c:
 	extab       start:0x80006850 end:0x80006868
 	extabindex  start:0x80006E38 end:0x80006E5C
