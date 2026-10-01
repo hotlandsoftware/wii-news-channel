@@ -104,9 +104,17 @@ news/DrawUtil.cpp:
 	.sbss       start:0x80357638 end:0x80357640
 	.sdata2     start:0x80358DC8 end:0x80358DD8
 
+Runtime.PPCEABI.H/__va_arg.c:
+	.text       start:0x80179F80 end:0x8017A048
+
 Runtime.PPCEABI.H/global_destructor_chain.c:
 	.text       start:0x8017A048 end:0x8017A0A8
 	.sbss       start:0x80358418 end:0x80358420
+
+Runtime.PPCEABI.H/NMWException.cp:
+	extab       start:0x800066A0 end:0x800066E8
+	extabindex  start:0x80006BE0 end:0x80006C1C
+	.text       start:0x8017A0A8 end:0x8017A458
 
 Runtime.PPCEABI.H/ptmf.c:
 	.text       start:0x8017A458 end:0x8017A4EC
