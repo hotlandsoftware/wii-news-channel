@@ -221,6 +221,7 @@ public:
     void SetLpf(u16 freq);
 
     static u32 GetSampleByDspAddress(const void* pBase, u32 addr, Format fmt);
+    static u32 GetSampleByByte(u32 byte, Format fmt);
 
 private:
     AXVPB* mVpb;           // at 0x0
