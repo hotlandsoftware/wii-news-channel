@@ -12,5 +12,4 @@ They read the generated `build/HAGE/asm` disassembly and `config/HAGE/symbols.tx
 | `rep.py` | `rep.py <unit substring>` | Rebuild `report.json` and print per-function match percentages. |
 | `ren.py` | `ren.py old=new[:local\|:weak] ...` | Rename symbols in `symbols.txt` (e.g. `fn_80012345=Foo__3BarFv`). |
 | `variants.py` | `variants.py <src> <unit> <symbol> <variants.py>` | Try source variants: the variants file defines `OLD` (text in `src`) and `NEWS` (list of replacements). Prints each variant's match percentage and restores the file. |
-| `asmfn.py` | `asmfn.py <unit> <function>` | Print a function's disassembly as an MWCC inline-asm body (labels and relocations kept symbolic), for `asm` functions in C files. |
 | `refcmp.py` | `refcmp.py <ogws\|smg\|tp> <src> <start> <end> [--mw VER] -- <cflags>` | Compile a file from a reference decomp (in `../decomp-refs` or `$DECOMP_REFS`) and report, per function, how much matches a same-size function in `[start, end)` of our DOL (relocations masked). Use it to pick the reference and flags before porting a platform file (see `docs/platform_layer_map.md`). |

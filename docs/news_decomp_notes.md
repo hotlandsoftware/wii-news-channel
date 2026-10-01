@@ -17,6 +17,13 @@ See `docs/platform_layer_map.md` for the per-library and per-file map of the pla
 **File boundaries.** Almost every game file includes a header that defines a static white `nw4r::ut::Color`.
 So each file ends with a `__sinit` that constructs it, and the `.ctors` table (`0x80191F04`, one entry per file in link order) gives the end of every game file.
 
+## Asm policy
+
+- **No inline-asm fallbacks.** A C/C++ function that doesn't match must stay in C, and its file stays `NonMatching`. Never replace it with inline asm copied from the DOL, not even behind `NON_MATCHING`.
+- **What may be asm:** only functions that were originally written in assembly. That covers the runtime (`__save_gpr`, `ptmf`), `setjmp`, MetroTRK, and the SDK's low-level PPC/OS/GX/DB routines that are `asm` in every reference decomp.
+- The repo never contains `.s` files.
+- **Currently NonMatching under this rule:** VF `pf_dir.c` (99.97%), `d_vf_sys.c` (99.99%), `nand_drv.c` (99.99%) and `ram_drv.c` (99.88%). All are register-allocation differences.
+
 ## Compiler
 
 - Game code: `GC/3.0a5.2`, base flags plus `-inline noauto -fp_contract off` (see `cflags_game` in `configure.py`).

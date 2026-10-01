@@ -14,10 +14,6 @@ extern struct PDM_DISK_SET VFipdm_disk_set;
 // still has Petari's 0x38-byte layout (VF part 1 updates it).
 #define VF_PDM_DISK_SIZE 0x34
 
-#ifndef NON_MATCHING
-void _savegpr_23(void);
-void _restgpr_23(void);
-#endif
 
 s32 ramdrv_init(struct PDM_DISK* p_disk);
 s32 ramdrv_finalize(struct PDM_DISK* p_disk);
@@ -177,7 +173,6 @@ s32 VFi_ramdrv_init_drv_tbl(struct PDM_DISK_TBL* p_disk_tbl, u32 ui_ext) {
     return 0;
 }
 
-#ifdef NON_MATCHING
 s32 ramdrv_physical_read(u32 num_blocks, u8* buf, u32 block, u32 bps, u32* p_num_success, struct PDM_DISK* p_disk) {
     u32 fileSize;
     u32 size;
@@ -211,78 +206,7 @@ s32 ramdrv_physical_read(u32 num_blocks, u8* buf, u32 block, u32 bps, u32* p_num
     *p_num_success = num_blocks;
     return 0;
 }
-#else
-// Register allocation differs from the C version above.
-asm s32 ramdrv_physical_read(u32 num_blocks, u8* buf, u32 block, u32 bps, u32* p_num_success, struct PDM_DISK* p_disk) {
-    nofralloc
-    stwu r1, -0x40(r1)
-    mflr r0
-    stw r0, 0x44(r1)
-    addi r11, r1, 0x40
-    bl _savegpr_23
-    mr r28, r8
-    mr r23, r3
-    mr r24, r4
-    mr r25, r5
-    mr r26, r6
-    mr r27, r7
-    mr r3, r28
-    bl dCommon_getFileSizeFromDisk
-    mr r31, r3
-    mr r3, r28
-    bl VFSysPDMDisk2DriveP
-    cmpwi r3, 0x0
-    bne L_80074958
-    li r3, -0x14
-    b L_800749E0
-L_80074958:
-    lwz r30, 0x0(r3)
-    lis r9, ramdrv_BuildUpBootSector@ha
-    lis r10, ramdrv_BuildUpFSInfoSector@ha
-    mr r3, r23
-    mr r4, r24
-    mr r5, r25
-    mr r6, r27
-    mr r7, r28
-    addi r8, r1, 0x8
-    addi r9, r9, ramdrv_BuildUpBootSector@l
-    addi r10, r10, ramdrv_BuildUpFSInfoSector@l
-    bl dCommon_ReadDummyBPB
-    cmpwi r3, 0x0
-    bne L_80074998
-    lwz r3, 0x8(r1)
-    b L_800749E0
-L_80074998:
-    mullw r29, r23, r26
-    mr r3, r28
-    bl dCommon_getResvSecNumFromDisk
-    mr r5, r3
-    mr r3, r25
-    mr r4, r26
-    bl dCommon_GetPhysicalOffset
-    add r0, r3, r29
-    add r4, r30, r3
-    cmplw r0, r31
-    ble L_800749CC
-    li r3, -0x16
-    b L_800749E0
-L_800749CC:
-    mr r3, r24
-    mr r5, r29
-    bl VFipf_memcpy
-    stw r23, 0x0(r27)
-    li r3, 0x0
-L_800749E0:
-    addi r11, r1, 0x40
-    bl _restgpr_23
-    lwz r0, 0x44(r1)
-    mtlr r0
-    addi r1, r1, 0x40
-    blr
-}
-#endif
 
-#ifdef NON_MATCHING
 s32 ramdrv_physical_write(u32 num_blocks, const u8* buf, u32 block, u32 bps, u32* p_num_success, struct PDM_DISK* p_disk) {
     u32 fileSize;
     u32 size;
@@ -317,70 +241,3 @@ s32 ramdrv_physical_write(u32 num_blocks, const u8* buf, u32 block, u32 bps, u32
     *p_num_success = num_blocks;
     return 0;
 }
-#else
-// Register allocation differs from the C version above.
-asm s32 ramdrv_physical_write(u32 num_blocks, const u8* buf, u32 block, u32 bps, u32* p_num_success, struct PDM_DISK* p_disk) {
-    nofralloc
-    stwu r1, -0x40(r1)
-    mflr r0
-    stw r0, 0x44(r1)
-    addi r11, r1, 0x40
-    bl _savegpr_23
-    mr r28, r8
-    mr r23, r3
-    mr r24, r4
-    mr r25, r5
-    mr r26, r6
-    mr r27, r7
-    mr r3, r28
-    bl dCommon_getFileSizeFromDisk
-    mr r31, r3
-    mr r3, r28
-    bl VFSysPDMDisk2DriveP
-    li r0, 0x0
-    cmpwi r3, 0x0
-    stw r0, 0x8(r1)
-    bne L_80074A50
-    li r3, -0x14
-    b L_80074AC4
-L_80074A50:
-    lwz r30, 0x0(r3)
-    mr r3, r23
-    mr r4, r25
-    mr r5, r27
-    mr r6, r28
-    addi r7, r1, 0x8
-    bl dCommon_WriteDummyBPB
-    cmpwi r3, 0x0
-    bne L_80074A7C
-    lwz r3, 0x8(r1)
-    b L_80074AC4
-L_80074A7C:
-    mullw r29, r23, r26
-    mr r3, r28
-    bl dCommon_getResvSecNumFromDisk
-    mr r5, r3
-    mr r3, r25
-    mr r4, r26
-    bl dCommon_GetPhysicalOffset
-    add r0, r3, r29
-    add r3, r30, r3
-    cmplw r0, r31
-    ble L_80074AB0
-    li r3, -0x16
-    b L_80074AC4
-L_80074AB0:
-    mr r4, r24
-    mr r5, r29
-    bl VFipf_memcpy
-    stw r23, 0x0(r27)
-    li r3, 0x0
-L_80074AC4:
-    addi r11, r1, 0x40
-    bl _restgpr_23
-    lwz r0, 0x44(r1)
-    mtlr r0
-    addi r1, r1, 0x40
-    blr
-}
-#endif

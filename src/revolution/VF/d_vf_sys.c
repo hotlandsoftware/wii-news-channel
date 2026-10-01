@@ -1015,7 +1015,6 @@ s32 VFSysFindFirst(VFSysDTA* o_dta_p, s32 i_handle_idx, const s8* i_path_p, u32 
     return err;
 }
 
-#ifdef NON_MATCHING
 s32 VFSysFindNext(VFSysDTA* io_dta_p) {
     s32 err;
 
@@ -1028,76 +1027,6 @@ s32 VFSysFindNext(VFSysDTA* io_dta_p) {
     }
     return VFipf2_errnum();
 }
-#else
-// Register allocation differs from the C version above.
-asm s32 VFSysFindNext(VFSysDTA* io_dta_p) {
-    nofralloc
-    stwu r1, -0x10(r1)
-    mflr r0
-    cmpwi r3, 0x0
-    stw r0, 0x14(r1)
-    stw r31, 0xc(r1)
-    mr r31, r3
-    beq L_8006F798
-    lwz r5, 0x8(r3)
-    cmpwi r5, 0x0
-    beq L_8006F778
-    lwz r0, l_vfsys_vol_max(r13)
-    cmpwi r0, 0x0
-    beq L_8006F734
-    lwz r6, l_sys_handle_table_p(r13)
-    cmpwi r6, 0x0
-    beq L_8006F734
-    b L_8006F738
-L_8006F734:
-    li r6, 0x0
-L_8006F738:
-    mulli r0, r0, 0x140
-    add r4, r6, r0
-    b L_8006F770
-L_8006F744:
-    lwz r0, 0x0(r6)
-    cmpwi r0, 0x0
-    beq L_8006F76C
-    lbz r3, 0x14(r6)
-    lbz r0, 0x187a(r5)
-    extsb r3, r3
-    extsb r0, r0
-    cmpw r3, r0
-    bne L_8006F76C
-    b L_8006F77C
-L_8006F76C:
-    addi r6, r6, 0x140
-L_8006F770:
-    cmplw r6, r4
-    bne L_8006F744
-L_8006F778:
-    li r6, 0x0
-L_8006F77C:
-    cmpwi r6, 0x0
-    beq L_8006F798
-    lwz r3, 0x8(r6)
-    cmpwi r3, 0x0
-    beq L_8006F798
-    li r4, 0x0
-    bl dCommon_setLastDeviceErrorToDisk
-L_8006F798:
-    mr r3, r31
-    bl VFipf2_fsnext
-    cmpwi r3, 0x0
-    bne L_8006F7B0
-    li r3, 0x0
-    b L_8006F7B4
-L_8006F7B0:
-    bl VFipf2_errnum
-L_8006F7B4:
-    lwz r0, 0x14(r1)
-    lwz r31, 0xc(r1)
-    mtlr r0
-    addi r1, r1, 0x10
-    blr
-}
-#endif
 
 s32 VFSysGetDriveFreeSize(s32 i_handle_idx) {
     struct VF_HANDLE_TYPE* handle_p;
