@@ -4,8 +4,14 @@
 #include "macros.h"
 #include "revolution/nand.h"
 #include "revolution/vf/vf_struct.h"
+#include "revolution/vf/pf_clib.h"
 
 extern struct PDM_DISK_SET VFipdm_disk_set;
+
+#ifndef NON_MATCHING
+void _savegpr_22(void);
+void _restgpr_22(void);
+#endif
 s32 VF_nand_sleep_msec;
 s32 VF_nand_retry_max;
 
@@ -456,6 +462,7 @@ static inline u8 _ConvertPerm(u32 i_perm) {
     return perm;
 }
 
+#ifdef NON_MATCHING
 s32 VFi_NandCreatePrfFileEx(u32 i_size, const s8* i_path_p, u32 i_version, u32 i_perm, u32 i_handleIdx) {
     struct NANDFileInfo fileInfo ATTRIBUTE_ALIGN(32);
     u8 buf[0x200] ATTRIBUTE_ALIGN(64);
@@ -511,6 +518,983 @@ s32 VFi_NandCreatePrfFileEx(u32 i_size, const s8* i_path_p, u32 i_version, u32 i
     VFi_NandClose(&fileInfo);
     return 0;
 }
+#else
+// Register allocation differs from the C version above.
+asm s32 VFi_NandCreatePrfFileEx(u32 i_size, const s8* i_path_p, u32 i_version, u32 i_perm, u32 i_handleIdx) {
+    nofralloc
+    clrlwi r11, r1, 26
+    mr r12, r1
+    subfic r11, r11, -0x340
+    stwux r1, r1, r11
+    mflr r0
+    mr r11, r12
+    stw r0, 0x4(r12)
+    bl _savegpr_22
+    clrlwi. r0, r3, 27
+    mr r28, r3
+    mr r29, r4
+    mr r30, r5
+    mr r31, r7
+    beq L_80072618
+    li r3, -0x8
+    b L_80073320
+L_80072618:
+    clrlwi. r0, r6, 31
+    li r26, 0x0
+    beq L_80072628
+    ori r26, r26, 0x10
+L_80072628:
+    rlwinm. r0, r6, 0, 30, 30
+    beq L_80072638
+    ori r0, r26, 0x20
+    clrlwi r26, r0, 24
+L_80072638:
+    rlwinm. r0, r6, 0, 29, 29
+    beq L_80072648
+    ori r0, r26, 0x4
+    clrlwi r26, r0, 24
+L_80072648:
+    rlwinm. r0, r6, 0, 28, 28
+    beq L_80072658
+    ori r0, r26, 0x8
+    clrlwi r26, r0, 24
+L_80072658:
+    rlwinm. r0, r6, 0, 27, 27
+    beq L_80072668
+    ori r0, r26, 0x1
+    clrlwi r26, r0, 24
+L_80072668:
+    rlwinm. r0, r6, 0, 26, 26
+    beq L_80072678
+    ori r0, r26, 0x2
+    clrlwi r26, r0, 24
+L_80072678:
+    cmplwi r7, 0x1a
+    bge L_8007273C
+    lis r3, l_nandFunc@ha
+    slwi r0, r7, 4
+    addi r3, r3, l_nandFunc@l
+    lwzx r12, r3, r0
+    cmpwi r12, 0x0
+    beq L_800726B0
+    mr r3, r29
+    clrlwi r4, r26, 24
+    li r5, 0x0
+    mtctr r12
+    bctrl
+    b L_8007285C
+L_800726B0:
+    lis r3, 0x1062
+    lwz r24, VF_nand_retry_max(r13)
+    addi r27, r3, 0x4dd3
+    li r25, 0x0
+    lis r23, 0x8000
+    li r22, 0x0
+    b L_80072728
+L_800726CC:
+    mr r3, r29
+    clrlwi r4, r26, 24
+    li r5, 0x0
+    bl NANDCreate
+    cmpwi r3, -0x3
+    mr r25, r3
+    beq L_800726F4
+    cmpwi r3, -0x2
+    beq L_800726F4
+    b L_80072734
+L_800726F4:
+    lwz r0, 0xf8(r23)
+    lwz r6, VF_nand_sleep_msec(r13)
+    srwi r0, r0, 2
+    mulhwu r3, r27, r0
+    srawi r0, r6, 31
+    mullw r4, r22, r6
+    srwi r5, r3, 6
+    mulhwu r3, r5, r6
+    mullw r0, r5, r0
+    add r3, r3, r4
+    mullw r4, r5, r6
+    add r3, r3, r0
+    bl OSSleepTicks
+L_80072728:
+    cmpwi r24, 0x0
+    subi r24, r24, 0x1
+    bgt L_800726CC
+L_80072734:
+    mr r3, r25
+    b L_8007285C
+L_8007273C:
+    addis r0, r7, 0x1
+    cmplwi r0, 0xfff6
+    bne L_800727D4
+    lis r3, 0x1062
+    lwz r25, VF_nand_retry_max(r13)
+    addi r27, r3, 0x4dd3
+    li r24, 0x0
+    lis r23, 0x8000
+    li r22, 0x0
+    b L_800727C0
+L_80072764:
+    mr r3, r29
+    clrlwi r4, r26, 24
+    li r5, 0x0
+    bl NANDCreate
+    cmpwi r3, -0x3
+    mr r24, r3
+    beq L_8007278C
+    cmpwi r3, -0x2
+    beq L_8007278C
+    b L_800727CC
+L_8007278C:
+    lwz r0, 0xf8(r23)
+    lwz r6, VF_nand_sleep_msec(r13)
+    srwi r0, r0, 2
+    mulhwu r3, r27, r0
+    srawi r0, r6, 31
+    mullw r4, r22, r6
+    srwi r5, r3, 6
+    mulhwu r3, r5, r6
+    mullw r0, r5, r0
+    add r3, r3, r4
+    mullw r4, r5, r6
+    add r3, r3, r0
+    bl OSSleepTicks
+L_800727C0:
+    cmpwi r25, 0x0
+    subi r25, r25, 0x1
+    bgt L_80072764
+L_800727CC:
+    mr r3, r24
+    b L_8007285C
+L_800727D4:
+    lis r3, 0x1062
+    lwz r25, VF_nand_retry_max(r13)
+    addi r27, r3, 0x4dd3
+    li r24, 0x0
+    lis r23, 0x8000
+    li r22, 0x0
+    b L_8007284C
+L_800727F0:
+    mr r3, r29
+    clrlwi r4, r26, 24
+    li r5, 0x0
+    bl NANDPrivateCreate
+    cmpwi r3, -0x3
+    mr r24, r3
+    beq L_80072818
+    cmpwi r3, -0x2
+    beq L_80072818
+    b L_80072858
+L_80072818:
+    lwz r0, 0xf8(r23)
+    lwz r6, VF_nand_sleep_msec(r13)
+    srwi r0, r0, 2
+    mulhwu r3, r27, r0
+    srawi r0, r6, 31
+    mullw r4, r22, r6
+    srwi r5, r3, 6
+    mulhwu r3, r5, r6
+    mullw r0, r5, r0
+    add r3, r3, r4
+    mullw r4, r5, r6
+    add r3, r3, r0
+    bl OSSleepTicks
+L_8007284C:
+    cmpwi r25, 0x0
+    subi r25, r25, 0x1
+    bgt L_800727F0
+L_80072858:
+    mr r3, r24
+L_8007285C:
+    extsh. r3, r3
+    beq L_80072868
+    b L_80073320
+L_80072868:
+    cmplwi r31, 0x1a
+    addi r26, r1, 0x40
+    bge L_80072934
+    lis r3, l_nandFunc@ha
+    slwi r0, r31, 4
+    addi r3, r3, l_nandFunc@l
+    add r3, r3, r0
+    lwz r12, 0x4(r3)
+    cmpwi r12, 0x0
+    beq L_800728A8
+    mr r3, r29
+    mr r4, r26
+    li r5, 0x2
+    mtctr r12
+    bctrl
+    b L_80072A54
+L_800728A8:
+    lis r3, 0x1062
+    lwz r24, VF_nand_retry_max(r13)
+    addi r27, r3, 0x4dd3
+    li r25, 0x0
+    lis r23, 0x8000
+    li r22, 0x0
+    b L_80072920
+L_800728C4:
+    mr r3, r29
+    mr r4, r26
+    li r5, 0x2
+    bl NANDOpen
+    cmpwi r3, -0x3
+    mr r25, r3
+    beq L_800728EC
+    cmpwi r3, -0x2
+    beq L_800728EC
+    b L_8007292C
+L_800728EC:
+    lwz r0, 0xf8(r23)
+    lwz r6, VF_nand_sleep_msec(r13)
+    srwi r0, r0, 2
+    mulhwu r3, r27, r0
+    srawi r0, r6, 31
+    mullw r4, r22, r6
+    srwi r5, r3, 6
+    mulhwu r3, r5, r6
+    mullw r0, r5, r0
+    add r3, r3, r4
+    mullw r4, r5, r6
+    add r3, r3, r0
+    bl OSSleepTicks
+L_80072920:
+    cmpwi r24, 0x0
+    subi r24, r24, 0x1
+    bgt L_800728C4
+L_8007292C:
+    mr r3, r25
+    b L_80072A54
+L_80072934:
+    addis r0, r31, 0x1
+    cmplwi r0, 0xfff6
+    bne L_800729CC
+    lis r3, 0x1062
+    lwz r24, VF_nand_retry_max(r13)
+    addi r27, r3, 0x4dd3
+    li r25, 0x0
+    lis r23, 0x8000
+    li r22, 0x0
+    b L_800729B8
+L_8007295C:
+    mr r3, r29
+    mr r4, r26
+    li r5, 0x2
+    bl NANDOpen
+    cmpwi r3, -0x3
+    mr r25, r3
+    beq L_80072984
+    cmpwi r3, -0x2
+    beq L_80072984
+    b L_800729C4
+L_80072984:
+    lwz r0, 0xf8(r23)
+    lwz r6, VF_nand_sleep_msec(r13)
+    srwi r0, r0, 2
+    mulhwu r3, r27, r0
+    srawi r0, r6, 31
+    mullw r4, r22, r6
+    srwi r5, r3, 6
+    mulhwu r3, r5, r6
+    mullw r0, r5, r0
+    add r3, r3, r4
+    mullw r4, r5, r6
+    add r3, r3, r0
+    bl OSSleepTicks
+L_800729B8:
+    cmpwi r24, 0x0
+    subi r24, r24, 0x1
+    bgt L_8007295C
+L_800729C4:
+    mr r3, r25
+    b L_80072A54
+L_800729CC:
+    lis r3, 0x1062
+    lwz r24, VF_nand_retry_max(r13)
+    addi r27, r3, 0x4dd3
+    li r25, 0x0
+    lis r22, 0x8000
+    li r23, 0x0
+    b L_80072A44
+L_800729E8:
+    mr r3, r29
+    mr r4, r26
+    li r5, 0x2
+    bl NANDPrivateOpen
+    cmpwi r3, -0x3
+    mr r25, r3
+    beq L_80072A10
+    cmpwi r3, -0x2
+    beq L_80072A10
+    b L_80072A50
+L_80072A10:
+    lwz r0, 0xf8(r22)
+    lwz r6, VF_nand_sleep_msec(r13)
+    srwi r0, r0, 2
+    mulhwu r3, r27, r0
+    srawi r0, r6, 31
+    mullw r4, r23, r6
+    srwi r5, r3, 6
+    mulhwu r3, r5, r6
+    mullw r0, r5, r0
+    add r3, r3, r4
+    mullw r4, r5, r6
+    add r3, r3, r0
+    bl OSSleepTicks
+L_80072A44:
+    cmpwi r24, 0x0
+    subi r24, r24, 0x1
+    bgt L_800729E8
+L_80072A50:
+    mr r3, r25
+L_80072A54:
+    cmpwi r3, 0x0
+    beq L_80072A64
+    extsh r3, r3
+    b L_80073320
+L_80072A64:
+    mr r4, r28
+    mr r5, r30
+    addi r3, r1, 0x100
+    li r6, 0x0
+    bl dCommon_CopyPrfFileHeader
+    lis r3, 0x1062
+    lwz r24, VF_nand_retry_max(r13)
+    addi r30, r3, 0x4dd3
+    li r25, 0x0
+    lis r27, 0x8000
+    li r26, 0x0
+    b L_80072AF0
+L_80072A94:
+    addi r3, r1, 0x40
+    addi r4, r1, 0x100
+    li r5, 0x20
+    bl NANDWrite
+    cmpwi r3, -0x3
+    mr r25, r3
+    beq L_80072ABC
+    cmpwi r3, -0x2
+    beq L_80072ABC
+    b L_80072AFC
+L_80072ABC:
+    lwz r0, 0xf8(r27)
+    lwz r6, VF_nand_sleep_msec(r13)
+    srwi r0, r0, 2
+    mulhwu r3, r30, r0
+    srawi r0, r6, 31
+    mullw r4, r26, r6
+    srwi r5, r3, 6
+    mulhwu r3, r5, r6
+    mullw r0, r5, r0
+    add r3, r3, r4
+    mullw r4, r5, r6
+    add r3, r3, r0
+    bl OSSleepTicks
+L_80072AF0:
+    cmpwi r24, 0x0
+    subi r24, r24, 0x1
+    bgt L_80072A94
+L_80072AFC:
+    cmpwi r25, 0x0
+    subi r26, r28, 0x20
+    bge L_80072D28
+    lis r3, 0x1062
+    lwz r24, VF_nand_retry_max(r13)
+    addi r28, r3, 0x4dd3
+    lis r27, 0x8000
+    li r26, 0x0
+    b L_80072B70
+L_80072B20:
+    addi r3, r1, 0x40
+    bl NANDClose
+    cmpwi r3, -0x3
+    beq L_80072B3C
+    cmpwi r3, -0x2
+    beq L_80072B3C
+    b L_80072B7C
+L_80072B3C:
+    lwz r0, 0xf8(r27)
+    lwz r6, VF_nand_sleep_msec(r13)
+    srwi r0, r0, 2
+    mulhwu r3, r28, r0
+    srawi r0, r6, 31
+    mullw r4, r26, r6
+    srwi r5, r3, 6
+    mulhwu r3, r5, r6
+    mullw r0, r5, r0
+    add r3, r3, r4
+    mullw r4, r5, r6
+    add r3, r3, r0
+    bl OSSleepTicks
+L_80072B70:
+    cmpwi r24, 0x0
+    subi r24, r24, 0x1
+    bgt L_80072B20
+L_80072B7C:
+    cmplwi r31, 0x1a
+    bge L_80072C28
+    lis r3, l_nandFunc@ha
+    slwi r0, r31, 4
+    addi r3, r3, l_nandFunc@l
+    add r3, r3, r0
+    lwz r12, 0xc(r3)
+    cmpwi r12, 0x0
+    beq L_80072BB0
+    mr r3, r29
+    mtctr r12
+    bctrl
+    b L_80072D20
+L_80072BB0:
+    lis r3, 0x1062
+    lwz r22, VF_nand_retry_max(r13)
+    addi r27, r3, 0x4dd3
+    lis r26, 0x8000
+    li r24, 0x0
+    b L_80072C18
+L_80072BC8:
+    mr r3, r29
+    bl NANDDelete
+    cmpwi r3, -0x3
+    beq L_80072BE4
+    cmpwi r3, -0x2
+    beq L_80072BE4
+    b L_80072D20
+L_80072BE4:
+    lwz r0, 0xf8(r26)
+    lwz r6, VF_nand_sleep_msec(r13)
+    srwi r0, r0, 2
+    mulhwu r3, r27, r0
+    srawi r0, r6, 31
+    mullw r4, r24, r6
+    srwi r5, r3, 6
+    mulhwu r3, r5, r6
+    mullw r0, r5, r0
+    add r3, r3, r4
+    mullw r4, r5, r6
+    add r3, r3, r0
+    bl OSSleepTicks
+L_80072C18:
+    cmpwi r22, 0x0
+    subi r22, r22, 0x1
+    bgt L_80072BC8
+    b L_80072D20
+L_80072C28:
+    addis r0, r31, 0x1
+    cmplwi r0, 0xfff6
+    bne L_80072CAC
+    lis r3, 0x1062
+    lwz r22, VF_nand_retry_max(r13)
+    addi r27, r3, 0x4dd3
+    lis r26, 0x8000
+    li r24, 0x0
+    b L_80072C9C
+L_80072C4C:
+    mr r3, r29
+    bl NANDDelete
+    cmpwi r3, -0x3
+    beq L_80072C68
+    cmpwi r3, -0x2
+    beq L_80072C68
+    b L_80072D20
+L_80072C68:
+    lwz r0, 0xf8(r26)
+    lwz r6, VF_nand_sleep_msec(r13)
+    srwi r0, r0, 2
+    mulhwu r3, r27, r0
+    srawi r0, r6, 31
+    mullw r4, r24, r6
+    srwi r5, r3, 6
+    mulhwu r3, r5, r6
+    mullw r0, r5, r0
+    add r3, r3, r4
+    mullw r4, r5, r6
+    add r3, r3, r0
+    bl OSSleepTicks
+L_80072C9C:
+    cmpwi r22, 0x0
+    subi r22, r22, 0x1
+    bgt L_80072C4C
+    b L_80072D20
+L_80072CAC:
+    lis r3, 0x1062
+    lwz r22, VF_nand_retry_max(r13)
+    addi r27, r3, 0x4dd3
+    lis r26, 0x8000
+    li r24, 0x0
+    b L_80072D14
+L_80072CC4:
+    mr r3, r29
+    bl NANDPrivateDelete
+    cmpwi r3, -0x3
+    beq L_80072CE0
+    cmpwi r3, -0x2
+    beq L_80072CE0
+    b L_80072D20
+L_80072CE0:
+    lwz r0, 0xf8(r26)
+    lwz r6, VF_nand_sleep_msec(r13)
+    srwi r0, r0, 2
+    mulhwu r3, r27, r0
+    srawi r0, r6, 31
+    mullw r4, r24, r6
+    srwi r5, r3, 6
+    mulhwu r3, r5, r6
+    mullw r0, r5, r0
+    add r3, r3, r4
+    mullw r4, r5, r6
+    add r3, r3, r0
+    bl OSSleepTicks
+L_80072D14:
+    cmpwi r22, 0x0
+    subi r22, r22, 0x1
+    bgt L_80072CC4
+L_80072D20:
+    mr r3, r25
+    b L_80073320
+L_80072D28:
+    addi r3, r1, 0x100
+    li r4, 0x0
+    li r5, 0x200
+    bl VFipf_memset
+    lis r3, 0x1062
+    lis r28, 0x8000
+    addi r30, r3, 0x4dd3
+    li r27, 0x0
+    b L_80072FEC
+L_80072D4C:
+    lwz r24, VF_nand_retry_max(r13)
+    li r25, 0x0
+    b L_80072DB4
+L_80072D58:
+    addi r3, r1, 0x40
+    addi r4, r1, 0x100
+    li r5, 0x200
+    bl NANDWrite
+    cmpwi r3, -0x3
+    mr r25, r3
+    beq L_80072D80
+    cmpwi r3, -0x2
+    beq L_80072D80
+    b L_80072DC0
+L_80072D80:
+    lwz r0, 0xf8(r28)
+    lwz r6, VF_nand_sleep_msec(r13)
+    srwi r0, r0, 2
+    mulhwu r3, r30, r0
+    srawi r0, r6, 31
+    mullw r4, r27, r6
+    srwi r5, r3, 6
+    mulhwu r3, r5, r6
+    mullw r0, r5, r0
+    add r3, r3, r4
+    mullw r4, r5, r6
+    add r3, r3, r0
+    bl OSSleepTicks
+L_80072DB4:
+    cmpwi r24, 0x0
+    subi r24, r24, 0x1
+    bgt L_80072D58
+L_80072DC0:
+    cmpwi r25, 0x0
+    bge L_80072FE8
+    lis r3, 0x1062
+    lwz r24, VF_nand_retry_max(r13)
+    addi r28, r3, 0x4dd3
+    lis r27, 0x8000
+    li r26, 0x0
+    b L_80072E30
+L_80072DE0:
+    addi r3, r1, 0x40
+    bl NANDClose
+    cmpwi r3, -0x3
+    beq L_80072DFC
+    cmpwi r3, -0x2
+    beq L_80072DFC
+    b L_80072E3C
+L_80072DFC:
+    lwz r0, 0xf8(r27)
+    lwz r6, VF_nand_sleep_msec(r13)
+    srwi r0, r0, 2
+    mulhwu r3, r28, r0
+    srawi r0, r6, 31
+    mullw r4, r26, r6
+    srwi r5, r3, 6
+    mulhwu r3, r5, r6
+    mullw r0, r5, r0
+    add r3, r3, r4
+    mullw r4, r5, r6
+    add r3, r3, r0
+    bl OSSleepTicks
+L_80072E30:
+    cmpwi r24, 0x0
+    subi r24, r24, 0x1
+    bgt L_80072DE0
+L_80072E3C:
+    cmplwi r31, 0x1a
+    bge L_80072EE8
+    lis r3, l_nandFunc@ha
+    slwi r0, r31, 4
+    addi r3, r3, l_nandFunc@l
+    add r3, r3, r0
+    lwz r12, 0xc(r3)
+    cmpwi r12, 0x0
+    beq L_80072E70
+    mr r3, r29
+    mtctr r12
+    bctrl
+    b L_80072FE0
+L_80072E70:
+    lis r3, 0x1062
+    lwz r22, VF_nand_retry_max(r13)
+    addi r27, r3, 0x4dd3
+    lis r26, 0x8000
+    li r24, 0x0
+    b L_80072ED8
+L_80072E88:
+    mr r3, r29
+    bl NANDDelete
+    cmpwi r3, -0x3
+    beq L_80072EA4
+    cmpwi r3, -0x2
+    beq L_80072EA4
+    b L_80072FE0
+L_80072EA4:
+    lwz r0, 0xf8(r26)
+    lwz r6, VF_nand_sleep_msec(r13)
+    srwi r0, r0, 2
+    mulhwu r3, r27, r0
+    srawi r0, r6, 31
+    mullw r4, r24, r6
+    srwi r5, r3, 6
+    mulhwu r3, r5, r6
+    mullw r0, r5, r0
+    add r3, r3, r4
+    mullw r4, r5, r6
+    add r3, r3, r0
+    bl OSSleepTicks
+L_80072ED8:
+    cmpwi r22, 0x0
+    subi r22, r22, 0x1
+    bgt L_80072E88
+    b L_80072FE0
+L_80072EE8:
+    addis r0, r31, 0x1
+    cmplwi r0, 0xfff6
+    bne L_80072F6C
+    lis r3, 0x1062
+    lwz r22, VF_nand_retry_max(r13)
+    addi r27, r3, 0x4dd3
+    lis r26, 0x8000
+    li r24, 0x0
+    b L_80072F5C
+L_80072F0C:
+    mr r3, r29
+    bl NANDDelete
+    cmpwi r3, -0x3
+    beq L_80072F28
+    cmpwi r3, -0x2
+    beq L_80072F28
+    b L_80072FE0
+L_80072F28:
+    lwz r0, 0xf8(r26)
+    lwz r6, VF_nand_sleep_msec(r13)
+    srwi r0, r0, 2
+    mulhwu r3, r27, r0
+    srawi r0, r6, 31
+    mullw r4, r24, r6
+    srwi r5, r3, 6
+    mulhwu r3, r5, r6
+    mullw r0, r5, r0
+    add r3, r3, r4
+    mullw r4, r5, r6
+    add r3, r3, r0
+    bl OSSleepTicks
+L_80072F5C:
+    cmpwi r22, 0x0
+    subi r22, r22, 0x1
+    bgt L_80072F0C
+    b L_80072FE0
+L_80072F6C:
+    lis r3, 0x1062
+    lwz r22, VF_nand_retry_max(r13)
+    addi r27, r3, 0x4dd3
+    lis r26, 0x8000
+    li r24, 0x0
+    b L_80072FD4
+L_80072F84:
+    mr r3, r29
+    bl NANDPrivateDelete
+    cmpwi r3, -0x3
+    beq L_80072FA0
+    cmpwi r3, -0x2
+    beq L_80072FA0
+    b L_80072FE0
+L_80072FA0:
+    lwz r0, 0xf8(r26)
+    lwz r6, VF_nand_sleep_msec(r13)
+    srwi r0, r0, 2
+    mulhwu r3, r27, r0
+    srawi r0, r6, 31
+    mullw r4, r24, r6
+    srwi r5, r3, 6
+    mulhwu r3, r5, r6
+    mullw r0, r5, r0
+    add r3, r3, r4
+    mullw r4, r5, r6
+    add r3, r3, r0
+    bl OSSleepTicks
+L_80072FD4:
+    cmpwi r22, 0x0
+    subi r22, r22, 0x1
+    bgt L_80072F84
+L_80072FE0:
+    mr r3, r25
+    b L_80073320
+L_80072FE8:
+    subi r26, r26, 0x200
+L_80072FEC:
+    cmplwi r26, 0x200
+    bge L_80072D4C
+    cmpwi r26, 0x0
+    beq L_800732A8
+    lis r3, 0x1062
+    lwz r24, VF_nand_retry_max(r13)
+    addi r30, r3, 0x4dd3
+    li r25, 0x0
+    lis r28, 0x8000
+    li r27, 0x0
+    b L_80073074
+L_80073018:
+    mr r5, r26
+    addi r3, r1, 0x40
+    addi r4, r1, 0x100
+    bl NANDWrite
+    cmpwi r3, -0x3
+    mr r25, r3
+    beq L_80073040
+    cmpwi r3, -0x2
+    beq L_80073040
+    b L_80073080
+L_80073040:
+    lwz r0, 0xf8(r28)
+    lwz r6, VF_nand_sleep_msec(r13)
+    srwi r0, r0, 2
+    mulhwu r3, r30, r0
+    srawi r0, r6, 31
+    mullw r4, r27, r6
+    srwi r5, r3, 6
+    mulhwu r3, r5, r6
+    mullw r0, r5, r0
+    add r3, r3, r4
+    mullw r4, r5, r6
+    add r3, r3, r0
+    bl OSSleepTicks
+L_80073074:
+    cmpwi r24, 0x0
+    subi r24, r24, 0x1
+    bgt L_80073018
+L_80073080:
+    cmpwi r25, 0x0
+    bge L_800732A8
+    lis r3, 0x1062
+    lwz r24, VF_nand_retry_max(r13)
+    addi r28, r3, 0x4dd3
+    lis r27, 0x8000
+    li r26, 0x0
+    b L_800730F0
+L_800730A0:
+    addi r3, r1, 0x40
+    bl NANDClose
+    cmpwi r3, -0x3
+    beq L_800730BC
+    cmpwi r3, -0x2
+    beq L_800730BC
+    b L_800730FC
+L_800730BC:
+    lwz r0, 0xf8(r27)
+    lwz r6, VF_nand_sleep_msec(r13)
+    srwi r0, r0, 2
+    mulhwu r3, r28, r0
+    srawi r0, r6, 31
+    mullw r4, r26, r6
+    srwi r5, r3, 6
+    mulhwu r3, r5, r6
+    mullw r0, r5, r0
+    add r3, r3, r4
+    mullw r4, r5, r6
+    add r3, r3, r0
+    bl OSSleepTicks
+L_800730F0:
+    cmpwi r24, 0x0
+    subi r24, r24, 0x1
+    bgt L_800730A0
+L_800730FC:
+    cmplwi r31, 0x1a
+    bge L_800731A8
+    lis r3, l_nandFunc@ha
+    slwi r0, r31, 4
+    addi r3, r3, l_nandFunc@l
+    add r3, r3, r0
+    lwz r12, 0xc(r3)
+    cmpwi r12, 0x0
+    beq L_80073130
+    mr r3, r29
+    mtctr r12
+    bctrl
+    b L_800732A0
+L_80073130:
+    lis r3, 0x1062
+    lwz r22, VF_nand_retry_max(r13)
+    addi r27, r3, 0x4dd3
+    lis r26, 0x8000
+    li r24, 0x0
+    b L_80073198
+L_80073148:
+    mr r3, r29
+    bl NANDDelete
+    cmpwi r3, -0x3
+    beq L_80073164
+    cmpwi r3, -0x2
+    beq L_80073164
+    b L_800732A0
+L_80073164:
+    lwz r0, 0xf8(r26)
+    lwz r6, VF_nand_sleep_msec(r13)
+    srwi r0, r0, 2
+    mulhwu r3, r27, r0
+    srawi r0, r6, 31
+    mullw r4, r24, r6
+    srwi r5, r3, 6
+    mulhwu r3, r5, r6
+    mullw r0, r5, r0
+    add r3, r3, r4
+    mullw r4, r5, r6
+    add r3, r3, r0
+    bl OSSleepTicks
+L_80073198:
+    cmpwi r22, 0x0
+    subi r22, r22, 0x1
+    bgt L_80073148
+    b L_800732A0
+L_800731A8:
+    addis r0, r31, 0x1
+    cmplwi r0, 0xfff6
+    bne L_8007322C
+    lis r3, 0x1062
+    lwz r22, VF_nand_retry_max(r13)
+    addi r27, r3, 0x4dd3
+    lis r26, 0x8000
+    li r24, 0x0
+    b L_8007321C
+L_800731CC:
+    mr r3, r29
+    bl NANDDelete
+    cmpwi r3, -0x3
+    beq L_800731E8
+    cmpwi r3, -0x2
+    beq L_800731E8
+    b L_800732A0
+L_800731E8:
+    lwz r0, 0xf8(r26)
+    lwz r6, VF_nand_sleep_msec(r13)
+    srwi r0, r0, 2
+    mulhwu r3, r27, r0
+    srawi r0, r6, 31
+    mullw r4, r24, r6
+    srwi r5, r3, 6
+    mulhwu r3, r5, r6
+    mullw r0, r5, r0
+    add r3, r3, r4
+    mullw r4, r5, r6
+    add r3, r3, r0
+    bl OSSleepTicks
+L_8007321C:
+    cmpwi r22, 0x0
+    subi r22, r22, 0x1
+    bgt L_800731CC
+    b L_800732A0
+L_8007322C:
+    lis r3, 0x1062
+    lwz r22, VF_nand_retry_max(r13)
+    addi r27, r3, 0x4dd3
+    lis r26, 0x8000
+    li r24, 0x0
+    b L_80073294
+L_80073244:
+    mr r3, r29
+    bl NANDPrivateDelete
+    cmpwi r3, -0x3
+    beq L_80073260
+    cmpwi r3, -0x2
+    beq L_80073260
+    b L_800732A0
+L_80073260:
+    lwz r0, 0xf8(r26)
+    lwz r6, VF_nand_sleep_msec(r13)
+    srwi r0, r0, 2
+    mulhwu r3, r27, r0
+    srawi r0, r6, 31
+    mullw r4, r24, r6
+    srwi r5, r3, 6
+    mulhwu r3, r5, r6
+    mullw r0, r5, r0
+    add r3, r3, r4
+    mullw r4, r5, r6
+    add r3, r3, r0
+    bl OSSleepTicks
+L_80073294:
+    cmpwi r22, 0x0
+    subi r22, r22, 0x1
+    bgt L_80073244
+L_800732A0:
+    mr r3, r25
+    b L_80073320
+L_800732A8:
+    lis r3, 0x1062
+    lwz r22, VF_nand_retry_max(r13)
+    addi r26, r3, 0x4dd3
+    lis r25, 0x8000
+    li r24, 0x0
+    b L_80073310
+L_800732C0:
+    addi r3, r1, 0x40
+    bl NANDClose
+    cmpwi r3, -0x3
+    beq L_800732DC
+    cmpwi r3, -0x2
+    beq L_800732DC
+    b L_8007331C
+L_800732DC:
+    lwz r0, 0xf8(r25)
+    lwz r6, VF_nand_sleep_msec(r13)
+    srwi r0, r0, 2
+    mulhwu r3, r26, r0
+    srawi r0, r6, 31
+    mullw r4, r24, r6
+    srwi r5, r3, 6
+    mulhwu r3, r5, r6
+    mullw r0, r5, r0
+    add r3, r3, r4
+    mullw r4, r5, r6
+    add r3, r3, r0
+    bl OSSleepTicks
+L_80073310:
+    cmpwi r22, 0x0
+    subi r22, r22, 0x1
+    bgt L_800732C0
+L_8007331C:
+    li r3, 0x0
+L_80073320:
+    lwz r10, 0x0(r1)
+    mr r11, r10
+    bl _restgpr_22
+    lwz r0, 0x4(r10)
+    mtlr r0
+    mr r1, r10
+    blr
+}
+#endif
 
 s32 VFi_NandCreatePrfFile(u32 i_size, const s8* i_path_p, u32 i_version) {
     return VFi_NandCreatePrfFileEx(i_size, i_path_p, i_version, 0x3F, -11);
