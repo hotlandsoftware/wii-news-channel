@@ -18,6 +18,8 @@ class DrawInfo;
 
 class ColorTagProcessor;
 
+extern "C" void fn_800409EC(void* p);
+
 // One button of a LayoutScreen, built from a top-level pane of the layout.
 // Child panes are looked up by name suffix: "B" (base), "R" (hit rect),
 // "I" (icon), "T" (text), "F0"/"F1" (frames) and "M" (marks).
@@ -25,6 +27,15 @@ class LayoutScreenItem {
 public:
     LayoutScreenItem(nw4r::lyt::Pane* pane, const nw4r::lyt::DrawInfo* drawInfo,
                    nw4r::ut::TagProcessorBase<wchar_t>* tagProcessor, int noScale);
+
+    ~LayoutScreenItem() {
+        if (mUnk88 != NULL) {
+            fn_800409EC(mUnk88);
+        }
+        if (mUnk84 != NULL) {
+            fn_800409EC(mUnk84);
+        }
+    }
 
     void Reset() {
         mOffsetY = 0.0f;
@@ -74,6 +85,7 @@ public:
     s32 mPressFrame;                        // at 0x6C
     s32 mTextIndex;                         // at 0x70
     bool mSelected;                         // at 0x74
+    u8 mPad75[3];                           // at 0x75
     nw4r::ut::Color mTextColor;             // at 0x78
     s32 mMarkIndex;                         // at 0x7C
     s32 mMarkSubIndex;                      // at 0x80

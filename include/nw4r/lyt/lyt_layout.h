@@ -39,7 +39,7 @@ public:
     ut::Rect GetLayoutRect() const;
 
     Pane* GetRootPane() const { return mpRootPane; }
-    u8 GetOriginType() const { return mOriginType; }
+    int GetOriginType() const { return mOriginType; }
 
     static void SetAllocator(MEMAllocator* allocator) { mspAllocator = allocator; }
 

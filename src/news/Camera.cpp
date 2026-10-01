@@ -175,10 +175,10 @@ void Camera::Project(math::VEC2* screen, const math::VEC3* pos) {
     mCamera.GetCameraMtx(&view);
     mCamera.GetProjectionMtx(&proj);
     mCamera.GetViewport(&x, &y, &w, &h, NULL, NULL);
-    h = 0.5f * h;
-    w = 0.5f * w;
-    y += h;
+    w *= 0.5f;
+    h *= 0.5f;
     x += w;
+    y += h;
     s32 fbWidth = gRenderMode.fbWidth;
     x *= (f32)GetScreenWidth() / fbWidth;
     w *= (f32)GetScreenWidth() / fbWidth;

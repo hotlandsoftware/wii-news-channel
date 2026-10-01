@@ -1,3 +1,5 @@
+// As in PaneButton.cpp, VEC3 has no destructor in this file's NW4R headers.
+#define NW4R_MATH_VEC3_NO_DTOR
 #include <news/LayoutScreen.h>
 #include <news/ColorTagProcessor.h>
 #include <news/System.h>
@@ -10,16 +12,11 @@
 #include <nw4r/ut/ut_TextWriterBase.h>
 #include <revolution/gx.h>
 #include <revolution/mtx.h>
-
-
+#include <stdio.h>
 
 using namespace nw4r;
 
-extern "C" {
-int sprintf(char* s, const char* format, ...);
-const char* fn_8003F79C();
-void fn_800409EC(void* p);
-}
+const char* GetLanguageSuffix();
 
 static const GXColor cBaseTop = {0, 0, 0, 255};
 static const GXColor cBaseBottom = {200, 140, 140, 255};
@@ -159,7 +156,7 @@ ut::Operation ColorTagProcessor::CalcRect(ut::Rect* pRect, u16 code, ut::PrintCo
 LayoutScreenItem::LayoutScreenItem(lyt::Pane* pane, const lyt::DrawInfo* drawInfo,
                                ut::TagProcessorBase<wchar_t>* tagProcessor, int noScale)
     : mPane(pane), mDrawInfo(drawInfo), mRect(0.0f, 0.0f, 0.0f, 0.0f), mTextColor(0xFFFFFFFF) {
-    char name[32];
+    char name[128];
 
     sprintf(name, "%sB", mPane->GetName());
     mBasePane = mPane->FindPaneByName(name, true);
@@ -199,8 +196,9 @@ LayoutScreenItem::LayoutScreenItem(lyt::Pane* pane, const lyt::DrawInfo* drawInf
     mFixed = false;
     mColorSet = 0;
 
-    for (int i = 0; i < 8; i++) {
-        switch (mPane->GetUserData()[i]) {
+    for (s32 i = 0; i < 8; i++) {
+        char c = mPane->GetUserData()[i];
+        switch (c) {
         case 'D':
         case 'd':
             mDisabled = true;
@@ -227,7 +225,7 @@ LayoutScreenItem::LayoutScreenItem(lyt::Pane* pane, const lyt::DrawInfo* drawInf
     if (iconPane == NULL) {
         mIconPane = NULL;
     } else {
-        sprintf(name, "%s%s", iconPane->GetName(), fn_8003F79C());
+        sprintf(name, "%s%s", iconPane->GetName(), GetLanguageSuffix());
         mIconPane = iconPane->FindPaneByName(name, true);
         if (mIconPane == NULL) {
             mIconPane = iconPane;
@@ -246,7 +244,7 @@ LayoutScreenItem::LayoutScreenItem(lyt::Pane* pane, const lyt::DrawInfo* drawInf
     if (textPane == NULL) {
         mTextPane = NULL;
     } else {
-        sprintf(name, "%s%s", textPane->GetName(), fn_8003F79C());
+        sprintf(name, "%s%s", textPane->GetName(), GetLanguageSuffix());
         mTextPane = textPane->FindPaneByName(name, true);
         lyt::PaneList& list = textPane->GetChildList();
         for (lyt::PaneList::Iterator it = list.GetBeginIter(); it != list.GetEndIter(); it++) {
@@ -277,7 +275,7 @@ LayoutScreenItem::LayoutScreenItem(lyt::Pane* pane, const lyt::DrawInfo* drawInf
     if (markPane == NULL) {
         mMarkPane = NULL;
     } else {
-        sprintf(name, "%s%s", markPane->GetName(), fn_8003F79C());
+        sprintf(name, "%s%s", markPane->GetName(), GetLanguageSuffix());
         mMarkPane = markPane->FindPaneByName(name, true);
         lyt::PaneList& list = markPane->GetChildList();
         for (lyt::PaneList::Iterator it = list.GetBeginIter(); it != list.GetEndIter(); it++) {
@@ -357,9 +355,13 @@ void LayoutScreenItem::Update() {
                 mLinkB->SetHover();
             }
         } else {
-            int frame = mPressFrame > 16 ? 16 : mPressFrame;
+            int frame = mPressFrame;
+            if (frame > 16) {
+                frame = 16;
+            }
             f32 rad = 1.5708f * (16 - frame) / 16.0f;
-            offset = (mUnk4B ? 4.0f : 18.0f) * (1.0f - math::SinRad(rad));
+            f32 amp = mUnk4B ? 4.0f : 18.0f;
+            offset = amp * (1.0f - math::SinRad(rad));
         }
     } else {
         offset = 0.0f;
@@ -593,15 +595,17 @@ void LayoutScreenItem::SetHover() {
 }
 
 lyt::Pane* LayoutScreenItem::GetMarkPane(int index) {
-    lyt::PaneList& list = mMarkPane->GetChildList();
+    lyt::Pane* pane = NULL;
     int i = 0;
+    lyt::PaneList& list = mMarkPane->GetChildList();
     for (lyt::PaneList::Iterator it = list.GetBeginIter(); it != list.GetEndIter(); it++) {
         if (index == i) {
-            return &*it;
+            pane = &*it;
+            break;
         }
         i++;
     }
-    return NULL;
+    return pane;
 }
 
 LayoutScreen::LayoutScreen(void* archive, const char* layoutName, int noScale) {
@@ -620,8 +624,8 @@ LayoutScreen::LayoutScreen(void* archive, const char* layoutName, int noScale) {
 
     mTagProcessor = new ColorTagProcessor();
 
-    mItemCount = 0;
     lyt::PaneList& list = mLayout->GetRootPane()->GetChildList();
+    mItemCount = 0;
     for (lyt::PaneList::Iterator it = list.GetBeginIter(); it != list.GetEndIter(); it++) {
         if (mItemCount >= 64) {
             break;
@@ -634,16 +638,7 @@ LayoutScreen::LayoutScreen(void* archive, const char* layoutName, int noScale) {
 
 LayoutScreen::~LayoutScreen() {
     for (int i = 0; i < mItemCount; i++) {
-        LayoutScreenItem* item = mItems[i];
-        if (item != NULL) {
-            if (item->mUnk88 != NULL) {
-                fn_800409EC(item->mUnk88);
-            }
-            if (item->mUnk84 != NULL) {
-                fn_800409EC(item->mUnk84);
-            }
-            delete item;
-        }
+        delete mItems[i];
     }
 
     delete mTagProcessor;
@@ -684,10 +679,9 @@ void LayoutScreen::Calc() {
 
     f32 step = height * mFadeFrame / mFadeLength;
     for (int i = 0; i < mItemCount; i++) {
-        LayoutScreenItem* item = mItems[i];
-        f32 offset = step * (item->mPane->GetTranslate().y > 0.0f ? 1 : -1);
-        if (!item->mInactive) {
-            item->mOffsetY = offset;
+        f32 offset = step * (mItems[i]->mPane->GetTranslate().y > 0.0f ? 1 : -1);
+        if (!mItems[i]->mInactive) {
+            mItems[i]->mOffsetY = offset;
         }
     }
 
