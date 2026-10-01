@@ -81,6 +81,7 @@ public:
     void Free();
 
     void Setup(const WaveData& rData, u32 offset);
+    void Setup(const WaveData& rData); // older NW4R (used by Channel::Start)
 
     void Start();
     void Stop();
@@ -96,6 +97,8 @@ public:
     void SetPanCurve(PanCurve curve);
     void SetPan(f32 pan);
     void SetSurroundPan(f32 pan);
+    void SetPan2(f32 pan);         // older NW4R (used by Channel::Update)
+    void SetSurroundPan2(f32 pan); // older NW4R (used by Channel::Update)
 
     void SetLpfFreq(f32 freq);
     void SetRemoteFilter(int filter);

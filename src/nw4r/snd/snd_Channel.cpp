@@ -14,12 +14,10 @@ ChannelManager& ChannelManager::GetInstance() {
 ChannelManager::ChannelManager() : mInitialized(false), mChannelCount(0) {}
 
 u32 ChannelManager::GetRequiredMemSize() {
-    return (AXGetMaxVoices() + VOICE_MARGIN) * sizeof(Channel);
+    return (AX_VOICE_MAX + VOICE_MARGIN) * sizeof(Channel);
 }
 
 void ChannelManager::Setup(void* pWork, u32 workSize) {
-    ut::AutoInterruptLock lock;
-
     if (mInitialized) {
         return;
     }
@@ -71,7 +69,6 @@ void Channel::InitParam(ChannelCallback pCallback, u32 callbackArg) {
 
     mPauseFlag = false;
     mAutoSweep = true;
-    mReleasePriorityFixFlag = false;
 
     mLength = 0;
     mKey = KEY_INIT;
@@ -87,9 +84,10 @@ void Channel::InitParam(ChannelCallback pCallback, u32 callbackArg) {
     mUserPitchRatio = 1.0f;
     mUserPan = 0.0f;
     mUserSurroundPan = 0.0f;
+    mUserPan2 = 0.0f;
+    mUserSurroundPan2 = 0.0f;
     mUserLpfFreq = 0.0f;
 
-    mRemoteFilter = 0;
     mOutputLineFlag = OUTPUT_LINE_MAIN;
 
     mMainOutVolume = 1.0f;
@@ -115,8 +113,6 @@ void Channel::InitParam(ChannelCallback pCallback, u32 callbackArg) {
     mLfo.GetParam().Init();
 
     mLfoTarget = LFO_TARGET_PITCH;
-    mPanMode = PAN_MODE_DUAL;
-    mPanCurve = PAN_CURVE_SQRT;
 }
 
 void Channel::Update(bool periodic) {
@@ -137,7 +133,7 @@ void Channel::Update(bool periodic) {
     volume *= mSilenceVolume.GetValue() / static_cast<f32>(SILENCE_VOLUME_MAX);
 
     f32 veInitVolume = 1.0f;
-    veInitVolume *= Util::CalcVolumeRatio(mEnvelope.GetValue());
+    veInitVolume *= mEnvelope.GetValue();
     if (mLfoTarget == LFO_TARGET_VOLUME) {
         veInitVolume *= Util::CalcVolumeRatio(VOLUME_MAX_DB * lfoValue);
     }
@@ -180,11 +176,14 @@ void Channel::Update(bool periodic) {
     surroundPan += mInitSurroundPan;
     surroundPan += mUserSurroundPan;
 
+    f32 pan2 = 0.0f;
+    pan2 += mUserPan2;
+
+    f32 surroundPan2 = 0.0f;
+    surroundPan2 += mUserSurroundPan2;
+
     f32 lpfFreq = 1.0f;
     lpfFreq += mUserLpfFreq;
-
-    int remoteFilter = 0;
-    remoteFilter += mRemoteFilter;
 
     f32 mainOutVolume = 1.0f;
     mainOutVolume *= mMainOutVolume;
@@ -224,21 +223,22 @@ void Channel::Update(bool periodic) {
     f32 nextLfoValue = mLfo.GetValue();
 
     f32 veTargetVolume = 1.0f;
-    veTargetVolume *= Util::CalcVolumeRatio(mEnvelope.GetValue());
+    veTargetVolume *= mEnvelope.GetValue();
     if (mLfoTarget == LFO_TARGET_VOLUME) {
         veTargetVolume *= Util::CalcVolumeRatio(VOLUME_MAX_DB * nextLfoValue);
     }
 
+    ut::AutoInterruptLock lock;
+
     if (mVoice != NULL) {
-        mVoice->SetPanMode(mPanMode);
-        mVoice->SetPanCurve(mPanCurve);
         mVoice->SetVolume(volume);
         mVoice->SetVeVolume(veTargetVolume, veInitVolume);
         mVoice->SetPitch(pitch);
         mVoice->SetPan(pan);
         mVoice->SetSurroundPan(surroundPan);
+        mVoice->SetPan2(pan2);
+        mVoice->SetSurroundPan2(surroundPan2);
         mVoice->SetLpfFreq(lpfFreq);
-        mVoice->SetRemoteFilter(remoteFilter);
         mVoice->SetOutputLine(mOutputLineFlag);
         mVoice->SetMainOutVolume(mainOutVolume);
         mVoice->SetMainSend(mainSend);
@@ -256,21 +256,21 @@ void Channel::Update(bool periodic) {
     }
 }
 
-void Channel::Start(const WaveData& rData, int length, u32 offset) {
+void Channel::Start(const WaveData& rData, int length) {
     mLength = length;
 
     mLfo.Reset();
     mEnvelope.Reset();
     mSweepCounter = 0;
 
-    mVoice->Setup(rData, offset);
+    mVoice->Setup(rData);
     mVoice->Start();
     mActiveFlag = true;
 }
 
 void Channel::Release() {
     if (mEnvelope.GetStatus() != EnvGenerator::STATUS_RELEASE) {
-        if (mVoice != NULL && !mReleasePriorityFixFlag) {
+        if (mVoice != NULL) {
             mVoice->SetPriority(PRIORITY_RELEASE);
         }
 
@@ -281,6 +281,8 @@ void Channel::Release() {
 }
 
 void Channel::Stop() {
+    ut::AutoInterruptLock lock;
+
     if (mVoice == NULL) {
         return;
     }
@@ -377,6 +379,8 @@ void Channel::VoiceCallbackFunc(Voice* pDropVoice,
 
 Channel* Channel::AllocChannel(int channels, int voices, int priority,
                                ChannelCallback pCallback, u32 callbackArg) {
+    ut::AutoInterruptLock lock;
+
     Channel* pChannel = ChannelManager::GetInstance().Alloc();
     if (pChannel == NULL) {
         return NULL;
@@ -388,7 +392,6 @@ Channel* Channel::AllocChannel(int channels, int voices, int priority,
         channels, voices, priority, VoiceCallbackFunc, pChannel);
 
     if (pVoice == NULL) {
-        ChannelManager::GetInstance().Free(pChannel);
         return NULL;
     }
 
