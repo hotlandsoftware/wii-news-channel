@@ -191,9 +191,9 @@ ArchiveFontBase::ConstructOpAnalyzeGLGR(ConstructContext* pContext, CachedStream
 
     FontGlyphGroupsAcs gg(pFileTop);
     const u16 numSheet = gg.GetNumSheet();
-    const u16 glyphsPerSheet = gg.GetGlyphsPerSheet();
-    const u16 numBlocks = reinterpret_cast<BinaryFileHeader*>(pFileTop)->dataBlocks;
-    const u32 sizeAdjustTable = (RoundUp)(numSheet * sizeof(u16), 4);
+    const int glyphsPerSheet = gg.GetGlyphsPerSheet();
+    const u32 numBlocks = reinterpret_cast<BinaryFileHeader*>(pFileTop)->dataBlocks;
+    const int sizeAdjustTable = (RoundUp)(numSheet * sizeof(u16), 4);
 
     const u32 remain = pContext->GetRemain();
     u16* pAdjustTable = static_cast<u16*>((RoundDown)(pFileTop + remain - sizeAdjustTable, 2));
