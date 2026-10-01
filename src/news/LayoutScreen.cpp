@@ -657,6 +657,12 @@ void LayoutScreen::Reset() {
     mFadeFrame = 0;
 }
 
+void LayoutScreen::SetAlpha(int alpha) {
+    for (int i = 0; i < mItemCount; i++) {
+        mItems[i]->mAlpha = alpha;
+    }
+}
+
 void LayoutScreen::Calc() {
     for (int i = 0; i < mItemCount; i++) {
         mItems[i]->Update();
@@ -693,10 +699,7 @@ void LayoutScreen::Calc() {
         mAlphaFadeFrame--;
     }
 
-    int alpha = 255 - mAlphaFadeFrame * 255 / mAlphaFadeLength;
-    for (int i = 0; i < mItemCount; i++) {
-        mItems[i]->mAlpha = alpha;
-    }
+    SetAlpha(255 - mAlphaFadeFrame * 255 / mAlphaFadeLength);
 }
 
 void LayoutScreen::Draw() {

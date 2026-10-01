@@ -105,6 +105,7 @@ public:
     void Reset();
 
     void Calc();
+    void SetAlpha(int alpha);
     void Draw();
 
     nw4r::lyt::ArcResourceAccessor* mResAccessor; // at 0x000
