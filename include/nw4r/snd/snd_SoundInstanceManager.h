@@ -59,7 +59,8 @@ public:
     }
 
     void Free(T* pSound) {
-        ut::detail::AutoLock<OSMutex> lock(mMutex);
+        // CONFLICT (ogws): interrupt lock in this older revision (SeqSound::Shutdown)
+        ut::AutoInterruptLock lock;
 
         if (mPriorityList.IsEmpty()) {
             return;
@@ -122,8 +123,7 @@ public:
     }
 
     void UpdatePriority(T* pSound, int priority) {
-        ut::detail::AutoLock<OSMutex> lock(mMutex);
-
+        // CONFLICT (ogws): no lock in this older revision (SeqSound::SetPlayerPriority)
         RemovePriorityList(pSound);
         InsertPriorityList(pSound, priority);
     }

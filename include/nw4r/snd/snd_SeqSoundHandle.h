@@ -24,32 +24,10 @@ public:
 
     void DetachSound();
 
-    void SetTempoRatio(f32 tempo) {
+    void SetTrackMute(u32 trackFlags, bool mute) {
         if (IsAttachedSound()) {
-            mSound->SetTempoRatio(tempo);
+            mSound->SetTrackMute(trackFlags, mute);
         }
-    }
-
-    void SetTrackVolume(u32 trackFlags, f32 volume) {
-        if (IsAttachedSound()) {
-            mSound->SetTrackVolume(trackFlags, volume);
-        }
-    }
-
-    void SetTrackPitch(u32 trackFlags, f32 pitch) {
-        if (IsAttachedSound()) {
-            mSound->SetTrackPitch(trackFlags, pitch);
-        }
-    }
-
-    void WriteVariable(int idx, s16 value) {
-        if (IsAttachedSound()) {
-            mSound->WriteVariable(idx, value);
-        }
-    }
-
-    static void WriteGlobalVariable(int idx, s16 value) {
-        detail::SeqSound::WriteGlobalVariable(idx, value);
     }
 
 private:
