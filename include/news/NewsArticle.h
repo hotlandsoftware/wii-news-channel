@@ -20,6 +20,11 @@ struct NewsPicture {
     NewsTexture* texture;  // at 0x8
 };
 
+struct NewsLocationRec {
+    u32 nameOfs;  // at 0x0
+    u8 unk4[0x10 - 0x4];
+};
+
 // News file (one per downloaded hour). All offsets are relative to the file
 // start.
 struct NewsFile {
@@ -76,11 +81,6 @@ struct NewsSourceRec {
     u32 nameOfs;     // at 0x10
     u32 unk14;       // at 0x14
     u32 copyrightOfs;  // at 0x18
-};
-
-struct NewsLocationRec {
-    u32 nameOfs;  // at 0x0
-    u8 unk4[0x10 - 0x4];
 };
 
 struct NewsPictureRec {
@@ -163,8 +163,9 @@ public:
 
     NewsFile* GetFile(u32 id) {
         NewsFile* file;
-        for (s32 i = 0; i < NEWS_FILE_MAX; i++) {
-            file = mFiles[i];
+        NewsFile** p = mFiles;
+        for (s32 i = 0; i < NEWS_FILE_MAX; p++, i++) {
+            file = *p;
             if (file != NULL && file->id == id) {
                 return file;
             }
