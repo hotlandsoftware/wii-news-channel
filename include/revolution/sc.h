@@ -253,6 +253,9 @@ BOOL SCReplaceByteArrayItem(const void*, u32, SCItemID);
 
 BOOL SCReplaceU8Item(u8, SCItemID);
 
+BOOL SCFindBoolItem(BOOL*, SCItemID);
+u32 SCFlush(void);
+
 #ifdef __cplusplus
 }
 #endif

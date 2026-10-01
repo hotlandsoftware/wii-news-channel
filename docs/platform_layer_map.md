@@ -383,6 +383,34 @@ All 23 files in `0x80164534–0x80179290` are split and `Matching` (lib `bte_hid
 - **Symbols outside the range** that were renamed so the objects link (Petari names, at Petari's addresses mapped by size alignment): GKI (`GKI_init_q`, `GKI_getpoolbuf`, `GKI_freebuf`, `GKI_enqueue`, `GKI_enqueue_head`, `GKI_dequeue`, `GKI_remove_from_queue`, `GKI_getfirst`, `GKI_getnext`), `bte_hcisu_send`, `LogMsg_0`…`LogMsg_6`, `btu_start_timer`/`btu_stop_timer`, the `btm_*`/`BTM_*` functions called from l2c/rfc/sdp, `btsnd_hcic_accept_conn`/`reject_conn`/`create_conn`/`write_auto_flush_tout`, and the objects `btu_cb` (`0x8034B650`), `btm_cb` (`0x8034BB78`), `hd_cb` (`0x8034E6F0`) and `BT_BD_ANY` (`.sdata2 0x8035A060`). Only names changed, not sizes or alignment.
 - Petari's `hh_cb` is `0x404` and `sdp_cb` is `0x4634`. Our `symbols.txt` gives them `0x408`/`0x4638`; the extra 4 bytes are alignment padding.
 
+#### NAND, SC, WENC, ESP, IPC, FS, PAD (task 21, **done**)
+
+All of `0x8012B540–0x80134C38` is split and `Matching` (libs `nand`, `sc`, `wenc`, `esp`, `ipc`, `fs`, `pad`). Ported from Petari, with forecast for SC and tp for WENC. Flags: `GC/3.0a5.2` with `cflags_rvl`.
+
+| File | `.text` |
+| --- | --- |
+| `NAND/nand.c` | `0x8012B540–0x8012C664` |
+| `NAND/NANDOpenClose.c` | `0x8012C664–0x8012D0D8` |
+| `NAND/NANDCore.c` | `0x8012D0D8–0x8012DEB8` |
+| `NAND/NANDLogging.c` | `0x8012DEB8–0x8012E488` |
+| `SC/scsystem.c` | `0x8012E488–0x8012FF5C` |
+| `SC/scapi.c` | `0x8012FF5C–0x80130580` |
+| `SC/scapi_prdinfo.c` | `0x80130580–0x801307F4` |
+| `WENC/wenc.c` | `0x801307F4–0x80130ACC` |
+| `ESP/esp.c` | `0x80130ACC–0x801314E4` |
+| `IPC/ipcMain.c` | `0x801314E4–0x801315B0` |
+| `IPC/ipcclt.c` | `0x801315B0–0x80132F20` |
+| `IPC/memory.c` | `0x80132F20–0x80133444` |
+| `IPC/ipcProfile.c` | `0x80133444–0x80133608` |
+| `FS/fs.c` | `0x80133608–0x80134BDC` |
+| `PAD/Pad.c` | `0x80134BDC–0x80134C38` |
+
+- **WENC sits between SC and ESP.** The 0x2D8 function at `0x801307F4` is `WENCGetEncodeData`, the Wii Remote speaker ADPCM encoder. Its `.rodata` (`0x801AE648`, the 8-double step table) had been put in `scapi_prdinfo`. tp's `wenc.c` matches unchanged.
+- **The SC version is older than Petari's.** `ProductAreaAndStringTbl` has no `CHN` entry, and the game-region table has no `KR`/`CN` entries. `scapi.c` also has `SCSetLanguage` (it returns `FALSE`), `SCGetParentalControl`, `SCGetSimpleAddressID`, `SCGetNetContentRestrictions`, `SCGetEULA` and `SCGetWCFlags`, all as in forecast. `SCGetSimpleAddressData` is inlined into `SCGetSimpleAddressID` and is made `static` here.
+- **Dead-stripped SDK functions.** HAGE lacks `ISFS_RenameAsync`, `ISFS_GetUsage`, `ISFS_GetFileStatsAsync` and `IPCGetQueueStatus`. The FS ones are under `#if 0`. `IPCGetQueueStatus` must still be compiled, because MWCC lays out `.bss` by first use, not by declaration order. Without it, `IpcReqPtrArray` comes before `IpcFdArray`. That changes no function bytes, so objdiff still shows 100%, but the DOL check fails. mwld then dead-strips the unreferenced function, so the DOL matches. **Lesson:** a unit can show 100% in `rep.py` and still break `main.dol`. If it does, diff the DOL bytes to find the first differing data or `.bss` address.
+- `nandSafeClose` returns `NAND_RESULT_FATAL_ERROR` (not `INVALID`) for an illegal `NANDFileInfo`.
+- **Shared headers (additive).** New prototypes in `esp.h` (content-file functions), `fs/fs.h` (`ISFS_OpenLib`, `CreateDir`/`CreateFile`/`Rename`/`GetAttr`/`SetAttr`/`GetFileStats`), `nand.h` (`NANDReadDir`, `NANDGetCurrentDir`, `NANDGetType`, `NANDCreateDir`, `NANDPrivateSetStatus`) and `sc.h` (`SCFindBoolItem`, `SCFlush`). `ESP_ListTitleContentsOnCard` is deliberately left out of `esp.h`: `OSExec.c` declares it locally with a `void*` argument.
+
 **TPL** `0x80179290`, **NdevExi2AD** `DebuggerDriver 0x801794A4`, `exi2 0x801797D8–0x80179F64`.
 
 ### MetroTRK (`0x8018C7C0–0x80191F00`, ogws, sizes identical)
@@ -535,7 +563,7 @@ Difficulty: E = mostly drop-in, M = drop-in plus version fixes, H = little or no
 | 18 | GX (**done**; ends `0x8011B120`) | `0x80112208–0x8011B120` | 36 KB | Petari + tp + ogws | E |
 | 19 | DVD + AI | `0x8011B478–0x80123F2C` | 35 KB | smg | M |
 | 20 | AX, AXFX, MEM, DSP | `0x80123F2C–0x8012B540` | 30 KB | ogws (AX/DSP), smg (MEM/AXFX) | E |
-| 21 | NAND, SC, ESP, IPC, FS, PAD | `0x8012B540–0x80134C38` | 38 KB | smg | E–M |
+| 21 | NAND, SC, WENC, ESP, IPC, FS, PAD (**done**, 15/15 Matching) | `0x8012B540–0x80134C38` | 38 KB | smg | E–M |
 | 22 | WPAD | `0x80134C38–0x80143634` | 60 KB | smg (GC/3.0a5.2) | M |
 | 23 | KPAD, EUART, USB, WUD, TPL, NdevExi2AD | `0x80143634–0x8014BCF0`, `0x80179290–0x80179F64` | 38 KB | smg, ogws | M–H (KPAD, USB) |
 | 24 | BTE part 1: gki, hcisu, bte, bta (**done**, all Matching) | `0x8014BCF0–0x8015526C` | 38 KB | smg | E–M |

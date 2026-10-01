@@ -993,9 +993,80 @@ revolution/DSP/dsp_task.c:
 	.data       start:0x801E3DC0 end:0x801E3F00
 	.sbss       start:0x80358280 end:0x80358298
 
+revolution/NAND/nand.c:
+	.text       start:0x8012B540 end:0x8012C664
+
+revolution/NAND/NANDOpenClose.c:
+	.text       start:0x8012C664 end:0x8012D0D8
+	.data       start:0x801E3F00 end:0x801E3F40
+	.sdata      start:0x80357168 end:0x80357178
+	.sbss       start:0x80358298 end:0x803582A0
+
+revolution/NAND/NANDCore.c:
+	.text       start:0x8012D0D8 end:0x8012DEB8
+	.rodata     start:0x801AE4A8 end:0x801AE5F0
+	.data       start:0x801E3F40 end:0x801E4090
+	.bss        start:0x8030EF20 end:0x8030EF80
+	.sdata      start:0x80357178 end:0x80357198
+	.sbss       start:0x803582A0 end:0x803582A8
+
+revolution/NAND/NANDLogging.c:
+	.text       start:0x8012DEB8 end:0x8012E488
+	.data       start:0x801E4090 end:0x801E40D8
+	.bss        start:0x8030EF80 end:0x8030F280
+	.sdata      start:0x80357198 end:0x803571A0
+	.sbss       start:0x803582A8 end:0x803582B0
+
+revolution/SC/scsystem.c:
+	.text       start:0x8012E488 end:0x8012FF5C
+	.rodata     start:0x801AE5F0 end:0x801AE648
+	.data       start:0x801E40D8 end:0x801E42B0
+	.bss        start:0x8030F280 end:0x80317420
+	.sdata      start:0x803571A0 end:0x803572A8
+	.sbss       start:0x803582B0 end:0x803582C8
+
+revolution/SC/scapi.c:
+	.text       start:0x8012FF5C end:0x80130580
+	.bss        start:0x80317420 end:0x80318440
+
+revolution/SC/scapi_prdinfo.c:
+	.text       start:0x80130580 end:0x801307F4
+	.data       start:0x801E42B0 end:0x801E4308
+	.sdata      start:0x803572A8 end:0x803572B8
+
+revolution/WENC/wenc.c:
+	.text       start:0x801307F4 end:0x80130ACC
+	.rodata     start:0x801AE648 end:0x801AE688
+	.sdata2     start:0x80359F28 end:0x80359F30
+
+revolution/ESP/esp.c:
+	.text       start:0x80130ACC end:0x801314E4
+	.sdata      start:0x803572B8 end:0x803572C8
+
 revolution/IPC/ipcMain.c:
 	.text       start:0x801314E4 end:0x801315B0
 	.sbss       start:0x803582C8 end:0x803582E0
+
+revolution/IPC/ipcclt.c:
+	.text       start:0x801315B0 end:0x80132F20
+	.bss        start:0x80318440 end:0x803184E0
+	.sdata      start:0x803572C8 end:0x803572D0
+	.sbss       start:0x803582E0 end:0x803582F0
+
+revolution/IPC/memory.c:
+	.text       start:0x80132F20 end:0x80133444
+	.bss        start:0x803184E0 end:0x80318560
+
+revolution/IPC/ipcProfile.c:
+	.text       start:0x80133444 end:0x80133608
+	.bss        start:0x80318560 end:0x80318660
+	.sbss       start:0x803582F0 end:0x803582F8
+
+revolution/FS/fs.c:
+	.text       start:0x80133608 end:0x80134BDC
+	.data       start:0x801E4308 end:0x801E4330
+	.sdata      start:0x803572D0 end:0x803572E0
+	.sbss       start:0x803582F8 end:0x80358310
 
 revolution/PAD/Pad.c:
 	.text       start:0x80134BDC end:0x80134C38

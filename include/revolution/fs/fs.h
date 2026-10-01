@@ -96,6 +96,16 @@ s32 ISFS_RenameAsync(const u8*, const u8*, ISFSCallback, void*);
 s32 ISFS_Delete(const u8*);
 s32 ISFS_DeleteAsync(const u8*, ISFSCallback, void*);
 
+ISFSError ISFS_OpenLib(void);
+s32 ISFS_CreateDir(const u8*, u32, u32, u32, u32);
+s32 ISFS_CreateFile(const u8*, u32, u32, u32, u32);
+s32 ISFS_Rename(const u8*, const u8*);
+s32 ISFS_GetAttr(const u8*, IOSUid*, IOSGid*, u32*, u32*, u32*, u32*);
+s32 ISFS_SetAttr(const u8*, IOSUid, IOSGid, u32, u32, u32, u32);
+s32 ISFS_SetAttrAsync(const u8*, IOSUid, IOSGid, u32, u32, u32, u32, ISFSCallback, void*);
+s32 ISFS_GetFileStats(IOSFd, ISFSFileStats*);
+s32 ISFS_GetFileStatsAsync(IOSFd, ISFSFileStats*, ISFSCallback, void*);
+
 #ifdef __cplusplus
 }
 #endif
