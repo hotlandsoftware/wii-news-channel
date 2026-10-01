@@ -319,6 +319,7 @@ config.libs = [
             Object(Matching, "MSL_C/mem_funcs.c", extra_cflags=["-Cpp_exceptions on"]),
             Object(Matching, "MSL_C/math_api.c", extra_cflags=["-Cpp_exceptions on"]),
             Object(Matching, "MSL_C/misc_io.c", extra_cflags=["-Cpp_exceptions on"]),
+            Object(Matching, "MSL_C/printf.c", extra_cflags=["-Cpp_exceptions on", "-ipa file"]),
             Object(Matching, "MSL_C/string.c", extra_cflags=["-Cpp_exceptions on"]),
             Object(NonMatching, "MSL_C/strtoul.c", extra_cflags=["-Cpp_exceptions on"]),
             Object(Matching, "MSL_C/wstring.c"),
