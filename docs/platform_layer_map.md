@@ -346,6 +346,23 @@ Findings:
 - **`block_relocations`:** `0x8019E9B4` is random `.rodata` table data that looks like a pointer into `gki_cb` (`0x80334431`). Without the block, the `gki_ppc` `.bss` split breaks the link.
 - **Names given outside the range for linking** (rename only): IUSB (`IUSB_OpenLib`, `IUSB_CloseLib`, `IUSB_OpenDeviceIds`, `IUSB_CloseDeviceAsync`, `IUSB_ReadIntrMsgAsync`, `IUSB_ReadBlkMsgAsync`, `IUSB_WriteBlkMsgAsync`, `IUSB_WriteCtrlMsgAsync`), WUD (`App_MEMalloc`, `App_MEMfree`, `bta_hh_co_data`/`open`/`close`, `bta_dm_co_get_compress_memory`), and BTM/BTU/GAP/HCI/HID/L2CAP/RFCOMM/SDP functions and data called from part 1 (`BTM_*`, `btm_*`, `btu_hcif_*`, `btu_init_core`, `BTE_Init`, `WBT_ExtCreateRecord`, `GAP_Init`, `btsnd_hcic_write_scan_enable`, `HID_DevInit`, `HID_Host*`, `hidh_proc_repage_timeout`, `L2CA_*`, `l2cap_link_chk_pkt_start`/`end`, `l2c_*`, `l2cu_find_ccb_by_cid`, `RFCOMM_Init`, `rfcomm_process_timeout`, `SDP_*`, `sdp_conn_timeout`, `btm_cb`, `hh_cb`, `l2cb`, `BT_BD_ANY`).
 
+**BTE part 2 (Task 25, `0x8015526C–0x80164534`, lib `bte_btm`): all 19 files Matching.**
+
+- **Same code as Petari.** From `bte_hcisu` (`0x8014EBB0`) to the end of BTE, our `.text` is Petari's shifted by the constant `0x8015526C − 0x804F432C`. Every file has the same size. The GKI files before it are shifted by a further +0xC (`GKI_getbuf` is at `0x8014C1D0`).
+  Data offsets for these files are as follows. `.data`: `0x801E85A0 ↔ 0x80604DA8`. `.rodata`: `0x801AE9D8 ↔ 0x80562088`. `.sdata`: `0x803573D8 ↔ 0x806B2DF0`. `.sdata2`: `0x8035A048 ↔ 0x806C2338`. `.bss`: `0x8034BB78 ↔ 0x806A6AF8` (`btm_cb`).
+  The splits were generated from Petari's `splits.txt` with these offsets, and the names from Petari's `symbols.txt` (`btu_cb` = `0x8034B650`, `l2cb` = `0x8034EC40`, `hh_cb` = `0x8034E838`).
+- **File list.** `btm_acl 0x8015526C`, `btm_dev 0x80156FB0`, `btm_devctl 0x8015767C`, `btm_discovery 0x80159004`, `btm_inq 0x80159138`, `btm_main 0x8015ABD0`, `btm_pm 0x8015AC2C`, `btm_sco 0x8015B8C0`, `btm_sec 0x8015C6F8`, `btu_hcif 0x8015F6BC`, `btu_init 0x80160918`, `wbt_ext 0x80160990`, `gap_api 0x80160A70`, `gap_conn 0x80160AD0`, `gap_utils 0x8016160C`, `hcicmds 0x80161C28`, `hidd_api 0x80164344`, `hidd_conn 0x801643AC`, `hidd_mgmt 0x8016446C`.
+- **Compiler: GC/3.0a3**, which is Petari's SDK default. GC/3.0a5.2 differs in two functions:
+  - `WBT_ExtCreateRecord`: 3.0a5.2 drops the dead `sdp_record_handle = 0` store.
+  - `BTM_StartInquiry`: scheduling differs.
+  The flags are `cflags_bte` = `cflags_rvl` + `-i src/revolution/BTE -ir include/revolution/bte`, the same include layout as Petari.
+- **Sources.** The sources are Petari's, copied verbatim.
+  - The private headers that these files use are in `src/revolution/BTE/`.
+  - In those headers, `"revolution/types.h"` became `<types.h>` + `<macros.h>`, and `<mem.h>` became `<string.h>`.
+  - `data_types.h` spells out the `INT*`/`UINT*` typedefs instead of including `<stdint.h>`, which we do not have. They are the same types as MSL's `int_least*_t`.
+  - The src `data_types.h` must stay: it defines `BCM_STRNCPY_S`, which the include-tree copy lacks. If it is missing, the build links against an undefined function `BCM_STRNCPY_S`. It has the same include guard as `include/revolution/bte/data_types.h`.
+- **`macros.h` (additive).** `ARRAY_LENGTH`, `BOOLIFY_TERNARY` and `BOOLIFY_TERNARY_FALSE` were added as in Petari's `macros.h`. Without `BOOLIFY_TERNARY`, the code compiles as an implicit call and quietly fails to match.
+
 **TPL** `0x80179290`, **NdevExi2AD** `DebuggerDriver 0x801794A4`, `exi2 0x801797D8–0x80179F64`.
 
 ### MetroTRK (`0x8018C7C0–0x80191F00`, ogws, sizes identical)

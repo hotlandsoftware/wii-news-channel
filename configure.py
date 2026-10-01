@@ -309,6 +309,14 @@ cflags_rvl = [
     "-ipa file",
 ]
 
+# BTE (Broadcom Bluetooth stack): RVL flags plus the stack's private headers
+# (src/revolution/BTE) and its public ones (include/revolution/bte), as Petari
+cflags_bte = [
+    *cflags_rvl,
+    "-i src/revolution/BTE",
+    "-ir include/revolution/bte",
+]
+
 config.linker_version = "GC/3.0a5.2"
 
 
@@ -713,6 +721,34 @@ config.libs = [
         "progress_category": "sdk",
         "objects": [
             Object(Matching, "revolution/PAD/Pad.c"),
+        ],
+    },
+    {
+        # BTE part 2 (btm, btu, gap, hcicmds, hidd api/conn/mgmt)
+        "lib": "bte_btm",
+        "mw_version": "GC/3.0a3",
+        "cflags": cflags_bte,
+        "progress_category": "sdk",
+        "objects": [
+            Object(Matching, "revolution/BTE/btm_acl.c"),
+            Object(Matching, "revolution/BTE/btm_dev.c"),
+            Object(Matching, "revolution/BTE/btm_devctl.c"),
+            Object(Matching, "revolution/BTE/btm_discovery.c"),
+            Object(Matching, "revolution/BTE/btm_inq.c"),
+            Object(Matching, "revolution/BTE/btm_main.c"),
+            Object(Matching, "revolution/BTE/btm_pm.c"),
+            Object(Matching, "revolution/BTE/btm_sco.c"),
+            Object(Matching, "revolution/BTE/btm_sec.c"),
+            Object(Matching, "revolution/BTE/btu_hcif.c"),
+            Object(Matching, "revolution/BTE/btu_init.c"),
+            Object(Matching, "revolution/BTE/wbt_ext.c"),
+            Object(Matching, "revolution/BTE/gap_api.c"),
+            Object(Matching, "revolution/BTE/gap_conn.c"),
+            Object(Matching, "revolution/BTE/gap_utils.c"),
+            Object(Matching, "revolution/BTE/hcicmds.c"),
+            Object(Matching, "revolution/BTE/hidd_api.c"),
+            Object(Matching, "revolution/BTE/hidd_conn.c"),
+            Object(Matching, "revolution/BTE/hidd_mgmt.c"),
         ],
     },
     {
