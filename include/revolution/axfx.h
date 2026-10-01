@@ -89,9 +89,17 @@ extern AXFXFreeHook __AXFXFree;
 void AXFXSetHooks(AXFXAllocHook alloc, AXFXFreeHook free);
 void AXFXGetHooks(AXFXAllocHook* alloc, AXFXFreeHook* free);
 
+u32 AXFXReverbHiExpGetMemSize(AXFX_REVERBHI_EXP* fx);
 BOOL AXFXReverbHiExpInit(AXFX_REVERBHI_EXP* fx);
 void AXFXReverbHiExpShutdown(AXFX_REVERBHI_EXP* fx);
+BOOL AXFXReverbHiExpSettings(AXFX_REVERBHI_EXP* fx);
 void AXFXReverbHiExpCallback(AXFX_BUFFERUPDATE* update, AXFX_REVERBHI_EXP* fx);
+
+u32 AXFXReverbHiGetMemSize(AXFX_REVERBHI* fx);
+BOOL AXFXReverbHiInit(AXFX_REVERBHI* fx);
+BOOL AXFXReverbHiShutdown(AXFX_REVERBHI* fx);
+BOOL AXFXReverbHiSettings(AXFX_REVERBHI* fx);
+void AXFXReverbHiCallback(void* chans, void* context);
 
 #ifdef __cplusplus
 }

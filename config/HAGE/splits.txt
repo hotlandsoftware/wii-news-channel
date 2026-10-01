@@ -429,6 +429,109 @@ revolution/GX/GXPerf.c:
 	.text       start:0x8011A8E4 end:0x8011B120
 	.data       start:0x801DF120 end:0x801DF210
 
+revolution/AX/AX.c:
+	.text       start:0x80123F2C end:0x80123F80
+	.data       start:0x801E0B08 end:0x801E0B50
+	.sdata      start:0x80357148 end:0x80357150
+	.sbss       start:0x80358138 end:0x80358140
+
+revolution/AX/AXAlloc.c:
+	.text       start:0x80123F80 end:0x80124438
+	.bss        start:0x802F95E0 end:0x802F96E0
+	.sbss       start:0x80358140 end:0x80358148
+
+revolution/AX/AXAux.c:
+	.text       start:0x80124438 end:0x80124C50
+	.bss        start:0x802F96E0 end:0x802FC860
+	.sbss       start:0x80358148 end:0x80358190
+
+revolution/AX/AXCL.c:
+	.text       start:0x80124C50 end:0x801256D4
+	.bss        start:0x802FC860 end:0x802FC960
+	.sbss       start:0x80358190 end:0x803581B0
+
+revolution/AX/AXOut.c:
+	.text       start:0x801256D4 end:0x80125EC0
+	.bss        start:0x802FC960 end:0x802FD760
+	.sbss       start:0x803581B0 end:0x803581F0
+
+revolution/AX/AXSPB.c:
+	.text       start:0x80125EC0 end:0x801262E0
+	.bss        start:0x802FD760 end:0x802FD7E0
+	.sbss       start:0x803581F0 end:0x80358240
+
+revolution/AX/AXVPB.c:
+	.text       start:0x801262E0 end:0x801278F0
+	.data       start:0x801E0B50 end:0x801E0BE0
+	.bss        start:0x802FD7E0 end:0x8030EEE0
+	.sbss       start:0x80358240 end:0x80358260
+	.sdata2     start:0x80359EB0 end:0x80359ED0
+
+revolution/AX/AXComp.c:
+	.data       start:0x801E0BE0 end:0x801E1BA0
+
+revolution/AX/DSPCode.c:
+	.data       start:0x801E1BA0 end:0x801E3BA0
+	.sdata      start:0x80357150 end:0x80357158
+
+revolution/AX/AXProf.c:
+	.text       start:0x801278F0 end:0x80127930
+	.sbss       start:0x80358260 end:0x80358270
+
+revolution/AXFX/AXFXReverbHi.c:
+	.text       start:0x80127930 end:0x80127A2C
+	.sdata2     start:0x80359ED0 end:0x80359ED8
+
+revolution/AXFX/AXFXReverbHiExp.c:
+	.text       start:0x80127A2C end:0x8012895C
+	.data       start:0x801E3BA0 end:0x801E3D40
+	.sdata2     start:0x80359ED8 end:0x80359F18
+
+revolution/AXFX/AXFXHooks.c:
+	.text       start:0x8012895C end:0x80128994
+	.sdata      start:0x80357158 end:0x80357160
+
+revolution/MEM/mem_heapCommon.c:
+	.text       start:0x80128994 end:0x80128E00
+	.bss        start:0x8030EEE0 end:0x8030EF20
+	.sbss       start:0x80358270 end:0x80358278
+
+revolution/MEM/mem_expHeap.c:
+	.text       start:0x80128E00 end:0x801296C0
+
+revolution/MEM/mem_frameHeap.c:
+	.text       start:0x801296C0 end:0x801299AC
+
+revolution/MEM/mem_unitHeap.c:
+	.text       start:0x801299AC end:0x80129C0C
+
+revolution/MEM/mem_allocator.c:
+	.text       start:0x80129C0C end:0x80129C90
+	.sdata2     start:0x80359F18 end:0x80359F28
+
+revolution/MEM/mem_list.c:
+	.text       start:0x80129C90 end:0x80129DA4
+
+revolution/CX/CXStreamingUncompression.c:
+	.text       start:0x80129DA4 end:0x8012A590
+
+revolution/CX/CXUncompression.c:
+	.text       start:0x8012A590 end:0x8012AA20
+
+revolution/DSP/dsp.c:
+	.text       start:0x8012AA20 end:0x8012AC5C
+	.data       start:0x801E3D40 end:0x801E3DC0
+	.sdata      start:0x80357160 end:0x80357168
+	.sbss       start:0x80358278 end:0x80358280
+
+revolution/DSP/dsp_debug.c:
+	.text       start:0x8012AC5C end:0x8012ACAC
+
+revolution/DSP/dsp_task.c:
+	.text       start:0x8012ACAC end:0x8012B540
+	.data       start:0x801E3DC0 end:0x801E3F00
+	.sbss       start:0x80358280 end:0x80358298
+
 revolution/IPC/ipcMain.c:
 	.text       start:0x801314E4 end:0x801315B0
 	.sbss       start:0x803582C8 end:0x803582E0

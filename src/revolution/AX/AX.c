@@ -1,0 +1,26 @@
+#include <revolution/ax.h>
+#include <revolution/os.h>
+
+const char* __AXVersion =
+    "<< RVL_SDK - AX \trelease build: May  8 2007 12:54:39 (0x4199_60831) >>";
+
+static BOOL __init = FALSE;
+
+void AXInit(void) {
+    AXInitEx(0);
+}
+
+void AXInitEx(u32 mode) {
+    if (!__init) {
+        OSRegisterVersion(__AXVersion);
+
+        __AXInitVoiceStacks();
+        __AXVPBInit();
+        __AXSPBInit();
+        __AXAuxInit();
+        __AXClInit();
+        __AXOutInit(mode);
+
+        __init = TRUE;
+    }
+}

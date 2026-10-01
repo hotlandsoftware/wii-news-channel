@@ -60,10 +60,11 @@ Anything matched there can be reused directly.
 | `0x80112208–0x8011B478` | 0x9270 | GX | May 8 2007 | **ogws** | 97% |
 | `0x8011B478–0x801239C8` | 0x8550 | DVD | Jun 21 2007 | smg | 76% |
 | `0x801239C8–0x80123F2C` | 0x564 | AI | May 8 2007 | ogws/smg | 90% |
-| `0x80123F2C–0x80127930` | 0x3A04 | AX | May 8 2007 | **ogws** | 97% |
-| `0x80127930–0x80128994` | 0x1064 | AXFX | — | smg | 65% |
-| `0x80128994–0x8012AA20` | 0x208C | MEM | — | **smg** | 100% |
-| `0x8012AA20–0x8012B540` | 0xB20 | DSP | May 8 2007 | ogws | 98% |
+| `0x80123F2C–0x80127930` | 0x3A04 | AX | May 8 2007 | **ogws** | 97% (**done**) |
+| `0x80127930–0x80128994` | 0x1064 | AXFX | — | smg | 65% (**done**) |
+| `0x80128994–0x80129DA4` | 0x1410 | MEM (incl. `mem_unitHeap`) | — | **smg** | 100% (**done**) |
+| `0x80129DA4–0x8012AA20` | 0xC7C | CX (`CXStreamingUncompression`, `CXUncompression`) | — | none (TwlSDK `MI`) | (**done**, 98%/100%) |
+| `0x8012AA20–0x8012B540` | 0xB20 | DSP | May 8 2007 | ogws | 98% (**done**) |
 | `0x8012B540–0x8012E488` | 0x2F48 | NAND | May 8 2007 | smg | 71% |
 | `0x8012E488–0x80130ACC` | 0x2644 | SC | May 8 2007 | **smg** | 99.8% |
 | `0x80130ACC–0x801314E4` | 0xA18 | ESP | — | smg | 100% |
@@ -217,6 +218,45 @@ GX notes (task 18):
 **AX** `AX 0x80123F2C`, `AXAlloc 0x80123F80`, `AXAux 0x80124438`, `AXCL 0x80124C50`, `AXOut 0x801256D4`, `AXSPB 0x80125EC0`, `AXVPB 0x801262E0` (ogws 98%), `AXProf 0x801278F0`. **AXFX** `AXFXReverbHi 0x80127930`, `AXFXReverbHiExp 0x80127A2C`, `AXFXHooks 0x8012895C`.
 
 **MEM** `mem_heapCommon 0x80128994`, `mem_expHeap 0x80128E00`, `mem_frameHeap 0x801296C0`, `mem_allocator 0x80129C0C`, `mem_list ≈0x80129C90`. **DSP** `dsp 0x8012AA20`, `dsp_debug 0x8012AC5C`, `dsp_task 0x8012ACAC`.
+
+#### AX, AXFX, MEM, CX, DSP (Task 20, **done**)
+
+All built with `cflags_rvl` and GC/3.0a5.2; no per-file flags.
+
+| File | Range | Status | Source |
+| --- | --- | --- | --- |
+| `AX/AX.c` | `0x80123F2C–0x80123F80` | Matching | ogws; only `AXInit` is linked (`AXInitEx` inlined), and it calls `__AXInitVoiceStacks` directly (no `__AXAllocInit`) |
+| `AX/AXAlloc.c` | `0x80123F80–0x80124438` | Matching | ogws |
+| `AX/AXAux.c` | `0x80124438–0x80124C50` | Matching | ogws |
+| `AX/AXCL.c` | `0x80124C50–0x801256D4` | Matching | ogws (`AXGetMode` dead-stripped) |
+| `AX/AXOut.c` | `0x801256D4–0x80125EC0` | Matching | ogws |
+| `AX/AXSPB.c` | `0x80125EC0–0x801262E0` | Matching | ogws |
+| `AX/AXVPB.c` | `0x801262E0–0x801278F0` | Matching | ogws + 12 setters written from tp's GameCube `AXVPB.c` |
+| `AX/AXComp.c`, `AX/DSPCode.c` | data only (`.data 0x801E0BE0–0x801E3BA0`, `.sdata 0x80357150`) | Matching | ogws |
+| `AX/AXProf.c` | `0x801278F0–0x80127930` | Matching | ogws |
+| `AXFX/AXFXReverbHi.c` | `0x80127930–0x80127A2C` | Matching | ogws (Petari's lacks `GetMemSize`/`Settings`) |
+| `AXFX/AXFXReverbHiExp.c` | `0x80127A2C–0x8012895C` | Matching | Petari + new `GetMemSize`/`Settings` |
+| `AXFX/AXFXHooks.c` | `0x8012895C–0x80128994` | Matching | Petari |
+| `MEM/mem_heapCommon.c` | `0x80128994–0x80128E00` | Matching | Petari |
+| `MEM/mem_expHeap.c` | `0x80128E00–0x801296C0` | Matching | Petari + `MEMGetTotalFreeSizeForExpHeap` |
+| `MEM/mem_frameHeap.c` | `0x801296C0–0x801299AC` | Matching | ogws (only Create/Destroy/Alloc/Free/GetAllocatableSize linked) |
+| `MEM/mem_unitHeap.c` | `0x801299AC–0x80129C0C` | Matching | new, after mkw `rvlMemUnitHeap.cpp` |
+| `MEM/mem_allocator.c` | `0x80129C0C–0x80129C90` | Matching | Petari + frame heap allocator (as Forecast) |
+| `MEM/mem_list.c` | `0x80129C90–0x80129DA4` | Matching | Petari |
+| `CX/CXStreamingUncompression.c` | `0x80129DA4–0x8012A590` | NonMatching (98.4%) | new, after TwlSDK's `MI_ReadUncomp*` |
+| `CX/CXUncompression.c` | `0x8012A590–0x8012AA20` | Matching | new, after TwlSDK's `MI_Uncompress*` |
+| `DSP/dsp.c`, `dsp_debug.c`, `dsp_task.c` | `0x8012AA20–0x8012B540` | Matching | ogws (Petari's also match; ogws chosen because ogws AX uses its `DSPTask` layout) |
+
+Findings:
+
+- **CX is not MEM.** `0x80129DA4–0x8012AA20` (3.2 KB) is the CX library: `CXInitUncompContextLZ`, `CXInitUncompContextHuffman`, `CXReadUncompLZ`, `CXReadUncompHuffman` (streaming, with the LZ77 extended format and the 8-byte header parser) and `CXGetUncompressedSize`, `CXUncompressLZ`, `CXUncompressHuffman`, `CXiVerifyHuffmanTable`. It is the Wii port of TwlSDK's `MI` uncompress code, and the C written from that compiles almost byte-for-byte. The context layouts are in `include/revolution/cx.h`. Remaining diffs: `CXReadUncompLZ` 99.9% (r7/r9 swap around `dispLen`), `CXReadUncompHuffman` 96.8% (the original loads `*treep` twice before the `srcTmp` store; no source order tried reproduces it). GC/3.0a3, `-O4,s` and `-ipa function` don't help.
+- **Unit heap.** The three functions after `MEMGetAllocatableSizeForFrmHeapEx` are `mem_unitHeap.c` (signature `'UNTH'`), not the frame heap's `Record/FreeByState/Adjust/ResizeForMBlock` (those are dead-stripped). The extra function in exp heap (vs Forecast's list) is `MEMGetTotalFreeSizeForExpHeap`.
+- **AXVPB setters.** This DOL links `AXSetVoiceSrcType`, `Type`, `Mix`, `Ve`, `Adpcm`, `Src`, `SrcRatio`, `AdpcmLoop`, `Lpf`, `LpfCoefs`, `RmtOn`, `RmtMix` (used by the old `Channel`-based nw4r::snd and HBM sound). The Wii mixer-control bits (`0x1/0x5/0x2/0x6/0x10000…`) differ from the GameCube ones in tp. `AXSetVoiceSrcRatio` has no 4x clamp. `AXGetLpfCoefs` calls double `cos`/`sqrt` with `(f32)` casts; ogws's `DECOMP_FORCELITERAL(2.0f)` must go, since `65536.0f` (`SrcRatio`) now comes first in `.sdata2`.
+- **AXFXReverbHiExp.** This SDK's callback does not store the input into the early-reflection line (`earlyLine[earlyPos[2]] = data` is under `SDK_AUG2010` in tp). An unreferenced `dummy_1()` returning `-3.0f` puts `-3.0f` before `10.0` in `.sdata2`, as in tp.
+- **Alignment.** `__s_AXPB`/`__s_AXITD`/`__s_AXVPB` are `ALIGN(32)` (`.bss` after `__AXStudio` has 8 bytes of padding), and the NAND-side `.bss` object at `0x8030EF20` needs `align:32` in `symbols.txt` while it's unsplit, or `mem_heapCommon`'s `.bss` comes out 0x18 short.
+- **Version strings.** AX `May  8 2007 12:54:39`, DSP `May  8 2007 12:55:11` (also in `DSPInit`'s debug printf), both `0x4199_60831`.
+- **Headers.** `include/revolution/dsp.h` and `dsp/*.h` are now ogws's (`DSPTask`, `DSP_HW_REGS`, `DSPMail`); Petari's `DSPTaskInfo` was unused. New: `include/revolution/cx.h`, `include/revolution/mem/unitHeap.h`. `axfx.h` and `ax/AXVPB.h` gained declarations, and `mem.h` now also includes `mem/unitHeap.h`.
+- **OS names for linking.** These OS/AI functions were named so the AX/MEM/DSP objects link: `OSAllocFromHeap`, `DCInvalidateRange`, `DCFlushRangeNoSync`, `OSSetCurrentContext`, `OSClearContext`, `OSInitMutex`, `OSLockMutex`, `OSUnlockMutex`, `OSInitThreadQueue`, `OSWakeupThread`, `OSGetTime`, `__OSSetInterruptHandler`, `__OSUnmaskInterrupts`, `AIRegisterDMACallback`, `AIInitDMA`, `AIStartDMA`, `AIGetDMABytesLeft`.
 
 **NAND** `nand 0x8012B540`, `NANDOpenClose 0x8012C664`, `NANDCore ≈0x8012D0D8`, `NANDLogging ≈0x8012DEB8`. **SC** `scsystem 0x8012E488`, `scapi 0x8012FF5C`, `scapi_prdinfo 0x80130580`. **ESP** `0x80130ACC`. **IPC** `ipcMain 0x801314E4` (**done**, Petari), `ipcclt 0x801315B0`, `memory 0x80132F20`, `ipcProfile 0x80133444`. **FS** `0x80133608`. **PAD** `0x80134BDC` (**done**, Petari).
 
