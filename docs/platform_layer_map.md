@@ -71,8 +71,8 @@ Anything matched there can be reused directly.
 | `0x801314E4–0x80133608` | 0x2124 | IPC | — | smg | 99.6% |
 | `0x80133608–0x80134BDC` | 0x15D4 | FS | — | smg | 89% |
 | `0x80134BDC–0x80134C38` | 0x5C | PAD | — | ogws/smg | 100% |
-| `0x80134C38–0x80143634` | 0xE9FC | WPAD | Jun 28 2007 | smg | 86% |
-| `0x80143634–0x8014590C` | 0x22D8 | KPAD | Jun 28 2007 | smg (Jun 2008) | 49% (hard) |
+| `0x80134C38–0x80142930` | 0xDCF8 | WPAD (**done**, task 22) | Jun 28 2007 | smg | 100% |
+| `0x80142930–0x8014590C` | 0x2FDC | KPAD | Jun 28 2007 | smg (Jun 2008) | 49% (hard) |
 | `0x8014590C–0x80145C7C` | 0x370 | EUART | — | ogws/smg | 100% |
 | `0x80145C7C–0x80146DA8` | 0x112C | USB | — | smg | 35% |
 | `0x80146DA8–0x8014BCF0` | 0x4F48 | WUD | — | smg | 72% |
@@ -325,10 +325,36 @@ Findings:
 
 **NAND** `nand 0x8012B540`, `NANDOpenClose 0x8012C664`, `NANDCore ≈0x8012D0D8`, `NANDLogging ≈0x8012DEB8`. **SC** `scsystem 0x8012E488`, `scapi 0x8012FF5C`, `scapi_prdinfo 0x80130580`. **ESP** `0x80130ACC`. **IPC** `ipcMain 0x801314E4` (**done**, Petari), `ipcclt 0x801315B0`, `memory 0x80132F20`, `ipcProfile 0x80133444`. **FS** `0x80133608`. **PAD** `0x80134BDC` (**done**, Petari).
 
-**WPAD** `WPAD 0x80134C38`, `WPADHIDParser 0x8013C398`, `WPADEncrypt 0x80141838`, `debug_msg 0x801428E0`. **KPAD** `0x80143634`. **EUART** `0x8014590C`. **USB** `0x80145C7C`. **WUD** `WUD 0x80146DA8`, `WUDHidHost 0x8014B6A4`, `debug_msg 0x8014BCA0`.
+**WPAD** `WPAD 0x80134C38`, `WPADHIDParser 0x8013C398`, `WPADEncrypt 0x80141838`, `debug_msg 0x801428E0`. **KPAD** `0x80142930` (not `0x80143634`, see below). **EUART** `0x8014590C`. **USB** `0x80145C7C`. **WUD** `WUD 0x80146DA8`, `WUDHidHost 0x8014B6A4`, `debug_msg 0x8014BCA0`.
 
 **BTE** (Petari/tp file names): `gki_buffer 0x8014BCF0`, `gki_time 0x8014D134`, `gki_ppc 0x8014D68C`, `hcisu_h2 0x8014D91C`, `uusb_ppc 0x8014DFB8`, `bte_hcisu ≈0x8014EAC0`, `bte_logmsg ≈0x8014EC94`, `bte_main 0x8014EDF8`, `btu_task1 0x8014EF50`, `bta_sys_conn 0x8014F474`, `bta_sys_main 0x8014F6C8`, `ptim 0x8014F90C`, `bta_dm_act 0x8014FB30`, `bta_dm_api 0x80151E6C`, `bta_dm_main 0x801522D8`, `bta_dm_pm 0x80152438`, `bta_hh_act 0x80152E54`, `bta_hh_api 0x8015459C`, `bta_hh_main 0x8015496C`, `bta_hh_utils 0x80154EC0`, `btm_acl 0x8015526C`, `btm_dev 0x80156FB0`, `btm_devctl 0x8015767C`, `btm_discovery 0x80159004`, `btm_inq 0x80159138`, `btm_pm 0x8015AC2C`, `btm_sco 0x8015B8C0`, `btm_sec 0x8015C6F8`, `btu_hcif 0x8015F6BC`, `gap_conn 0x80160AD0`, `gap_utils 0x8016160C`, `hcicmds 0x80161C28`, `hidd_pm 0x80164534`, `hidh_api 0x801648B0`, `hidh_conn 0x80165630`, `l2c_api 0x80167670`, `l2c_csm 0x8016823C`, `l2c_link 0x80169718`, `l2c_main 0x8016A8A4`, `l2c_utils 0x8016B8D4`, `port_api 0x8016D798`, `port_rfc 0x8016D7E8`, `port_utils 0x8016EBE4`, `rfc_l2cap_if 0x8016F1BC`, `rfc_mx_fsm 0x8016FAF0`, `rfc_port_fsm 0x80170734`, `rfc_port_if 0x801718D4`, `rfc_ts_frames 0x80171E00`, `rfc_utils 0x80173448`, `sdp_api 0x80173C28`, `sdp_db 0x80174A90`, `sdp_discovery 0x8017575C`, `sdp_main 0x801769D4`, `sdp_server 0x80177540`, `sdp_utils 0x80178250`.
 Some small `*_cfg.c`, `btu_*` and `hcicmds` neighbours are not listed; take boundaries from Petari's `splits.txt`.
+
+#### WPAD (task 22, **done**): `0x80134C38–0x80142930`
+
+All five files are Matching. The sources are Petari's (`src/RVL_SDK/wpad`), copied into `src/revolution/WPAD/` with include rewrites only, except for the `WPAD.c` changes listed below. They are built in lib `wpad` with GC/3.0a5.2 and `cflags_rvl`. `WPAD.c` gets `-fp off` as in Petari, though it also matches without it.
+
+| File | `.text` | Data | Status |
+| --- | --- | --- | --- |
+| `WPAD/WPAD.c` | `0x80134C38–0x8013C398` | `.rodata 0x801AE688–0x801AE6C8`, `.data 0x801E4330–0x801E4628`, `.bss 0x80318660–0x8031BD88`, `.sdata 0x803572E0–0x803572F0`, `.sbss 0x80358318–0x80358348`, `.sdata2 0x80359F30–0x80359F38` | Matching |
+| `WPAD/WPADHIDParser.c` | `0x8013C398–0x80141838` | `.data 0x801E4628–0x801E4BC8`, `.bss 0x8031BD88–0x8031BDF0`, `.sbss 0x80358348–0x80358360`, `.sdata2 0x80359F38–0x80359F98` | Matching (Petari unchanged) |
+| `WPAD/WPADEncrypt.c` | `0x80141838–0x801428E0` | `.data 0x801E4BC8–0x801E5EF0`, `.sbss 0x80358360–0x80358368` | Matching (Petari unchanged) |
+| `WPAD/WPADMem.c` | — | `.bss 0x8031BDF0–0x8031BE40` (`_wmb`) | Matching (Petari unchanged) |
+| `WPAD/debug_msg.c` | `0x801428E0–0x80142930` | — | Matching (`DEBUGPrint`, empty) |
+
+Findings:
+
+- **KPAD starts at `0x80142930`, not `0x80143634`.** The code after WPAD's `debug_msg` (`0x80142930`, two 0x1C setters that index `0x8031BE40` with stride 0x528, then a 0x1D4 reset) already uses KPAD's `.bss` (`0x8031BE40`), `.sbss` (`0x80358378`…) and its `.sdata2` pool (`0x80359F98`…), and the pool continues without a restart past `0x80143634`. So `0x80142930–0x8014590C` is one `KPAD.c`, and the 0xD04 bytes `0x80142930–0x80143634` were left to task 23, although they were inside this task's nominal range.
+- **`WPAD.c` is between ogws (May 17 2007) and Petari (Dec 11 2007).** Petari's layout of `WPADControlBlock` (in `wpad.h`) and its `.bss` size (0x3722) are right. The differences from Petari are:
+  - There is no reconnect delay: `_startup`, `_recFlag` and `_recCnt` don't exist (`.sbss` is 0x2B bytes, `.sdata` 0x10). `WPADiManageHandler` just returns while the library isn't set up.
+  - `__WPADReconnect(BOOL exec)` sets `_shutdown`, calls `BTA_DmSendHciReset()`, then `WPADiShutdown(exec)` (`OSCancelAlarm`, `WUDSetHidRecvCallback(NULL)`, `WUDShutdown(exec)`). It is inlined into `OnShutdown`, which passes `TRUE`.
+  - `OnShutdown` calls `WPADStopSimpleSync()` when `WUDIsBusy()`, not `WUDCancelSyncDevice()`.
+  - `WPADiInitSub` calls `OSRegisterVersion` after `OSSetPeriodicAlarm`, as in ogws.
+  - New `u8 WPADGetRadioSensitivity(s32 chan)` (it returns `radioSense` under interrupts disabled) sits after `WPADGetStatus`. The HOME Menu calls it (`0x80096304`).
+  - The version string is `Jun 28 2007 02:04:52`.
+- **Dead-stripped or inlined in this DOL:** `WPADGetWorkMemorySize`, `WPADGetAddress`, `WPADShutdown`, `__WPADShutdown`, `__WPADReconnect`, the `WPADiIs*Format` helpers, the command-queue helpers (`__GetCmdNumber`, `WPADiPushCommand` …) and all `WPADiSend*` builders except `SetReportType`, `WriteDataCmd`, `WriteData` and `ReadData`. In `WPADHIDParser.c`, `initExtension` is inlined into `WPADiHIDParser`'s callers. The five 4-byte `WPAD*` wrappers that remain are `WPADStartFastSimpleSync`, `WPADStopSimpleSync`, `WPADSetSimpleSyncCallback`, `WPADRegisterAllocator` (called by game code at `0x8003D778`) and `WPADGetStatus` (called by KPAD).
+- **Symbols outside the range** that were renamed so the objects link (Petari names, checked against each call site with objdiff): WUD `WUDInit` (`0x80148B40`), `WUDRegisterAllocator`, `WUDShutdown`, `WUDGetStatus`, `WUDGetBufferStatus`, `WUDSetSyncSimpleCallback`, `WUDStartFastSyncSimple`, `WUDStopSyncSimple` (`0x801491CC`), `WUDSetDisableChannel`, `WUDSetHidRecvCallback`, `WUDSetHidConnCallback`, `WUDSetVisibility`, `WUDIsBusy` (`0x8014A5A0`), `_WUDGetDevAddr`, `_WUDGetQueuedSize`, `_WUDGetNotAckedSize`, `_WUDGetLinkNumber` (`0x8014B55C–0x8014B6A4`), and the WUD `.bss` object `_scArray` (`0x8031DA70`). Only names changed.
+- No shared header was changed; `wpad.h` is untouched.
 
 #### BTE part 1 (task 24, done): `0x8014BCF0–0x8015526C`
 
@@ -564,8 +590,8 @@ Difficulty: E = mostly drop-in, M = drop-in plus version fixes, H = little or no
 | 19 | DVD + AI | `0x8011B478–0x80123F2C` | 35 KB | smg | M |
 | 20 | AX, AXFX, MEM, DSP | `0x80123F2C–0x8012B540` | 30 KB | ogws (AX/DSP), smg (MEM/AXFX) | E |
 | 21 | NAND, SC, WENC, ESP, IPC, FS, PAD (**done**, 15/15 Matching) | `0x8012B540–0x80134C38` | 38 KB | smg | E–M |
-| 22 | WPAD | `0x80134C38–0x80143634` | 60 KB | smg (GC/3.0a5.2) | M |
-| 23 | KPAD, EUART, USB, WUD, TPL, NdevExi2AD | `0x80143634–0x8014BCF0`, `0x80179290–0x80179F64` | 38 KB | smg, ogws | M–H (KPAD, USB) |
+| 22 | WPAD (**done**, 5/5 Matching; ends `0x80142930`) | `0x80134C38–0x80142930` | 55 KB | smg (GC/3.0a5.2) | M |
+| 23 | KPAD, EUART, USB, WUD, TPL, NdevExi2AD | `0x80142930–0x8014BCF0`, `0x80179290–0x80179F64` | 38 KB | smg, ogws | M–H (KPAD, USB) |
 | 24 | BTE part 1: gki, hcisu, bte, bta (**done**, all Matching) | `0x8014BCF0–0x8015526C` | 38 KB | smg | E–M |
 | 25 | BTE part 2: btm, btu, gap, hci | `0x8015526C–0x80164534` | 61 KB | smg | E–M |
 | 26 | BTE part 3: hid, l2c, port/rfc, sdp (**done**, 23/23 Matching) | `0x80164534–0x80179290` | 85 KB | smg | E–M |
