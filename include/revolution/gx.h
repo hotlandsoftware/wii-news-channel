@@ -2,6 +2,7 @@
 #define REVOLUTION_GX_H
 
 #include <types.h>
+#include <revolution/mtx.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -52,6 +53,23 @@ typedef enum _GXCompare {
     GX_GEQUAL,
     GX_ALWAYS,
 } GXCompare;
+
+typedef enum _GXProjectionType {
+    GX_PERSPECTIVE,
+    GX_ORTHOGRAPHIC,
+} GXProjectionType;
+
+typedef enum _GXPosNrmMtx {
+    GX_PNMTX0 = 0,
+    GX_PNMTX1 = 3,
+} GXPosNrmMtx;
+
+#define GX_MAX_Z24 0x00FFFFFF
+
+void GXSetCopyClear(GXColor clearColor, u32 clearZ);
+void GXSetProjection(const Mtx44 m, GXProjectionType type);
+void GXLoadPosMtxImm(const Mtx m, u32 id);
+void GXSetCurrentMtx(u32 id);
 
 void GXSetZMode(u8 compareEnable, GXCompare func, u8 updateEnable);
 void GXSetTevColor(GXTevRegID id, GXColor color);
@@ -232,14 +250,6 @@ typedef enum _GXLogicOp {
     GX_LO_CLEAR,
 } GXLogicOp;
 
-typedef enum _GXProjectionType {
-    GX_PERSPECTIVE,
-    GX_ORTHOGRAPHIC,
-} GXProjectionType;
-
-#define GX_PNMTX0 0
-#define GX_PNMTX1 3
-
 typedef struct _GXTexObj {
     u32 dummy[8];
 } GXTexObj;
@@ -301,9 +311,6 @@ void GXSetTevOrder(GXTevStageID stage, GXTexCoordID coord, GXTexMapID map, GXCha
 void GXSetNumTevStages(u8 nStages);
 void GXSetBlendMode(GXBlendMode type, GXBlendFactor src_factor, GXBlendFactor dst_factor,
                     GXLogicOp op);
-void GXSetProjection(const f32 mtx[4][4], GXProjectionType type);
-void GXLoadPosMtxImm(const f32 mtx[3][4], u32 id);
-void GXSetCurrentMtx(u32 id);
 
 typedef union _PPCWGPipe {
     u8 u8;

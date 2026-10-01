@@ -31,6 +31,10 @@ void Draw2D_Icon(u32 index, nw4r::math::VEC3* pos, f32 scaleX, f32 scaleY, u32 f
 void Draw2D_Texture(NewsTexture* tex, const nw4r::math::VEC3* pos, f32 scale);
 
 void TPL_GetTexObj(TPLPalette* tpl, u32 index, GXTexObj* texObj);
+// Builds a scale * rotation (from a direction vector) * translation matrix.
+void Draw2D_CalcMtx(const nw4r::math::VEC3& scale, const nw4r::math::VEC2& dir,
+                    const nw4r::math::VEC3& pos, Mtx out);
+
 u32 TPL_GetWidth(TPLPalette* tpl, u32 index);
 u32 TPL_GetHeight(TPLPalette* tpl, u32 index);
 

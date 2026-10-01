@@ -16,7 +16,6 @@ using namespace nw4r;
 // Not yet decompiled: application code in other files.
 extern "C" {
 extern MEMHeapHandle lbl_80357640; // MEM1 heap
-extern MEMHeapHandle lbl_80357648; // MEM2 heap
 extern void* lbl_80357664;         // external frame buffer
 extern void* lbl_8035772C;
 extern bool lbl_803576A5;
@@ -26,9 +25,7 @@ void fn_8003D634(void);
 void fn_8003DC30(void);
 void fn_8003EA30(void);
 void* fn_8003F7B4(u32 arc, const char* path, s32 align, u32* size, MEMHeapHandle heap);
-void* fn_8003F890(u32 arc, const char* path, s32 align, u32* size, MEMHeapHandle heap);
 void fn_8003FD24(bool progressive, bool widescreen, bool blackOut);
-void* fn_800409C0(u32 size, s32 align);
 void fn_800409EC(void* block);
 void fn_800409F8(void* block);
 void fn_80048C80(void* obj, s32 arg);
@@ -112,24 +109,24 @@ HomeMenu::HomeMenu(u32 manualArc, const char* manualPath, const char* startUrl,
             break;
         }
 
-        mInfo->layoutBuf = fn_8003F890(4, layoutName, 32, NULL, lbl_80357648);
-        mInfo->spkSeBuf = fn_8003F890(4, "HomeButton3/Huf8_SpeakerSe.arc", 32, NULL, lbl_80357648);
-        mInfo->msgBuf = fn_8003F890(7, "home_nosave.csv.LZ", 32, NULL, lbl_80357648);
+        mInfo->layoutBuf = LoadArcFile(4, layoutName, 32, NULL, gSubHeap);
+        mInfo->spkSeBuf = LoadArcFile(4, "HomeButton3/Huf8_SpeakerSe.arc", 32, NULL, gSubHeap);
+        mInfo->msgBuf = LoadArcFile(7, "home_nosave.csv.LZ", 32, NULL, gSubHeap);
         mInfo->configBuf =
-            fn_8003F7B4(4, "HomeButton3/config.txt", 32, &mInfo->configBufSize, lbl_80357648);
+            fn_8003F7B4(4, "HomeButton3/config.txt", 32, &mInfo->configBufSize, gSubHeap);
 
         if (hbmAllocator != NULL) {
             mInfo->pAllocator = hbmAllocator;
             mInfo->mem = NULL;
         } else {
             mInfo->pAllocator = NULL;
-            mInfo->mem = fn_800409C0(HBM_MEM_SIZE, 32);
+            mInfo->mem = SubHeapAlloc(HBM_MEM_SIZE, 32);
         }
         mInfo->memSize = HBM_MEM_SIZE;
 
         mSoundData =
-            fn_8003F890(4, "HomeButton3/Huf8_HomeButtonSe.brsar", 32, NULL, lbl_80357648);
-        mSoundHeap = fn_800409C0(HBM_SOUND_HEAP_SIZE, 0);
+            LoadArcFile(4, "HomeButton3/Huf8_HomeButtonSe.brsar", 32, NULL, gSubHeap);
+        mSoundHeap = SubHeapAlloc(HBM_SOUND_HEAP_SIZE, 0);
 
         u32 size;
         void* arc = fn_8003F7B4(7, "Opera.arc", 32, &size, lbl_80357640);
@@ -363,7 +360,7 @@ void HomeMenu::PrintHeapInfo() {
     MEMGetTotalFreeSizeForExpHeap((MEMHeapHandle)mBrowserAllocator->pHeap);
     MEMGetTotalFreeSizeForExpHeap((MEMHeapHandle)mArcAllocator->pHeap);
     MEMGetTotalFreeSizeForExpHeap(lbl_80357640);
-    MEMGetTotalFreeSizeForExpHeap(lbl_80357648);
+    MEMGetTotalFreeSizeForExpHeap(gSubHeap);
 }
 
 BOOL HomeMenu::RunManual() {
