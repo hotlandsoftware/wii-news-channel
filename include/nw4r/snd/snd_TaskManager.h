@@ -6,47 +6,64 @@
 
 #include <nw4r/snd/snd_ut.h>
 
+#include <revolution/mem.h>
 #include <revolution/os.h>
 
 namespace nw4r {
 namespace snd {
 namespace detail {
 
+// This NW4R revision's TaskManager (cf. TP's nw4hbm)
 class TaskManager {
 public:
     enum TaskPriority {
         PRIORITY_LOW = 0,
         PRIORITY_MIDDLE = 1,
         PRIORITY_HIGH = 2,
-
         PRIORITY_MAX
     };
+
+    static const int TASK_SIZE = 0x40;
+    static const int TASK_AREA_SIZE = 0x2000 + 0x44;
 
 public:
     static TaskManager& GetInstance();
 
-    void AppendTask(Task* pTask, TaskPriority priority = PRIORITY_MIDDLE);
+    void* Alloc();
+    void Free(void* pTask) {
+        ut::AutoInterruptLock lock;
+        MEMFreeToUnitHeap(mHeapHandle, pTask);
+    }
 
-    Task* ExecuteTask();
-    void CancelTask(Task* pTask);
-    void CancelAllTask();
+    void AppendTask(Task* pTask, TaskPriority priority);
 
-    void WaitTask();
-    void CancelWaitTask();
+    void Execute();
+    bool ExecuteSingle() DECOMP_DONT_INLINE;
+
+    void CancelByTaskId(u32 taskId);
 
 private:
     TaskManager();
 
-    Task* PopTask();
-    Task* GetNextTask();
-    Task* GetNextTask(TaskPriority priority, bool remove);
+    Task* PopTask(TaskPriority priority) {
+        ut::AutoInterruptLock lock;
+
+        if (mTaskList[priority].IsEmpty()) {
+            return NULL;
+        }
+
+        Task& rTask = mTaskList[priority].GetFront();
+        mTaskList[priority].PopFront();
+        return &rTask;
+    }
 
 private:
-    TaskList mTaskList[PRIORITY_MAX]; // at 0x0
-    Task* volatile mCurrentTask;      // at 0x24
-    bool mCancelWaitTaskFlag;         // at 0x28
-    OSThreadQueue mAppendThreadQueue; // at 0x2C
-    OSThreadQueue mDoneThreadQueue;   // at 0x34
+    static u8 sTaskArea[TASK_AREA_SIZE];
+
+    OSMutex mMutex;                   // at 0x0
+    MEMHeapHandle mHeapHandle;        // at 0x18
+    Task* mCurrentTask;               // at 0x1C
+    TaskList mTaskList[PRIORITY_MAX]; // at 0x20
 };
 
 } // namespace detail
