@@ -55,6 +55,17 @@ news/SmallTextButton.cpp:
 	.sbss       start:0x803574D8 end:0x803574E0
 	.sdata2     start:0x80358890 end:0x803588A8
 
+news/SmoothValue.cpp:
+	.text       start:0x80045238 end:0x80045298
+	.sdata2     start:0x80358ED8 end:0x80358EE0
+
+news/PaneButton.cpp:
+	.text       start:0x80045298 end:0x80047B50
+	.ctors      start:0x80191F48 end:0x80191F4C
+	.bss        start:0x8020DCB8 end:0x8020DE08
+	.sdata      start:0x80356C60 end:0x80356C90
+	.sdata2     start:0x80358EE0 end:0x80358F18
+
 Runtime.PPCEABI.H/global_destructor_chain.c:
 	.text       start:0x8017A048 end:0x8017A0A8
 	.sbss       start:0x80358418 end:0x80358420
