@@ -63,3 +63,6 @@ decomp-toolkit, the CodeWarrior compilers, binutils and objdiff-cli are download
 - Flip an object to `Matching` only once it matches 100% and the DOL checksum still passes.
 
 Project layout follows [dtk-template](https://github.com/encounter/dtk-template).
+
+# DISCLAIMER
+This is "vibecoded" (in the sense I am telling an AI Agent what to do, reviewing its code, and if it looks good, continuing). I am making this because I want to run the Wii News Channel (and eventually Wii Forecast Channel) on my PC. If this bothers you, please do not use it. Thank you!
