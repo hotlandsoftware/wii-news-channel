@@ -321,7 +321,7 @@ config.libs = [
             Object(Matching, "MSL_C/misc_io.c", extra_cflags=["-Cpp_exceptions on"]),
             Object(Matching, "MSL_C/printf.c", extra_cflags=["-Cpp_exceptions on", "-ipa file"]),
             Object(Matching, "MSL_C/string.c", extra_cflags=["-Cpp_exceptions on"]),
-            Object(NonMatching, "MSL_C/strtoul.c", extra_cflags=["-Cpp_exceptions on"]),
+            Object(Matching, "MSL_C/strtoul.c", extra_cflags=["-Cpp_exceptions on"], mw_version="GC/3.0a3"),
             Object(Matching, "MSL_C/wstring.c"),
             Object(Matching, "MSL_C/ppc_eabi_stubs.c", extra_cflags=["-Cpp_exceptions on"]),
             Object(Matching, "MSL_C/uart_console_io_gcn.c", extra_cflags=["-Cpp_exceptions on"]),

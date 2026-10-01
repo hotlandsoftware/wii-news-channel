@@ -77,7 +77,6 @@ So each file ends with a `__sinit` that constructs it, and the `.ctors` table (`
 - **Constants in `fmuls`.** In plain expressions MWCC tends to put the constant on the left of `fmuls`, but `x *= c` keeps `x` on the left.
 - **`fmr` before arithmetic.** This often means the original re-read the same field (CSE'd), not a copied local.
 - **`__fabsf` vs `__fabs`.** `__fabsf` gives `fabs` without `frsp`; `__fabs` adds an `frsp`.
-- `MSL_C/strtoul.c`: `__strtoull` (99.15%). The original hoists `li r31, -1` (used by `ULLONG_MAX - value`) before the jump-table `lis`; ours hoists it after `addi r29, _current_locale`. Declaration order, `const`, literal vs `ullmax` local and comparison forms made no difference.
 - **MSL is built with `-Cpp_exceptions on`.** Every MSL function with a stack frame has an extab/extabindex entry; without the flag the DOL comes out 0x20 bytes short.
 - **MSL ctype.** `isspace`/`isdigit`/`isalpha`/`toupper` are inline functions over `_current_locale.ctype_cmpt_ptr` (`0x801ED3A8`, field `+0x38`), with a `(c < 0 || c >= 256)` guard.
 - **`const T&` parameters.** MWCC assumes stores can't change a `const&` target, so it moves parameter loads above member stores. If the original keeps them in order, the parameter is a non-const reference (`Ticker::Layout(math::VEC2&)`).
@@ -88,3 +87,4 @@ So each file ends with a `__sinit` that constructs it, and the `.ctors` table (`
 - **Loop locals: `s32 i;` before `Ticker* item` vs `for (s32 i = 0; ...)`.** These two forms swap `r29`/`r30` between `i` and `item`. When the same loop appears several times with different registers, each copy may have been written differently. Sweep each copy separately (coordinate descent with `variants.py`).
 - **Position of `u8` conversions.** In `HeadlineList::Draw` the two `fctiwz` alpha conversions matched only after moving `u8 a = 255.0f * alpha; u8 headerA = ...;` below the `basePos` declaration. Brute-force where conversion statements go among the declarations.
 - **`ut::Color()` is empty.** HeadlineList's `Draw` needs a default-constructed `Color` with no store. Where the original stores white (`li -1; stw`), as in PaneButton's `mTextColor` and `BlendColor`'s local, initialise it explicitly with `ut::Color::WHITE`.
+- **Some MSL files use GC/3.0a3.** The fdlibm math files and `strtoul.c` only match with `mw_version="GC/3.0a3"`; under 3.0a5.2 they differ in constant hoisting or scheduling. Try 3.0a3 on any MSL function stuck at 95–99%.
