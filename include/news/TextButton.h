@@ -49,4 +49,39 @@ protected:
     s32 mAlign;                                  // at 0xBC
 };
 
+// TextButton drawn on a framed background texture.
+class FrameTextButton : public TextButton {
+public:
+    FrameTextButton(const wchar_t* text, const nw4r::math::VEC2& size, s32 id, bool enabled,
+                    s32 align, f32 scale);
+    virtual ~FrameTextButton();
+    virtual void Draw(f32 alpha);
+};
+
+// TextButton with an icon to the left of the label.
+class IconTextButton : public TextButton {
+public:
+    IconTextButton(const wchar_t* text, const nw4r::math::VEC2& size, s32 id, bool enabled,
+                   s32 align, f32 scale, u8 iconFlags);
+    virtual ~IconTextButton();
+    virtual void Draw(f32 alpha);
+    virtual void Update(const nw4r::math::VEC2& pos);
+
+private:
+    nw4r::math::VEC2 mIconOffset; // at 0xC0
+    nw4r::math::VEC2 mIconSize;   // at 0xC8
+    nw4r::math::VEC2 mTextOffset; // at 0xD0
+    f32 mMaxTextWidth;            // at 0xD8
+    u8 mIconFlags;                // at 0xDC
+};
+
+// Framed TextButton with the label nudged upwards.
+class SmallTextButton : public TextButton {
+public:
+    SmallTextButton(const wchar_t* text, const nw4r::math::VEC2& size, s32 id, bool enabled,
+                    s32 align, f32 scale);
+    virtual ~SmallTextButton();
+    virtual void Draw(f32 alpha);
+};
+
 #endif

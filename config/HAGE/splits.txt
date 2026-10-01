@@ -21,6 +21,30 @@ news/TextButton.cpp:
 	.sbss       start:0x803574A8 end:0x803574C8
 	.sdata2     start:0x80358820 end:0x80358840
 
+news/FrameTextButton.cpp:
+	.text       start:0x80020254 end:0x80020684
+	.ctors      start:0x80191F18 end:0x80191F1C
+	.data       start:0x801B19B8 end:0x801B19D0
+	.bss        start:0x801EDE60 end:0x801EDE70
+	.sbss       start:0x803574C8 end:0x803574D0
+	.sdata2     start:0x80358840 end:0x80358860
+
+news/IconTextButton.cpp:
+	.text       start:0x80020684 end:0x80020C9C
+	.ctors      start:0x80191F1C end:0x80191F20
+	.data       start:0x801B19D0 end:0x801B19E8
+	.bss        start:0x801EDE70 end:0x801EDE80
+	.sbss       start:0x803574D0 end:0x803574D8
+	.sdata2     start:0x80358860 end:0x80358890
+
+news/SmallTextButton.cpp:
+	.text       start:0x80020C9C end:0x8002101C
+	.ctors      start:0x80191F20 end:0x80191F24
+	.data       start:0x801B19E8 end:0x801B1A00
+	.bss        start:0x801EDE80 end:0x801EDE90
+	.sbss       start:0x803574D8 end:0x803574E0
+	.sdata2     start:0x80358890 end:0x803588A8
+
 Runtime.PPCEABI.H/global_destructor_chain.c:
 	.text       start:0x8017A048 end:0x8017A0A8
 	.sbss       start:0x80358418 end:0x80358420

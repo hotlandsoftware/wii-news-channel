@@ -251,7 +251,7 @@ cflags_rel = [
 cflags_game = [
     *cflags_base,
     "-inline noauto",
-    "-i include/nw4r",
+    "-fp_contract off",
 ]
 
 config.linker_version = "GC/3.0a5.2"
@@ -309,6 +309,9 @@ config.libs = [
         "progress_category": "game",
         "objects": [
             Object(Matching, "news/TextButton.cpp"),
+            Object(Matching, "news/FrameTextButton.cpp"),
+            Object(Matching, "news/IconTextButton.cpp"),
+            Object(Matching, "news/SmallTextButton.cpp"),
         ],
     },
 ]

@@ -12,7 +12,10 @@ void Draw2D_SetupGX();
 void Draw2D_SetOrtho();
 void Draw2D_FillQuad(const nw4r::math::VEC3* quad, const nw4r::ut::Color* color);
 void Draw2D_TexRect(TPLPalette* tpl, u32 index, const nw4r::ut::Rect* rect, f32 z, u32 flags);
-void Draw2D_TexPos(TPLPalette* tpl, u32 index, const nw4r::math::VEC2* pos, f32 scaleX, f32 scaleY,
+void Draw2D_TexPos(TPLPalette* tpl, u32 index, const nw4r::math::VEC3* pos, f32 scaleX, f32 scaleY,
                    u8 flags);
+
+u32 TPL_GetWidth(TPLPalette* tpl, u32 index);
+u32 TPL_GetHeight(TPLPalette* tpl, u32 index);
 
 #endif
