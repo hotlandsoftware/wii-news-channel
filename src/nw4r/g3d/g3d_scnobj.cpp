@@ -388,7 +388,7 @@ void ScnLeaf::DefG3dProcScnLeaf(u32 task, u32 param, void* pInfo) {
     switch (task) {
     case G3DPROC_CALC_WORLD: {
         CheckCallback_CALC_WORLD(CALLBACK_TIMING_A, param, pInfo);
-        CalcWorldMtx(static_cast<math::MTX34*>(pInfo), &param);
+        CalcWorldMtx(reinterpret_cast<math::MTX34*>(pInfo), &param);
         CheckCallback_CALC_WORLD(CALLBACK_TIMING_B, param, pInfo);
         CheckCallback_CALC_WORLD(CALLBACK_TIMING_C, param, pInfo);
         break;
@@ -402,7 +402,7 @@ void ScnLeaf::DefG3dProcScnLeaf(u32 task, u32 param, void* pInfo) {
 
     case G3DPROC_CALC_VIEW: {
         CheckCallback_CALC_VIEW(CALLBACK_TIMING_A, param, pInfo);
-        CalcViewMtx(static_cast<math::MTX34*>(pInfo));
+        CalcViewMtx(reinterpret_cast<math::MTX34*>(pInfo));
         CheckCallback_CALC_VIEW(CALLBACK_TIMING_B, param, pInfo);
         CheckCallback_CALC_VIEW(CALLBACK_TIMING_C, param, pInfo);
         break;
@@ -561,7 +561,7 @@ void ScnGroup::DefG3dProcScnGroup(u32 task, u32 param, void* pInfo) {
     }
 
     case G3DPROC_CALC_WORLD: {
-        ScnGroup_G3DPROC_CALC_WORLD(param, static_cast<math::MTX34*>(pInfo));
+        ScnGroup_G3DPROC_CALC_WORLD(param, reinterpret_cast<math::MTX34*>(pInfo));
         break;
     }
 
@@ -571,7 +571,7 @@ void ScnGroup::DefG3dProcScnGroup(u32 task, u32 param, void* pInfo) {
     }
 
     case G3DPROC_CALC_VIEW: {
-        ScnGroup_G3DPROC_CALC_VIEW(param, static_cast<math::MTX34*>(pInfo));
+        ScnGroup_G3DPROC_CALC_VIEW(param, reinterpret_cast<math::MTX34*>(pInfo));
         break;
     }
 

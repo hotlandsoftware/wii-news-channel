@@ -112,6 +112,7 @@ void PSMTXMultVecArray(const Mtx m, const Vec* srcBase, Vec* dstBase, u32 count)
 void PSMTXReorder(const Mtx src, f32 (*dest)[4]);
 f32 PSVECSquareDistance(const Vec* a, const Vec* b);
 f32 PSVECSquareMag(const Vec* v);
+void C_VECHalfAngle(const Vec* a, const Vec* b, Vec* half);
 
 /* SMG1 uses the paired single versions of matrix / vector operations */
 #define VECNormalize PSVECNormalize

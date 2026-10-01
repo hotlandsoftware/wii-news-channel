@@ -9,6 +9,7 @@ namespace ut {
 
 struct Color : public GXColor {
     static const u32 WHITE = 0xFFFFFFFF;
+    static const u32 BLACK = 0x000000FF; // added for g3d (Task 10)
 
     // The NW4R libraries (lyt) default-construct colours as white;
     // the game code's headers have an empty constructor.

@@ -8,17 +8,10 @@
 #include <revolution/os.h>
 #include <revolution/vi.h>
 
-namespace {
-
-NW4R_LIB_VERSION(G3D, "Jun  8 2007", "11:16:25", "0x4199_60831");
-
-} // namespace
-
 namespace nw4r {
 namespace g3d {
 
 void G3dInit(bool enableLockedCache) {
-    OSRegisterVersion(NW4R_G3D_Version_);
 
     if (enableLockedCache) {
         ut::LC::Enable();
@@ -30,22 +23,22 @@ void G3dInit(bool enableLockedCache) {
 
     GXRenderModeObj* pMode;
     switch (VIGetTvFormat()) {
-    case VI_TVFORMAT_NTSC: {
+    case VI_NTSC: {
         pMode = &GXNtsc480IntDf;
         break;
     }
 
-    case VI_TVFORMAT_PAL: {
+    case VI_PAL: {
         pMode = &GXPal528IntDf;
         break;
     }
 
-    case VI_TVFORMAT_EURGB60: {
+    case VI_EURGB60: {
         pMode = &GXEurgb60Hz480IntDf;
         break;
     }
 
-    case VI_TVFORMAT_MPAL: {
+    case VI_MPAL: {
         pMode = &GXMpal480IntDf;
         break;
     }

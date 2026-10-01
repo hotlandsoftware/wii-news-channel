@@ -97,7 +97,7 @@ void ScnMdlSimple::ScnMdlSmpl_CalcPosture(u32 param,
 
         mFlagScnMdlSimple |= SCNMDLSMPLFLAG_LC_DMA;
         DC::InvalidateRange(GetWldMtxArray(), mtxNum * sizeof(math::MTX34));
-        pWorldMtxArray = static_cast<math::MTX34*>(ut::LC::GetBase());
+        pWorldMtxArray = reinterpret_cast<math::MTX34*>(ut::LC::GetBase());
     } else {
         mFlagScnMdlSimple &= ~SCNMDLSMPLFLAG_LC_DMA;
         pWorldMtxArray = GetWldMtxArray();
@@ -254,7 +254,7 @@ void ScnMdlSimple::G3dProc(u32 task, u32 param, void* pInfo) {
     }
 
     case G3DPROC_CALC_WORLD: {
-        ScnMdlSmpl_G3DPROC_CALC_WORLD(param, static_cast<math::MTX34*>(pInfo));
+        ScnMdlSmpl_G3DPROC_CALC_WORLD(param, reinterpret_cast<math::MTX34*>(pInfo));
         break;
     }
 
@@ -264,7 +264,7 @@ void ScnMdlSimple::G3dProc(u32 task, u32 param, void* pInfo) {
     }
 
     case G3DPROC_CALC_VIEW: {
-        ScnMdlSmpl_G3DPROC_CALC_VIEW(param, static_cast<math::MTX34*>(pInfo));
+        ScnMdlSmpl_G3DPROC_CALC_VIEW(param, reinterpret_cast<math::MTX34*>(pInfo));
         break;
     }
 

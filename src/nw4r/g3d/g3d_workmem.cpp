@@ -34,11 +34,11 @@ MdlZ* GetMdlZTemporary() {
 }
 
 math::MTX34* GetSkinningMtxTemporary() {
-    return static_cast<math::MTX34*>(sTemp.skinningMtx);
+    return reinterpret_cast<math::MTX34*>(sTemp.skinningMtx);
 }
 
 math::MTX34* GetBillboardMtxTemporary() {
-    return static_cast<math::MTX34*>(sTemp.bbMtx);
+    return reinterpret_cast<math::MTX34*>(sTemp.bbMtx);
 }
 
 ShpAnmResultBuf* GetShpAnmResultBufTemporary() {

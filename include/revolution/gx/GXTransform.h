@@ -38,6 +38,9 @@ void __GXSetMatrixIndex(GXAttr);
 
 static void GXSetViewportv(const f32* vp);
 
+/* Added for g3d (Task 10) */
+void GXSetViewportJitter(f32 left, f32 top, f32 wd, f32 ht, f32 nearz, f32 farz, u32 field);
+
 #ifdef __cplusplus
 }
 #endif

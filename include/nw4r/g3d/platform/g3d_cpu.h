@@ -5,6 +5,10 @@
 
 #include <revolution/os.h>
 
+#ifndef ASM
+#define ASM asm
+#endif
+
 namespace nw4r {
 namespace g3d {
 
@@ -15,6 +19,51 @@ namespace g3d {
  ******************************************************************************/
 namespace fastcast {
 
+// ogws OSFastCast.h conversions (our os/OSFastCast.h lacks them; kept local
+// to g3d so the shared OS header stays unchanged)
+namespace detail {
+
+inline f32 OSu8tof32_(register u8* in) {
+    register f32 ret;
+    ASM (
+        psq_l ret, 0(in), 1, 2
+    )
+    return ret;
+}
+
+inline f32 OSu16tof32_(register u16* in) {
+    register f32 ret;
+    ASM (
+        psq_l ret, 0(in), 1, 3
+    )
+    return ret;
+}
+
+inline u8 OSf32tou8_(register f32 arg) {
+    f32 a;
+    register f32* ptr = &a;
+    u8 r;
+    ASM (
+        psq_st arg, 0(ptr), 1, 2
+    )
+    r = *(u8*)ptr;
+    return r;
+}
+
+inline void u8tof32(u8* in, volatile f32* out) {
+    *out = OSu8tof32_(in);
+}
+
+inline void u16tof32(u16* in, volatile f32* out) {
+    *out = OSu16tof32_(in);
+}
+
+inline void f32tou8(f32* in, volatile u8* out) {
+    *out = OSf32tou8_(*in);
+}
+
+} // namespace detail
+
 /******************************************************************************
  *
  * Convert from U8
@@ -22,7 +71,7 @@ namespace fastcast {
  ******************************************************************************/
 inline f32 U8_0ToF32(const u8* pPtr) {
     f32 x;
-    OSu8tof32(const_cast<u8*>(pPtr), &x);
+    detail::u8tof32(const_cast<u8*>(pPtr), &x);
     return x;
 }
 
@@ -33,7 +82,7 @@ inline f32 U8_0ToF32(const u8* pPtr) {
  ******************************************************************************/
 inline f32 U16_0ToF32(const u16* pPtr) {
     f32 x;
-    OSu16tof32(const_cast<u16*>(pPtr), &x);
+    detail::u16tof32(const_cast<u16*>(pPtr), &x);
     return x;
 }
 
@@ -69,7 +118,7 @@ inline f32 S10_5ToF32(register const s16* pPtr) {
  ******************************************************************************/
 inline u8 F32ToU8_0(f32 f) {
     u8 x;
-    OSf32tou8(&f, &x);
+    detail::f32tou8(&f, &x);
     return x;
 }
 
@@ -89,11 +138,30 @@ inline s16 F32ToS10_5(register f32 f) {
  * GQR
  *
  ******************************************************************************/
+// ogws OSFastCast.h OSSetGQR6/OSSetGQR7 (OS_GQR_TYPE_S16 = 7)
+namespace detail {
+
+inline void SetGQR6(register u32 type, register u32 scale) {
+    register u32 val = ((scale << 8 | type) << 16) | ((scale << 8) | type);
+    ASM (
+        mtspr 0x396, val
+    )
+}
+
+inline void SetGQR7(register u32 type, register u32 scale) {
+    register u32 val = ((scale << 8 | type) << 16) | ((scale << 8) | type);
+    ASM (
+        mtspr 0x397, val
+    )
+}
+
+} // namespace detail
+
 inline void SetGQR6_S10_5() {
-    OSSetGQR6(OS_GQR_TYPE_S16, 5);
+    detail::SetGQR6(7, 5);
 }
 inline void SetGQR7_S7_8() {
-    OSSetGQR7(OS_GQR_TYPE_S16, 8);
+    detail::SetGQR7(7, 8);
 }
 
 /******************************************************************************

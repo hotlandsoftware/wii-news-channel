@@ -1,3 +1,18 @@
 // C++-style wrapper so sources ported from other decomps can #include <cstring>.
 // The declarations stay in the global namespace (the SDK sources are C).
 #include <string.h>
+
+// Added for g3d (Task 10): std:: names as in MSL's <cstring>
+#ifdef __cplusplus
+#ifndef CSTRING_STD_USING
+#define CSTRING_STD_USING
+namespace std {
+using ::memcmp;
+using ::memcpy;
+using ::memset;
+using ::strcmp;
+using ::strlen;
+using ::strncmp;
+} // namespace std
+#endif
+#endif

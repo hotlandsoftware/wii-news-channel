@@ -177,6 +177,33 @@ inline VEC3* VEC3Sub(register VEC3* pOut, register const VEC3* pA,
     return pOut;
 }
 
+// VEC3 operators added for g3d (Task 10), as in ogws math_types.h
+inline VEC3 VEC3::operator-(const VEC3& rhs) const {
+    VEC3 out;
+    VEC3Sub(&out, this, &rhs);
+    return out;
+}
+inline VEC3 VEC3::operator*(f32 s) const {
+    VEC3 out;
+    VEC3Scale(&out, this, s);
+    return out;
+}
+inline VEC3 VEC3::operator/(f32 s) const {
+    f32 r = 1 / s;
+    return *this * r;
+}
+inline VEC3& VEC3::operator-=(const VEC3& rhs) {
+    VEC3Sub(this, this, &rhs);
+    return *this;
+}
+inline VEC3& VEC3::operator*=(f32 s) {
+    VEC3Scale(this, this, s);
+    return *this;
+}
+inline VEC3& VEC3::operator/=(f32 s) {
+    return *this *= (1 / s);
+}
+
 inline VEC3* VEC3Cross(VEC3* pOut, const VEC3* pA, const VEC3* pB) {
     PSVECCrossProduct(*pA, *pB, *pOut);
     return pOut;

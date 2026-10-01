@@ -32,6 +32,13 @@ void GXSetChanMatColor(GXChannelID, GXColor);
 
 void GXSetChanCtrl(GXChannelID, GXBool, GXColorSrc, GXColorSrc, u32, GXDiffuseFn, GXAttnFn);
 
+/* Added for g3d (Task 10) */
+void GXInitLightAttnA(GXLightObj*, f32, f32, f32);
+void GXInitLightAttnK(GXLightObj*, f32, f32, f32);
+
+void GXGetLightPos(const GXLightObj*, f32*, f32*, f32*);
+void GXGetLightDir(const GXLightObj*, f32*, f32*, f32*);
+
 #ifdef __cplusplus
 }
 #endif

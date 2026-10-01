@@ -515,7 +515,7 @@ void ApplyTexPatAnmResult(ResTexObj texObj, ResTlutObj tlutObj,
                                  &maxLod, &mipmap);
 
             GXInitTexObjCI(pGXObj, pTexData, width, height,
-                           static_cast<GXTexFmt>(cifmt), wrapS, wrapT, mipmap,
+                           cifmt, wrapS, wrapT, mipmap,
                            static_cast<GXTlut>(i));
         } else {
             tex.GetTexObjParam(&pTexData, &width, &height, &fmt, &minLod,

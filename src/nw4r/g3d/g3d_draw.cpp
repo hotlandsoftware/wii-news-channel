@@ -81,8 +81,8 @@ G3DState::IndMtxOp* GetIndMtxOp(ResMat mat, ResNode node, ResShp shp) {
 
                     math::MTX34Mult(
                         &nrmMtx,
-                        static_cast<math::MTX34*>(&shpNode.ref().invModelMtx),
-                        static_cast<math::MTX34*>(&node.ref().modelMtx));
+                        reinterpret_cast<math::MTX34*>(&shpNode.ref().invModelMtx),
+                        reinterpret_cast<math::MTX34*>(&node.ref().modelMtx));
 
                     const math::MTX33* pViewNrm =
                         G3DState::GetViewNrmMtxPtr(shp.ptr()->curMtxIdx);

@@ -3,6 +3,7 @@
 
 #include <types.h>
 #include <nw4r/math/math_constant.h>
+#include <math.h>
 
 // Minimal version for lyt (Task 15), as in tp nw4hbm math/arithmetic.h.
 namespace nw4r {
@@ -49,6 +50,19 @@ inline f32 FInv(register f32 x) {
     }
 
     return work0;
+}
+
+// as MSL's std::fmodf/floorf/ceilf (math_double.h)
+inline f32 FMod(f32 x, f32 y) {
+    return fmod(x, y);
+}
+
+inline f32 FFloor(f32 x) {
+    return floor(x);
+}
+
+inline f32 FCeil(f32 x) {
+    return ceil(x);
 }
 
 inline f32 FSqrt(f32 x) {

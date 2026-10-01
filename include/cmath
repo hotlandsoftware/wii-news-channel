@@ -1,3 +1,15 @@
 // C++-style wrapper so sources ported from other decomps can #include <cmath>.
 // The declarations stay in the global namespace (the SDK sources are C).
 #include <math.h>
+
+// Added for g3d (Task 10): as in MSL's math_double.h (std::ldexpf)
+#ifdef __cplusplus
+#ifndef CMATH_STD_LDEXPF
+#define CMATH_STD_LDEXPF
+namespace std {
+inline float ldexpf(float value, int exp) {
+    return ldexp(value, exp);
+}
+} // namespace std
+#endif
+#endif

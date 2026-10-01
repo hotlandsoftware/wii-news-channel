@@ -19,8 +19,5 @@ void G3dObj::Destroy() {
     delete this;
 }
 
-DECOMP_FORCEACTIVE(g3d_obj_cpp,
-                   G3dObj::IsDerivedFrom);
-
 } // namespace g3d
 } // namespace nw4r

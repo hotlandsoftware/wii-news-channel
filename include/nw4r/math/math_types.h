@@ -51,6 +51,18 @@ struct VEC3 : public Vec {
 
     VEC3& operator+=(const VEC3& rhs);
     VEC3 operator+(const VEC3& rhs) const;
+
+    // Added for g3d (Task 10), as in ogws (defined in math_types_g3d.h)
+    f32 LenSq() const { return x * x + y * y + z * z; }
+    VEC3 operator-() const { return VEC3(-x, -y, -z); }
+    VEC3 operator-(const VEC3& rhs) const;
+    VEC3 operator*(f32 s) const;
+    VEC3 operator/(f32 s) const;
+    VEC3& operator-=(const VEC3& rhs);
+    VEC3& operator*=(f32 s);
+    VEC3& operator/=(f32 s);
+    bool operator==(const VEC3& rhs) const { return x == rhs.x && y == rhs.y && z == rhs.z; }
+    bool operator!=(const VEC3& rhs) const { return x != rhs.x || y != rhs.y || z != rhs.z; }
 };
 
 inline VEC3* VEC3Add(register VEC3* pOut, register const VEC3* p1, register const VEC3* p2) {

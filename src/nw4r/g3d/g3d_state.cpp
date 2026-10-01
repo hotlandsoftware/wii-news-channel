@@ -94,7 +94,7 @@ void EnvironmentMapping(math::MTX34* pMtx, s8 camRef, s8 lightRef) {
             // clang-format on
         };
 
-        math::MTX34Mult(pMtx, static_cast<const math::MTX34*>(&envMtx), pMtx);
+        math::MTX34Mult(pMtx, reinterpret_cast<const math::MTX34*>(&envMtx), pMtx);
         return;
     }
 
@@ -1030,7 +1030,7 @@ public:
         if (!(mFlag & FLAG_0) || !(mFlag & FLAG_1) || id != mCurrentFogIdx) {
             if (id < 0 || id >= NUM_FOG) {
                 GXColor color = {0, 0, 0, 0};
-                GXSetFog(GX_FOG_NONE, color, 0.0f, 0.0f, 0.0f, 0.0f);
+                GXSetFog(GX_FOG_NONE, 0.0f, 0.0f, 0.0f, 0.0f, color);
             } else {
                 Fog(&mFogData[id]).SetGP();
             }
@@ -1716,13 +1716,13 @@ void LoadResTexSrt(const ResTexSrt srt) {
                     if (!(rEffect.misc_flag & TexMtxEffect::FLAG_IDENT)) {
                         ident = false;
 
-                        math::MTX34Copy(&mtx, static_cast<const math::MTX34*>(
+                        math::MTX34Copy(&mtx, reinterpret_cast<const math::MTX34*>(
                                                   &rEffect.effectMtx));
                     }
                 } else {
                     math::MTX34Mult(
                         &mtx,
-                        static_cast<const math::MTX34*>(&rEffect.effectMtx),
+                        reinterpret_cast<const math::MTX34*>(&rEffect.effectMtx),
                         &mtx);
                 }
 

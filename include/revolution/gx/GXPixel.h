@@ -24,6 +24,9 @@ void GXSetDstAlpha(GXBool, u8);
 void GXSetFieldMask(GXBool, GXBool);
 void GXSetFieldMode(GXBool, GXBool);
 
+/* Added for g3d (Task 10) */
+void GXInitFogAdjTable(GXFogAdjTable* table, u16 width, const f32 projmtx[4][4]);
+
 #ifdef __cplusplus
 }
 #endif

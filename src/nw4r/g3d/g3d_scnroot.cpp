@@ -1,3 +1,4 @@
+#include <new>
 #include <nw4r/g3d.h>
 
 #include <revolution/gx.h>
