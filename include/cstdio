@@ -1,0 +1,3 @@
+// C++-style wrapper so sources ported from other decomps can #include <cstdio>.
+// The declarations stay in the global namespace (the SDK sources are C).
+#include <stdio.h>

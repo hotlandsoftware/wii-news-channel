@@ -163,6 +163,18 @@ revolution/OS/OSArena.c:
 	.sdata      start:0x80356FF8 end:0x80357000
 	.sbss       start:0x80357DB8 end:0x80357DC0
 
+revolution/DB/db.c:
+	.text       start:0x8010C270 end:0x8010C358
+	.data       start:0x801DDE70 end:0x801DDE88
+	.sbss       start:0x80357EC0 end:0x80357EC8
+
+revolution/IPC/ipcMain.c:
+	.text       start:0x801314E4 end:0x801315B0
+	.sbss       start:0x803582C8 end:0x803582E0
+
+revolution/PAD/Pad.c:
+	.text       start:0x80134BDC end:0x80134C38
+
 Runtime.PPCEABI.H/__va_arg.c:
 	.text       start:0x80179F80 end:0x8017A048
 
