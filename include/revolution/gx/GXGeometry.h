@@ -20,6 +20,11 @@ void GXBegin(GXPrimitive, GXVtxFmt, u16);
 
 void GXSetTexCoordGen2(GXTexCoordID, GXTexGenType, GXTexGenSrc, u32, GXBool, u32);
 
+// added by Task 15 (lyt)
+static inline void GXSetTexCoordGen(GXTexCoordID dst_coord, GXTexGenType func, GXTexGenSrc src_param, u32 mtx) {
+    GXSetTexCoordGen2(dst_coord, func, src_param, mtx, GX_FALSE, GX_PTIDENTITY);
+}
+
 void GXSetNumTexGens(u8);
 void GXInvalidateVtxCache(void);
 

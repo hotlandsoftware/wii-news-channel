@@ -233,7 +233,7 @@ nw4r/lyt/lyt_arcResourceAccessor.cpp:
 
 nw4r/lyt/lyt_common.cpp:
 	.text       start:0x800FADA4 end:0x800FB9EC
-	.bss        start:0x802F25D0 end:0x802F2600
+	.bss        start:0x802F25D0 end:0x802F25F0
 	.sbss       start:0x80357D50 end:0x80357D58
 	.sdata2     start:0x80359C90 end:0x80359CA0
 

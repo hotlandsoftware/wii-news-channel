@@ -22,6 +22,11 @@ void GXInitTexObjLOD(GXTexObj *, GXTexFilter, GXTexFilter, f32, f32, f32, GXBool
 void GXInitTexObjCI(GXTexObj *, void *, u16, u16, GXCITexFmt, GXTexWrapMode, GXTexWrapMode, GXBool, u32);
 void GXInitTexObjUserData(GXTexObj *, void *); // added by Task 15 (lyt)
 void *GXGetTexObjUserData(const GXTexObj *); // added by Task 15 (lyt)
+void GXInitTexObjWrapMode(GXTexObj *, GXTexWrapMode, GXTexWrapMode); // added by Task 15 (lyt)
+u16 GXGetTexObjWidth(const GXTexObj *); // added by Task 15 (lyt)
+u16 GXGetTexObjHeight(const GXTexObj *); // added by Task 15 (lyt)
+GXTexWrapMode GXGetTexObjWrapS(const GXTexObj *); // added by Task 15 (lyt)
+GXTexWrapMode GXGetTexObjWrapT(const GXTexObj *); // added by Task 15 (lyt)
 void GXInitTexObjTlut(GXTexObj *, u32);
 
 void GXLoadTlut(const GXTlutObj *, u32);
