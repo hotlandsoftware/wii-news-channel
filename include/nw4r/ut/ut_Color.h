@@ -9,6 +9,7 @@ namespace ut {
 
 struct Color : public GXColor {
     static const u32 WHITE = 0xFFFFFFFF;
+    static const u32 BLACK = 0x000000FF; // added for g3d (Task 10)
 
     // The NW4R libraries (lyt) default-construct colours as white;
     // the game code's headers have an empty constructor.
@@ -33,6 +34,11 @@ struct Color : public GXColor {
     }
 
     operator u32() const { return ToU32ref(); }
+
+    // Added for g3d (Task 10), from ogws ut_Color.h
+    u32 ToU32() const { return ToU32ref(); }
+    Color operator|(u32 color) const { return Color(ToU32() | color); }
+    Color operator&(u32 color) const { return Color(ToU32() & color); }
 
     void Set(u8 red, u8 green, u8 blue, u8 alpha) {
         r = red;

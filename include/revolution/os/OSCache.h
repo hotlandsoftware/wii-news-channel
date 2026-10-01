@@ -32,6 +32,7 @@ void LCDisable(void);
 void LCStoreBlocks(void *, void *, u32);
 u32 LCStoreData(void *, void *, u32);
 void LCQueueWait(u32);
+u32 LCQueueLength(void); // added for g3d (Task 10)
 
 void DMAErrorHandler(OSError, OSContext *, ...);
 

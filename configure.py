@@ -302,6 +302,17 @@ cflags_nw4r_lyt = [
     "-DNW4R_UT_RECT_DEFAULT_ZERO",
 ]
 
+# nw4r::g3d (ogws sources): same NW4R basics as lyt (no math destructors,
+# white default ut::Color)
+cflags_nw4r_g3d = [
+    *cflags_nw4r,
+    "-DNW4R_MATH_VEC2_NO_DTOR",
+    "-DNW4R_MATH_VEC3_NO_DTOR",
+    "-DNW4R_MATH_MTX34_NO_DTOR",
+    "-DNW4R_UT_COLOR_DEFAULT_WHITE",
+    "-DNW4R_UT_RECT_DEFAULT_ZERO",
+]
+
 # RVL SDK libraries; flags as in doldecomp/ogws
 cflags_rvl = [
     *cflags_base,
@@ -909,6 +920,50 @@ config.libs = [
             Object(Matching, "revolution/MTX/mtx44.c"),
             Object(Matching, "revolution/MTX/vec.c"),
             Object(Matching, "revolution/MTX/quat.c"),
+        ],
+    },
+    {
+        "lib": "nw4r_g3d",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_nw4r_g3d,
+        "progress_category": "sdk",
+        "objects": [
+            Object(Matching, "nw4r/g3d/res/g3d_resmdl.cpp"),
+            Object(Matching, "nw4r/g3d/res/g3d_resshp.cpp"),
+            Object(Matching, "nw4r/g3d/res/g3d_restev.cpp"),
+            Object(Matching, "nw4r/g3d/res/g3d_resmat.cpp"),
+            Object(Matching, "nw4r/g3d/res/g3d_resvtx.cpp"),
+            Object(Matching, "nw4r/g3d/res/g3d_restex.cpp"),
+            Object(Matching, "nw4r/g3d/res/g3d_resnode.cpp"),
+            Object(Matching, "nw4r/g3d/res/g3d_resanmtexpat.cpp"),
+            Object(Matching, "nw4r/g3d/g3d_anmvis.cpp"),
+            Object(Matching, "nw4r/g3d/g3d_anmclr.cpp"),
+            Object(Matching, "nw4r/g3d/g3d_anmtexpat.cpp"),
+            Object(Matching, "nw4r/g3d/g3d_anmtexsrt.cpp"),
+            Object(Matching, "nw4r/g3d/g3d_anmscn.cpp"),
+            Object(Matching, "nw4r/g3d/g3d_obj.cpp"),
+            Object(Matching, "nw4r/g3d/g3d_anmobj.cpp"),
+            Object(Matching, "nw4r/g3d/platform/g3d_gpu.cpp"),
+            Object(Matching, "nw4r/g3d/platform/g3d_cpu.cpp"),
+            Object(Matching, "nw4r/g3d/g3d_state.cpp"),
+            Object(Matching, "nw4r/g3d/g3d_draw1mat1shp.cpp"),
+            Object(Matching, "nw4r/g3d/g3d_calcview.cpp"),
+            Object(Matching, "nw4r/g3d/g3d_dcc.cpp"),
+            Object(Matching, "nw4r/g3d/g3d_workmem.cpp"),
+            Object(Matching, "nw4r/g3d/g3d_calcworld.cpp"),
+            Object(Matching, "nw4r/g3d/g3d_draw.cpp"),
+            Object(Matching, "nw4r/g3d/g3d_camera.cpp"),
+            Object(Matching, "nw4r/g3d/g3d_basic.cpp"),
+            Object(Matching, "nw4r/g3d/g3d_maya.cpp"),
+            Object(Matching, "nw4r/g3d/g3d_xsi.cpp"),
+            Object(Matching, "nw4r/g3d/g3d_3dsmax.cpp"),
+            Object(Matching, "nw4r/g3d/g3d_scnobj.cpp"),
+            Object(Matching, "nw4r/g3d/g3d_scnroot.cpp"),
+            Object(Matching, "nw4r/g3d/g3d_scnmdlsmpl.cpp"),
+            Object(Matching, "nw4r/g3d/g3d_calcmaterial.cpp"),
+            Object(Matching, "nw4r/g3d/g3d_init.cpp"),
+            Object(Matching, "nw4r/g3d/g3d_fog.cpp"),
+            Object(Matching, "nw4r/g3d/g3d_light.cpp"),
         ],
     },
 ]
