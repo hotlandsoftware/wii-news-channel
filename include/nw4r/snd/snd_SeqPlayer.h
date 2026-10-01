@@ -57,6 +57,10 @@ public:
         return mActiveFlag;
     } // at 0x18
 
+    // Older NW4R: BasicPlayer::IsPrepared (at 0x1C) is pure virtual.
+    // Added by the snd part 1 task; the definition belongs to this class's file.
+    virtual bool IsPrepared() const;
+
     virtual bool IsStarted() const {
         return mStartedFlag;
     } // at 0x1C

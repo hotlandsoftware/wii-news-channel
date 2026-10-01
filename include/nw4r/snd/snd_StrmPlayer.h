@@ -66,7 +66,8 @@ public:
         Stop();
     } // at 0x14
 
-    bool IsPrepared() const {
+    // Older NW4R: virtual (BasicPlayer::IsPrepared at 0x1C)
+    virtual bool IsPrepared() const {
         return mPreparedFlag;
     }
 

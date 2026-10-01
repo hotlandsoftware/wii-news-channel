@@ -9,17 +9,16 @@ BasicPlayer::BasicPlayer() : mId(BasicSound::INVALID_ID) {
 }
 
 void BasicPlayer::InitParam() {
-    // TODO(kiwi) Fakematch
+    // TODO(kiwi) Fakematch (as ogws)
     mPan = 1.0f;
 
     mPan = 0.0f;
     mVolume = 1.0f;
     mPitch = 1.0f;
     mSurroundPan = 0.0f;
+    mPan2 = 0.0f;
+    mSurroundPan2 = 0.0f;
     mLpfFreq = 0.0f;
-    mRemoteFilter = 0;
-    mPanMode = PAN_MODE_DUAL;
-    mPanCurve = PAN_CURVE_SQRT;
     mOutputLine = OUTPUT_LINE_MAIN;
     mMainSend = 0.0f;
     mMainOutVolume = 1.0f;
