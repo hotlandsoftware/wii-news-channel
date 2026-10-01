@@ -2,6 +2,7 @@
 #define NW4R_UT_RECT_H
 
 #include <types.h>
+#include <nw4r/math/math_arithmetic.h>
 
 namespace nw4r {
 namespace ut {
@@ -35,6 +36,19 @@ struct Rect {
 
         bottom = y + GetHeight();
         top = y;
+    }
+
+    // Added for ut (Task 14), as tp nw4hbm Rect.h
+    void Normalize() {
+        f32 l = left;
+        f32 t = top;
+        f32 r = right;
+        f32 b = bottom;
+
+        left = math::FSelect(r - l, l, r);
+        right = math::FSelect(r - l, r, l);
+        top = math::FSelect(b - t, t, b);
+        bottom = math::FSelect(b - t, b, t);
     }
 };
 

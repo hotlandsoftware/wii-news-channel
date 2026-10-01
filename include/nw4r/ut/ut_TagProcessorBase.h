@@ -31,6 +31,9 @@ public:
     virtual ~TagProcessorBase();                                                 // at 0x08
     virtual Operation Process(u16 code, PrintContext<T>* context);               // at 0x0C
     virtual Operation CalcRect(Rect* pRect, u16 code, PrintContext<T>* context); // at 0x10
+
+    void ProcessLinefeed(PrintContext<T>* context);
+    void ProcessTab(PrintContext<T>* context);
 };
 
 } // namespace ut
