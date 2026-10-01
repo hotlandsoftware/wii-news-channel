@@ -19,6 +19,7 @@ public:
     const Font* GetFont() const;
     void SetupGX();
     void SetTextColor(Color color);
+    Color GetTextColor() const;
     void SetScale(f32 x, f32 y);
     void SetScale(f32 scale);
     f32 GetScaleH() const;

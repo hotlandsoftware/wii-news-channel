@@ -15,6 +15,8 @@ namespace detail {
 
 class LinkListImpl {
 public:
+    ~LinkListImpl();
+
     class Iterator {
     public:
         Iterator() : mPointer(NULL) {}
