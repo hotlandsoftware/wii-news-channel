@@ -368,6 +368,8 @@ config.libs = [
         "progress_category": "game",
         "objects": [
             Object(NonMatching, "news/Mascot.cpp"),
+            Object(NonMatching, "news/NewsArticle.cpp"),
+            Object(NonMatching, "news/LanguageSelect.cpp"),
             Object(Matching, "news/TextButton.cpp"),
             Object(Matching, "news/FrameTextButton.cpp"),
             Object(Matching, "news/IconTextButton.cpp"),
