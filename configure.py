@@ -309,6 +309,9 @@ cflags_rvl = [
     "-ipa file",
 ]
 
+# EXIBios.c is built with -O3 instead of -O4,p (as in SMGCommunity/Petari)
+cflags_rvl_exi = ["-O3" if flag == "-O4,p" else flag for flag in cflags_rvl]
+
 config.linker_version = "GC/3.0a5.2"
 
 
@@ -602,12 +605,57 @@ config.libs = [
         ],
     },
     {
+        "lib": "exi",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_rvl,
+        "progress_category": "sdk",
+        "objects": [
+            Object(Matching, "revolution/EXI/EXIBios.c", cflags=cflags_rvl_exi),
+            Object(Matching, "revolution/EXI/EXIUart.c"),
+            Object(Matching, "revolution/EXI/EXICommon.c"),
+        ],
+    },
+    {
+        "lib": "si",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_rvl,
+        "progress_category": "sdk",
+        "objects": [
+            Object(Matching, "revolution/SI/SIBios.c"),
+            Object(Matching, "revolution/SI/SISamplingRate.c"),
+        ],
+    },
+    {
         "lib": "db",
         "mw_version": "GC/3.0a5.2",
         "cflags": cflags_rvl,
         "progress_category": "sdk",
         "objects": [
             Object(Matching, "revolution/DB/db.c"),
+        ],
+    },
+    {
+        "lib": "vi",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_rvl,
+        "progress_category": "sdk",
+        "objects": [
+            Object(NonMatching, "revolution/VI/vi.c"),
+            Object(NonMatching, "revolution/VI/i2c.c"),
+            Object(NonMatching, "revolution/VI/vi3in1.c"),
+        ],
+    },
+    {
+        "lib": "mtx",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_rvl,
+        "progress_category": "sdk",
+        "objects": [
+            Object(NonMatching, "revolution/MTX/mtx.c"),
+            Object(NonMatching, "revolution/MTX/mtxvec.c"),
+            Object(NonMatching, "revolution/MTX/mtx44.c"),
+            Object(NonMatching, "revolution/MTX/vec.c"),
+            Object(NonMatching, "revolution/MTX/quat.c"),
         ],
     },
     {
