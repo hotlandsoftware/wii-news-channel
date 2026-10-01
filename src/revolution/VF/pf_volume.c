@@ -189,6 +189,93 @@ s32 VFiPFVOL_p_unmount(struct PF_VOLUME* p_vol, u32 mode) {
     return err;
 }
 
+// Not in ogws (dead-stripped there); the name is a guess.
+static s32 VFiPFVOL_p_format(struct PF_VOLUME* p_vol, const u8* param) {
+    s32 err;
+    u32 was_mounted;
+    u32 cache_mode;
+    u16 fsi_flag;
+    u32 num_free_clusters;
+
+    was_mounted = 0;
+    cache_mode = 0;
+    fsi_flag = 0;
+
+    if (p_vol == NULL) {
+        return 10;
+    }
+
+    if (VFiPFDRV_IsWProtected(p_vol)) {
+        return 11;
+    }
+
+    err = VFiPFDRV_format(p_vol, param);
+    if (err) {
+        return err;
+    }
+
+    if (p_vol->flags & 2) {
+        cache_mode = p_vol->cache.mode;
+        fsi_flag = p_vol->fsi_flag;
+        was_mounted = 1;
+        VFiPFCACHE_FreeAllCaches(p_vol);
+        err = VFiPFVOL_p_unmount(p_vol, 0);
+        if (err) {
+            return err;
+        }
+    }
+
+    err = VFiPFVOL_p_mount(p_vol);
+    if (err) {
+        return err;
+    }
+
+    if (was_mounted == 1) {
+        p_vol->cache.mode = cache_mode;
+        p_vol->fsi_flag = fsi_flag;
+    }
+
+    if (p_vol->flags & 0x20) {
+        if (p_vol->bpb.fat_type == FAT_32 && (p_vol->fsi_flag & 2)) {
+            p_vol->fsi_flag |= 4;
+            VFiPFFAT_RefreshFSINFO(p_vol);
+        } else {
+            p_vol->fsi_flag &= ~4;
+            if (p_vol->bpb.fat_type != FAT_32) {
+                p_vol->fsi_flag &= ~3;
+            }
+            err = VFiPFFAT_CountFreeClusters(p_vol, &num_free_clusters);
+            if (err) {
+                return err;
+            }
+        }
+        return 0;
+    }
+
+    err = VFiPFFAT_InitFATRegion(p_vol);
+    if (err) {
+        return err;
+    }
+
+    err = VFiPFENT_MakeRootDir(p_vol);
+    if (err) {
+        return err;
+    }
+
+    if (p_vol->bpb.fat_type != FAT_32) {
+        p_vol->fsi_flag &= ~3;
+    }
+
+    if (p_vol->bpb.fat_type == FAT_32 && (p_vol->fsi_flag & 2)) {
+        err = VFiPFFAT_RefreshFSINFO(p_vol);
+        if (err) {
+            return err;
+        }
+    }
+
+    return 0;
+}
+
 static s32 VFiPFVOL_CheckMediaInsert(struct PF_VOLUME* p_vol) {
     s32 err;
 
@@ -579,6 +666,55 @@ s32 VFiPFVOL_detach(s8 drv_char) {
     return 0;
 }
 
+// Not in ogws (dead-stripped there); the name is a guess.
+s32 VFiPFVOL_format(s8 drv_char, const u8* param) {
+    struct PF_VOLUME* p_vol;
+    s32 err;
+
+    p_vol = VFiPFVOL_GetVolumeFromDrvChar(drv_char);
+    if (p_vol == NULL) {
+        VFipf_vol_set.last_error = 10;
+        return 10;
+    }
+
+    if ((p_vol->flags & 1) == 0) {
+        VFipf_vol_set.last_error = 10;
+        p_vol->last_error = 10;
+        return 10;
+    }
+
+    if (!VFiPFDRV_IsInserted(p_vol)) {
+        VFipf_vol_set.last_error = 10;
+        p_vol->last_error = 10;
+        return 10;
+    }
+
+    if (p_vol->num_opened_files != 0) {
+        VFiPFFILE_FinalizeAllFiles(p_vol);
+        VFiPFCACHE_FreeAllCaches(p_vol);
+    }
+
+    if (p_vol->num_opened_directories != 0) {
+        VFiPFDIR_FinalizeAllDirs(p_vol);
+    }
+
+    err = VFiPFVOL_p_format(p_vol, param);
+    if (err) {
+        VFipf_vol_set.last_error = err;
+        p_vol->last_error = err;
+        return err;
+    }
+
+    p_vol->fsi_flag |= 4;
+    if (p_vol->bpb.fat_type == FAT_32) {
+        p_vol->num_free_clusters = p_vol->bpb.num_clusters - 1;
+    } else {
+        p_vol->num_free_clusters = p_vol->bpb.num_clusters;
+    }
+
+    return 0;
+}
+
 s32 VFiPFVOL_unmount(s8 drv_char, u32 mode) {
     struct PF_VOLUME* p_vol;
     s32 err;
@@ -626,4 +762,61 @@ s32 VFiPFVOL_unmount(s8 drv_char, u32 mode) {
     }
 
     return err2;
+}
+
+// Not in ogws (dead-stripped there); the name is a guess (PrFILE2 pf_sync).
+s32 VFiPFVOL_sync(s8 drv_char, u32 mode) {
+    struct PF_VOLUME* p_vol;
+    s32 err;
+    u32 i;
+
+    p_vol = VFiPFVOL_GetVolumeFromDrvChar(drv_char);
+    if (p_vol == NULL) {
+        VFipf_vol_set.last_error = 10;
+        return 10;
+    }
+
+    if (mode != 1 && mode != 0) {
+        VFipf_vol_set.last_error = 10;
+        p_vol->last_error = 10;
+        return 10;
+    }
+
+    err = VFiPFVOL_CheckForWrite(p_vol);
+    if (err) {
+        VFipf_vol_set.last_error = err;
+        p_vol->last_error = err;
+        return err;
+    }
+
+    err = VFiPFCACHE_FlushFATCache(p_vol);
+    if (err) {
+        VFipf_vol_set.last_error = err;
+        p_vol->last_error = err;
+        return err;
+    }
+
+    for (i = 0; i < 5; i++) {
+        if (p_vol->ufds[(u16)i].stat & 1) {
+            err = VFiPFENT_updateEntry(&p_vol->ufds[(u16)i].p_sfd->dir_entry, 1);
+            if (err) {
+                VFipf_vol_set.last_error = err;
+                p_vol->last_error = err;
+                return err;
+            }
+        }
+    }
+
+    err = VFiPFCACHE_FlushDataCache(p_vol);
+    if (err) {
+        VFipf_vol_set.last_error = err;
+        p_vol->last_error = err;
+        return err;
+    }
+
+    if (mode == 1) {
+        VFiPFCACHE_FreeAllCaches(p_vol);
+    }
+
+    return err;
 }

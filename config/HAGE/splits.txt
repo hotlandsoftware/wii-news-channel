@@ -293,8 +293,11 @@ revolution/VF/pf_mkdir.c:
 revolution/VF/pf_remove.c:
 	.text       start:0x8006C488 end:0x8006C4D8
 
+revolution/VF/pf_sync.c:
+	.text       start:0x8006C4D8 end:0x8006C500
+
 revolution/VF/pf_unmount.c:
-	.text       start:0x8006C4D8 end:0x8006C528
+	.text       start:0x8006C500 end:0x8006C528
 
 revolution/VF/pf_filelock.c:
 	.text       start:0x8006C528 end:0x8006C53C

@@ -23,7 +23,7 @@ s32 VFiPFVOL_unmount(s8 drv_char, u32 mode);
 
 // Not in ogws; names are guesses.
 s32 VFiPFVOL_format(s8 drv_char, const u8* param);
-s32 VFiPFVOL_unmount2(s8 drv_char, u32 mode);
+s32 VFiPFVOL_sync(s8 drv_char, u32 mode);
 
 #ifdef __cplusplus
 }
