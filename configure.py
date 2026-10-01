@@ -302,6 +302,16 @@ cflags_nw4r_lyt = [
     "-DNW4R_UT_RECT_DEFAULT_ZERO",
 ]
 
+# nw4r::ut: same NW4R basics as lyt/g3d (CharWriter's colours default to white)
+cflags_nw4r_ut = [
+    *cflags_nw4r,
+    "-DNW4R_MATH_VEC2_NO_DTOR",
+    "-DNW4R_MATH_VEC3_NO_DTOR",
+    "-DNW4R_MATH_MTX34_NO_DTOR",
+    "-DNW4R_UT_COLOR_DEFAULT_WHITE",
+    "-DNW4R_UT_RECT_DEFAULT_ZERO",
+]
+
 # nw4r::g3d (ogws sources): same NW4R basics as lyt (no math destructors,
 # white default ut::Color)
 cflags_nw4r_g3d = [
@@ -520,7 +530,7 @@ config.libs = [
     {
         "lib": "nw4r_ut",
         "mw_version": "GC/3.0a5.2",
-        "cflags": cflags_nw4r,
+        "cflags": cflags_nw4r_ut,
         "progress_category": "sdk",
         "objects": [
             Object(Matching, "nw4r/ut/ut_list.cpp"),
@@ -539,7 +549,7 @@ config.libs = [
             Object(Matching, "nw4r/ut/ut_ResFont.cpp"),
             Object(NonMatching, "nw4r/ut/ut_ArchiveFontBase.cpp"),
             Object(NonMatching, "nw4r/ut/ut_ArchiveFont.cpp"),
-            Object(NonMatching, "nw4r/ut/ut_CharWriter.cpp"),
+            Object(Matching, "nw4r/ut/ut_CharWriter.cpp"),
             Object(NonMatching, "nw4r/ut/ut_TextWriterBase.cpp"),
         ],
     },
