@@ -59,9 +59,8 @@ So each file ends with a `__sinit` that constructs it, and the `.ctors` table (`
 
 ## Known non-matching
 
-- `Mascot.cpp`: `Mascot::Mascot` (57%) and `Mascot::Reset` (80%).
-  The original loads `sWalkInSpeed` before the `mState`/`mTimer` stores, and the `88.0f` constant before the second `sWalkInSpeed` load.
-  No statement order tried so far reproduces both (720-permutation searches with and without `offset`/`center` locals).
+- `Mascot.cpp` (99.96%): the constructor and `Reset` (both inline `Init()`) store `mSpeed` before `mY`, and the centre value lands in f1 instead of f2. All 720 orders of the statements were tried.
+- `NewsArticle.cpp` (99.39%), `LanguageSelect.cpp` (99.92%), `LayoutScreen.cpp` (99.99%), `Camera.cpp` (99.93%; `.sdata2` pool order also differs): register swaps only.
 
 ## More codegen patterns
 
@@ -101,3 +100,5 @@ So each file ends with a `__sinit` that constructs it, and the `.ctors` table (`
 - **Small POD struct returns.** A function returning `GXColor` (a POD) returns it in `r3`, and the caller stores it bytewise with `srwi`/`extrwi`. Returning `ut::Color` (which has a dtor) uses a hidden pointer instead.
 - **Temporaries of a type with a dtor are allocated in reverse.** `C_MTXOrtho(m, l->GetLayoutRect().top, ...bottom, ...left, ...right, ...)` put the first `Rect` temporary at the highest stack slot only once `ut::Rect` got `~Rect() {}`. That was added to `ut_Rect.h`, and no other file changed.
 - **`delete p` with an inline dtor.** `delete mItems[i]` with an inline `~LayoutScreenItem()` that frees two buffers gives a single null check. An explicit `if (item) { ...; delete item; }` gives two.
+- **Function-local statics act like `const`.** The scheduler can move their loads above earlier stores, even above the prologue `stwu`. Ordinary globals and statics keep source order. This fixed the HomeMenu constructor (`sLayoutNames` as a local static) and most of Mascot (walk-in statics local to an inline `Init()`).
+- **Constants from inline calls.** `t * GetScreenHeight()`, with an inline returning `456.0f`, keeps source operand order. A literal is placed on the left of `fmuls`.
