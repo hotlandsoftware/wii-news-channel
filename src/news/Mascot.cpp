@@ -328,7 +328,7 @@ void Mascot::UpdateAnim() {
     }
 }
 
-static inline void SetTevColor0(u8 alpha) {
+static inline void SetTevColorWhite(u8 alpha) {
     GXColor color = {255, 255, 255, alpha};
     GXSetTevColor(GX_TEVREG0, color);
 }
@@ -354,7 +354,7 @@ void Mascot::Draw() {
     Draw2D_SetOrtho();
     GXSetZMode(FALSE, GX_NEVER, FALSE);
 
-    SetTevColor0(mAlpha);
+    SetTevColorWhite(mAlpha);
 
     Vec pos;
     pos.x = x;

@@ -102,10 +102,15 @@ void Ticker::ResetState() {
     ChangeState(&Ticker::StateWait);
 }
 
+static inline void SetTevColorWhite(u8 alpha) {
+    GXColor color = {255, 255, 255, alpha};
+    GXSetTevColor(GX_TEVREG0, color);
+}
+
 void Ticker::Draw(const math::VEC2& pos, const f32& offsetX, const f32& scale, const f32& alpha) {
     u8 a = 255.0f * alpha;
     f32 s = mFontScale * scale;
-    GXColor highlight = gHighlightColor;
+    ut::Color highlight = gHighlightColor;
     highlight.a = a;
 
     if (mHover) {
@@ -122,8 +127,8 @@ void Ticker::Draw(const math::VEC2& pos, const f32& offsetX, const f32& scale, c
 
     u32 drawFlag = mWriter->GetDrawFlag();
     u32 margin = 30.0f * s;
-    f32 centerY = 0.5f * (1.55f * (scale * (mFontScale * mWriter->GetFont()->GetHeight()))) +
-                  (pos.y + mTextY);
+    f32 height = 1.55f * GetTextHeight(scale);
+    f32 centerY = 0.5f * height + (pos.y + mTextY);
     ut::Color white(255, 255, 255, a);
     math::VEC3 textPos(0.0f, 0.0f, 0.0f);
     const ut::Font* font = mWriter->GetFont();
@@ -152,9 +157,9 @@ void Ticker::Draw(const math::VEC2& pos, const f32& offsetX, const f32& scale, c
     textPos.y += s;
     mWriter->SetCursor(textPos.x, textPos.y);
 
-    f32 ascent = s * font->GetAscent();
+    f32 yOffset = s * font->GetAscent();
     f32 charSpace = mWriter->GetCharSpace();
-    f32 yOffset = ascent - ascent;
+    yOffset -= yOffset;
     u32 i = 0;
     const wchar_t* text;
     if (mMode == MODE_WAIT) {
@@ -187,8 +192,7 @@ void Ticker::Draw(const math::VEC2& pos, const f32& offsetX, const f32& scale, c
         math::VEC3 thumbPos(pos.x + mThumbPosX, mTop + (0.5f * rowHeight - halfHeight), 0.0f);
         Draw2D_SetupGX();
         GXSetZMode(FALSE, GX_LEQUAL, FALSE);
-        GXColor color = {255, 255, 255, a};
-        GXSetTevColor(GX_TEVREG0, color);
+        SetTevColorWhite(a);
         Draw2D_Texture(mArticle->GetTexture(), &thumbPos, mThumbScale);
     }
 }

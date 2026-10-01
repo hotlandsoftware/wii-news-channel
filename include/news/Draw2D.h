@@ -2,6 +2,7 @@
 #define NEWS_DRAW2D_H
 
 #include <types.h>
+#include <revolution/gx.h>
 #include <nw4r/ut/ut_Color.h>
 #include <nw4r/ut/ut_Rect.h>
 #include <nw4r/math/math_types.h>
