@@ -365,7 +365,7 @@ config.libs = [
             Object(Matching, "MSL_C/ansi_fp.c", mw_version="GC/3.0a3", extra_cflags=["-Cpp_exceptions on", "-ipa file"]),
             Object(Matching, "MSL_C/ctype.c", extra_cflags=["-Cpp_exceptions on", "-ipa file"]),
             Object(Matching, "MSL_C/locale.c", extra_cflags=["-Cpp_exceptions on", "-ipa file"]),
-            Object(NonMatching, "MSL_C/arith.c", extra_cflags=["-Cpp_exceptions on", "-ipa file"]),
+            Object(Matching, "MSL_C/arith.c", extra_cflags=["-Cpp_exceptions on", "-ipa file"]),
             Object(Matching, "MSL_C/bsearch.c", extra_cflags=["-Cpp_exceptions on", "-ipa file"]),
             Object(Matching, "MSL_C/buffer_io.c", extra_cflags=["-Cpp_exceptions on", "-ipa file"]),
             Object(Matching, "MSL_C/direct_io.c", extra_cflags=["-Cpp_exceptions on", "-ipa file"]),
