@@ -1,0 +1,14 @@
+# Decompilation helper scripts
+
+All scripts can be run from anywhere; they work relative to the repository root.
+They read the generated `build/HAGE/asm` disassembly and `config/HAGE/symbols.txt`, so run `ninja` first.
+
+| Script | Usage | What it does |
+| --- | --- | --- |
+| `fasm.py` | `fasm.py <name or address> [count]` | Print clean disassembly for a function (and the next `count-1`). |
+| `refs.py` | `refs.py <start> <end>` | List the data and functions a `.text` range references, and whether code outside the range uses the same data. Helps pick split boundaries. |
+| `dump.py` | `dump.py <start> <end>` | Hex/int/float dump of any address range in the original DOL. |
+| `od.py` | `od.py <unit> [symbol] [-a]` | Side-by-side objdiff (left = original, right = ours). Shows differing lines only unless `-a`. Unit names are like `news/TextButton`. |
+| `rep.py` | `rep.py <unit substring>` | Rebuild `report.json` and print per-function match percentages. |
+| `ren.py` | `ren.py old=new[:local\|:weak] ...` | Rename symbols in `symbols.txt` (e.g. `fn_80012345=Foo__3BarFv`). |
+| `variants.py` | `variants.py <src> <unit> <symbol> <variants.py>` | Try source variants: the variants file defines `OLD` (text in `src`) and `NEWS` (list of replacements). Prints each variant's match percentage and restores the file. |
