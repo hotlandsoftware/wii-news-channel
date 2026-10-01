@@ -309,6 +309,12 @@ cflags_rvl = [
     "-ipa file",
 ]
 
+# BTE (Broadcom stack): RVL flags plus the BTE-private header directory
+cflags_bte = [
+    *cflags_rvl,
+    "-i src/revolution/BTE",
+]
+
 config.linker_version = "GC/3.0a5.2"
 
 
@@ -760,6 +766,37 @@ config.libs = [
             Object(Matching, "nw4r/lyt/lyt_resourceAccessor.cpp"),
             Object(Matching, "nw4r/lyt/lyt_arcResourceAccessor.cpp"),
             Object(Matching, "nw4r/lyt/lyt_common.cpp"),
+        ],
+    },
+    {
+        "lib": "bte_hid_l2c_rfc_sdp",
+        "mw_version": "GC/3.0a3",
+        "cflags": cflags_bte,
+        "progress_category": "sdk",
+        "objects": [
+            Object(Matching, "revolution/BTE/hidd_pm.c"),
+            Object(Matching, "revolution/BTE/hidh_api.c"),
+            Object(Matching, "revolution/BTE/hidh_conn.c"),
+            Object(Matching, "revolution/BTE/l2c_api.c"),
+            Object(Matching, "revolution/BTE/l2c_csm.c"),
+            Object(Matching, "revolution/BTE/l2c_link.c"),
+            Object(Matching, "revolution/BTE/l2c_main.c"),
+            Object(Matching, "revolution/BTE/l2c_utils.c"),
+            Object(Matching, "revolution/BTE/port_api.c"),
+            Object(Matching, "revolution/BTE/port_rfc.c"),
+            Object(Matching, "revolution/BTE/port_utils.c"),
+            Object(Matching, "revolution/BTE/rfc_l2cap_if.c"),
+            Object(Matching, "revolution/BTE/rfc_mx_fsm.c"),
+            Object(Matching, "revolution/BTE/rfc_port_fsm.c"),
+            Object(Matching, "revolution/BTE/rfc_port_if.c"),
+            Object(Matching, "revolution/BTE/rfc_ts_frames.c"),
+            Object(Matching, "revolution/BTE/rfc_utils.c"),
+            Object(Matching, "revolution/BTE/sdp_api.c"),
+            Object(Matching, "revolution/BTE/sdp_db.c"),
+            Object(Matching, "revolution/BTE/sdp_discovery.c"),
+            Object(Matching, "revolution/BTE/sdp_main.c"),
+            Object(Matching, "revolution/BTE/sdp_server.c"),
+            Object(Matching, "revolution/BTE/sdp_utils.c"),
         ],
     },
 ]
