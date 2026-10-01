@@ -36,7 +36,7 @@ public:
     void StateScroll();
     void StateReturn();
 
-    void SetLayout(nw4r::math::VEC2& pos, f32 scale);
+    f32 SetLayout(nw4r::math::VEC2& pos, f32 scale);
     void Dummy();
     void GetOrigin(nw4r::math::VEC2& out);
     void TruncateText();

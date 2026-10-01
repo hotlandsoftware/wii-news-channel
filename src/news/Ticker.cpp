@@ -9,7 +9,9 @@
 
 using namespace nw4r;
 
+#pragma explicit_zero_data on
 static f32 sOrigin[2] = {0.0f, 0.0f};
+#pragma explicit_zero_data reset
 
 inline f32 Ticker::GetTextHeight(f32 scale) {
     return scale * (mFontScale * mWriter->GetFont()->GetHeight());
@@ -358,13 +360,12 @@ void Ticker::StateReturn() {
     }
 }
 
-void Ticker::SetLayout(math::VEC2& pos, f32 scale) {
+f32 Ticker::SetLayout(math::VEC2& pos, f32 scale) {
     if (mArticle->GetTexture()) {
         mThumbLeft = unk24 - 80.0f;
         mThumbTop = pos.y;
         const NewsTexture* tex = mArticle->GetTexture();
-        u16 w = tex->width;
-        if (w < mArticle->GetTexture()->height) {
+        if (tex->width < mArticle->GetTexture()->height) {
             mThumbScale = 80.0f / mArticle->GetTexture()->height;
             mThumbPosX = mThumbLeft + 0.5f * (80.0f - mThumbScale * mArticle->GetTexture()->width);
             mThumbPosY = mThumbTop;
@@ -381,6 +382,7 @@ void Ticker::SetLayout(math::VEC2& pos, f32 scale) {
     mTextY = pos.y;
     unk64 = unk60 + CalcRowHeight(mTextScale);
     pos.y = 5.0f + unk64;
+    return pos.y;
 }
 
 void Ticker::Dummy() {}
