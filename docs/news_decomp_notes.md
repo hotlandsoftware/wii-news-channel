@@ -102,3 +102,9 @@ So each file ends with a `__sinit` that constructs it, and the `.ctors` table (`
 - **`delete p` with an inline dtor.** `delete mItems[i]` with an inline `~LayoutScreenItem()` that frees two buffers gives a single null check. An explicit `if (item) { ...; delete item; }` gives two.
 - **Function-local statics act like `const`.** The scheduler can move their loads above earlier stores, even above the prologue `stwu`. Ordinary globals and statics keep source order. This fixed the HomeMenu constructor (`sLayoutNames` as a local static) and most of Mascot (walk-in statics local to an inline `Init()`).
 - **Constants from inline calls.** `t * GetScreenHeight()`, with an inline returning `456.0f`, keeps source operand order. A literal is placed on the left of `fmuls`.
+
+## MetroTRK (0x8018C7C0–0x80191EF0, plus `.init` 0x8000446C–0x80006420)
+
+- Same 29 files and layout as the Forecast Channel. Sources are ported from there, built with `GC/2.7` and `cflags_trk` (`-inline deferred,auto -sdata 0 -sdata2 0 -use_lmw_stmw on -str reuse,readonly`). `serpoll.c` and `EXI2_GDEV_GCN/main.c` add `-sdata 8`.
+- `targsupp.c` and `exception.c` were `.s` files in Forecast. They are C files with `asm` functions here. GC/2.7 inline asm has no data directives: the vector table's string and zero padding are `opword`s (`PAD*` macros), and `entry gTRKInterruptVectorTableEnd` makes the end label. `twui` is written `twi 31, r0, 0`.
+- `TRKOpenFile`/`TRKCloseFile`/`TRKPositionFile` are unreferenced. In C they need `#pragma force_active on`, or the linker strips them and `.text` comes out 0x20 short.
