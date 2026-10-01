@@ -199,3 +199,147 @@ MSL_C/strtoul.c:
 
 MSL_C/wstring.c:
 	.text       start:0x801881BC end:0x801882C4
+
+MSL_C/ppc_eabi_stubs.c:
+	.text       start:0x80188348 end:0x80188358
+
+MSL_C/uart_console_io_gcn.c:
+	extab       start:0x80006928 end:0x80006930
+	extabindex  start:0x80006F7C end:0x80006F88
+	.text       start:0x80188358 end:0x80188430
+	.sbss       start:0x80358430 end:0x80358438
+
+MSL_C/abort_exit_ppc_eabi.c:
+	extab       start:0x80006930 end:0x80006938
+	extabindex  start:0x80006F88 end:0x80006F94
+	.text       start:0x80188430 end:0x80188464
+	.sbss       start:0x80358438 end:0x80358440
+
+MSL_C/math_sun.c:
+	extab       start:0x80006938 end:0x80006940
+	extabindex  start:0x80006F94 end:0x80006FA0
+	.text       start:0x80188464 end:0x801884A4
+
+MSL_C/extras.c:
+	.text       start:0x801884A4 end:0x80188554
+
+MSL_C/e_acos.c:
+	.text       start:0x80188554 end:0x80188818
+	.sdata2     start:0x8035A110 end:0x8035A198
+
+MSL_C/e_asin.c:
+	.text       start:0x80188818 end:0x80188AB0
+	.sdata2     start:0x8035A198 end:0x8035A220
+
+MSL_C/e_atan2.c:
+	.text       start:0x80188AB0 end:0x80188D20
+	.sdata2     start:0x8035A220 end:0x8035A278
+
+MSL_C/e_exp.c:
+	.text       start:0x80188D20 end:0x80188F54
+	.rodata     start:0x801AF970 end:0x801AF9A0
+	.sdata2     start:0x8035A278 end:0x8035A2F0
+
+MSL_C/e_fmod.c:
+	.text       start:0x80188F54 end:0x80189284
+	.rodata     start:0x801AF9A0 end:0x801AF9B0
+
+MSL_C/e_log.c:
+	.text       start:0x80189284 end:0x80189538
+	.sbss       start:0x80358440 end:0x80358448
+	.sdata2     start:0x8035A2F0 end:0x8035A370
+
+MSL_C/e_pow.c:
+	.text       start:0x80189538 end:0x80189D80
+	.rodata     start:0x801AF9B0 end:0x801AF9E0
+	.sdata2     start:0x8035A370 end:0x8035A480
+
+MSL_C/e_rem_pio2.c:
+	.text       start:0x80189D80 end:0x8018A118
+	.rodata     start:0x801AF9E0 end:0x801AFB68
+	.sdata2     start:0x8035A480 end:0x8035A4D8
+
+MSL_C/k_cos.c:
+	.text       start:0x8018A118 end:0x8018A228
+	.sdata2     start:0x8035A4D8 end:0x8035A520
+
+MSL_C/k_rem_pio2.c:
+	.text       start:0x8018A228 end:0x8018B934
+	.rodata     start:0x801AFB68 end:0x801AFBB8
+	.sdata2     start:0x8035A520 end:0x8035A560
+
+MSL_C/k_sin.c:
+	.text       start:0x8018B934 end:0x8018B9F4
+	.sdata2     start:0x8035A560 end:0x8035A598
+
+MSL_C/k_tan.c:
+	.text       start:0x8018B9F4 end:0x8018BC4C
+	.rodata     start:0x801AFBB8 end:0x801AFC20
+	.sdata2     start:0x8035A598 end:0x8035A5D0
+
+MSL_C/s_atan.c:
+	.text       start:0x8018BC4C end:0x8018BE8C
+	.rodata     start:0x801AFC20 end:0x801AFCB8
+	.sdata2     start:0x8035A5D0 end:0x8035A5F8
+
+MSL_C/s_ceil.c:
+	.text       start:0x8018BE8C end:0x8018BFCC
+	.sdata2     start:0x8035A5F8 end:0x8035A608
+
+MSL_C/s_copysign.c:
+	.text       start:0x8018BFCC end:0x8018BFF8
+
+MSL_C/s_cos.c:
+	.text       start:0x8018BFF8 end:0x8018C0CC
+	.sdata2     start:0x8035A608 end:0x8035A610
+
+MSL_C/s_floor.c:
+	.text       start:0x8018C0CC end:0x8018C210
+	.sdata2     start:0x8035A610 end:0x8035A620
+
+MSL_C/s_frexp.c:
+	.text       start:0x8018C210 end:0x8018C298
+	.sdata2     start:0x8035A620 end:0x8035A628
+
+MSL_C/s_ldexp.c:
+	.text       start:0x8018C298 end:0x8018C404
+	.sdata2     start:0x8035A628 end:0x8035A650
+
+MSL_C/s_sin.c:
+	.text       start:0x8018C404 end:0x8018C4DC
+	.sdata2     start:0x8035A650 end:0x8035A658
+
+MSL_C/s_tan.c:
+	.text       start:0x8018C4DC end:0x8018C554
+	.sdata2     start:0x8035A658 end:0x8035A660
+
+MSL_C/w_acos.c:
+	.text       start:0x8018C554 end:0x8018C558
+
+MSL_C/w_asin.c:
+	.text       start:0x8018C558 end:0x8018C55C
+
+MSL_C/w_atan2.c:
+	.text       start:0x8018C55C end:0x8018C560
+
+MSL_C/w_exp.c:
+	.text       start:0x8018C560 end:0x8018C564
+
+MSL_C/w_fmod.c:
+	.text       start:0x8018C564 end:0x8018C568
+
+MSL_C/w_log.c:
+	.text       start:0x8018C568 end:0x8018C56C
+
+MSL_C/w_pow.c:
+	.text       start:0x8018C56C end:0x8018C570
+
+MSL_C/e_sqrt.c:
+	.text       start:0x8018C570 end:0x8018C7B8
+	.sdata2     start:0x8035A660 end:0x8035A668
+
+MSL_C/math_ppc.c:
+	.text       start:0x8018C7B8 end:0x8018C7BC
+
+MSL_C/w_sqrt.c:
+	.text       start:0x8018C7BC end:0x8018C7C0
