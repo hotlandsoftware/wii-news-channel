@@ -41,6 +41,10 @@ public:
 public:
     WsdPlayer();
 
+    // Called by SoundThread in this NW4R revision
+    static void UpdateAllPlayers();
+    static void StopAllPlayers();
+
     virtual bool Start();          // at 0xC
     virtual void Stop();           // at 0x10
     virtual void Pause(bool flag); // at 0x14

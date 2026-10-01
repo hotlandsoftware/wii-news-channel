@@ -96,6 +96,10 @@ public:
     void SetLocalVariable(int idx, s16 value);
     static void SetGlobalVariable(int idx, s16 value);
 
+    // Called by SoundThread in this NW4R revision
+    static void UpdateAllPlayers();
+    static void StopAllPlayers();
+
     void SetTrackVolume(u32 trackFlags, f32 volume);
     void SetTrackPitch(u32 trackFlags, f32 pitch);
 

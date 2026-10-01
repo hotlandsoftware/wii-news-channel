@@ -40,6 +40,11 @@ public:
 
 public:
     StrmPlayer();
+
+    // Called by SoundThread in this NW4R revision
+    static void UpdateAllPlayers();
+    static void StopAllPlayers();
+    static void UpdateBufferAllPlayers();
     virtual ~StrmPlayer(); // at 0x8
 
     virtual bool Start();          // at 0xC
