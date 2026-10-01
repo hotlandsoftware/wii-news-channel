@@ -1,84 +1,228 @@
-#ifndef REVOLUTION_OS_H
-#define REVOLUTION_OS_H
+#ifndef OS_H
+#define OS_H
 
+#include <stdarg.h>
 #include <types.h>
+#include <macros.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void DCFlushRange(void* addr, u32 len);
+#define OSHalt(msg) OSPanic(__FILE__, __LINE__, msg)
 
-void OSReport(const char* msg, ...);
+#ifdef __MWERKS__
+u32 __OSBusClock : (0x8000 << 16 | 0x00F8);
+u32 __MEM2End : (0x8000 << 16 | 0x3128);
+#else
+u32 __OSBusClock = 0x800000F8;
+u32 __MEM2End = 0x80003128;
+#endif
 
-typedef int OSHeapHandle;
-extern volatile OSHeapHandle __OSCurrHeap;
+#define OS_BUS_CLOCK __OSBusClock
+#ifndef OS_CORE_CLOCK
+#define OS_CORE_CLOCK 729000000u
+#endif
+#ifndef OS_BUS_CLOCK
+#define OS_BUS_CLOCK 243000000u
+#endif
+#ifndef OS_TIMER_CLOCK
+#define OS_TIMER_CLOCK (OS_BUS_CLOCK / 4)
+#endif
 
-void* OSGetMEM1ArenaHi(void);
-void* OSGetMEM2ArenaHi(void);
-void* OSGetArenaHi(void);
-void* OSGetMEM1ArenaLo(void);
-void* OSGetMEM2ArenaLo(void);
-void* OSGetArenaLo(void);
-void OSSetMEM1ArenaHi(void* addr);
-void OSSetMEM2ArenaHi(void* addr);
-void OSSetArenaHi(void* addr);
-void OSSetMEM1ArenaLo(void* addr);
-void OSSetMEM2ArenaLo(void* addr);
-void OSSetArenaLo(void* addr);
-void* OSAllocFromMEM1ArenaLo(u32 size, u32 align);
-void* OSAllocFromMEM1ArenaHi(u32 size, u32 align);
-void* OSAllocFromMEM2ArenaHi(u32 size, u32 align);
-void* OSInitAlloc(void* arenaStart, void* arenaEnd, int maxHeaps);
-OSHeapHandle OSCreateHeap(void* start, void* end);
-OSHeapHandle OSSetCurrentHeap(OSHeapHandle heap);
-void OSFreeToHeap(OSHeapHandle heap, void* ptr);
+#define OSNanosecondsToTicks(nsec) (((nsec) * (OS_TIMER_CLOCK / 125000)) / 8000)
+
+#define OSTicksToSeconds(ticks) ((ticks) / OS_TIMER_CLOCK)
+#define OSTicksToMilliseconds(ticks) ((ticks) / (OS_TIMER_CLOCK / 1000))
+#define OSTicksToMicroseconds(ticks) (((ticks)*8) / (OS_TIMER_CLOCK / 125000))
+#define OSSecondsToTicks(sec) ((sec)*OS_TIMER_CLOCK)
+#define OSMillisecondsToTicks(msec) ((msec) * (OS_TIMER_CLOCK / 1000))
+#define OSMicrosecondsToTicks(usec) (((usec) * (OS_TIMER_CLOCK / 125000)) / 8)
+
+void* OSPhysicalToUncached(u32);
+
+#define OS_CACHED_REGION_PREFIX 0x8000
+#define OS_UNCACHED_REGION_PREFIX 0xC000
+
+#define OS_BASE_CACHED (OS_CACHED_REGION_PREFIX << 16)
+#define OS_BASE_UNCACHED (OS_UNCACHED_REGION_PREFIX << 16)
+
+#define OSPhysicalToCached(paddr) ((void*)((u32)(paddr) + OS_BASE_CACHED))
+#define OSCachedToPhysical(caddr) ((u32)((u8*)(caddr)-OS_BASE_CACHED))
+#define OSUncachedToPhysical(ucaddr) ((u32)((u32)(ucaddr) & (~OS_BASE_UNCACHED)))
+#define OSPhysicalToUncached(paddr) ((void*)((u32)(paddr) + OS_BASE_UNCACHED))
+
+#define OSIsMEM1Region(addr) (((u32)(addr)&0x30000000) == 0x00000000)
+#define OSIsMEM2Region(addr) (((u32)(addr)&0x30000000) == 0x10000000)
 
 #define OSRoundUp32B(x) (((u32)(x) + 32 - 1) & ~(32 - 1))
 #define OSRoundDown32B(x) (((u32)(x)) & ~(32 - 1))
+#define OSDiffTick(tick1, tick0) ((s32)(tick1) - (s32)(tick0))
 
-typedef struct OSCalendarTime {
-    int sec;  // at 0x00
-    int min;  // at 0x04
-    int hour; // at 0x08
-    int mday; // at 0x0C
-    int mon;  // at 0x10
-    int year; // at 0x14
-    int wday; // at 0x18
-    int yday; // at 0x1C
-    int msec; // at 0x20
-    int usec; // at 0x24
-} OSCalendarTime;
+#define OS_TICKS_DELTA(x, y) ((s32)x - (s32)y)
 
-typedef struct OSContext {
-    u32 gprs[32];  // at 0x0
-    u32 cr;        // at 0x80
-    u32 lr;        // at 0x84
-    u32 ctr;       // at 0x88
-    u32 xer;       // at 0x8C
-    f64 fprs[32];  // at 0x90
-    u32 fpscr_pad; // at 0x190
-    u32 fpscr;     // at 0x194
-    u32 srr0;      // at 0x198
-    u32 srr1;      // at 0x19C
-    u16 mode;      // at 0x1A0
-    u16 state;     // at 0x1A2
-    u32 gqrs[8];   // at 0x1A4
-    u32 psf_pad;   // at 0x1C4
-    f64 psfs[32];  // at 0x1C8
-} OSContext;
+u32 OSGetSoundMode(void);
+void OSSetSoundMode(u32 mode);
 
-typedef void (*OSInterruptHandler)(s16 intr, OSContext* ctx);
+u32 OSGetConsoleType(void);
 
-void ICInvalidateRange(const void* buf, u32 len);
+void OSRegisterVersion(const char*);
 
-s32 OSDisableScheduler(void);
-s32 OSEnableScheduler(void);
+void OSReport(const char*, ...);
+void OSVReport(const char*, va_list);
+void OSPanic(const char*, int, const char*, ...);
 
-void OSResetSystem(u32 arg0, u32 arg1, u32 arg2);
+void* OSGetArenaHi(void);
+void* OSGetArenaLo(void);
+
+void OSSetArenaHi(void*);
+void OSSetArenaLo(void*);
+
+void OSSetMEM2ArenaHi(void*);
+
+void* OSGetMEM1ArenaLo(void);
+void* OSGetMEM1ArenaHi(void);
+void* OSGetMEM2ArenaLo(void);
+void* OSGetMEM2ArenaHi(void);
+
+void* OSAllocFromMEM1ArenaLo(u32, u32);
+
+// From our original os.h (OSArena.c)
+void OSSetMEM1ArenaHi(void* addr);
+void OSSetMEM1ArenaLo(void* addr);
+void OSSetMEM2ArenaLo(void* addr);
+void* OSAllocFromMEM1ArenaHi(u32 size, u32 align);
+void* OSAllocFromMEM2ArenaHi(u32 size, u32 align);
+
+u32 OSGetPhysicalMem2Size(void);
+
+void OSProtectRange(u32, void*, u32, u32);
+
+void* OSAllocFromHeap(int, u32);
+
+typedef struct OSIOSRev {
+    u8 reserved;
+    u8 major;
+    u8 minor;
+    u8 micro;
+    u8 month;
+    u8 date;
+    u16 year;
+} OSIOSRev;
+
+const u8 OSGetAppType(void);
+
+char* OSUTF8to32(const char*, u32*);
+u16* OSUTF16to32(const u16*, u32*);
+u8 OSUTF32toANSI(u32);
+u16 OSUTF32toSJIS(u32);
+
+extern void __RAS_OSDisableInterrupts_begin(void);
+extern void __RAS_OSDisableInterrupts_end(void);
+
+extern s64 __OSStartTime;
+
+const char* OSGetAppGamename(void);
+
+void* OSAllocFromArenaLo(u32 size, u32 align);
+void* OSAllocFromArenaHi(u32 size, u32 align);
+
+#define OSAssert_Line(line_, exp_)
+
+#ifndef ASSERT
+#define ASSERT(exp) ((void)0)
+#endif
+
+#ifndef ASSERTMSG
+#define ASSERTMSG(exp, msg) ((void)0)
+#endif
+
+inline s16 __OSf32tos16(__REGISTER f32 inF) {
+    __REGISTER s16 out;
+    u32 tmp;
+    __REGISTER u32* tmpPtr = &tmp;
+    // clang-format off
+#ifdef __MWERKS__
+    asm {
+        psq_st inF, 0(tmpPtr), 0x1, 5
+        lha out, 0(tmpPtr)
+    }
+#endif
+    // clang-format on
+
+    return out;
+}
+
+inline void OSf32tos16(f32* f, s16* out) {
+    *out = __OSf32tos16(*f);
+}
+
+inline u8 __OSf32tou8(__REGISTER f32 inF) {
+    __REGISTER u8 out;
+    u32 tmp;
+    __REGISTER u32* tmpPtr = &tmp;
+    // clang-format off
+#ifdef __MWERKS__
+    asm {
+        psq_st inF, 0(tmpPtr), 0x1, 2
+        lbz out, 0(tmpPtr)
+    }
+#endif
+    // clang-format on
+
+    return out;
+}
+
+#ifdef OS_F32_TO_U8_DEFER_INLINE
+static void OSf32tou8(f32* f, u8* out);
+#else
+inline void OSf32tou8(f32* f, u8* out) {
+    *out = __OSf32tou8(*f);
+}
+#endif
+
+#include <revolution/base/PPCArch.h>
+#include <revolution/gx.h>
+#include <revolution/os/OSAlarm.h>
+#include <revolution/os/OSAlloc.h>
+#include <revolution/os/OSCache.h>
+#include <revolution/os/OSContext.h>
+#include <revolution/os/OSException.h>
+#include <revolution/os/OSExecParams.h>
+#include <revolution/os/OSFastCast.h>
+#include <revolution/os/OSFont.h>
+#include <revolution/os/OSInterrupt.h>
+#include <revolution/os/OSMessage.h>
+#include <revolution/os/OSMutex.h>
+#include <revolution/os/OSPlayRecord.h>
+#include <revolution/os/OSPlayTime.h>
+#include <revolution/os/OSReset.h>
+#include <revolution/os/OSResetSW.h>
+#include <revolution/os/OSRtc.h>
+#include <revolution/os/OSStateFlags.h>
+#include <revolution/os/OSStateTM.h>
+#include <revolution/os/OSThread.h>
+#include <revolution/os/OSTime.h>
+
+/* PRIVATE OS FUNCTIONS */
+void __OSInitSystemCall(void);
+void __OSUnhandledException(__OSException, OSContext*, u32, u32);
+void __OSReschedule(void);
+void __OSInitAlarm(void);
+void __OSModuleInit(void);
+void __OSInterruptInit(void);
+void __OSContextInit(void);
+void __OSInitAudioSystem(void);
+void __OSInitMemoryProtection(void);
+void __OSGetIOSRev(OSIOSRev*);
+int __OSInitSTM(void);
+void __OSInitNet(void);
+void __OSPromoteThread(OSThread*, OSPriority);
+
+void OSFatal(GXColor, GXColor, const char*);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif
+#endif  // OS_H

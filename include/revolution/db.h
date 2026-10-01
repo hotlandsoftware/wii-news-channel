@@ -1,13 +1,27 @@
-#ifndef REVOLUTION_DB_H
-#define REVOLUTION_DB_H
-
-#include <revolution/os.h>
+#ifndef DB_H
+#define DB_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-// NdevExi2AD debugger driver
+#include <types.h>
+#include <macros.h>
+#include <revolution/os.h>
+
+typedef struct DBInterface {
+    u32 _0;
+    u32 mask;
+    void (*exceptionDestination)(void);
+    void* exceptionReturn;
+} DBInterface;
+
+void DBInit(void);
+void DBPrintf(char *, ...);
+
+BOOL __DBIsExceptionMarked(__OSException ex);
+
+// NdevExi2AD debugger driver (from our original db.h; used by MetroTRK)
 void DBInitComm(u8** flagOut, OSInterruptHandler handler);
 void DBInitInterrupts(void);
 u32 DBQueryData(void);
@@ -20,4 +34,4 @@ void DBClose(void);
 }
 #endif
 
-#endif
+#endif // DB_H

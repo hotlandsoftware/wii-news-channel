@@ -503,6 +503,33 @@ config.libs = [
             Object(Matching, "revolution/OS/OSArena.c"),
         ],
     },
+    {
+        "lib": "db",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_rvl,
+        "progress_category": "sdk",
+        "objects": [
+            Object(Matching, "revolution/DB/db.c"),
+        ],
+    },
+    {
+        "lib": "ipc",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_rvl,
+        "progress_category": "sdk",
+        "objects": [
+            Object(Matching, "revolution/IPC/ipcMain.c"),
+        ],
+    },
+    {
+        "lib": "pad",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_rvl,
+        "progress_category": "sdk",
+        "objects": [
+            Object(Matching, "revolution/PAD/Pad.c"),
+        ],
+    },
 ]
 
 

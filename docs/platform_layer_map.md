@@ -180,7 +180,7 @@ The NW4R revision here has out-of-line `CharWriter`/`TextWriterBase` accessors, 
 
 **OS** (ogws/smg order): `OS.c 0x800FBB58`, `OSAlarm 0x800FCF0C` (ogws 100%), `OSAlloc 0x800FD6F0` (100%), `OSArena 0x800FD9F8` (**done**), `OSAudioSystem 0x800FDACC` (100%), `OSCache 0x800FDF80`, `OSContext 0x800FE5B0` (100%), `OSError 0x800FEE38`, `OSExec 0x800FF568`, `OSFatal 0x80101738` (100%), `OSFont 0x8010235C`, `OSInterrupt 0x80103024` (100%), `OSLink 0x801037A8`, `OSMessage 0x801037C0`, `OSMemory 0x801039C4`, `OSMutex 0x801041D8` (100%), `OSReboot 0x801044DC`, `OSReset 0x8010455C`, `OSRtc 0x80104DC0`, `OSSync 0x8010584C`, `OSThread 0x801058CC` (smg 93%), `OSTime 0x80106E84`, `OSUtf 0x80107538`, `OSIpc 0x80107770`, `OSStateTM 0x80107798`, `OSPlayRecord 0x80107F28`, `OSStateFlags 0x80108620`, `OSNet 0x8010882C`, `OSNandbootInfo 0x801088E0`, `OSPlayTime 0x80108AE8`, `__ppc_eabi_init 0x80109380`.
 
-**EXI** `EXIBios 0x80109434`, `EXIUart 0x8010ACC8`, `EXICommon 0x8010AFFC`. **SI** `SIBios 0x8010B188`, `SISamplingRate 0x8010C190`. **DB** `0x8010C270`. **VI** `vi 0x8010C358`, `i2c 0x8010ECFC`, `vi3in1 0x8010F718`. **MTX** `mtx 0x80110DBC`, `mtxvec 0x80111A24`, `mtx44 0x80111A78`, `vec 0x80111C98`, `quat 0x80111EA0`.
+**EXI** `EXIBios 0x80109434`, `EXIUart 0x8010ACC8`, `EXICommon 0x8010AFFC`. **SI** `SIBios 0x8010B188`, `SISamplingRate 0x8010C190`. **DB** `0x8010C270` (**done**, Petari). **VI** `vi 0x8010C358`, `i2c 0x8010ECFC`, `vi3in1 0x8010F718`. **MTX** `mtx 0x80110DBC`, `mtxvec 0x80111A24`, `mtx44 0x80111A78`, `vec 0x80111C98`, `quat 0x80111EA0`.
 
 **GX** `GXInit 0x80112208`, `GXFifo 0x801133D4`, `GXAttr 0x80113D90` (100%), `GXMisc 0x80114FB4`, `GXGeometry 0x80115720`, `GXFrameBuf 0x80115CE0`, `GXLight 0x80116720`, `GXTexture 0x80116E30`, `GXBump 0x80117CB0`, `GXTev 0x801180FC`, `GXPixel 0x8011877C`, `GXDraw 0x80118EE0`, `GXDisplayList 0x8011A324`, `GXTransform 0x8011A398`, `GXPerf 0x8011A8E4`.
 
@@ -190,7 +190,7 @@ The NW4R revision here has out-of-line `CharWriter`/`TextWriterBase` accessors, 
 
 **MEM** `mem_heapCommon 0x80128994`, `mem_expHeap 0x80128E00`, `mem_frameHeap 0x801296C0`, `mem_allocator 0x80129C0C`, `mem_list ≈0x80129C90`. **DSP** `dsp 0x8012AA20`, `dsp_debug 0x8012AC5C`, `dsp_task 0x8012ACAC`.
 
-**NAND** `nand 0x8012B540`, `NANDOpenClose 0x8012C664`, `NANDCore ≈0x8012D0D8`, `NANDLogging ≈0x8012DEB8`. **SC** `scsystem 0x8012E488`, `scapi 0x8012FF5C`, `scapi_prdinfo 0x80130580`. **ESP** `0x80130ACC`. **IPC** `ipcMain 0x801314E4`, `ipcclt 0x801315B0`, `memory 0x80132F20`, `ipcProfile 0x80133444`. **FS** `0x80133608`. **PAD** `0x80134BDC`.
+**NAND** `nand 0x8012B540`, `NANDOpenClose 0x8012C664`, `NANDCore ≈0x8012D0D8`, `NANDLogging ≈0x8012DEB8`. **SC** `scsystem 0x8012E488`, `scapi 0x8012FF5C`, `scapi_prdinfo 0x80130580`. **ESP** `0x80130ACC`. **IPC** `ipcMain 0x801314E4` (**done**, Petari), `ipcclt 0x801315B0`, `memory 0x80132F20`, `ipcProfile 0x80133444`. **FS** `0x80133608`. **PAD** `0x80134BDC` (**done**, Petari).
 
 **WPAD** `WPAD 0x80134C38`, `WPADHIDParser 0x8013C398`, `WPADEncrypt 0x80141838`, `debug_msg 0x801428E0`. **KPAD** `0x80143634`. **EUART** `0x8014590C`. **USB** `0x80145C7C`. **WUD** `WUD 0x80146DA8`, `WUDHidHost 0x8014B6A4`, `debug_msg 0x8014BCA0`.
 
@@ -236,11 +236,84 @@ MetroTRK is handled by another agent.
 ## Headers
 
 Game code uses lowercase `include/revolution/*.h` (`os.h`, `gx.h` …) and `include/nw4r/<lib>/*.h`.
-Petari's and TP's SDK headers are also lowercase (`revolution/os.h`, `revolution/gx.h` plus subdirectories).
-ogws's are uppercase (`revolution/OS.h`); on case-insensitive file systems these would clash with ours, so don't copy ogws's SDK header tree.
-Recommended: import Petari's `libs/RVL_SDK/include/revolution` tree (lowercase) once, merging our existing declarations into it.
-Do this as task 0 before the SDK tasks, so parallel agents do not edit the same headers.
 For NW4R, each library task owns `include/nw4r/<lib>/`. Other agents may only add declarations to it, never change existing ones (game code depends on the current layouts).
+The RVL SDK headers are described in the next section.
+
+## SDK headers
+
+Task 0 imported Petari's SDK header tree (`libs/RVL_SDK/include/revolution`, lowercase) and merged our existing declarations into it.
+All of `include/revolution/*.h` compiles on its own, in C and C++, with GC/3.0a5.2; the game, MSL and MetroTRK objects were unchanged by the import (identical code and data; only local label numbers moved).
+
+### Layout
+
+| Path | Contents | Source |
+| --- | --- | --- |
+| `include/revolution/<lib>.h` | Public header per library: `ai`, `arc`, `ax`, `axfx`, `base`, `bte`, `card`, `cnt`, `db`, `dsp`, `dvd`, `esp`, `euart`, `exi`, `fs`, `gd`, `gx`, `hbm`, `ipc`, `kpad`, `mem`, `mtx`, `nand`, `ncd`, `net`, `nwc24`, `os`, `pad`, `rso`, `sc`, `si`, `so`, `thp`, `tpl`, `usb`, `vf`, `vi`, `wenc`, `wpad`, `wud` | Petari, merged with ours |
+| `include/revolution/<lib>/*.h` | Per-library subheaders (`os/OSThread.h`, `gx/GXEnum.h`, `mem/expHeap.h`, `nwc24/internal/*`, `vf/pf_*.h` …) | Petari |
+| `include/revolution/ax/*.h` | AX (`AXPB.h`, `AXVPB.h`, `AXCL.h` …) | **ogws** (Petari's `ax.h` only had the PB structs) |
+| `include/revolution/mem/frameHeap.h`, `cnt.h` | Frame heap, CNT | ogws |
+| `include/revolution/so.h`, `ncd.h` | SO sockets, NCD constants | mkw |
+| `include/revolution/private/*.h` | Hardware registers: `flipper.h` (`__VIRegs`, `__PIRegs`, `__DSPRegs`, `__AIRegs`, `__EXIRegs`, `__MEMRegs`, `__DIRegs`, `__SIRegs`, `__ACRRegs`, `__IPCRegs`), GP register field macros (`bp_reg.h`, `cp_reg.h`, `xf_mem.h`, `tev_reg.h` …), `OSLoMem.h`, IOS types (`iostypes.h`, `iosrestypes.h`) | Petari `include/private` |
+| `include/revolution/gx/GXRegs.h`, `gx/shortcut_*.h` | GX register shadow helpers | Petari |
+| `include/revolution.h` | Umbrella header (Petari's list minus `gd.h`) | Petari |
+| `include/types.h`, `include/macros.h` | Base types and attribute macros (`ATTRIBUTE_ALIGN`, `ATTRIBUTE_PACKED`, `ATTRIBUTE_WEAK`, `ALWAYS_INLINE`, `NO_INLINE`, `DECOMP_DONT_INLINE`, `AT_ADDRESS`/`DECL_ADDRESS`, `__REGISTER`, `IS_ALIGNED`, `ALIGN_NEXT`, `ROUND_UP`, `ARRAY_SIZE` (unsigned), `ARRAY_SIZEU`, `DECL_SECTION`, `DECL_WEAK` …), plus `UNKWORD`/`UNKTYPE` and `vs32`/`vf32`-style volatile types | ours, extended |
+| `include/stddef.h`, `stdbool.h`, `cstring`, `cstdio`, `cstdlib`, `cstddef`, `cstdarg`, `cmath` | C library shims so Petari sources compile unchanged (`<cstring>` just includes `<string.h>`; declarations stay global) | new |
+
+There is deliberately **no `include/revolution/types.h`**.
+MSL is built with `-gccinc`, which searches the including header's directory first, so `<types.h>` from inside `include/revolution/` would find it instead of `include/types.h`.
+Every imported header includes `<types.h>` and `<macros.h>` instead.
+
+### Porting a library: include rewrites
+
+- Petari: `"revolution/os.h"` works as is (use `<revolution/os.h>` in new code). `"revolution/types.h"` → `<types.h>` + `<macros.h>`. `"private/flipper.h"` → `<revolution/private/flipper.h>`. `<mem.h>` (MSL) → `<string.h>`.
+- ogws: uppercase public headers map to lowercase ones: `<revolution/OS.h>` → `<revolution/os.h>`, `<revolution/AX/AXPB.h>` → `<revolution/ax/AXPB.h>`, `<revolution/GX/GXTypes.h>` → `<revolution/gx.h>` (Petari split GX differently). ogws GX/OS/… internal headers (`GXHardware*.h`, `GXInternal.h`, `OSHardware.h`) are **not** imported; the owning task adds what it needs under its own subdirectory (lowercase), translated to the existing names where they overlap.
+- BTE: Petari keeps the Broadcom stack's private headers (`bt_types.h`, `gki.h`, `btm_int.h` …) next to the sources; copy them into `src/revolution/BTE/` (or a BTE-owned include directory), not into the shared tree.
+- Sources live in `src/revolution/<LIB>/<file>.c` (uppercase library directory, as `OS/OSArena.c`), one `configure.py` lib per library, built with `cflags_rvl` and GC/3.0a5.2.
+
+### Conflicts resolved in favour of our code
+
+These are marked `// CONFLICT` in the headers.
+
+- `OSContext` (`os/OSContext.h`): Petari's `gpr`/`fpr`/`gqr`/`psf` and ogws/MetroTRK's `gprs`/`fprs`/`gqrs`/`psfs` are both provided through anonymous unions.
+- `OSInterruptHandler` is a typedef of Petari's `__OSInterruptHandler` (`os/OSInterrupt.h`); MetroTRK's `-D__OSInterruptHandler=OSInterruptHandler` still works.
+- `Vec`, `Vec2` (`mtx.h`): tagged structs (`struct Vec`, `struct Vec2`) as `nw4r::math::VEC2/VEC3` derive from them; `Vec2` moved from Petari's `kpad.h` to `mtx.h`. `MTXIdentity`/`MTXOrtho`/… release-build macros added.
+- `KPADStatus`/`KPADEXStatus` (`kpad.h`): our layout with named `KPADEXStatusFS`/`KPADEXStatusCL`. Petari's `KPADInsideStatus` is from a June 2008 KPAD and is unverified for ours (June 2007).
+- `SCLanguage`/`SCProductArea` (`sc.h`): our enums replace Petari's unsigned `#define SC_LANG_* 0u` macros. A Petari SC file that compares against them may need an explicit `(u32)` cast.
+- `EXICallback` (`exi.h`): takes `EXIChannel` (our enum) instead of `s32`; same ABI. Petari's ODEMU helpers in `exi.h` became `static inline`.
+- `GXVert.h`: `GXWGFifo` is our pointer-cast macro and the vertex functions (`GXPosition3f32` …) are `static inline` (Petari: an address variable and plain `static` functions, which would break game code built with `-inline noauto`).
+- `hbm.h`: our `HBMDataInfo`/`HBMControllerData` (tagged) plus Petari's `HBMSE_*`/`HBMSEV_*`/`HBMMSG_*` enums; `hbm/HBMBase.h` just includes it.
+- `TPLPalette` and every other anonymous `typedef struct { … } X;` in the tree now has the tag `X`, so C++ code can forward-declare `struct X;` (mangling unchanged).
+- `db.h` keeps our NdevExi2AD declarations (`DBInitComm` …), `nand.h` our `NAND_PERM_OWNER_READ/WRITE`, `os.h` our MEM1/MEM2 arena functions, `gx.h` `GX_MAX_Z24` and the `mtx.h` include.
+- `OSResetSystem(int, u32, BOOL)` and `ICInvalidateRange(void*, u32)` use Petari's prototypes (ours differed only in types; only C code calls them).
+- `macros.h`: `ATTRIBUTE_WEAK`, `ALWAYS_INLINE`, `NO_INLINE` and `DECOMP_DONT_INLINE` expand to nothing for GC/2.7 / MetroTRK, which rejects those attributes.
+
+Known leftovers in the Petari tree (not included by anything, owned by the respective task): `gd/*.h` clash with `private/*_reg.h` macros (GD is not in our DOL); `nwc24/NWC24{DateParser,Time,FriendList,MBoxCtrl,SecretFList,StdApi,Structs}.h` duplicate `nwc24/internal/*` (Petari's NWC24 sources use `nwc24.h` + `nwc24/NWC24Internal.h`); `dvd.h` uses one-byte `bool` (`stdbool.h`) for `DVDLow*`, as Petari; check against the DOL.
+
+### Rules for the parallel library tasks
+
+1. **Each task owns the headers of its libraries** (table below). Within its own headers a task may fix anything that came from Petari/ogws, but must keep every declaration the game or other libraries already use with the same signature, layout and enum values.
+2. **Shared headers are additive-only**: `types.h`, `macros.h`, `revolution.h`, the C library headers/shims, `private/flipper.h`, `private/io*.h`, `os.h` core types (`OSContext`, `OSThread`, `OSMutex`, `OSAlarm`, `OSTime`), `gx.h` public enums/structs, `mtx.h`, `mem.h` (`MEMAllocator`, `MEMHeapHandle`), `kpad.h`/`wpad.h` status structs, `hbm.h`, `sc.h` enums, `nand.h` (`NANDFileInfo`) and `tpl.h`. Add missing declarations; never change or remove one. If a reference disagrees with what the DOL proves, keep ours and add a `// CONFLICT (ref): …` comment.
+3. Before committing a header change, run `python3 configure.py && ninja` and check that every unit's `rep.py` percentage is unchanged and `build/HAGE/main.dol: OK`.
+4. Keep headers self-contained (each must compile alone in C and C++), give new structs a tag (`typedef struct Foo { … } Foo;`), wrap declarations in `extern "C"`, and use `static inline` (never plain `static`) for functions defined in headers.
+
+| Task | Owns (under `include/revolution/`) |
+| --- | --- |
+| 1, 2 VF | `vf.h`, `vf/` |
+| 3 RSO/CNT/ARC/SO | `rso.h`, `cnt.h`, `arc.h`, `so.h`, `ncd.h` |
+| 4 NWC24 | `nwc24.h`, `nwc24/`, `net.h` |
+| 6, 7 HBM | `hbm.h` (additive-only: game code uses it), `hbm/` |
+| 16 BASE/OS | `base.h`, `base/`, `os.h`, `os/`, `private/OSLoMem.h` |
+| 17 EXI/SI/DB/VI/MTX | `exi.h`, `si.h`, `db.h`, `vi.h`, `vi/`, `mtx.h` (additive-only) |
+| 18 GX | `gx.h`, `gx/`, `gd.h`, `gd/`, `private/*_reg.h`, `private/xf_mem.h`, `private/ra_gen.h` |
+| 19 DVD/AI | `dvd.h`, `ai.h` |
+| 20 AX/AXFX/MEM/DSP | `ax.h`, `ax/`, `axfx.h`, `mem.h`, `mem/`, `dsp.h`, `dsp/` |
+| 21 NAND/SC/ESP/IPC/FS/PAD | `nand.h`, `nand/`, `sc.h`, `esp.h`, `ipc.h`, `ipc/`, `fs.h`, `fs/`, `pad.h`, `private/ipc.h`, `private/ios*.h` |
+| 22 WPAD | `wpad.h` |
+| 23 KPAD/EUART/USB/WUD/TPL/NdevExi2AD | `kpad.h`, `euart.h`, `usb.h`, `wud.h`, `wud/`, `tpl.h` |
+| 24–26 BTE | `bte.h`, `bte/` (and BTE-private headers under `src/revolution/BTE/`) |
+| — | `card.h`, `thp.h`, `wenc.h`, `aralt.h`: not in our DOL |
+
+Smoke test: `DB/db.c`, `IPC/ipcMain.c` and `PAD/Pad.c` were copied from Petari with only include changes and match 100% (see the RVL SDK section above).
 
 ## Tools
 
@@ -255,7 +328,7 @@ Difficulty: E = mostly drop-in, M = drop-in plus version fixes, H = little or no
 
 | # | Task | Range | Size | Reference | Diff. |
 | --- | --- | --- | --- | --- | --- |
-| 0 | Import SDK headers (Petari tree, lowercase), keep game matching | — | — | smg | M |
+| 0 | Import SDK headers (Petari tree, lowercase), keep game matching (**done**, see "SDK headers") | — | — | smg | M |
 | 1 | VF part 1: `pf_*`, `pdm_*` | `0x80053274–0x8006C5B4` | 103 KB | ogws (42/49 files exact) | E |
 | 2 | VF part 2: `d_vf*`, `d_hash/time/common`, `nand_drv`, `sd_drv` | `0x8006C5B4–0x800750DC` | 35 KB | ogws, smg | E |
 | 3 | RSO + CNT + ARC + SO/NCD | `0x80051D4C–0x80053274`, `0x8008A0A4–0x8008AA44`, `0x800750DC–0x800767C8` | 13 KB | smg, ogws/fc, mkw | E–M |

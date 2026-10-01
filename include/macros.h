@@ -92,4 +92,97 @@
 // Give a symbol weak linkage
 #define DECL_WEAK __declspec(weak)
 
+/******************************************************************************
+ *
+ * RVL SDK / Petari compatibility
+ *
+ * Everything below is guarded with #ifndef because MetroTRK (trk.h) and the
+ * command line (-D__REGISTER=register) may define some of these already.
+ *
+ ******************************************************************************/
+
+#ifndef ATTRIBUTE_ALIGN
+#define ATTRIBUTE_ALIGN(num) __attribute__((aligned(num)))
+#endif
+
+#ifndef ATTRIBUTE_PACKED
+#define ATTRIBUTE_PACKED __attribute__((packed))
+#endif
+
+// (GC/2.7, used for MetroTRK, rejects __attribute__((weak)))
+#ifndef ATTRIBUTE_WEAK
+#if defined(__MWERKS__) && __MWERKS__ >= 0x3000 && !defined(METRO_TRK)
+#define ATTRIBUTE_WEAK __attribute__((weak))
+#else
+#define ATTRIBUTE_WEAK
+#endif
+#endif
+
+#ifndef ATTRIBUTE_UNUSED
+#define ATTRIBUTE_UNUSED __attribute__((unused))
+#endif
+
+// Function inlining control (not supported by MWCC < 3.0, e.g. GC/2.7)
+#ifndef ALWAYS_INLINE
+#if defined(__MWERKS__) && __MWERKS__ >= 0x3000 && !defined(METRO_TRK)
+#define ALWAYS_INLINE __attribute__((always_inline))
+#define NO_INLINE __attribute__((noinline))
+#else
+#define ALWAYS_INLINE
+#define NO_INLINE
+#endif
+#endif
+
+// ogws spelling of NO_INLINE (used by headers/sources ported from ogws)
+#ifndef DECOMP_DONT_INLINE
+#if defined(__MWERKS__) && __MWERKS__ >= 0x3000 && !defined(METRO_TRK)
+#define DECOMP_DONT_INLINE __attribute__((never_inline))
+#else
+#define DECOMP_DONT_INLINE
+#endif
+#endif
+
+// Place a variable at a fixed address: `vu32 REG AT_ADDRESS(0xCC000000);`
+#ifndef AT_ADDRESS
+#ifdef __MWERKS__
+#define AT_ADDRESS(x) : x
+#else
+#define AT_ADDRESS(x)
+#endif
+#endif
+
+// ogws spelling
+#ifndef DECL_ADDRESS
+#define DECL_ADDRESS(x) AT_ADDRESS(x)
+#endif
+
+#ifndef __REGISTER
+#ifdef __MWERKS__
+#define __REGISTER register
+#else
+#define __REGISTER
+#endif
+#endif
+
+// Unsigned element count (Petari's ARRAY_SIZE is (s32); ours above is unsigned)
+#ifndef ARRAY_SIZEU
+#define ARRAY_SIZEU(x) (sizeof(x) / sizeof((x)[0]))
+#endif
+
+#ifndef ALIGN_PREV
+#define ALIGN_PREV(X, N) ((X) & ~((N) - 1))
+#define ALIGN_NEXT(X, N) ALIGN_PREV(((X) + (N) - 1), N)
+#endif
+
+#ifndef IS_ALIGNED
+#define IS_ALIGNED(x, align) (((unsigned long)(x) & ((align) - 1)) == 0)
+#define IS_NOT_ALIGNED(X, N) (((X) & ((N) - 1)) != 0)
+#endif
+
+// Comparing a reference's address to NULL (needed to match some code)
+#ifndef IS_REF_NULL
+#define IS_REF_NULL(r) (&(r) == NULL)
+#define IS_REF_NONNULL(r) (&(r) != NULL)
+#endif
+
 #endif
