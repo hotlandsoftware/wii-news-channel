@@ -10,9 +10,11 @@ extern math::MTX34 gWorkMtx;
 void Mtx_RotateDeg(math::MTX34* mtx, f32 x, f32 y, f32 z);
 void Mtx_Translate(math::MTX34* mtx, f32 x, f32 y, f32 z);
 
+// Referenced by other files; defined here.
 extern const f32 gModelDepth = 3.0f;
 
-Model::Model(void* brres) : mPos(0.0f, 0.0f, 0.0f), mRotate(0.0f, 0.0f, 0.0f), mScale(21.0f, 21.0f, 21.0f) {
+Model::Model(void* brres)
+    : mPos(0.0f, 0.0f, 0.0f), mRotate(0.0f, 0.0f, 0.0f), mScale(21.0f, 21.0f, 21.0f) {
     g3d::ResFile file(brres);
     file.Init();
     file.Bind(file);
@@ -32,10 +34,13 @@ void Model::Calc() {
     mScnMdl->SetMtx(g3d::ScnObj::MTX_LOCAL, &mMtx);
 }
 
-inline void RotXZ(math::MTX34* m, f32 x, f32 z) { Mtx_RotateDeg(m, x, 0.0f, z); }
+inline void Mtx_RotateDegXZ(math::MTX34* mtx, f32 x, f32 z) {
+    Mtx_RotateDeg(mtx, x, 0.0f, z);
+}
+
 math::MTX34 Model::CalcMtx(const math::VEC3& rotate) {
-    math::MTX34RotXYZFIdx(&gWorkMtx, 0.0f, rotate.y * (256.0f / 360.0f), 0.0f);
-    RotXZ(&gWorkMtx, rotate.x, rotate.z);
+    math::MTX34RotXYZFIdx(&gWorkMtx, 0.0f, (256.0f / 360.0f) * rotate.y, 0.0f);
+    Mtx_RotateDegXZ(&gWorkMtx, rotate.x, rotate.z);
     Mtx_Translate(&gWorkMtx, mPos.x, mPos.y, mPos.z);
     return gWorkMtx;
 }

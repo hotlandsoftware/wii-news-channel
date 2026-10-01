@@ -12,9 +12,6 @@ using namespace nw4r;
 
 extern math::VEC2 gCursorHorizon[4]; // KPADStatus::horizon of each channel
 
-void Draw2D_CalcMtx(const math::VEC3& scale, const math::VEC2& dir, const math::VEC3& pos,
-                    Mtx out);
-
 inline void SetEffectPos(ef::Effect* effect, f32 x, f32 y) {
     math::VEC3 pos(x, y, 0.0f);
     ef::Emitter* emitter = effect->GetRootEmitter();
@@ -118,14 +115,18 @@ void PointerEffect::Calc() {
                 sShadowNames[sEffectType[mState[i]]], 0, 0);
             mShadowEffect[i] = effect;
             if (effect != NULL) {
-                SetEffectPos(effect, dx + (3.0f + gCursorX[i][0]), 456.0f - gCursorY[i][0] - 3.0f - dy);
+                f32 y = 456.0f - gCursorY[i][0] - 3.0f - dy;
+                f32 x = dx + (3.0f + gCursorX[i][0]);
+                SetEffectPos(effect, x, y);
             }
 
             if (mState[i] == STATE_OPEN_SPIN) {
                 effect = ef::EffectSystem::GetInstance()->CreateEffect(sNames[2][i], 0, 0);
                 mOpenEffect[i] = effect;
                 if (effect != NULL) {
-                    SetEffectPos(effect, gCursorX[i][0] - dx, dy + (456.0f - gCursorY[i][0]));
+                    f32 y = gCursorY[i][0];
+                    f32 x = gCursorX[i][0];
+                    SetEffectPos(effect, x - dx, dy + (456.0f - y));
                 }
             }
 
@@ -133,7 +134,9 @@ void PointerEffect::Calc() {
                 sNames[sEffectType[mState[i]]][i], 0, 0);
             mEffect[i] = effect;
             if (effect != NULL) {
-                SetEffectPos(effect, dx + gCursorX[i][0], 456.0f - gCursorY[i][0] - dy);
+                f32 y = gCursorY[i][0];
+                f32 x = gCursorX[i][0];
+                SetEffectPos(effect, dx + x, 456.0f - y - dy);
             }
         }
         mState[i] = 0;
@@ -206,7 +209,9 @@ void PointerEffect::SetState(s32 chan, s32 state) {
         GXSetTevColor(GX_TEVREG0, shadowColor);
         Draw2D_Tex(gCursorTpl, 2, &offset, 1.0f, 1.0f);
 
-        Draw2D_CalcMtx(scale, dir, math::VEC3(gCursorX[chan][0], gCursorY[chan][0], 0.0f), mtx);
+        y = gCursorY[chan][0];
+        x = gCursorX[chan][0];
+        Draw2D_CalcMtx(scale, dir, math::VEC3(x, y, 0.0f), mtx);
         GXLoadPosMtxImm(mtx, GX_PNMTX1);
         GXColor color = {255, 255, 255, 255};
         GXSetTevColor(GX_TEVREG0, color);

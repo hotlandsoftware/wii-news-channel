@@ -17,6 +17,10 @@ void Draw2D_TexPos(TPLPalette* tpl, u32 index, const nw4r::math::VEC3* pos, f32 
 
 void Draw2D_Tex(TPLPalette* tpl, u32 index, const Vec* pos, f32 scaleX, f32 scaleY);
 
+// Builds a scale * rotation (from a direction vector) * translation matrix.
+void Draw2D_CalcMtx(const nw4r::math::VEC3& scale, const nw4r::math::VEC2& dir,
+                    const nw4r::math::VEC3& pos, Mtx out);
+
 u32 TPL_GetWidth(TPLPalette* tpl, u32 index);
 u32 TPL_GetHeight(TPLPalette* tpl, u32 index);
 

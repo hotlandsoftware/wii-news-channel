@@ -38,13 +38,6 @@ public:
     ParticleManager* GetParticleManager(u16 idx);
     void SetMtxDirty();
 
-    void SetTranslate(const math::VEC3& translate) {
-        mTranslate.x = translate.x;
-        mTranslate.y = translate.y;
-        mTranslate.z = translate.z;
-        SetMtxDirty();
-    }
-
     u8 _00[0x8C];
     math::VEC3 mTranslate; // at 0x8C
     u8 _98[0xBC - 0x98];
