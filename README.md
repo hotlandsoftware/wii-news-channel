@@ -1,5 +1,25 @@
 # wii-news-channel
 
+## STATUS
+- **7.72%** decompiled (7.12% byte-matching)
+- **5.57%** fully linked (79 / 305 files)
+
+Percentages are of the DOL's code bytes (1,618,968), as reported by `ninja`.
+
+| Area | Decompiled | Matching | Linked |
+| --- | --- | --- | --- |
+| News Channel game code | 99.86% | 87.22% | 54.68% (13 / 20 files) |
+| Runtime / MSL | 100.00% | 99.80% | 98.76% (66 / 67 files) |
+
+These rows cover only the files that are split so far. Most game code (roughly `0x80012ABC`–`0x80051D4C`), the HOME Menu, NW4R and the RVL SDK haven't been started yet.
+
+**Fully linked game code:** TextButton, FrameTextButton, IconTextButton, SmallTextButton, Scroller, Ticker, HeadlineList, Locale, ErrorScreen, DrawUtil, SmoothValue, PaneButton, main.
+
+**Decompiled, not yet matching:** LayoutScreen (99.99%), Mascot (99.96%), Camera (99.93%), LanguageSelect (99.92%), NewsArticle (99.39%), PointerEffect (99.39%), Model (94.23%), MSL `arith.c` (99.90%).
+
+**Linked runtime and MSL:** C++ runtime and exception handling, `string`, `mem`, `printf`, `strtoul`, stdio/file I/O, `ansi_fp`, locale/ctype, the allocator and the fdlibm math library.
+
+## Description
 A matching decompilation of the Wii News Channel (USA, title `HAGE`, v7).
 
 The goal is C/C++ source that compiles to a byte-identical `main.dol`.
