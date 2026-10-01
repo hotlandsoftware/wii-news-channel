@@ -44,7 +44,7 @@ s32 VFipf2_format(s8 drv_char, const u8* param);
 s32 VFipf2_fsfirst(const s8* path, u32 attr, VFSysDTA* dta);
 s32 VFipf2_fsnext(VFSysDTA* dta);
 s32 VFipf2_mkdir(const s8* path);
-s32 VFipf2_sync(s8 drv_char, u32 mode);
+s32 VFipf2_unmount2(s8 drv_char, u32 mode);
 s32 VFipf2_errnum();
 
 static union VFSysDeviceTableEntry* l_vfsys_dev_table[26];
@@ -1179,12 +1179,12 @@ s32 VFSysFormatDrive(s32 i_handle_idx) {
     err = VFipf2_format(handle_p->drive.pf_drv.drive, NULL);
     if (err == 0) {
         VFSysSetSyncMode(i_handle_idx, 0);
-        if (dCommon_FlushFromHandleIdx(i_handle_idx, 1) != 0) {
+        if (dCommon_FlushFromHandleIdx(i_handle_idx, 1) == 0) {
             VFSysSetSyncMode(i_handle_idx, old_mode);
-            return 5;
+            return 0;
         }
         VFSysSetSyncMode(i_handle_idx, old_mode);
-        return 0;
+        return 5;
     }
     VFSysSetSyncMode(i_handle_idx, 0);
     dCommon_FlushFromHandleIdx(i_handle_idx, 1);
@@ -1208,15 +1208,15 @@ s32 VFSysSyncDrive(s32 i_handle_idx, u32 i_mode) {
     VFSys_set_device_err_info(handle_p, 0);
     old_mode = VFSysGetSyncMode(i_handle_idx);
     VFSysSetSyncMode(i_handle_idx, 1);
-    err = VFipf2_sync(handle_p->drive.pf_drv.drive, i_mode);
+    err = VFipf2_unmount2(handle_p->drive.pf_drv.drive, i_mode);
     if (err == 0) {
         VFSysSetSyncMode(i_handle_idx, 0);
-        if (dCommon_FlushFromHandleIdx(i_handle_idx, 1) != 0) {
+        if (dCommon_FlushFromHandleIdx(i_handle_idx, 1) == 0) {
             VFSysSetSyncMode(i_handle_idx, old_mode);
-            return 5;
+            return 0;
         }
         VFSysSetSyncMode(i_handle_idx, old_mode);
-        return 0;
+        return 5;
     }
     VFSysSetSyncMode(i_handle_idx, 0);
     dCommon_FlushFromHandleIdx(i_handle_idx, 1);

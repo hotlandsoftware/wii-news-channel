@@ -181,7 +181,7 @@ static int dHash_SetArgW(const u16* i_Name, u8 i_Arg) {
     s32 newHash = dHash_GetNewHashW(i_Name);
 
     if (newHash != -1) {
-        VFipf_memcpy(hashTable[newHash].Name, i_Name, 16);
+        VFipf_memcpy(hashTable[newHash].Name, (void*)i_Name, 16);
         hashTable[newHash].arg = i_Arg;
         return 1;
     }
