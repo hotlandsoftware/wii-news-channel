@@ -6,7 +6,6 @@
 // Not yet decompiled: allocators and the JPEG decoder in other files.
 extern MEMAllocator lbl_801EE1E0; // general allocator
 extern MEMAllocator lbl_801EE1F0; // picture allocator
-extern NewsData* lbl_80357558;    // the loaded news data
 extern s32 lbl_803575B0;
 
 extern "C" {
@@ -52,7 +51,7 @@ static const u32 sIcon[4][2] = {
     {78, 78},
 };
 
-NewsArticle::NewsArticle(NewsFile* file, NewsEntryRec* entry, u32 topic, u32 index, BOOL isCurrent) {
+NewsArticle::NewsArticle(NewsHeader* file, NewsEntryRec* entry, u32 topic, u32 index, BOOL isCurrent) {
     mPrevSame = NULL;
     mNextSame = NULL;
     mFile = file;
@@ -164,15 +163,15 @@ void NewsArticle::MarkRead() {
 
 BOOL NewsArticle::LoadPicture() {
     if (mText->pictureIdx != 0xFFFFFFFF && mText->pictureFileId != 0) {
-        mPicture = lbl_80357558->GetPicture(mText);
+        mPicture = gNewsData->GetPicture(mText);
         mPictureError = mPicture == NULL;
     }
     return !mPictureError;
 }
 
 NewsData::NewsData() {
-    mTopics = NULL;
-    mNumTopics = 0;
+    mCategories = NULL;
+    mNumCategories = 0;
     for (s32 i = 0; i < NEWS_FILE_MAX; i++) {
         mFiles[i] = NULL;
         mLogoCache[i] = NULL;
@@ -183,11 +182,11 @@ NewsData::NewsData() {
 
 NewsData::~NewsData() {}
 
-s32 NewsData::Init(NewsFile** files, s32 current) {
-    NewsTopic* topic;
-    NewsFile* file;
+s32 NewsData::Init(NewsHeader** files, s32 current) {
+    Category* topic;
+    NewsHeader* file;
     NewsArticle** slot;
-    NewsFile* src;
+    NewsHeader* src;
     u32 i;
     u32 j;
     s32 n;
@@ -215,12 +214,12 @@ s32 NewsData::Init(NewsFile** files, s32 current) {
         return 7;
     }
 
-    mCurrentFile = file;
-    mNumTopics = file->numTopics;
+    mHeader = file;
+    mNumCategories = file->numTopics;
 
     // Count the source logos of each file.
     topicRec = (NewsTopicRec*)file->At(file->topicsOfs);
-    for (i = 0; i < mNumTopics; i++, topicRec++) {
+    for (i = 0; i < mNumCategories; i++, topicRec++) {
         entry = (NewsEntryRec*)file->At(topicRec->entriesOfs);
         for (j = 0; j < topicRec->numEntries; j++, entry++) {
             src = GetFile(entry->fileId);
@@ -250,15 +249,15 @@ s32 NewsData::Init(NewsFile** files, s32 current) {
         }
     }
 
-    mTopics = new (&lbl_801EE1E0) NewsTopic[mNumTopics];
-    if (mTopics == NULL) {
+    mCategories = new (&lbl_801EE1E0) Category[mNumCategories];
+    if (mCategories == NULL) {
         gAllocFailed = true;
         return 3;
     }
 
     topicRec = (NewsTopicRec*)file->At(file->topicsOfs);
     mEmpty = true;
-    for (i = 0; i < mNumTopics; i++, topicRec++) {
+    for (i = 0; i < mNumCategories; i++, topicRec++) {
         if (topicRec->numEntries != 0) {
             mEmpty = false;
             break;
@@ -266,7 +265,7 @@ s32 NewsData::Init(NewsFile** files, s32 current) {
     }
 
     topicRec = (NewsTopicRec*)file->At(file->topicsOfs);
-    for (i = 0; i < mNumTopics; i++, topicRec++) {
+    for (i = 0; i < mNumCategories; i++, topicRec++) {
         if (topicRec->numEntries == 0) {
             continue;
         }
@@ -294,33 +293,33 @@ s32 NewsData::Init(NewsFile** files, s32 current) {
         }
     }
 
-    topic = mTopics;
+    topic = mCategories;
     topicRec = (NewsTopicRec*)file->At(file->topicsOfs);
-    for (i = 0; i < mNumTopics; i++, topic++, topicRec++) {
+    for (i = 0; i < mNumCategories; i++, topic++, topicRec++) {
         count = topicRec->numEntries;
-        topic->count = count;
+        topic->mNumArticles = count;
         if (count != 0) {
-            topic->articles = new (&lbl_801EE1E0) NewsArticle*[count];
-            if (topic->articles == NULL) {
+            topic->mArticles = new (&lbl_801EE1E0) NewsArticle*[count];
+            if (topic->mArticles == NULL) {
                 gAllocFailed = true;
                 return 4;
             }
         }
     }
 
-    topic = mTopics;
+    topic = mCategories;
     topicRec = (NewsTopicRec*)file->At(file->topicsOfs);
-    for (i = 0; i < mNumTopics; i++, topic++, topicRec++) {
-        topic->rec = topicRec;
-        topic->name = (wchar_t*)file->At(topicRec->nameOfs);
+    for (i = 0; i < mNumCategories; i++, topic++, topicRec++) {
+        topic->mRec = topicRec;
+        topic->mName = (wchar_t*)file->At(topicRec->nameOfs);
         if (topicRec->numEntries == 0) {
             continue;
         }
         entry = (NewsEntryRec*)file->At(topicRec->entriesOfs);
-        slot = topic->articles;
+        slot = topic->mArticles;
         for (j = 0; j < topicRec->numEntries; j++, slot++, entry++) {
             src = GetFile(entry->fileId);
-            isCurrent = src == mCurrentFile;
+            isCurrent = src == mHeader;
             *slot = new (&lbl_801EE1E0) NewsArticle(src, entry, i, j, isCurrent);
             if (*slot == NULL) {
                 gAllocFailed = true;
@@ -330,10 +329,10 @@ s32 NewsData::Init(NewsFile** files, s32 current) {
     }
 
     // Link articles that appear in several topics.
-    topic = mTopics;
-    for (i = 0; i < mNumTopics; i++, topic++) {
-        slot = topic->articles;
-        for (j = 0; j < topic->count; j++, slot++) {
+    topic = mCategories;
+    for (i = 0; i < mNumCategories; i++, topic++) {
+        slot = topic->mArticles;
+        for (j = 0; j < topic->mNumArticles; j++, slot++) {
             same = FindArticle((*slot)->mText, i, j + 1);
             if (same != NULL) {
                 (*slot)->mNextSame = *same;
@@ -347,10 +346,10 @@ s32 NewsData::Init(NewsFile** files, s32 current) {
     // Load the pictures, newest file first.
     for (n = 0; n < NEWS_FILE_MAX; n++) {
         src = mFiles[current];
-        topic = mTopics;
-        for (i = 0; i < mNumTopics; i++, topic++) {
-            slot = topic->articles;
-            for (j = 0; j < topic->rec->numEntries; j++, slot++) {
+        topic = mCategories;
+        for (i = 0; i < mNumCategories; i++, topic++) {
+            slot = topic->mArticles;
+            for (j = 0; j < topic->mRec->numEntries; j++, slot++) {
                 if ((*slot)->mFile == src) {
                     (*slot)->LoadPicture();
                 }
@@ -362,14 +361,14 @@ s32 NewsData::Init(NewsFile** files, s32 current) {
     }
 
     // Move the articles whose picture failed to the end.
-    topic = mTopics;
-    for (i = 0; i < mNumTopics; i++, topic++) {
-        slot = topic->articles;
-        for (j = 0; j < topic->rec->numEntries; j++, slot++) {
+    topic = mCategories;
+    for (i = 0; i < mNumCategories; i++, topic++) {
+        slot = topic->mArticles;
+        for (j = 0; j < topic->mRec->numEntries; j++, slot++) {
             article = *slot;
             if (article->mPictureError) {
                 next = slot + 1;
-                for (k = j + 1; k < topic->rec->numEntries; k++, next++) {
+                for (k = j + 1; k < topic->mRec->numEntries; k++, next++) {
                     if (!(*next)->mPictureError) {
                         *slot = *next;
                         *next = article;
@@ -381,14 +380,14 @@ s32 NewsData::Init(NewsFile** files, s32 current) {
     }
 
     // And drop them.
-    topic = mTopics;
-    for (i = 0; i < mNumTopics; i++, topic++) {
-        slot = topic->articles;
-        for (j = 0; j < topic->rec->numEntries; j++, slot++) {
+    topic = mCategories;
+    for (i = 0; i < mNumCategories; i++, topic++) {
+        slot = topic->mArticles;
+        for (j = 0; j < topic->mRec->numEntries; j++, slot++) {
             if ((*slot)->mPictureError) {
-                topic->count = j;
+                topic->mNumArticles = j;
                 if (j == 0) {
-                    topic->articles = NULL;
+                    topic->mArticles = NULL;
                 }
                 break;
             }
@@ -399,18 +398,18 @@ s32 NewsData::Init(NewsFile** files, s32 current) {
 }
 
 NewsArticle** NewsData::FindArticle(NewsTextBuffer* text, u32 topicIdx, u32 start) {
-    NewsTopic* topic = &mTopics[topicIdx];
-    NewsArticle** slot = &topic->articles[start];
-    for (u32 j = start; j < topic->count; j++, slot++) {
+    Category* topic = &mCategories[topicIdx];
+    NewsArticle** slot = &topic->mArticles[start];
+    for (u32 j = start; j < topic->mNumArticles; j++, slot++) {
         if ((*slot)->mText == text) {
             return slot;
         }
     }
 
     topic++;
-    for (u32 i = topicIdx + 1; i < mNumTopics; i++, topic++) {
-        slot = topic->articles;
-        for (u32 j = 0; j < topic->count; j++, slot++) {
+    for (u32 i = topicIdx + 1; i < mNumCategories; i++, topic++) {
+        slot = topic->mArticles;
+        for (u32 j = 0; j < topic->mNumArticles; j++, slot++) {
             if ((*slot)->mText == text) {
                 return slot;
             }
@@ -429,7 +428,7 @@ NewsPicture* NewsData::GetPicture(NewsTextBuffer* text) {
     PictureCache* cache = mPictureCache;
     JPEGDecoder decoder;
     for (s32 i = 0; i < NEWS_FILE_MAX; i++, cache++) {
-        NewsFile* file = mFiles[i];
+        NewsHeader* file = mFiles[i];
         if (file == NULL || fileId != cache->fileId) {
             continue;
         }
@@ -476,7 +475,7 @@ NewsPicture* NewsData::GetPicture(NewsTextBuffer* text) {
 
 void NewsData::LoadLogos() {
     NewsSourceRec* source;
-    NewsTopic* topic;
+    Category* topic;
     NewsArticle** slot;
     LogoCache* cache;
     s32 i;
@@ -495,10 +494,10 @@ void NewsData::LoadLogos() {
         }
     }
 
-    topic = mTopics;
-    for (i = 0; i < mNumTopics; i++, topic++) {
-        slot = topic->articles;
-        for (j = 0; j < topic->count; j++, slot++) {
+    topic = mCategories;
+    for (i = 0; i < mNumCategories; i++, topic++) {
+        slot = topic->mArticles;
+        for (j = 0; j < (u32)topic->mNumArticles; j++, slot++) {
             source = (*slot)->mSource;
             if (!source->noLogo) {
                 (*slot)->mSourceLogo = LoadLogo((*slot)->mFile, source->logoOfs, source->logoSize);
@@ -507,7 +506,7 @@ void NewsData::LoadLogos() {
     }
 }
 
-NewsTexture* NewsData::LoadLogo(NewsFile* file, u32 ofs, u32 size) {
+NewsTexture* NewsData::LoadLogo(NewsHeader* file, u32 ofs, u32 size) {
     if (file == NULL || ofs == 0) {
         return NULL;
     }

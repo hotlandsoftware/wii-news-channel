@@ -3,6 +3,7 @@
 #include <news/Draw2D.h>
 #include <news/MathUtil.h>
 #include <news/NewsArticle.h>
+#include <news/PaneButton.h>
 #include <news/System.h>
 #include <nw4r/math/math_types.h>
 #include <nw4r/ut/ut_Font.h>
@@ -10,15 +11,7 @@
 using namespace nw4r;
 
 // Not yet decompiled: layouts, input and globals in other files.
-struct LayoutButton {
-    u8 unk0[0x92];
-    bool mDecided;   // at 0x92
-    u8 unk93[0x98 - 0x93];
-    bool mDisabled;  // at 0x98
-};
-
 extern u8 lbl_801EE270[];          // layout resource accessor
-extern NewsData* lbl_80357558;     // the loaded news data
 extern const wchar_t* lbl_801B26BC[]; // language names
 extern u8 lbl_8035698C;            // selected language
 extern s32 lbl_80357598;
@@ -40,9 +33,7 @@ void fn_80047DE8(Layout* layout, s32 flags);
 void fn_80047EFC(Layout* layout);
 void fn_80047F70(Layout* layout);
 void fn_80048154(Layout* layout);
-LayoutButton* fn_80048364(Layout* layout, const char* name);
-void fn_8004702C(LayoutButton* button, u32 arg);
-void fn_80047060(LayoutButton* button);
+PaneButton* fn_80048364(Layout* layout, const char* name);
 void fn_8004BD60(Layout* layout, u32 arg);
 s32 fn_8004C000(const char* name, u32 button);
 s32 fn_8004C13C(const char* name, u32 button);
@@ -52,13 +43,13 @@ static ut::Color sFillColor(255, 255, 255, 64);
 static ut::Color sTextColor(0, 0, 0, 255);
 
 static inline void PressButton(Layout* layout, const char* name) {
-    LayoutButton* button = fn_80048364(layout, name);
-    button->mDecided = true;
+    PaneButton* button = fn_80048364(layout, name);
+    button->mToggle = true;
 }
 
-static inline void DisableButton(LayoutButton* button) {
+static inline void DisableButton(PaneButton* button) {
     button->mDisabled = true;
-    fn_80047060(button);
+    button->Press();
 }
 
 LanguageSelect::LanguageSelect(u32 arc)
@@ -151,7 +142,7 @@ LanguageSelect::LanguageSelect(u32 arc)
     f32 width = GetContentRight() - GetSideMargin();
     f32 rowHeight = mRowHeight;
     f32 screenWidth = GetScreenWidth();
-    const u8* language = lbl_80357558->mCurrentFile->languages;
+    const u8* language = gNewsData->mHeader->languages;
     f32 y = 0.5f * rowHeight;
     f32 scale = 1.0f;
 
@@ -169,9 +160,7 @@ LanguageSelect::LanguageSelect(u32 arc)
     }
 
     Item* item = mItems;
-    s32 i = 0;
-    while (i < mNumItems) {
-        i++;
+    for (s32 i = 0; i < mNumItems; i++, item++) {
         item->language = *language++;
         item->name = lbl_801B26BC[item->language];
         item->scaleX = scale;
@@ -188,7 +177,6 @@ LanguageSelect::LanguageSelect(u32 arc)
         item->x = mListX;
         item->y = y;
         y += rowHeight;
-        item++;
     }
     mMaxScroll = mNumItems - 2;
 
@@ -243,8 +231,7 @@ void LanguageSelect::Update(bool arg) {
 void LanguageSelect::DrawList() {
     f32 offsetY = mScrollY + mListTop;
     Item* item = mItems;
-    ut::Color color;
-    color = 0xFFFFFFFF;
+    ut::Color color = ut::Color::WHITE;
     math::VEC3 quad[4];
 
     Draw2D_SetScissor(0, 133, GetScreenWidth(), 323);
@@ -402,13 +389,13 @@ void LanguageSelect::CheckInput() {
             mDownPressed = true;
         } else if (lbl_80357698 & 4) {
             mDownPressed = true;
-            fn_8004702C(mDownButton, 1);
+            mDownButton->SetPressed(true);
         }
         if (fn_8004C000("up", 0x800) >= 0) {
             mUpPressed = true;
         } else if (lbl_80357698 & 8) {
             mUpPressed = true;
-            fn_8004702C(mUpButton, 1);
+            mUpButton->SetPressed(true);
         }
     }
     if (fn_8004C13C("yes", 0x800) >= 0) {

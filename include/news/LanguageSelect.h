@@ -6,7 +6,7 @@
 #include <nw4r/ut/ut_TextWriterBase.h>
 
 struct Layout;
-struct LayoutButton;
+class PaneButton;
 
 // Screen that lets the user pick the language of the news when the
 // downloaded data offers several.
@@ -88,9 +88,9 @@ public:
     Layout* mLayout1;                            // at 0x00
     Layout* mLayout2;                            // at 0x04
     Layout* mActiveLayout;                       // at 0x08
-    LayoutButton* mBackButton;                   // at 0x0C
-    LayoutButton* mUpButton;                     // at 0x10
-    LayoutButton* mDownButton;                   // at 0x14
+    PaneButton* mBackButton;                   // at 0x0C
+    PaneButton* mUpButton;                     // at 0x10
+    PaneButton* mDownButton;                   // at 0x14
     Item* mItems;                                // at 0x18
     Item* mSelected;                             // at 0x1C
     u32 unk20;                                   // at 0x20
