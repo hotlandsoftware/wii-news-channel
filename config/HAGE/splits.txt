@@ -131,5 +131,12 @@ Runtime.PPCEABI.H/__init_cpp_exceptions.cpp:
 	.dtors      start:0x80191FE4 end:0x80191FE8 rename:.dtors$15
 	.sdata      start:0x80357428 end:0x80357430
 
+MSL_C/setjmp.c:
+	.text       start:0x8017AC78 end:0x8017AE8C
+
+Runtime.PPCEABI.H/Gecko_ExceptionPPC.cp:
+	.text       start:0x8017AE8C end:0x8017AEF0
+	.bss        start:0x80353E78 end:0x80353E88
+
 MSL_C/wstring.c:
 	.text       start:0x801881BC end:0x801882C4

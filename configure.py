@@ -303,6 +303,7 @@ config.libs = [
             Object(Matching, "Runtime.PPCEABI.H/NMWException.cp", extra_cflags=["-Cpp_exceptions on"]),
             Object(Matching, "Runtime.PPCEABI.H/ptmf.c"),
             Object(Matching, "Runtime.PPCEABI.H/runtime.c"),
+            Object(Matching, "Runtime.PPCEABI.H/Gecko_ExceptionPPC.cp", extra_cflags=["-Cpp_exceptions on"]),
             Object(Matching, "Runtime.PPCEABI.H/__init_cpp_exceptions.cpp"),
         ],
     },
@@ -312,6 +313,7 @@ config.libs = [
         "cflags": cflags_runtime,
         "progress_category": "sdk",
         "objects": [
+            Object(Matching, "MSL_C/setjmp.c"),
             Object(Matching, "MSL_C/wstring.c"),
         ],
     },
