@@ -120,7 +120,35 @@ public:
         detail::LinkListImpl::Iterator mIterator; // at 0x0
     };
 
+    // Added for snd part 3 (Task 13): ogws's const-view iterator
+    class ConstIterator {
+        friend class LinkList;
+
+    public:
+        typedef T TElem;
+
+        explicit ConstIterator(detail::LinkListImpl::Iterator it) : mIterator(it) {}
+
+        ConstIterator& operator++() {
+            ++mIterator;
+            return *this;
+        }
+
+        const T* operator->() const { return GetPointerFromNode(mIterator.operator->()); }
+        const T& operator*() const { return *this->operator->(); }
+
+        friend bool operator==(ConstIterator lhs, ConstIterator rhs) { return lhs.mIterator == rhs.mIterator; }
+        friend bool operator!=(ConstIterator lhs, ConstIterator rhs) { return !(lhs == rhs); }
+
+    private:
+        detail::LinkListImpl::Iterator mIterator; // at 0x0
+    };
+
     LinkList() {}
+
+    // Added for snd part 3 (Task 13)
+    ConstIterator GetBeginIter() const { return ConstIterator(const_cast<LinkList*>(this)->detail::LinkListImpl::GetBeginIter()); }
+    ConstIterator GetEndIter() const { return ConstIterator(const_cast<LinkList*>(this)->detail::LinkListImpl::GetEndIter()); }
 
     Iterator GetBeginIter() { return Iterator(detail::LinkListImpl::GetBeginIter()); }
     Iterator GetEndIter() { return Iterator(detail::LinkListImpl::GetEndIter()); }

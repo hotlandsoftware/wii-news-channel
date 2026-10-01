@@ -161,9 +161,10 @@ bool Voice::Acquire(int channels, int voices, int priority,
         if (pAxVoice == NULL) {
             int rest = required - i;
 
-            VoiceList& rVoiceList = VoiceManager::GetInstance().GetVoiceList();
+            const VoiceList& rVoiceList =
+                VoiceManager::GetInstance().GetVoiceList();
 
-            for (VoiceList::Iterator it = rVoiceList.GetBeginIter();
+            for (VoiceList::ConstIterator it = rVoiceList.GetBeginIter();
                  it != rVoiceList.GetEndIter(); ++it) {
 
                 if (priority < it->GetPriority()) {
@@ -670,9 +671,8 @@ bool Voice::CalcAxVe() {
 
     f32 baseVolume = 1.0f;
     baseVolume *= mVolume;
-    baseVolume *= AxManager::GetInstance().GetOutputVolume();
-
     bool result = false;
+    baseVolume *= AxManager::GetInstance().GetOutputVolume();
 
     for (int i = 0; i < mVoiceOutCount; i++) {
         f32 volume = baseVolume * mVoiceOutParam[i].volume;
@@ -798,7 +798,7 @@ void Voice::TransformDpl2Pan(f32* pPan, f32* pSurroundPan, f32 pan,
 
     surroundPan -= 1.0f;
 
-    if (ut::Abs(pan) <= ut::Abs(surroundPan)) {
+    if (__fabsf(pan) <= __fabsf(surroundPan)) {
         if (surroundPan <= 0.0f) {
             *pPan = pan;
             *pSurroundPan = -0.12f + 0.88f * surroundPan;
@@ -809,18 +809,18 @@ void Voice::TransformDpl2Pan(f32* pPan, f32* pSurroundPan, f32 pan,
     } else if (pan >= 0.0f) {
         if (surroundPan <= 0.0f) {
             *pPan =
-                (0.85f + (1.0f - 0.85f) * (-surroundPan / pan)) * ut::Abs(pan);
+                (0.85f + (1.0f - 0.85f) * (-surroundPan / pan)) * __fabsf(pan);
             *pSurroundPan = -0.12f + (2.0f * surroundPan + 0.88f * pan);
         } else {
             *pPan =
-                (0.85f + (1.0f - 0.65f) * (-surroundPan / pan)) * ut::Abs(pan);
+                (0.85f + (1.0f - 0.65f) * (-surroundPan / pan)) * __fabsf(pan);
             *pSurroundPan = -0.12f + 1.12f * pan;
         }
     } else if (surroundPan <= 0.0f) {
-        *pPan = ((1.0f - 0.85f) * (-surroundPan / pan) - 0.85f) * ut::Abs(pan);
+        *pPan = ((1.0f - 0.85f) * (-surroundPan / pan) - 0.85f) * __fabsf(pan);
         *pSurroundPan = -0.12f + (2.0f * surroundPan - 1.12f * pan);
     } else {
-        *pPan = ((1.0f - 0.65f) * (-surroundPan / pan) - 0.85f) * ut::Abs(pan);
+        *pPan = ((1.0f - 0.65f) * (-surroundPan / pan) - 0.85f) * __fabsf(pan);
         *pSurroundPan = -0.12f + 1.12f * -pan;
     }
 
@@ -841,20 +841,25 @@ void Voice::CalcAXPBRMTMIX(int channel, int voice, AXPBRMTMIX* pMix) {
 
     f32 main[WPAD_MAX_CONTROLLERS];
     f32 fx[WPAD_MAX_CONTROLLERS];
+    f32* pMain = main;
+    f32* pFx = fx;
 
     for (int i = 0; i < WPAD_MAX_CONTROLLERS; i++) {
-        main[i] = 1.0f;
-        fx[i] = 1.0f;
+        pMain[i] = 1.0f;
+        pFx[i] = 1.0f;
 
-        f32 volume = (mOutputLineFlag & (OUTPUT_LINE_REMOTE_N << i))
-                         ? 1.0f * mRemoteOutVolume[i]
-                         : 0.0f;
+        f32 volume = 1.0f;
+        if (mOutputLineFlag & (OUTPUT_LINE_REMOTE_N << i)) {
+            volume *= mRemoteOutVolume[i];
+        } else {
+            volume = 0.0f;
+        }
 
-        main[i] *= volume;
-        fx[i] *= volume;
+        pMain[i] *= volume;
+        pFx[i] *= volume;
 
-        main[i] *= mRemoteSend[i];
-        fx[i] *= mRemoteFxSend[i];
+        pMain[i] *= mRemoteSend[i];
+        pFx[i] *= mRemoteFxSend[i];
     }
 
     pMix->vMain0 = CalcMixVolume(main[0]);
