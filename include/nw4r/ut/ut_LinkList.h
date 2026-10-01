@@ -2,11 +2,12 @@
 #define NW4R_UT_LINK_LIST_H
 
 #include <types.h>
+#include <nw4r/ut/ut_NonCopyable.h>
 
 namespace nw4r {
 namespace ut {
 
-struct LinkListNode {
+struct LinkListNode : private NonCopyable {
     // Added for lyt (Task 15): nodes are zeroed on construction (lyt_pane/group/animation ctors).
     LinkListNode() : mNext(NULL), mPrev(NULL) {}
 
