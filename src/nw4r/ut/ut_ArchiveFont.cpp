@@ -17,94 +17,67 @@ u32 ArchiveFont::GetRequireBufferSize(const void* brfna, const char* pGlyphGroup
         return 0;
     }
 
-    const u8* pFileTop = static_cast<const u8*>(brfna);
-    const FontGlyphGroupsBlock* pBlock =
-        reinterpret_cast<const FontGlyphGroupsBlock*>(pFileTop + sizeof(BinaryFileHeader));
-
-    const u32 offsetSizeSheets = (RoundUp)(sizeof(BinaryFileHeader) + sizeof(BinaryBlockHeader) +
-                                               sizeof(FontGlyphGroups) - sizeof(u16) +
-                                               pBlock->body.numSet * sizeof(u16),
-                                           4);
-    const u32 offsetSizeCWDH =
-        (RoundUp)(offsetSizeSheets + pBlock->body.numSheet * sizeof(u32), 4);
-    const u32 offsetSizeCMAP = (RoundUp)(offsetSizeCWDH + pBlock->body.numCWDH * sizeof(u32), 4);
-    const u32 offsetUseSheets = (RoundUp)(offsetSizeCMAP + pBlock->body.numCMAP * sizeof(u32), 4);
-    const u32 bytesPerSetSheet = (pBlock->body.numSheet + 31) / 32 * sizeof(u32);
-    const u32 bytesPerSetCWDH = (pBlock->body.numCWDH + 31) / 32 * sizeof(u32);
-    const u32 bytesPerSetCMAP = (pBlock->body.numCMAP + 31) / 32 * sizeof(u32);
-    const u32 offsetUseCWDH =
-        (RoundUp)(offsetUseSheets + bytesPerSetSheet * pBlock->body.numSet, 4);
-    const u32 offsetUseCMAP = (RoundUp)(offsetUseCWDH + bytesPerSetCWDH * pBlock->body.numSet, 4);
-
-    const u32* pSizeCWDH = reinterpret_cast<const u32*>(offsetSizeCWDH + reinterpret_cast<u32>(pFileTop));
-    const u32* pSizeCMAP = reinterpret_cast<const u32*>(offsetSizeCMAP + reinterpret_cast<u32>(pFileTop));
-    const u32* pUseSheets = reinterpret_cast<const u32*>(offsetUseSheets + reinterpret_cast<u32>(pFileTop));
-    const u32* pUseCWDH = reinterpret_cast<const u32*>(offsetUseCWDH + reinterpret_cast<u32>(pFileTop));
-    const u32* pUseCMAP = reinterpret_cast<const u32*>(offsetUseCMAP + reinterpret_cast<u32>(pFileTop));
-
+    detail::FontGlyphGroupsAcs gg(brfna);
     int numLoadSheet = 0;
-    u32 sizeCWDH = 0;
-    u32 sizeCMAP = 0;
+    u32 sizeLoadCWDH = 0;
+    u32 sizeLoadCMAP = 0;
 
-    for (int b = 0; b < pBlock->body.numSheet; b += 32) {
-        u32 mask = 0;
+    for (int flagSetNo = 0; flagSetNo * 32 < gg.GetNumSheet(); flagSetNo++) {
+        u32 useSheets = 0;
 
-        for (int set = 0; set < pBlock->body.numSet; set++) {
-            const char* setName =
-                reinterpret_cast<const char*>(pBlock->body.nameOffsets[set] + reinterpret_cast<u32>(pFileTop));
+        for (int setNo = 0; setNo < gg.GetNumSet(); setNo++) {
+            const char* setName = gg.GetSetName(setNo);
 
             if (pGlyphGroups[0] == '\0' || IncludeName(pGlyphGroups, setName)) {
-                mask |= pUseSheets[set * bytesPerSetSheet / sizeof(u32) + b / 32];
+                useSheets |= gg.GetUseSheetFlags(setNo, flagSetNo);
             }
         }
 
-        numLoadSheet += math::CntBit1(mask);
+        numLoadSheet += math::CntBit1(useSheets);
     }
 
-    for (int b = 0; b < pBlock->body.numCWDH; b += 32) {
-        u32 mask = 0;
+    for (int flagSetNo = 0; flagSetNo * 32 < gg.GetNumCWDH(); flagSetNo++) {
+        u32 useCWDH = 0;
 
-        for (int set = 0; set < pBlock->body.numSet; set++) {
-            const char* setName =
-                reinterpret_cast<const char*>(pBlock->body.nameOffsets[set] + reinterpret_cast<u32>(pFileTop));
-
-            if (pGlyphGroups[0] == '\0' || IncludeName(pGlyphGroups, setName)) {
-                mask |= pUseCWDH[set * bytesPerSetCWDH / sizeof(u32) + b / 32];
-            }
-        }
-
-        for (int i = 0; i < 32; i++) {
-            if ((mask << i) & 0x80000000) {
-                sizeCWDH += pSizeCWDH[b + i] - sizeof(BinaryBlockHeader);
-            }
-        }
-    }
-
-    for (int b = 0; b < pBlock->body.numCMAP; b += 32) {
-        u32 mask = 0;
-
-        for (int set = 0; set < pBlock->body.numSet; set++) {
-            const char* setName =
-                reinterpret_cast<const char*>(pBlock->body.nameOffsets[set] + reinterpret_cast<u32>(pFileTop));
+        for (int setNo = 0; setNo < gg.GetNumSet(); setNo++) {
+            const char* setName = gg.GetSetName(setNo);
 
             if (pGlyphGroups[0] == '\0' || IncludeName(pGlyphGroups, setName)) {
-                mask |= pUseCMAP[set * bytesPerSetCMAP / sizeof(u32) + b / 32];
+                useCWDH |= gg.GetUseCWDHFlags(setNo, flagSetNo);
             }
         }
 
-        for (int i = 0; i < 32; i++) {
-            if ((mask << i) & 0x80000000) {
-                sizeCMAP += pSizeCMAP[b + i] - sizeof(BinaryBlockHeader);
+        for (int b = 0; b < 32; b++) {
+            if ((useCWDH << b) & 0x80000000) {
+                sizeLoadCWDH += gg.GetSizeCWDH(flagSetNo * 32 + b) - sizeof(BinaryBlockHeader);
             }
         }
     }
 
-    const u32 sizeSheets = (RoundUp)(numLoadSheet * pBlock->body.sheetSize, 4);
-    const u32 sizeAdjustTable = (RoundUp)(pBlock->body.numSheet * sizeof(u16), 4);
-    const u32 sizeBlocks = Max<u32>(sizeCWDH + sizeCMAP, sizeof(CXUncompContextHuffman));
+    for (int flagSetNo = 0; flagSetNo * 32 < gg.GetNumCMAP(); flagSetNo++) {
+        u32 useCMAP = 0;
+
+        for (int setNo = 0; setNo < gg.GetNumSet(); setNo++) {
+            const char* setName = gg.GetSetName(setNo);
+
+            if (pGlyphGroups[0] == '\0' || IncludeName(pGlyphGroups, setName)) {
+                useCMAP |= gg.GetUseCMAPFlags(setNo, flagSetNo);
+            }
+        }
+
+        for (int b = 0; b < 32; b++) {
+            if ((useCMAP << b) & 0x80000000) {
+                sizeLoadCMAP += gg.GetSizeCMAP(flagSetNo * 32 + b) - sizeof(BinaryBlockHeader);
+            }
+        }
+    }
+
+    const u32 sizeAdjustTable = (RoundUp)(gg.GetNumSheet() * sizeof(u16), 4);
+    const u32 sizeSheets = (RoundUp)(numLoadSheet * gg.GetSheetSize(), 4);
+    const u32 sizeBlocks = Max<u32>(sizeLoadCWDH + sizeLoadCMAP, sizeof(CXUncompContextHuffman));
 
     return (RoundUp)(sizeAdjustTable + sizeof(FontInformation) + sizeof(FontTextureGlyph), 32) +
-           sizeBlocks + sizeSheets;
+           sizeSheets + sizeBlocks;
 }
 
 inline void ArchiveFont::InitStreamingConstruct(ConstructContext* pContext, void* pBuffer, u32 bufferSize,
@@ -138,9 +111,10 @@ ArchiveFont::ConstructResult ArchiveFont::StreamingConstruct(ConstructContext* p
     }
 
     ConstructResult ret = CONSTRUCT_CONTINUE;
-    CachedStreamReader* pReader = &pContext->streamReader;
+    CachedStreamReader& reader = pContext->streamReader;
+    CachedStreamReader* pReader = &reader;
 
-    pReader->Attach(stream, streamSize);
+    reader.Attach(stream, streamSize);
 
     while (ret == CONSTRUCT_CONTINUE) {
         switch (pContext->op) {

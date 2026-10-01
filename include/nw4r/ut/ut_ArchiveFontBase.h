@@ -7,6 +7,7 @@
 #include <nw4r/ut/ut_ResFontBase.h>
 #include <nw4r/ut/ut_binaryFileFormat.h>
 #include <revolution/cx.h>
+#include <nw4r/ut/ut_algorithm.h>
 
 namespace nw4r {
 namespace ut {
@@ -36,6 +37,70 @@ struct FontGlyphGroupsBlock {
 };
 
 namespace detail {
+
+// Accessor for a GLGR block that follows a BinaryFileHeader.
+class FontGlyphGroupsAcs {
+public:
+    explicit FontGlyphGroupsAcs(const void* brfna) {
+        mpFileTop = static_cast<const u8*>(brfna);
+        mpData = reinterpret_cast<const FontGlyphGroupsBlock*>(mpFileTop + sizeof(BinaryFileHeader));
+        mSizeSheetFlags = (GetNumSheet() + 31) / 32 * sizeof(u32);
+        mSizeCWDHFlags = (GetNumCWDH() + 31) / 32 * sizeof(u32);
+        mSizeCMAPFlags = (GetNumCMAP() + 31) / 32 * sizeof(u32);
+        const u32 offsetSizeSheets =
+            (RoundUp)(sizeof(BinaryFileHeader) + sizeof(BinaryBlockHeader) + sizeof(FontGlyphGroups) -
+                          sizeof(u16) + GetNumSet() * sizeof(u16),
+                      4);
+        const u32 offsetSizeCWDH = (RoundUp)(offsetSizeSheets + GetNumSheet() * sizeof(u32), 4);
+        const u32 offsetSizeCMAP = (RoundUp)(offsetSizeCWDH + GetNumCWDH() * sizeof(u32), 4);
+        const u32 offsetUseSheets = (RoundUp)(offsetSizeCMAP + GetNumCMAP() * sizeof(u32), 4);
+        const u32 offsetUseCWDH = (RoundUp)(offsetUseSheets + mSizeSheetFlags * GetNumSet(), 4);
+        const u32 offsetUseCMAP = (RoundUp)(offsetUseCWDH + mSizeCWDHFlags * GetNumSet(), 4);
+        mpSizeSheetsArray = reinterpret_cast<const u32*>(offsetSizeSheets + reinterpret_cast<u32>(mpFileTop));
+        mpSizeCWDHArray = reinterpret_cast<const u32*>(offsetSizeCWDH + reinterpret_cast<u32>(mpFileTop));
+        mpSizeCMAPArray = reinterpret_cast<const u32*>(offsetSizeCMAP + reinterpret_cast<u32>(mpFileTop));
+        mpUseSheetArray = reinterpret_cast<const u32*>(offsetUseSheets + reinterpret_cast<u32>(mpFileTop));
+        mpUseCWDHArray = reinterpret_cast<const u32*>(offsetUseCWDH + reinterpret_cast<u32>(mpFileTop));
+        mpUseCMAPArray = reinterpret_cast<const u32*>(offsetUseCMAP + reinterpret_cast<u32>(mpFileTop));
+    }
+
+    u32 GetSheetSize() const { return mpData->body.sheetSize; }
+    u16 GetGlyphsPerSheet() const { return mpData->body.glyphsPerSheet; }
+    u16 GetNumSet() const { return mpData->body.numSet; }
+    u16 GetNumSheet() const { return mpData->body.numSheet; }
+    u16 GetNumCWDH() const { return mpData->body.numCWDH; }
+    u16 GetNumCMAP() const { return mpData->body.numCMAP; }
+
+    const char* GetSetName(int setNo) const {
+        return static_cast<const char*>(AddOffsetToPtr(mpFileTop, mpData->body.nameOffsets[setNo]));
+    }
+
+    u32 GetSizeCWDH(int index) const { return mpSizeCWDHArray[index]; }
+    u32 GetSizeCMAP(int index) const { return mpSizeCMAPArray[index]; }
+
+    u32 GetUseSheetFlags(int setNo, int flagSetNo) const {
+        return mpUseSheetArray[setNo * mSizeSheetFlags / sizeof(u32) + flagSetNo];
+    }
+    u32 GetUseCWDHFlags(int setNo, int flagSetNo) const {
+        return mpUseCWDHArray[setNo * mSizeCWDHFlags / sizeof(u32) + flagSetNo];
+    }
+    u32 GetUseCMAPFlags(int setNo, int flagSetNo) const {
+        return mpUseCMAPArray[setNo * mSizeCMAPFlags / sizeof(u32) + flagSetNo];
+    }
+
+private:
+    const u8* mpFileTop;
+    const FontGlyphGroupsBlock* mpData;
+    const u32* mpSizeSheetsArray;
+    const u32* mpSizeCWDHArray;
+    const u32* mpSizeCMAPArray;
+    const u32* mpUseSheetArray;
+    const u32* mpUseCWDHArray;
+    const u32* mpUseCMAPArray;
+    u32 mSizeSheetFlags;
+    u32 mSizeCWDHFlags;
+    u32 mSizeCMAPFlags;
+};
 
 class ArchiveFontBase : public ResFontBase {
 public:
