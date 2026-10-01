@@ -313,6 +313,10 @@ config.libs = [
             Object(Matching, "news/FrameTextButton.cpp"),
             Object(Matching, "news/IconTextButton.cpp"),
             Object(Matching, "news/SmallTextButton.cpp"),
+            Object(Matching, "news/Locale.cpp"),
+            Object(NonMatching, "news/PointerEffect.cpp"),
+            Object(Matching, "news/ErrorScreen.cpp"),
+            Object(NonMatching, "news/Model.cpp"),
         ],
     },
 ]

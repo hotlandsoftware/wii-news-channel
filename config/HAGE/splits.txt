@@ -55,6 +55,29 @@ news/SmallTextButton.cpp:
 	.sbss       start:0x803574D8 end:0x803574E0
 	.sdata2     start:0x80358890 end:0x803588A8
 
+news/Locale.cpp:
+	.text       start:0x8003A0B4 end:0x8003A14C
+	.data       start:0x801B2270 end:0x801B22A0
+
+news/PointerEffect.cpp:
+	.text       start:0x8003A14C end:0x8003AE70
+	.rodata     start:0x80192468 end:0x80192498
+	.data       start:0x801B22A0 end:0x801B2460
+	.sdata2     start:0x80358D18 end:0x80358D70
+
+news/ErrorScreen.cpp:
+	.text       start:0x8003AE70 end:0x8003B034
+	.data       start:0x801B2460 end:0x801B2478
+	.sdata2     start:0x80358D70 end:0x80358D78
+
+news/Model.cpp:
+	.text       start:0x8003B034 end:0x8003B328
+	.ctors      start:0x80191F3C end:0x80191F40
+	.data       start:0x801B2478 end:0x801B2488
+	.bss        start:0x801EE3C8 end:0x801EE3D8
+	.sbss       start:0x80357630 end:0x80357638
+	.sdata2     start:0x80358D78 end:0x80358D88
+
 Runtime.PPCEABI.H/global_destructor_chain.c:
 	.text       start:0x8017A048 end:0x8017A0A8
 	.sbss       start:0x80358418 end:0x80358420

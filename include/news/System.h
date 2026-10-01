@@ -47,4 +47,17 @@ void PlaySE(u32 id);
 void PlaySound(nw4r::snd::SoundHandle* handle, u32 id);
 BOOL IsSoundPlaying(nw4r::snd::SoundHandle* handle);
 
+typedef struct MEMiHeapHead* MEMHeapHandle;
+
+extern u32 gTrigAll;             // gTrig of every connected channel ORed together
+extern void* gArchive;           // main resource archive
+extern MEMHeapHandle gSubHeap;   // heap used for loaded files
+extern TPLPalette* gCursorTpl;
+
+void* SubHeapAlloc(u32 size, s32 align);
+void* LoadArcFile(void* archive, const char* name, s32 align, u32* size, MEMHeapHandle heap);
+
+void StartFade(s32 type, s32 frames, s32 arg2, s32 arg3);
+void ReturnToMenu();
+
 #endif

@@ -2,6 +2,7 @@
 #define REVOLUTION_GX_H
 
 #include <types.h>
+#include <revolution/mtx.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -51,6 +52,23 @@ typedef enum _GXCompare {
     GX_GEQUAL,
     GX_ALWAYS,
 } GXCompare;
+
+typedef enum _GXProjectionType {
+    GX_PERSPECTIVE,
+    GX_ORTHOGRAPHIC,
+} GXProjectionType;
+
+typedef enum _GXPosNrmMtx {
+    GX_PNMTX0 = 0,
+    GX_PNMTX1 = 3,
+} GXPosNrmMtx;
+
+#define GX_MAX_Z24 0x00FFFFFF
+
+void GXSetCopyClear(GXColor clearColor, u32 clearZ);
+void GXSetProjection(const Mtx44 m, GXProjectionType type);
+void GXLoadPosMtxImm(const Mtx m, u32 id);
+void GXSetCurrentMtx(u32 id);
 
 void GXSetZMode(u8 compareEnable, GXCompare func, u8 updateEnable);
 void GXSetTevColor(GXTevRegID id, GXColor color);
