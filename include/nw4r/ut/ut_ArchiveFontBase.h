@@ -88,6 +88,14 @@ public:
         return mpUseCMAPArray[setNo * mSizeCMAPFlags / sizeof(u32) + flagSetNo];
     }
 
+    bool IsUseSheet(int setNo, int sheetNo) const {
+        return IsBitOn(mpUseSheetArray, setNo * mSizeSheetFlags * 8 + sheetNo);
+    }
+
+    static bool IsBitOn(const u32* pBits, u32 index) {
+        return (pBits[index / 32] << (index % 32)) & 0x80000000;
+    }
+
 private:
     const u8* mpFileTop;
     const FontGlyphGroupsBlock* mpData;

@@ -8,14 +8,6 @@ namespace nw4r {
 namespace ut {
 namespace detail {
 
-namespace {
-
-inline bool IsBitOn(const u32* pBits, u32 index) {
-    return (pBits[index / 32] << (index % 32)) & 0x80000000;
-}
-
-} // namespace
-
 ArchiveFontBase::ArchiveFontBase() : mpGlyphIndexAdjustArray(NULL) {}
 
 ArchiveFontBase::~ArchiveFontBase() {}
@@ -197,44 +189,33 @@ ArchiveFontBase::ConstructOpAnalyzeGLGR(ConstructContext* pContext, CachedStream
         return CONSTRUCT_ERROR;
     }
 
-    const FontGlyphGroupsBlock* pBlock =
-        reinterpret_cast<const FontGlyphGroupsBlock*>(pFileTop + sizeof(BinaryFileHeader));
-    const u16 numSheet = pBlock->body.numSheet;
-    const u16 glyphsPerSheet = pBlock->body.glyphsPerSheet;
+    FontGlyphGroupsAcs gg(pFileTop);
+    const u16 numSheet = gg.GetNumSheet();
+    const u16 glyphsPerSheet = gg.GetGlyphsPerSheet();
     const u16 numBlocks = reinterpret_cast<BinaryFileHeader*>(pFileTop)->dataBlocks;
-
-    const u32 offsetSizeSheets = (RoundUp)(sizeof(BinaryFileHeader) + sizeof(BinaryBlockHeader) +
-                                               sizeof(FontGlyphGroups) - sizeof(u16) +
-                                               pBlock->body.numSet * sizeof(u16),
-                                           4);
-    const u32 offsetSizeCWDH = (RoundUp)(offsetSizeSheets + numSheet * sizeof(u32), 4);
-    const u32 offsetSizeCMAP = (RoundUp)(offsetSizeCWDH + pBlock->body.numCWDH * sizeof(u32), 4);
-    const u32 offsetUseSheets = (RoundUp)(offsetSizeCMAP + pBlock->body.numCMAP * sizeof(u32), 4);
-    const u32 bytesPerSet = (numSheet + 31) / 32 * sizeof(u32);
     const u32 sizeAdjustTable = (RoundUp)(numSheet * sizeof(u16), 4);
-    const u32* pUseSheets = reinterpret_cast<const u32*>(offsetUseSheets + reinterpret_cast<u32>(pFileTop));
 
     const u32 remain = pContext->GetRemain();
+    u16* pAdjustTable = static_cast<u16*>((RoundDown)(pFileTop + remain - sizeAdjustTable, 2));
+
     if (remain < (pBlockEnd - pFileTop) + sizeAdjustTable) {
         return CONSTRUCT_ERROR;
     }
 
-    u16* pAdjustTable = static_cast<u16*>((RoundDown)(pFileTop + remain - sizeAdjustTable, 2));
-
-    for (int i = 0; i < pBlock->body.numSheet; i++) {
+    for (int i = 0; i < gg.GetNumSheet(); i++) {
         pAdjustTable[i] = 0;
     }
 
-    for (int set = 0; set < pBlock->body.numSet; set++) {
-        const char* setName = reinterpret_cast<const char*>(pBlock->body.nameOffsets[set] + reinterpret_cast<u32>(pFileTop));
+    for (int setNo = 0; setNo < gg.GetNumSet(); setNo++) {
+        const char* setName = gg.GetSetName(setNo);
 
         if (pContext->pGlyphGroups[0] != '\0' && !IncludeName(pContext->pGlyphGroups, setName)) {
             continue;
         }
 
-        for (int sheet = 0; sheet < pBlock->body.numSheet; sheet++) {
-            if (IsBitOn(pUseSheets, set * bytesPerSet * 8 + sheet)) {
-                pAdjustTable[sheet] = 1;
+        for (int sheetNo = 0; sheetNo < gg.GetNumSheet(); sheetNo++) {
+            if (gg.IsUseSheet(setNo, sheetNo)) {
+                pAdjustTable[sheetNo] = 1;
             }
         }
     }
@@ -242,12 +223,12 @@ ArchiveFontBase::ConstructOpAnalyzeGLGR(ConstructContext* pContext, CachedStream
     {
         u32 adjust = 0;
 
-        for (int i = 0; i < pBlock->body.numSheet; i++) {
+        for (int i = 0; i < gg.GetNumSheet(); i++) {
             if (pAdjustTable[i] == 1) {
                 pAdjustTable[i] = adjust;
             } else {
                 pAdjustTable[i] = ADJUST_OFFSET_SHEET_NOT_LOADED;
-                adjust += pBlock->body.glyphsPerSheet;
+                adjust += gg.GetGlyphsPerSheet();
             }
         }
     }
