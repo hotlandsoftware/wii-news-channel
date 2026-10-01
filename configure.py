@@ -309,6 +309,9 @@ cflags_rvl = [
     "-ipa file",
 ]
 
+# EXIBios.c is built with -O3 instead of -O4,p (as in SMGCommunity/Petari)
+cflags_rvl_exi = ["-O3" if flag == "-O4,p" else flag for flag in cflags_rvl]
+
 # BTE (Broadcom Bluetooth stack): RVL flags plus the stack's private headers
 # (src/revolution/BTE) and its public ones (include/revolution/bte), as Petari
 cflags_bte = [
@@ -861,6 +864,51 @@ config.libs = [
             Object(Matching, "revolution/BTE/sdp_main.c"),
             Object(Matching, "revolution/BTE/sdp_server.c"),
             Object(Matching, "revolution/BTE/sdp_utils.c"),
+        ],
+    },
+    {
+        "lib": "exi",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_rvl,
+        "progress_category": "sdk",
+        "objects": [
+            Object(Matching, "revolution/EXI/EXIBios.c", cflags=cflags_rvl_exi),
+            Object(Matching, "revolution/EXI/EXIUart.c"),
+            Object(Matching, "revolution/EXI/EXICommon.c"),
+        ],
+    },
+    {
+        "lib": "si",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_rvl,
+        "progress_category": "sdk",
+        "objects": [
+            Object(Matching, "revolution/SI/SIBios.c"),
+            Object(Matching, "revolution/SI/SISamplingRate.c"),
+        ],
+    },
+    {
+        "lib": "vi",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_rvl,
+        "progress_category": "sdk",
+        "objects": [
+            Object(Matching, "revolution/VI/vi.c"),
+            Object(Matching, "revolution/VI/i2c.c"),
+            Object(Matching, "revolution/VI/vi3in1.c"),
+        ],
+    },
+    {
+        "lib": "mtx",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_rvl,
+        "progress_category": "sdk",
+        "objects": [
+            Object(Matching, "revolution/MTX/mtx.c"),
+            Object(Matching, "revolution/MTX/mtxvec.c"),
+            Object(Matching, "revolution/MTX/mtx44.c"),
+            Object(Matching, "revolution/MTX/vec.c"),
+            Object(Matching, "revolution/MTX/quat.c"),
         ],
     },
 ]
