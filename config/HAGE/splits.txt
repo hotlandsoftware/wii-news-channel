@@ -142,5 +142,10 @@ MSL_C/alloc.c:
 	.text       start:0x8017AEF0 end:0x8017AFA8
 	.rodata     start:0x801AEB68 end:0x801AEBD8
 
+MSL_C/string.c:
+	extab       start:0x80006850 end:0x80006868
+	extabindex  start:0x80006E38 end:0x80006E5C
+	.text       start:0x80182070 end:0x8018261C
+
 MSL_C/wstring.c:
 	.text       start:0x801881BC end:0x801882C4

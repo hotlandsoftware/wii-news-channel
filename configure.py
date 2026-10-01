@@ -315,6 +315,7 @@ config.libs = [
         "objects": [
             Object(Matching, "MSL_C/alloc.c"),
             Object(Matching, "MSL_C/setjmp.c"),
+            Object(Matching, "MSL_C/string.c", extra_cflags=["-Cpp_exceptions on"]),
             Object(Matching, "MSL_C/wstring.c"),
         ],
     },
