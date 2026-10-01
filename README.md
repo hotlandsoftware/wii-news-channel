@@ -6,12 +6,15 @@
 
 Percentages are of the DOL's code bytes (1,618,968), as reported by `ninja`.
 
-| Area | Decompiled | Matching | Linked |
+| Area (code size) | Decompiled | Matching | Linked |
 | --- | --- | --- | --- |
-| News Channel game code | 99.86% | 87.22% | 54.68% (13 / 20 files) |
-| Runtime / MSL | 100.00% | 99.80% | 98.76% (66 / 67 files) |
+| News Channel game code (`0x80006FC0`–`0x80051D4C`, ~307 KB) | 24.7% | 21.6% | 13.5% (13 files) |
+| Runtime / MSL (`0x80179F64`–`0x8018C7C0`, ~76 KB) | 64.9% | 64.8% | 64.1% (66 files) |
+| HOME Menu, NW4R, RVL SDK, MetroTRK (~1.24 MB) | 0% | 0% | 0% |
 
-These rows cover only the files that are split so far. Most game code (roughly `0x80012ABC`–`0x80051D4C`), the HOME Menu, NW4R and the RVL SDK haven't been started yet.
+Each row is a share of that whole address range.
+
+`ninja`'s per-category summary reports a different figure: a percentage of only the files split so far. That is why it shows game code as "99.86% fuzzy": 99.86% of the 20 game files started, about 76 KB.
 
 **Fully linked game code:** TextButton, FrameTextButton, IconTextButton, SmallTextButton, Scroller, Ticker, HeadlineList, Locale, ErrorScreen, DrawUtil, SmoothValue, PaneButton, main.
 
