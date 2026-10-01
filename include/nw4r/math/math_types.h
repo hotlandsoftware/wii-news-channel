@@ -13,6 +13,9 @@ struct VEC2 : public Vec2 {
         x = fx;
         y = fy;
     }
+    operator f32*() { return reinterpret_cast<f32*>(this); }
+    operator const f32*() const { return reinterpret_cast<const f32*>(this); }
+
     // NW4R library code (lyt) is built without the VEC2/MTX34 destructors:
     // there an 8-byte VEC2 is returned in r3/r4 (Pane::GetVtxPos).
 #ifndef NW4R_MATH_VEC2_NO_DTOR
