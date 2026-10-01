@@ -13,6 +13,8 @@ write_asm: true
 block_relocations:
   # Random table data that happens to look like a pointer into OSFont's HankakuToCode
   - source: 0x801E4C9C
+  # Random rodata table bytes that look like a pointer into BTE's gki_cb (.bss)
+  - source: 0x8019E9B4
   # OSInit: lis/addi of 0x80004000 (start of .init)
   - source: 0x800FC6F8
   - source: 0x800FC770
