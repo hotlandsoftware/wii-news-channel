@@ -29,6 +29,7 @@ void ICEnable(void);
 
 void LCEnable(void);
 void LCDisable(void);
+void LCLoadBlocks(void *, const void *, u32); // added for nw4r::ut (Task 14)
 void LCStoreBlocks(void *, void *, u32);
 u32 LCStoreData(void *, void *, u32);
 void LCQueueWait(u32);
