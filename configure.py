@@ -284,6 +284,20 @@ cflags_game = [
     "-fp_contract off",
 ]
 
+# NW4R libraries (ut, math, lyt, snd, g3d, ef); flags as in doldecomp/ogws
+cflags_nw4r = [
+    *cflags_base,
+    "-fp_contract off",
+    "-ipa file",
+]
+
+# RVL SDK libraries; flags as in doldecomp/ogws
+cflags_rvl = [
+    *cflags_base,
+    "-fp_contract off",
+    "-ipa file",
+]
+
 config.linker_version = "GC/3.0a5.2"
 
 
@@ -468,6 +482,25 @@ config.libs = [
             Object(Matching, "news/DrawUtil.cpp"),
             Object(Matching, "news/SmoothValue.cpp"),
             Object(Matching, "news/PaneButton.cpp", extra_cflags=["-inline auto", "-ipa file"]),
+        ],
+    },
+    {
+        "lib": "nw4r_ut",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_nw4r,
+        "progress_category": "sdk",
+        "objects": [
+            Object(Matching, "nw4r/ut/ut_list.cpp"),
+            Object(Matching, "nw4r/ut/ut_LinkList.cpp"),
+        ],
+    },
+    {
+        "lib": "os",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_rvl,
+        "progress_category": "sdk",
+        "objects": [
+            Object(Matching, "revolution/OS/OSArena.c"),
         ],
     },
 ]

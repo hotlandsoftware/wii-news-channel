@@ -152,6 +152,17 @@ news/PaneButton.cpp:
 	.sdata      start:0x80356C60 end:0x80356C90
 	.sdata2     start:0x80358EE0 end:0x80358F18
 
+nw4r/ut/ut_list.cpp:
+	.text       start:0x800E84D8 end:0x800E8774
+
+nw4r/ut/ut_LinkList.cpp:
+	.text       start:0x800E8774 end:0x800E88E0
+
+revolution/OS/OSArena.c:
+	.text       start:0x800FD9F8 end:0x800FDACC
+	.sdata      start:0x80356FF8 end:0x80357000
+	.sbss       start:0x80357DB8 end:0x80357DC0
+
 Runtime.PPCEABI.H/__va_arg.c:
 	.text       start:0x80179F80 end:0x8017A048
 
