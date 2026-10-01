@@ -791,6 +791,20 @@ config.libs = [
         ],
     },
     {
+        # WPAD (Jun 28 2007), sources after SMGCommunity/Petari and doldecomp/ogws
+        "lib": "wpad",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_rvl,
+        "progress_category": "sdk",
+        "objects": [
+            Object(NonMatching, "revolution/WPAD/WPAD.c", extra_cflags=["-fp off"]),
+            Object(Matching, "revolution/WPAD/WPADHIDParser.c"),
+            Object(Matching, "revolution/WPAD/WPADEncrypt.c"),
+            Object(Matching, "revolution/WPAD/WPADMem.c"),
+            Object(Matching, "revolution/WPAD/debug_msg.c"),
+        ],
+    },
+    {
         # BTE part 2 (btm, btu, gap, hcicmds, hidd api/conn/mgmt)
         "lib": "bte_btm",
         "mw_version": "GC/3.0a3",
