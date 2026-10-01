@@ -33,8 +33,8 @@ struct PaneButtonColors {
     nw4r::ut::Color mIconTopSelect;     // at 0x30
     nw4r::ut::Color mIconBottomSelect;  // at 0x34
     nw4r::ut::Color mTextSelect;        // at 0x38
-    nw4r::ut::Color mUnk3C;             // at 0x3C
-    nw4r::ut::Color mUnk40;             // at 0x40
+    u32 mUnk3C;                         // at 0x3C
+    u32 mUnk40;                         // at 0x40
     nw4r::ut::Color mIconTopBlend;      // at 0x44
     nw4r::ut::Color mIconBottomBlend;   // at 0x48
     nw4r::ut::Color mTextBlend;         // at 0x4C

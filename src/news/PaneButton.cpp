@@ -187,7 +187,7 @@ PaneButton::PaneButton(lyt::Pane* pane, const lyt::DrawInfo* drawInfo, PaneButto
         mRect.bottom += trans.y;
     }
 
-    for (int i = 0; i < 8; i++) {
+    for (s32 i = 0; i < 8; i++) {
         switch (mPane->GetUserData()[i]) {
         case 'D':
         case 'd':
@@ -201,7 +201,7 @@ PaneButton::PaneButton(lyt::Pane* pane, const lyt::DrawInfo* drawInfo, PaneButto
         case 'c':
             i++;
             if (i < 8) {
-                int set = mPane->GetUserData()[i] - '0';
+                s32 set = mPane->GetUserData()[i] - '0';
                 if (set >= 0 && set <= 9) {
                     mColorSet = set;
                 }

@@ -313,7 +313,7 @@ config.libs = [
             Object(Matching, "news/FrameTextButton.cpp"),
             Object(Matching, "news/IconTextButton.cpp"),
             Object(Matching, "news/SmallTextButton.cpp"),
-            Object(NonMatching, "news/SmoothValue.cpp"),
+            Object(Matching, "news/SmoothValue.cpp"),
             Object(NonMatching, "news/PaneButton.cpp", extra_cflags=["-inline auto", "-ipa file"]),
         ],
     },
