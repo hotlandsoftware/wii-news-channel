@@ -1,0 +1,2 @@
+// C++-style wrapper so sources ported from other decomps can #include <climits>.
+#include <limits.h>

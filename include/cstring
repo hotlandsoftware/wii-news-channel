@@ -13,6 +13,9 @@ using ::memset;
 using ::strcmp;
 using ::strlen;
 using ::strncmp;
+using ::strncpy; // added for snd (Task 11)
+using ::strcpy;
+using ::strcat;
 } // namespace std
 #endif
 #endif

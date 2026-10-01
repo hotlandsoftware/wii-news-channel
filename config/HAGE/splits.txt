@@ -498,6 +498,84 @@ nw4r/g3d/g3d_light.cpp:
 	.text       start:0x800CDD94 end:0x800CE740
 	.sdata2     start:0x803598F0 end:0x80359920
 
+nw4r/snd/snd_AxManager.cpp:
+	.text       start:0x800CE740 end:0x800CFBC4
+	.bss        start:0x802D5800 end:0x802D5A00
+	.sbss       start:0x80357C50 end:0x80357C58
+	.sdata2     start:0x80359920 end:0x80359938
+
+nw4r/snd/snd_AxVoice.cpp:
+	.text       start:0x800CFBC4 end:0x800D19F0
+	.bss        start:0x802D5A00 end:0x802D5A10
+	.sbss       start:0x80357C58 end:0x80357C60
+	.sdata2     start:0x80359938 end:0x80359958
+
+nw4r/snd/snd_AxfxImpl.cpp:
+	.text       start:0x800D19F0 end:0x800D1B60
+	.sbss       start:0x80357C60 end:0x80357C68
+
+nw4r/snd/snd_Bank.cpp:
+	.text       start:0x800D1B60 end:0x800D1D84
+	.sdata2     start:0x80359958 end:0x80359978
+
+nw4r/snd/snd_BankFile.cpp:
+	.text       start:0x800D1D84 end:0x800D218C
+	.sdata2     start:0x80359978 end:0x80359980
+
+nw4r/snd/snd_BasicPlayer.cpp:
+	.text       start:0x800D218C end:0x800D22D4
+	.data       start:0x801CDF60 end:0x801CDF88
+	.sdata2     start:0x80359980 end:0x80359988
+
+nw4r/snd/snd_BasicSound.cpp:
+	.text       start:0x800D22D4 end:0x800D335C
+	.ctors      start:0x80191F80 end:0x80191F84
+	.data       start:0x801CDF88 end:0x801CDFF0
+	.sbss       start:0x80357C68 end:0x80357C70
+	.sdata2     start:0x80359988 end:0x80359998
+
+nw4r/snd/snd_Channel.cpp:
+	.text       start:0x800D335C end:0x800D40E4
+	.bss        start:0x802D5A10 end:0x802D5A40
+	.sbss       start:0x80357C70 end:0x80357C78
+	.sdata2     start:0x80359998 end:0x803599C0
+
+nw4r/snd/snd_DisposeCallbackManager.cpp:
+	.text       start:0x800D40E4 end:0x800D44EC
+	.bss        start:0x802D5A40 end:0x802D5A58
+	.sbss       start:0x80357C78 end:0x80357C80
+
+nw4r/snd/snd_DvdSoundArchive.cpp:
+	.text       start:0x800D44EC end:0x800D4B84
+	.data       start:0x801CDFF0 end:0x801CE078
+	.sbss       start:0x80357C80 end:0x80357C88
+	.sbss2      start:0x8035A6A8 end:0x8035A6B0
+
+nw4r/snd/snd_EnvGenerator.cpp:
+	.text       start:0x800D4B84 end:0x800D4EBC
+	.rodata     start:0x801AC9C8 end:0x801ACCC8
+	.sdata2     start:0x803599C0 end:0x803599F0
+
+nw4r/snd/snd_ExternalSoundPlayer.cpp:
+	.text       start:0x800D4EBC end:0x800D4F9C
+
+nw4r/snd/snd_FrameHeap.cpp:
+	.text       start:0x800D4F9C end:0x800D5570
+
+nw4r/snd/snd_FxReverbHi.cpp:
+	.text       start:0x800D5570 end:0x800D5958
+	.rodata     start:0x801ACCC8 end:0x801ACCE0
+	.data       start:0x801CE078 end:0x801CE098
+	.sdata2     start:0x803599F0 end:0x80359A00
+
+nw4r/snd/snd_InstancePool.cpp:
+	.text       start:0x800D5958 end:0x800D5BC0
+
+nw4r/snd/snd_Lfo.cpp:
+	.text       start:0x800D5BC0 end:0x800D5DB0
+	.rodata     start:0x801ACCE0 end:0x801ACD08
+	.sdata2     start:0x80359A00 end:0x80359A30
+
 nw4r/ut/ut_list.cpp:
 	.text       start:0x800E84D8 end:0x800E8774
 

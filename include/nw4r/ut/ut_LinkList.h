@@ -2,6 +2,7 @@
 #define NW4R_UT_LINK_LIST_H
 
 #include <types.h>
+#include <stddef.h>
 #include <nw4r/ut/ut_NonCopyable.h>
 
 namespace nw4r {
@@ -151,5 +152,36 @@ public:
 
 } // namespace ut
 } // namespace nw4r
+
+// Added for snd (Task 11): ogws list macros.
+#ifndef DECLTYPE
+#define DECLTYPE(x) __decltype__(x)
+#endif
+
+#ifndef NW4R_UT_LINKLIST_TYPEDEF_DECL
+#define NW4R_UT_LINKLIST_TYPEDEF_DECL(T) typedef nw4r::ut::LinkList<T, offsetof(T, node)> T##List;
+#define NW4R_UT_LINKLIST_TYPEDEF_DECL_EX(T, SUFFIX)                                                \
+    typedef nw4r::ut::LinkList<T, offsetof(T, node##SUFFIX)> T##SUFFIX##List;
+#define NW4R_UT_LINKLIST_NODE_DECL() nw4r::ut::LinkListNode node
+#define NW4R_UT_LINKLIST_NODE_DECL_EX(SUFFIX) nw4r::ut::LinkListNode node##SUFFIX
+#define NW4R_UT_LINKLIST_TYPEDEF_FORCE(T) template struct nw4r::ut::LinkList<T, offsetof(T, node)>
+
+#define NW4R_UT_LINKLIST_FOREACH(NAME, LIST, ...)                                                  \
+    {                                                                                              \
+        typedef DECLTYPE((LIST).GetBeginIter()) IterType;                                          \
+        for (IterType NAME = (LIST).GetBeginIter(); NAME != (LIST).GetEndIter(); ++NAME) {         \
+            __VA_ARGS__;                                                                           \
+        }                                                                                          \
+    }
+
+#define NW4R_UT_LINKLIST_FOREACH_SAFE(NAME, LIST, ...)                                             \
+    {                                                                                              \
+        typedef DECLTYPE((LIST).GetBeginIter()) IterType;                                          \
+        for (IterType __impl__ = (LIST).GetBeginIter(); __impl__ != (LIST).GetEndIter();) {        \
+            IterType NAME = __impl__++;                                                            \
+            __VA_ARGS__;                                                                           \
+        }                                                                                          \
+    }
+#endif
 
 #endif
