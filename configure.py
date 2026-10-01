@@ -313,6 +313,11 @@ cflags_nw4r_g3d = [
     "-DNW4R_UT_RECT_DEFAULT_ZERO",
 ]
 
+# nw4r::snd SoundArchivePlayer ... WsdTrack (Task 13): NW4R flags
+cflags_nw4r_snd3 = [
+    *cflags_nw4r,
+]
+
 # RVL SDK libraries; flags as in doldecomp/ogws
 cflags_rvl = [
     *cflags_base,
@@ -1017,6 +1022,38 @@ config.libs = [
             Object(Matching, "nw4r/g3d/g3d_init.cpp"),
             Object(Matching, "nw4r/g3d/g3d_fog.cpp"),
             Object(Matching, "nw4r/g3d/g3d_light.cpp"),
+        ],
+    },
+    {
+        "lib": "nw4r_snd3",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_nw4r_snd3,
+        "progress_category": "sdk",
+        "objects": [
+            Object(NonMatching, "nw4r/snd/snd_SoundArchivePlayer.cpp"),
+            Object(Matching, "nw4r/snd/snd_SoundHandle.cpp"),
+            Object(Matching, "nw4r/snd/snd_SoundHeap.cpp"),
+            Object(NonMatching, "nw4r/snd/snd_SoundPlayer.cpp"),
+            Object(NonMatching, "nw4r/snd/snd_SoundStartable.cpp"),
+            Object(NonMatching, "nw4r/snd/snd_SoundSystem.cpp"),
+            Object(NonMatching, "nw4r/snd/snd_SoundThread.cpp"),
+            Object(NonMatching, "nw4r/snd/snd_StrmChannel.cpp"),
+            Object(NonMatching, "nw4r/snd/snd_StrmFile.cpp"),
+            Object(NonMatching, "nw4r/snd/snd_StrmPlayer.cpp"),
+            Object(NonMatching, "nw4r/snd/snd_StrmSound.cpp"),
+            Object(NonMatching, "nw4r/snd/snd_StrmSoundHandle.cpp"),
+            Object(NonMatching, "nw4r/snd/snd_TaskManager.cpp"),
+            Object(NonMatching, "nw4r/snd/snd_TaskThread.cpp"),
+            Object(NonMatching, "nw4r/snd/snd_Voice.cpp"),
+            Object(NonMatching, "nw4r/snd/snd_VoiceManager.cpp"),
+            Object(NonMatching, "nw4r/snd/snd_Util.cpp"),
+            Object(NonMatching, "nw4r/snd/snd_WaveFile.cpp"),
+            Object(NonMatching, "nw4r/snd/snd_WavePlayer.cpp"),
+            Object(NonMatching, "nw4r/snd/snd_WaveSound.cpp"),
+            Object(NonMatching, "nw4r/snd/snd_WaveSoundHandle.cpp"),
+            Object(NonMatching, "nw4r/snd/snd_WsdFile.cpp"),
+            Object(NonMatching, "nw4r/snd/snd_WsdPlayer.cpp"),
+            Object(NonMatching, "nw4r/snd/snd_WsdTrack.cpp"),
         ],
     },
 ]
