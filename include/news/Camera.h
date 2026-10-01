@@ -9,7 +9,7 @@
 class Camera {
 public:
     Camera(nw4r::g3d::Camera camera);
-    virtual ~Camera() {}
+    virtual ~Camera();
 
     void Init(const nw4r::math::VEC3* rot);
     void Calc();
@@ -18,6 +18,9 @@ public:
     bool UpdateRotation();
     bool Approach(f32* angle, f32 target);
     void Project(nw4r::math::VEC2* screen, const nw4r::math::VEC3* pos);
+
+    // Rotation that ResetRotation() returns to. Also written from outside this file.
+    static nw4r::math::VEC3 sHomeRot;
 
     nw4r::g3d::Camera mCamera;      // at 0x04
     nw4r::math::MTX34 mViewMtx;     // at 0x08

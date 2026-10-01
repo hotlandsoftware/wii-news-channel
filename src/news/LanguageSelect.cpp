@@ -161,7 +161,7 @@ LanguageSelect::LanguageSelect(u32 arc)
 
     Item* item = mItems;
     for (s32 i = 0; i < mNumItems; i++, item++) {
-        item->language = *language++;
+        item->language = language[i];
         item->name = lbl_801B26BC[item->language];
         item->scaleX = scale;
         item->scaleY = scale;
@@ -183,6 +183,8 @@ LanguageSelect::LanguageSelect(u32 arc)
     ChangeState(&LanguageSelect::StateIdle);
     ChangeScroll(&LanguageSelect::ScrollIdle);
 }
+
+LanguageSelect::Item::~Item() {}
 
 LanguageSelect::~LanguageSelect() {
     if (mItems != NULL) {

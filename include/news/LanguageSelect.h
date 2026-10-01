@@ -14,7 +14,7 @@ class LanguageSelect {
 public:
     struct Item {
         Item() : rect(0.0f, 0.0f, 0.0f, 0.0f) {}
-        ~Item() {}
+        ~Item();
 
         u32 unk0;              // at 0x00
         u32 unk4;              // at 0x04

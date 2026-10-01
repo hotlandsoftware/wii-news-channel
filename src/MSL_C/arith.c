@@ -78,8 +78,12 @@ int __msl_mul(int* x, int y) {
         sign = -1;
     }
 
-    a = abs(a);
-    y = abs(y);
+    if (a < 0) {
+        a = -a;
+    }
+    if (y < 0) {
+        y = -y;
+    }
 
     if (a > INT_MAX / y) {
         return 0;
