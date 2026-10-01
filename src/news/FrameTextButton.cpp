@@ -12,7 +12,7 @@ FrameTextButton::FrameTextButton(const wchar_t* text, const math::VEC2& size, s3
         return;
     }
 
-    if (gFitButtonText) {
+    if (gLanguage != 0) {
         f32 maxWidth = mRect.GetWidth() - 48.0f;
         f32 width = mWriter.CalcStringWidth(mText);
         if (maxWidth < width) {

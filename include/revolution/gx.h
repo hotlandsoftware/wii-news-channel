@@ -41,6 +41,18 @@ typedef enum _GXTevColorArg {
     GX_CC_ZERO,
 } GXTevColorArg;
 
+typedef enum _GXCompare {
+    GX_NEVER,
+    GX_LESS,
+    GX_EQUAL,
+    GX_LEQUAL,
+    GX_GREATER,
+    GX_NEQUAL,
+    GX_GEQUAL,
+    GX_ALWAYS,
+} GXCompare;
+
+void GXSetZMode(u8 compareEnable, GXCompare func, u8 updateEnable);
 void GXSetTevColor(GXTevRegID id, GXColor color);
 void GXSetTevColorIn(GXTevStageID stage, GXTevColorArg a, GXTevColorArg b, GXTevColorArg c,
                      GXTevColorArg d);

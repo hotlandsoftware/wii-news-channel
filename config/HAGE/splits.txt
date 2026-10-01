@@ -13,6 +13,16 @@ Sections:
 	.sdata2     type:rodata align:16
 	.sbss2      type:bss align:32
 
+news/Mascot.cpp:
+	.text       start:0x80006FC0 end:0x80007F58
+	.ctors      start:0x80191F04 end:0x80191F08
+	.rodata     start:0x80192000 end:0x801920C0
+	.data       start:0x801AFEC0 end:0x801AFFA0
+	.bss        start:0x801EDD80 end:0x801EDD90
+	.sdata      start:0x80356740 end:0x80356748
+	.sbss       start:0x80357460 end:0x80357468
+	.sdata2     start:0x80358460 end:0x803584F0
+
 news/TextButton.cpp:
 	.text       start:0x8001F994 end:0x80020254
 	.ctors      start:0x80191F14 end:0x80191F18
