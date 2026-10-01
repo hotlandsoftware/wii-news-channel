@@ -637,7 +637,6 @@ static timing_s* getTiming(VITVMode mode) {
     case VI_TVMODE_EXTRA_INT:
     case VI_TVMODE_EXTRA_DS:
     case VI_TVMODE_EXTRA_PROG:
-    case VI_TVMODE_HD720_PROG:
         return timingExtra;
         break;
     }
@@ -1006,13 +1005,8 @@ void setHorizontalRegs(timing_s* tm, u16 dispPosX, u16 dispSizeX) {
     regs[2] = (u16)(tm->hce | tm->hcs << 8);
     changed |= (1ull << (63 - (0x2)));
 
-    if (HorVer.tv == 8) {
-        hbe = (u32)(tm->hbe640 + 172);
-        hbs = tm->hbs640;
-    } else {
-        hbe = (u32)(tm->hbe640 - 40 + dispPosX);
-        hbs = (u32)(tm->hbs640 + 40 + dispPosX - (720 - dispSizeX));
-    }
+    hbe = (u32)(tm->hbe640 - 40 + dispPosX);
+    hbs = (u32)(tm->hbs640 + 40 + dispPosX - (720 - dispSizeX));
 
     hbeLo = hbe & ONES(9);
     hbeHi = hbe >> 9;
@@ -1027,7 +1021,7 @@ void setHorizontalRegs(timing_s* tm, u16 dispPosX, u16 dispSizeX) {
 void setVerticalRegs(u16 dispPosY, u16 dispSizeY, u8 equ, u16 acv, u16 prbOdd, u16 prbEven, u16 psbOdd, u16 psbEven, BOOL black) {
     u16 actualPrbOdd, actualPrbEven, actualPsbOdd, actualPsbEven, actualAcv, c, d;
 
-    if ((HorVer.nonInter == 2) || (HorVer.nonInter == 3)) {
+    if (regs[0x36] & 1) {
         c = 1;
         d = 2;
     } else {
@@ -1094,10 +1088,26 @@ void VIConfigure(const GXRenderModeObj* rm) {
         PrintDebugPalCaution();
     }
 
-    if (((tvInBootrom != VI_PAL && tvInBootrom != VI_EURGB60) && (tvInGame == VI_PAL || tvInGame == VI_EURGB60)) ||
-        ((tvInBootrom == VI_PAL || tvInBootrom == VI_EURGB60) && (tvInGame != VI_PAL && tvInGame != VI_EURGB60))) {
-        OSPanic(__FILE__, 0xA57, "VIConfigure(): Tried to change mode from (%d) to (%d), which is forbidden\n", tvInBootrom, tvInGame);
+    switch (tvInBootrom) {
+    case VI_NTSC:
+    case VI_MPAL:
+    case 6:
+    case 7:
+        if (tvInGame == VI_NTSC || tvInGame == VI_MPAL || tvInGame == 6 || tvInGame == 7) {
+            goto ok;
+        }
+        break;
+    case VI_PAL:
+    case VI_EURGB60:
+        if (tvInGame == VI_PAL || tvInGame == VI_EURGB60) {
+            goto ok;
+        }
+        break;
     }
+
+    OSPanic(__FILE__, 0xA59, "VIConfigure(): Tried to change mode from (%d) to (%d), which is forbidden\n", tvInBootrom, tvInGame);
+
+ok:
 
     if ((tvInGame == VI_NTSC) || (tvInGame == VI_MPAL)) {
         HorVer.tv = tvInBootrom;
@@ -1135,11 +1145,7 @@ void VIConfigure(const GXRenderModeObj* rm) {
     if ((HorVer.nonInter == VI_PROGRESSIVE) || (HorVer.nonInter == VI_3D)) {
         regDspCfg = (((unsigned long)(regDspCfg)) & ~0x00000004) | (((unsigned long)(1)) << 2);
 
-        if (HorVer.tv == VI_HD720) {
-            regClksel = (((unsigned long)(regClksel)) & ~0x00000001) | (((unsigned long)(0)));
-        } else {
-            regClksel = (((unsigned long)(regClksel)) & ~0x00000001) | (((unsigned long)(1)));
-        }
+        regClksel = (((unsigned long)(regClksel)) & ~0x00000001) | (((unsigned long)(1)));
     } else {
         regDspCfg = (((unsigned long)(regDspCfg)) & ~0x00000004) | (((unsigned long)(HorVer.nonInter & 1)) << 2);
         regClksel = (((unsigned long)(regClksel)) & ~0x00000001) | (((unsigned long)(0)));
@@ -1254,6 +1260,16 @@ u32 VIGetRetraceCount(void) {
     return retraceCount;
 }
 
+u32 VIGetNextField(void) {
+    s32 nextField;
+    BOOL enabled;
+
+    enabled = OSDisableInterrupts();
+    nextField = getCurrentFieldEvenOdd() ^ 1;
+    OSRestoreInterrupts(enabled);
+    return nextField ^ (HorVer.AdjustedDispPosY & 1);
+}
+
 u32 VIGetCurrentLine(void) {
     u32 halfLine;
     timing_s* tm;
@@ -1282,7 +1298,6 @@ u32 VIGetTvFormat(void) {
     case 3:
     case 6:
     case 7:
-    case 8:
         format = 0;
         break;
 

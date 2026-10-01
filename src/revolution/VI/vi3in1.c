@@ -4,7 +4,6 @@
 static VIVideo Vdac_Flag_Region;
 volatile u32 Vdac_Flag_Changed = 0;
 static VIACPType __type;
-static u32 __tvType = 0xFF;
 
 static VIGammaObj gammaSet[] = {
     0x0000,0x0000,0x0000,0x0000,0x0000,0x0000,
@@ -616,6 +615,8 @@ static u8 __cc1 = 0xFF;
 static u8 __cc2 = 0xFF;
 static u8 __cc3 = 0xFF;
 static u8 __cc4 = 0xFF;
+
+static u32 __tvType = 0xFF;
 
 void __VISetClosedCaption(void) {
     u8 buffer[5];

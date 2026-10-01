@@ -640,9 +640,9 @@ config.libs = [
         "cflags": cflags_rvl,
         "progress_category": "sdk",
         "objects": [
-            Object(NonMatching, "revolution/VI/vi.c"),
-            Object(NonMatching, "revolution/VI/i2c.c"),
-            Object(NonMatching, "revolution/VI/vi3in1.c"),
+            Object(Matching, "revolution/VI/vi.c"),
+            Object(Matching, "revolution/VI/i2c.c"),
+            Object(Matching, "revolution/VI/vi3in1.c"),
         ],
     },
     {
