@@ -290,10 +290,10 @@ PaneButton::PaneButton(lyt::Pane* pane, const lyt::DrawInfo* drawInfo, PaneButto
 PaneButton::~PaneButton() {}
 
 void PaneButton::Reset() {
-    mHover = false;
     mOffsetY = 0.0f;
     mAlpha = 255;
     mFadeAlpha = 255;
+    mHover = false;
     mHoverFrame = 0;
     mPressed = false;
     mPressFrame = 0;
@@ -334,6 +334,9 @@ void PaneButton::UpdateFrame() {
     }
 }
 
+// This file is built with -ipa file, under which a function that gets too big
+// from inlining is compiled with no inlining at all. UpdatePane is just below
+// that limit here, so force the same result.
 #pragma dont_inline on
 void PaneButton::UpdatePane() {
     lyt::Pane* textPane = NULL;

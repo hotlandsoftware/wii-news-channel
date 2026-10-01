@@ -314,7 +314,7 @@ config.libs = [
             Object(Matching, "news/IconTextButton.cpp"),
             Object(Matching, "news/SmallTextButton.cpp"),
             Object(Matching, "news/SmoothValue.cpp"),
-            Object(NonMatching, "news/PaneButton.cpp", extra_cflags=["-inline auto", "-ipa file"]),
+            Object(Matching, "news/PaneButton.cpp", extra_cflags=["-inline auto", "-ipa file"]),
         ],
     },
 ]

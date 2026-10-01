@@ -23,6 +23,8 @@ struct VEC3 : public Vec {
         y = fy;
         z = fz;
     }
+    // Mascot.cpp needs this destructor for its weak-destructor placement,
+    // but PaneButton.cpp's temporaries show VEC3 has no destructor there.
 #ifndef NW4R_MATH_VEC3_NO_DTOR
     ~VEC3() {}
 #endif
