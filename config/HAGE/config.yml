@@ -1,0 +1,11 @@
+# See docs/ and https://github.com/encounter/decomp-toolkit for documentation.
+# Extract orig/HAGE/sys/main.dol from the WAD with tools/extract_wad.py.
+object: orig/HAGE/sys/main.dol
+hash: 1bb643fa5f5e11930849b5efd514f08d30ead975
+symbols: config/HAGE/symbols.txt
+splits: config/HAGE/splits.txt
+mw_comment_version: 14
+quick_analysis: false
+detect_objects: true
+detect_strings: true
+write_asm: true

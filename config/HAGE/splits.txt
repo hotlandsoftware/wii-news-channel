@@ -1,0 +1,25 @@
+Sections:
+	.init       type:code align:4
+	extab       type:rodata align:32
+	extabindex  type:rodata align:4
+	.text       type:code align:4
+	.ctors      type:rodata align:32
+	.dtors      type:rodata align:32
+	.rodata     type:rodata align:32
+	.data       type:data align:4
+	.bss        type:bss align:128
+	.sdata      type:data align:32
+	.sbss       type:bss align:32
+	.sdata2     type:rodata align:16
+	.sbss2      type:bss align:32
+
+Runtime.PPCEABI.H/global_destructor_chain.c:
+	.text       start:0x8017A048 end:0x8017A0A8
+	.sbss       start:0x80358418 end:0x80358420
+
+Runtime.PPCEABI.H/__init_cpp_exceptions.cpp:
+	.text       start:0x8017AC08 end:0x8017AC78
+	.ctors      start:0x80191F00 end:0x80191F04 rename:.ctors$10
+	.dtors      start:0x80191FE0 end:0x80191FE4 rename:.dtors$10
+	.dtors      start:0x80191FE4 end:0x80191FE8 rename:.dtors$15
+	.sdata      start:0x80357428 end:0x80357430
