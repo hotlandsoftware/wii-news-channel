@@ -239,7 +239,10 @@ revolution/MEM/mem_expHeap.c:
 	.text       start:0x80128E00 end:0x801296C0
 
 revolution/MEM/mem_frameHeap.c:
-	.text       start:0x801296C0 end:0x80129C0C
+	.text       start:0x801296C0 end:0x801299AC
+
+revolution/MEM/mem_unitHeap.c:
+	.text       start:0x801299AC end:0x80129C0C
 
 revolution/MEM/mem_allocator.c:
 	.text       start:0x80129C0C end:0x80129C90

@@ -549,7 +549,8 @@ config.libs = [
         "objects": [
             Object(Matching, "revolution/MEM/mem_heapCommon.c"),
             Object(Matching, "revolution/MEM/mem_expHeap.c"),
-            Object(NonMatching, "revolution/MEM/mem_frameHeap.c"),
+            Object(Matching, "revolution/MEM/mem_frameHeap.c"),
+            Object(Matching, "revolution/MEM/mem_unitHeap.c"),
             Object(Matching, "revolution/MEM/mem_allocator.c"),
             Object(Matching, "revolution/MEM/mem_list.c"),
         ],

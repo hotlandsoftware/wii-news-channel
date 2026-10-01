@@ -8,5 +8,6 @@
 #include <revolution/mem/frameHeap.h>
 #include <revolution/mem/heapCommon.h>
 #include <revolution/mem/list.h>
+#include <revolution/mem/unitHeap.h>
 
 #endif // MEM_H
