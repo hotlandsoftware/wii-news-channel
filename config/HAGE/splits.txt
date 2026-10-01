@@ -348,10 +348,169 @@ nw4r/ut/ut_list.cpp:
 nw4r/ut/ut_LinkList.cpp:
 	.text       start:0x800E8774 end:0x800E88E0
 
+revolution/BASE/PPCArch.c:
+	.text       start:0x800FB9EC end:0x800FBB58
+	.data       start:0x801CFE68 end:0x801CFEA0
+
+revolution/OS/OS.c:
+	.text       start:0x800FBB58 end:0x800FCF0C
+	.data       start:0x801CFEA0 end:0x801D0290
+	.bss        start:0x802F2600 end:0x802F2670
+	.sdata      start:0x80356FC8 end:0x80356FF0
+	.sbss       start:0x80357D58 end:0x80357DA0
+
+revolution/OS/OSAlarm.c:
+	.text       start:0x800FCF0C end:0x800FD6F0
+	.data       start:0x801D0290 end:0x801D02A0
+	.sbss       start:0x80357DA0 end:0x80357DA8
+
+revolution/OS/OSAlloc.c:
+	.text       start:0x800FD6F0 end:0x800FD9F8
+	.sdata      start:0x80356FF0 end:0x80356FF8
+	.sbss       start:0x80357DA8 end:0x80357DB8
+
 revolution/OS/OSArena.c:
 	.text       start:0x800FD9F8 end:0x800FDACC
 	.sdata      start:0x80356FF8 end:0x80357000
 	.sbss       start:0x80357DB8 end:0x80357DC0
+
+revolution/OS/OSAudioSystem.c:
+	.text       start:0x800FDACC end:0x800FDF80
+	.data       start:0x801D02A0 end:0x801D0320
+
+revolution/OS/OSCache.c:
+	.text       start:0x800FDF80 end:0x800FE5B0
+	.data       start:0x801D0320 end:0x801D0558
+
+revolution/OS/OSContext.c:
+	.text       start:0x800FE5B0 end:0x800FEE38
+	.data       start:0x801D0558 end:0x801D0738
+
+revolution/OS/OSError.c:
+	.text       start:0x800FEE38 end:0x800FF568
+	.data       start:0x801D0738 end:0x801D0A58
+	.bss        start:0x802F2670 end:0x802F26C0
+	.sdata      start:0x80357000 end:0x80357008
+
+revolution/OS/OSExec.c:
+	.text       start:0x800FF568 end:0x80101738
+	.data       start:0x801D0A58 end:0x801D0DA8
+	.bss        start:0x802F26C0 end:0x802F26E0
+	.sdata      start:0x80357008 end:0x80357018
+	.sbss       start:0x80357DC0 end:0x80357DD8
+	.sdata2     start:0x80359CA0 end:0x80359CA8
+
+revolution/OS/OSFatal.c:
+	.text       start:0x80101738 end:0x8010235C
+	.bss        start:0x802F26E0 end:0x802F29C0
+	.sdata      start:0x80357018 end:0x80357020
+	.sdata2     start:0x80359CA8 end:0x80359CE8
+
+revolution/OS/OSFont.c:
+	.text       start:0x8010235C end:0x80103024
+	.data       start:0x801D0DA8 end:0x801D18B8
+	.sdata      start:0x80357020 end:0x80357028
+	.sbss       start:0x80357DD8 end:0x80357DE8
+	.sdata2     start:0x80359CE8 end:0x80359CF0
+
+revolution/OS/OSInterrupt.c:
+	.text       start:0x80103024 end:0x801037A8
+	.data       start:0x801D18B8 end:0x801D18E8
+	.sbss       start:0x80357DE8 end:0x80357E00
+
+revolution/OS/OSLink.c:
+	.text       start:0x801037A8 end:0x801037C0
+
+revolution/OS/OSMessage.c:
+	.text       start:0x801037C0 end:0x801039C4
+
+revolution/OS/OSMemory.c:
+	.text       start:0x801039C4 end:0x801041D8
+	.data       start:0x801D18E8 end:0x801D18F8
+
+revolution/OS/OSMutex.c:
+	.text       start:0x801041D8 end:0x801044DC
+
+revolution/OS/OSReboot.c:
+	.text       start:0x801044DC end:0x8010455C
+	.sbss       start:0x80357E00 end:0x80357E08
+
+revolution/OS/OSReset.c:
+	.text       start:0x8010455C end:0x80104DC0
+	.data       start:0x801D18F8 end:0x801D1B80
+	.sdata      start:0x80357028 end:0x80357030
+	.sbss       start:0x80357E08 end:0x80357E18
+
+revolution/OS/OSRtc.c:
+	.text       start:0x80104DC0 end:0x8010584C
+	.bss        start:0x802F29C0 end:0x802F2A18
+
+revolution/OS/OSSync.c:
+	.text       start:0x8010584C end:0x801058CC
+
+revolution/OS/OSThread.c:
+	.text       start:0x801058CC end:0x80106E84
+	.bss        start:0x802F2A18 end:0x802F3420
+	.sdata      start:0x80357030 end:0x80357038
+	.sbss       start:0x80357E18 end:0x80357E28
+
+revolution/OS/OSTime.c:
+	.text       start:0x80106E84 end:0x80107538
+	.data       start:0x801D1B80 end:0x801D1BE0
+
+revolution/OS/OSUtf.c:
+	.text       start:0x80107538 end:0x80107770
+	.data       start:0x801D1BE0 end:0x801DDA20
+
+revolution/OS/OSIpc.c:
+	.text       start:0x80107770 end:0x80107798
+	.sdata      start:0x80357038 end:0x80357040
+	.sbss       start:0x80357E28 end:0x80357E30
+
+revolution/OS/OSStateTM.c:
+	.text       start:0x80107798 end:0x80107EDC
+	.data       start:0x801DDA20 end:0x801DDAE8
+	.bss        start:0x802F3420 end:0x802F34E0
+	.sbss       start:0x80357E30 end:0x80357E50
+
+revolution/OS/time.dolphin.c:
+	.text       start:0x80107EDC end:0x80107F28
+
+revolution/OS/__start.c:
+	.init       start:0x80004000 end:0x800042E0
+	.sbss       start:0x80357E50 end:0x80357E58
+
+revolution/OS/OSPlayRecord.c:
+	.text       start:0x80107F28 end:0x80108620
+	.data       start:0x801DDAE8 end:0x801DDB30
+	.bss        start:0x802F34E0 end:0x802F36E0
+	.sdata      start:0x80357040 end:0x80357048
+	.sbss       start:0x80357E58 end:0x80357E78
+
+revolution/OS/OSStateFlags.c:
+	.text       start:0x80108620 end:0x8010882C
+	.data       start:0x801DDB30 end:0x801DDB58
+	.bss        start:0x802F36E0 end:0x802F3700
+
+revolution/OS/OSNet.c:
+	.text       start:0x8010882C end:0x801088E0
+	.data       start:0x801DDB58 end:0x801DDCC0
+
+revolution/OS/OSNandbootInfo.c:
+	.text       start:0x801088E0 end:0x80108AE8
+	.data       start:0x801DDCC0 end:0x801DDCE0
+
+revolution/OS/OSPlayTime.c:
+	.text       start:0x80108AE8 end:0x80109380
+	.data       start:0x801DDCE0 end:0x801DDD20
+	.bss        start:0x802F3700 end:0x802F3730
+	.sdata      start:0x80357048 end:0x80357050
+	.sbss       start:0x80357E78 end:0x80357E90
+	.sdata2     start:0x80359CF0 end:0x80359D00
+
+revolution/OS/__ppc_eabi_init.c:
+	.init       start:0x800042E0 end:0x80004338
+	.text       start:0x80109380 end:0x80109434
 
 revolution/DB/db.c:
 	.text       start:0x8010C270 end:0x8010C358
@@ -538,6 +697,7 @@ revolution/IPC/ipcMain.c:
 
 revolution/PAD/Pad.c:
 	.text       start:0x80134BDC end:0x80134C38
+	.sbss       start:0x80358310 end:0x80358318
 
 Runtime.PPCEABI.H/__va_arg.c:
 	.text       start:0x80179F80 end:0x8017A048

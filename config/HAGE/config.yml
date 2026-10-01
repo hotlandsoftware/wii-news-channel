@@ -9,3 +9,10 @@ quick_analysis: false
 detect_objects: true
 detect_strings: true
 write_asm: true
+
+block_relocations:
+  # Random table data that happens to look like a pointer into OSFont's HankakuToCode
+  - source: 0x801E4C9C
+  # OSInit: lis/addi of 0x80004000 (start of .init)
+  - source: 0x800FC6F8
+  - source: 0x800FC770
