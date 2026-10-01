@@ -1,32 +1,38 @@
 # wii-news-channel
 
 ## STATUS
-- **7.72%** decompiled (7.12% byte-matching)
-- **5.57%** fully linked (79 / 305 files)
+- **49.56%** decompiled (48.50% byte-matching)
+- **45.85%** fully linked (381 / 632 files)
 
-Percentages are of the DOL's code bytes (1,618,968), as reported by `ninja`.
+Percentages are of the DOL's code bytes (1,626,960, including `.init`), as reported by `ninja`.
 
 | Area (code size) | Decompiled | Matching | Linked |
 | --- | --- | --- | --- |
-| News Channel game code (`0x80006FC0`–`0x80051D4C`, ~307 KB) | 24.7% | 21.6% | 13.5% (13 files) |
-| Runtime / MSL (`0x80179F64`–`0x8018C7C0`, ~76 KB) | 64.9% | 64.8% | 64.1% (66 files) |
-| HOME Menu, NW4R, RVL SDK, MetroTRK (~1.24 MB) | 0% | 0% | 0% |
+| News Channel game code (`0x80006FC0`–`0x80051D4C`, ~307 KB) | 24.7% | 22.9% | 20.4% |
+| HOME Menu, NW4R, RVL SDK (`0x80051D4C`–`0x80179F64`, ~1.21 MB) | 53.7% | 52.7% | 49.8% |
+| Runtime / MSL (`0x80179F64`–`0x8018C7C0`, ~76 KB) | 64.9% | 64.9% | 64.9% |
+| MetroTRK (`0x8018C7C0`–`0x80191F00`, plus `.init`) | 100% | 100% | 100% |
 
-Each row is a share of that whole address range.
+Each row is a share of that whole address range. `ninja`'s per-category summary is different: it only counts files that have been split so far.
 
-`ninja`'s per-category summary reports a different figure: a percentage of only the files split so far. That is why it shows game code as "99.86% fuzzy": 99.86% of the 20 game files started, about 76 KB.
+**Game code**
+- Fully linked: TextButton, FrameTextButton, IconTextButton, SmallTextButton, Scroller, Ticker, HeadlineList, Locale, ErrorScreen, DrawUtil, SmoothValue, PaneButton, LayoutScreen, Camera, LanguageSelect, main.
+- Not yet matching: PointerEffect (99.98%), Mascot (99.96%), NewsArticle (99.54%), Model (94.23%).
 
-**Fully linked game code:** TextButton, FrameTextButton, IconTextButton, SmallTextButton, Scroller, Ticker, HeadlineList, Locale, ErrorScreen, DrawUtil, SmoothValue, PaneButton, main.
+**Platform layer**
+- RVL SDK, linked: OS and BASE, EXI, SI, DB, VI, MTX, GX, AX, AXFX, MEM, DSP, CX, NAND, SC, WENC, ESP, IPC, FS, PAD, the Bluetooth stack (BTE), and the VF filesystem (except 4 files at 99.9%).
+- NW4R, linked: `g3d`, `lyt` (except `lyt_window.cpp`, 99.7%), `ut` (lists).
+- Not started: NW4R ef, snd and the rest of ut/math; DVD/AI, WPAD/KPAD/USB/WUD, NWC24, RSO/CNT/ARC/SO; the HOME Menu; one unidentified 41 KB library.
+- [docs/platform_layer_map.md](docs/platform_layer_map.md) has the full address map and plan.
 
-**Decompiled, not yet matching:** LayoutScreen (99.99%), Mascot (99.96%), Camera (99.93%), LanguageSelect (99.92%), NewsArticle (99.39%), PointerEffect (99.39%), Model (94.23%), MSL `arith.c` (99.90%).
-
-**Linked runtime and MSL:** C++ runtime and exception handling, `string`, `mem`, `printf`, `strtoul`, stdio/file I/O, `ansi_fp`, locale/ctype, the allocator and the fdlibm math library.
+**Runtime, MSL and MetroTRK, linked:** C++ runtime and exceptions, `string`, `mem`, `printf`, `strtoul`, stdio/file I/O, `ansi_fp`, locale/ctype, the allocator, the fdlibm math library, and all of MetroTRK. Not started: MSL scanf/wide printf.
 
 ## Description
 A matching decompilation of the Wii News Channel (USA, title `HAGE`, v7).
 
 The goal is C/C++ source that compiles to a byte-identical `main.dol`.
 No game assets or assembly are stored in this repository: you supply your own copy of the channel WAD.
+The only `asm` in the source is code that was originally written in assembly (runtime, MetroTRK, low-level SDK routines). Unmatched C functions are never replaced with disassembly.
 
 ## Dependencies
 
