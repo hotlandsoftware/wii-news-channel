@@ -1,0 +1,229 @@
+#ifndef NW4R_UT_ARCHIVE_FONT_BASE_H
+#define NW4R_UT_ARCHIVE_FONT_BASE_H
+
+// Archive (.brfna) font base. There is no public reference decomp for this
+// class; names follow later NW4R revisions where known, the rest are ours.
+#include <types.h>
+#include <nw4r/ut/ut_ResFontBase.h>
+#include <nw4r/ut/ut_binaryFileFormat.h>
+#include <revolution/cx.h>
+
+namespace nw4r {
+namespace ut {
+
+// Body of the 'GLGR' (glyph groups) block, after its BinaryBlockHeader.
+struct FontGlyphGroups {
+    u32 sheetSize;      // at 0x0
+    u16 glyphsPerSheet; // at 0x4
+    u16 numSet;         // at 0x6
+    u16 numSheet;       // at 0x8
+    u16 numCWDH;        // at 0xA
+    u16 numCMAP;        // at 0xC
+    u16 nameOffsets[1]; // at 0xE (numSet entries)
+    // followed by:
+    // u32 sizeSheets[numSheet];
+    // u32 sizeCWDH[numCWDH];
+    // u32 sizeCMAP[numCMAP];
+    // u32 useSheets[numSet][(numSheet + 31) / 32];
+    // u32 useCWDH[numSet][(numCWDH + 31) / 32];
+    // u32 useCMAP[numSet][(numCMAP + 31) / 32];
+    // char names[];
+};
+
+struct FontGlyphGroupsBlock {
+    BinaryBlockHeader blockHeader; // at 0x0
+    FontGlyphGroups body;          // at 0x8
+};
+
+namespace detail {
+
+class ArchiveFontBase : public ResFontBase {
+public:
+    enum ConstructResult {
+        CONSTRUCT_MORE_DATA,
+        CONSTRUCT_FINISH,
+        CONSTRUCT_ERROR,
+        CONSTRUCT_CONTINUE,
+        NUM_OF_CONSTRUCT_RESULT
+    };
+
+    struct ConstructContext;
+
+    class CachedStreamReader {
+    public:
+        void Init();
+        void Attach(const void* stream, u32 streamSize);
+        bool RequestData(ConstructContext* pContext, u32 size);
+
+        u32 GetRemain() const {
+            return (mStreamEnd - mStreamPos) + (mpTempStrmBufEnd - mpTempStrmBufPos);
+        }
+
+        u32 GetStreamRemain() const { return mStreamEnd - mStreamPos; }
+
+        u32 GetOffset() const {
+            return (mStreamPos - mStreamBegin) + (mpTempStrmBufPos - mpTempStrmBuf);
+        }
+
+        const u8* GetStreamPos() const { return mStreamPos; }
+
+        const u8* Get(u32 size) {
+            const u8* pos = mStreamPos;
+            mStreamPos += size;
+            return pos;
+        }
+
+        void SkipStream(u32 size) { mStreamPos += size; }
+
+        void Advance(u32 size);
+        void CopyTo(void* pDst, u32 size);
+        void MoveTo(void* pDst, u32 size);
+
+        const u8* mStreamBegin;      // at 0x0
+        const u8* mStreamPos;        // at 0x4
+        const u8* mStreamEnd;        // at 0x8
+        u8* mpTempStrmBuf;           // at 0xC
+        u8* mpTempStrmBufPos;        // at 0x10
+        u8* mpTempStrmBufEnd;        // at 0x14
+        u32 mRequireSize;            // at 0x18
+    };
+
+    struct ConstructContext {
+        enum Operation {
+            OP_ANALYZE_BLOCK_HEADER,
+            OP_ANALYZE_FILE_HEADER,
+            OP_ANALYZE_GLGR,
+            OP_ANALYZE_FINF,
+            OP_ANALYZE_CMAP,
+            OP_ANALYZE_CWDH,
+            OP_ANALYZE_TGLP,
+            OP_PREPARE_COPY_SHEET,
+            OP_PREPARE_EXPAND_SHEET,
+            OP_COPY,
+            OP_SKIP,
+            OP_EXPAND,
+            OP_FATAL_ERROR,
+            NUM_OF_OPERATION,
+            OP_INVALID = NUM_OF_OPERATION + 1
+        };
+
+        struct TargetBuffer {
+            u32 GetRemain() const { return pEnd - pCurrent; }
+
+            u8* pBegin;   // at 0x0
+            u8* pEnd;     // at 0x4
+            u8* pCurrent; // at 0x8
+        };
+
+        u32 GetRemain() const { return target.GetRemain(); }
+        u8* GetCurrentPtr() const { return target.pCurrent; }
+        void Advance(u32 size) { target.pCurrent += size; }
+
+        void SetupTask(Operation task, u32 size, Operation next) {
+            opSize = size;
+            op = task;
+            opNext = next;
+        }
+
+        void SetupCopyTask(u32 size, Operation next) { SetupTask(OP_COPY, size, next); }
+        void SetupSkipTask(u32 size, Operation next) { SetupTask(OP_SKIP, size, next); }
+        void SetupExpandTask(u32 size, Operation next) { SetupTask(OP_EXPAND, size, next); }
+
+        bool FinishTask(u32 size) {
+            if (size > opSize) {
+                size = opSize;
+            }
+
+            opSize -= size;
+            if (opSize == 0) {
+                op = opNext;
+                return true;
+            }
+
+            return false;
+        }
+
+        FontInformation* pFINF;                // at 0x0
+        FontWidth* pPrevCWDH;                  // at 0x4
+        FontCodeMap* pPrevCMAP;                // at 0x8
+        u32 op;                                // at 0xC
+        BinaryBlockHeader header;              // at 0x10
+        u32 streamOffset;                      // at 0x18
+        CachedStreamReader streamReader;       // at 0x1C
+        CXUncompContextHuffman* pHuffmanCtx;   // at 0x38
+        const char* pGlyphGroups;              // at 0x3C
+        u16* pAdjustTable;                     // at 0x40
+        TargetBuffer target;                   // at 0x44
+        u32 opNext;                            // at 0x50
+        u32 opSize;                            // at 0x54
+        u32 numBlocks;                         // at 0x58
+        u32 blocksRead;                        // at 0x5C
+        u16 sheetIndex;                        // at 0x60
+        u16 numSheet;                          // at 0x62
+        u16 glyphsPerSheet;                    // at 0x64
+    };
+
+    static const u32 SIGNATURE = 'RFNA';
+    static const u32 SIGNATURE_GLGR = 'GLGR';
+    static const u32 SIGNATURE_FINF = 'FINF';
+    static const u32 SIGNATURE_CMAP = 'CMAP';
+    static const u32 SIGNATURE_CWDH = 'CWDH';
+    static const u32 SIGNATURE_TGLP = 'TGLP';
+
+    static const u16 ADJUST_OFFSET_SHEET_NOT_LOADED = 0xFFFF;
+    static const u16 FONT_SHEET_FORMAT_COMPRESSED_FLAG = 0x8000;
+    static const u16 FONT_SHEET_FORMAT_MASK = 0x7FFF;
+
+    ArchiveFontBase();
+    virtual ~ArchiveFontBase(); // at 0x08
+
+    virtual CharWidths GetCharWidths(u16 c) const; // at 0x4C
+
+protected:
+    void SetResourceBuffer(void* pBuffer, FontInformation* pInfo, u16* pAdjustTable);
+    void* RemoveResourceBuffer();
+
+    u16 AdjustIndex(u16 index) const;
+
+    static bool IncludeName(const char* nameList, const char* name);
+    static bool IsValidResource(const void* brfna, u32 dataSize);
+
+    static ConstructResult ConstructOpAnalyzeBlockHeader(ConstructContext* pContext,
+                                                         CachedStreamReader* pReader);
+    static ConstructResult ConstructOpAnalyzeFileHeader(ConstructContext* pContext,
+                                                        CachedStreamReader* pReader);
+    static ConstructResult ConstructOpAnalyzeGLGR(ConstructContext* pContext,
+                                                  CachedStreamReader* pReader);
+    static ConstructResult ConstructOpAnalyzeFINF(ConstructContext* pContext,
+                                                  CachedStreamReader* pReader);
+    static ConstructResult ConstructOpAnalyzeCMAP(ConstructContext* pContext,
+                                                  CachedStreamReader* pReader);
+    static ConstructResult ConstructOpAnalyzeCWDH(ConstructContext* pContext,
+                                                  CachedStreamReader* pReader);
+    static ConstructResult ConstructOpAnalyzeTGLP(ConstructContext* pContext,
+                                                  CachedStreamReader* pReader);
+    static ConstructResult ConstructOpPrepareCopySheet(ConstructContext* pContext,
+                                                       CachedStreamReader* pReader);
+    static ConstructResult ConstructOpPrepareExpandSheet(ConstructContext* pContext,
+                                                         CachedStreamReader* pReader);
+    static ConstructResult ConstructOpCopy(ConstructContext* pContext, CachedStreamReader* pReader);
+    static ConstructResult ConstructOpSkip(ConstructContext* pContext, CachedStreamReader* pReader);
+    static ConstructResult ConstructOpExpand(ConstructContext* pContext,
+                                             CachedStreamReader* pReader);
+    static ConstructResult ConstructOpFatalError(ConstructContext* pContext,
+                                                 CachedStreamReader* pReader);
+
+    static ConstructResult RequestData(ConstructContext* pContext, CachedStreamReader* pReader,
+                                       u32 size) {
+        pContext->streamOffset += pReader->GetOffset();
+        return pReader->RequestData(pContext, size) ? CONSTRUCT_MORE_DATA : CONSTRUCT_ERROR;
+    }
+
+    u16* mpGlyphIndexAdjustArray; // at 0x18
+};
+
+} // namespace detail
+} // namespace ut
+} // namespace nw4r
+
+#endif
