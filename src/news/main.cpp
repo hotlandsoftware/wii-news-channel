@@ -245,8 +245,8 @@ s32 HomeMenu::Calc() {
     if (mActive) {
         f32 scaleY = 1.2f * (gWidescreen ? 7.0f / 6.0f : 1.0f);
         f32 t = 0.908f * scaleY;
-        t *= 456.0f;
-        f32 scaleX = t * gRenderMode.fbWidth / (gRenderMode.viWidth * GetScreenWidth());
+        f32 height = t * GetScreenHeight();
+        f32 scaleX = height * gRenderMode.fbWidth / (gRenderMode.viWidth * GetScreenWidth());
 
         HBMControllerData con;
         KPADStatus kpads[4];
