@@ -128,7 +128,7 @@ static void SetMaterialAlphaRecursive(lyt::Pane* pane, int alpha) {
 }
 
 static ut::Color BlendColor(const ut::Color& from, const ut::Color& to, int t, int max) {
-    ut::Color color;
+    ut::Color color(ut::Color::WHITE);
     color.r = (from.r * (max - t) + to.r * t) / max;
     color.g = (from.g * (max - t) + to.g * t) / max;
     color.b = (from.b * (max - t) + to.b * t) / max;
@@ -149,6 +149,7 @@ PaneButton::PaneButton(lyt::Pane* pane, const lyt::DrawInfo* drawInfo, PaneButto
       mLinkB(NULL),
       mTextColorCallback(NULL),
       mMoveCallback(NULL),
+      mTextColor(ut::Color::WHITE),
       mRect(0.0f, 0.0f, 0.0f, 0.0f),
       mColorSet(0),
       mFixed(false),

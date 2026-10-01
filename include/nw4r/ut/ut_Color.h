@@ -10,7 +10,7 @@ namespace ut {
 struct Color : public GXColor {
     static const u32 WHITE = 0xFFFFFFFF;
 
-    Color() { *this = WHITE; }
+    Color() {}
     Color(u32 color) { *this = color; }
     Color(const GXColor& color) { *this = color; }
     Color(u8 red, u8 green, u8 blue, u8 alpha) { Set(red, green, blue, alpha); }
