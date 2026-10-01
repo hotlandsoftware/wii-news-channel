@@ -108,6 +108,14 @@ Runtime.PPCEABI.H/global_destructor_chain.c:
 	.text       start:0x8017A048 end:0x8017A0A8
 	.sbss       start:0x80358418 end:0x80358420
 
+Runtime.PPCEABI.H/ptmf.c:
+	.text       start:0x8017A458 end:0x8017A4EC
+	.rodata     start:0x801AEB40 end:0x801AEB50
+
+Runtime.PPCEABI.H/runtime.c:
+	.text       start:0x8017A4EC end:0x8017AC08
+	.rodata     start:0x801AEB50 end:0x801AEB68
+
 Runtime.PPCEABI.H/__init_cpp_exceptions.cpp:
 	.text       start:0x8017AC08 end:0x8017AC78
 	.ctors      start:0x80191F00 end:0x80191F04 rename:.ctors$10
