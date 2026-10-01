@@ -40,6 +40,10 @@ inline s32 GetScreenWidth() {
     return gWidescreen ? 832 : 608;
 }
 
+inline f32 GetScreenHeight() {
+    return 456.0f;
+}
+
 inline s32 GetContentRight() {
     return GetScreenWidth() - GetSideMargin();
 }

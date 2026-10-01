@@ -20,7 +20,6 @@ extern MEMHeapHandle lbl_80357648; // MEM2 heap
 extern void* lbl_80357664;         // external frame buffer
 extern void* lbl_8035772C;
 extern bool lbl_803576A5;
-extern GXRenderModeObj lbl_801EE428;
 extern KPADStatus lbl_801EE478[4][16];
 
 void fn_8003D634(void);
@@ -161,7 +160,7 @@ HomeMenu::HomeMenu(u32 manualArc, const char* manualPath, const char* startUrl,
             mInfo->adjust.y = 1.0f;
 
             f32 frameDelta = 1.0f;
-            if (lbl_801EE428.viTVmode == VI_TVMODE_PAL_INT) {
+            if (gRenderMode.viTVmode == VI_TVMODE_PAL_INT) {
                 frameDelta = 1.2f;
             }
             mInfo->frameDelta = frameDelta;
@@ -248,8 +247,9 @@ s32 HomeMenu::Calc() {
 
     if (mActive) {
         f32 scaleY = 1.2f * (gWidescreen ? 7.0f / 6.0f : 1.0f);
-        f32 scaleX = 0.908f * (scaleY * 456.0f) * lbl_801EE428.fbWidth /
-                     (lbl_801EE428.viWidth * GetScreenWidth());
+        f32 t = 0.908f * scaleY;
+        t *= 456.0f;
+        f32 scaleX = t * gRenderMode.fbWidth / (gRenderMode.viWidth * GetScreenWidth());
 
         HBMControllerData con;
         KPADStatus kpads[4];
@@ -396,7 +396,7 @@ BOOL HomeMenu::RunManual() {
         if (ret) {
             fn_8009C720(arc);
             PrintHeapInfo();
-            fn_8009C5C0(&lbl_801EE428, &lbl_801EE428, 0);
+            fn_8009C5C0(&gRenderMode, &gRenderMode, 0);
             ret = fn_8009C5C8(gWidescreen ? 808 : 608, 456) != 0;
             if (ret) {
                 fn_8009C5CC(12);
