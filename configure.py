@@ -313,6 +313,7 @@ config.libs = [
         "cflags": cflags_runtime,
         "progress_category": "sdk",
         "objects": [
+            Object(Matching, "MSL_C/alloc.c"),
             Object(Matching, "MSL_C/setjmp.c"),
             Object(Matching, "MSL_C/wstring.c"),
         ],
