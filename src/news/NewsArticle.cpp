@@ -265,7 +265,7 @@ s32 NewsData::Init(NewsHeader** files, s32 current) {
     }
 
     topicRec = (NewsTopicRec*)file->At(file->topicsOfs);
-    for (i = 0; i < mNumCategories; i++, topicRec++) {
+    for (i = 0; i < mNumCategories; topicRec++, i++) {
         if (topicRec->numEntries == 0) {
             continue;
         }
@@ -295,7 +295,7 @@ s32 NewsData::Init(NewsHeader** files, s32 current) {
 
     topic = mCategories;
     topicRec = (NewsTopicRec*)file->At(file->topicsOfs);
-    for (i = 0; i < mNumCategories; i++, topic++, topicRec++) {
+    for (i = 0; i < mNumCategories; topicRec++, topic++, i++) {
         count = topicRec->numEntries;
         topic->mNumArticles = count;
         if (count != 0) {
@@ -309,7 +309,7 @@ s32 NewsData::Init(NewsHeader** files, s32 current) {
 
     topic = mCategories;
     topicRec = (NewsTopicRec*)file->At(file->topicsOfs);
-    for (i = 0; i < mNumCategories; i++, topic++, topicRec++) {
+    for (i = 0; i < mNumCategories; topicRec++, topic++, i++) {
         topic->mRec = topicRec;
         topic->mName = (wchar_t*)file->At(topicRec->nameOfs);
         if (topicRec->numEntries == 0) {
@@ -330,7 +330,7 @@ s32 NewsData::Init(NewsHeader** files, s32 current) {
 
     // Link articles that appear in several topics.
     topic = mCategories;
-    for (i = 0; i < mNumCategories; i++, topic++) {
+    for (u32 i = 0; i < mNumCategories; i++, topic++) {
         slot = topic->mArticles;
         for (j = 0; j < topic->mNumArticles; j++, slot++) {
             same = FindArticle((*slot)->mText, i, j + 1);
@@ -347,9 +347,9 @@ s32 NewsData::Init(NewsHeader** files, s32 current) {
     for (n = 0; n < NEWS_FILE_MAX; n++) {
         src = mFiles[current];
         topic = mCategories;
-        for (i = 0; i < mNumCategories; i++, topic++) {
+        for (u32 i = 0; i < mNumCategories; i++, topic++) {
             slot = topic->mArticles;
-            for (j = 0; j < topic->mRec->numEntries; j++, slot++) {
+            for (u32 j = 0; j < topic->mRec->numEntries; j++, slot++) {
                 if ((*slot)->mFile == src) {
                     (*slot)->LoadPicture();
                 }
