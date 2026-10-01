@@ -2,6 +2,7 @@
 #define MSL_WCHAR_H
 
 #include <types.h>
+#include <stdarg.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -13,6 +14,7 @@ wchar_t* wcscat(wchar_t* dst, const wchar_t* src);
 struct _FILE;
 int fwide(struct _FILE* file, int mode);
 int swprintf(wchar_t* s, size_t n, const wchar_t* format, ...);
+int vswprintf(wchar_t* s, size_t n, const wchar_t* format, va_list arg); // added for nw4r::ut (Task 14)
 
 #ifdef __cplusplus
 }

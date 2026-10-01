@@ -3,6 +3,9 @@
 
 #include <types.h>
 #include <stdarg.h>
+#include <stdio.h>
+#include <string.h>
+#include <wchar.h>
 #include <nw4r/ut/ut_CharWriter.h>
 
 namespace nw4r {
@@ -77,8 +80,16 @@ public:
     static u32 GetBufferSize();
     static T* GetBuffer();
 
-    static int VSNPrintf(T* buffer, u32 count, const T* format, va_list arg);
-    static int StrLen(const T* str);
+    static int VSNPrintf(T* buffer, u32 count, const T* format, va_list arg) {
+        return sizeof(T) == sizeof(char)
+                   ? vsnprintf((char*)buffer, count, (const char*)format, arg)
+                   : vswprintf((wchar_t*)buffer, count, (const wchar_t*)format, arg);
+    }
+
+    static int StrLen(const T* str) {
+        return sizeof(T) == sizeof(char) ? strlen((const char*)str)
+                                         : wcslen((const wchar_t*)str);
+    }
 
 private:
     f32 CalcLineWidth(const T* str, int length);
