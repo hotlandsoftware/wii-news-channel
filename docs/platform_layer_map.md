@@ -182,7 +182,16 @@ The NW4R revision here has out-of-line `CharWriter`/`TextWriterBase` accessors, 
 
 **EXI** `EXIBios 0x80109434`, `EXIUart 0x8010ACC8`, `EXICommon 0x8010AFFC`. **SI** `SIBios 0x8010B188`, `SISamplingRate 0x8010C190`. **DB** `0x8010C270` (**done**, Petari). **VI** `vi 0x8010C358`, `i2c 0x8010ECFC`, `vi3in1 0x8010F718`. **MTX** `mtx 0x80110DBC`, `mtxvec 0x80111A24`, `mtx44 0x80111A78`, `vec 0x80111C98`, `quat 0x80111EA0`.
 
-**GX** `GXInit 0x80112208`, `GXFifo 0x801133D4`, `GXAttr 0x80113D90` (100%), `GXMisc 0x80114FB4`, `GXGeometry 0x80115720`, `GXFrameBuf 0x80115CE0`, `GXLight 0x80116720`, `GXTexture 0x80116E30`, `GXBump 0x80117CB0`, `GXTev 0x801180FC`, `GXPixel 0x8011877C`, `GXDraw 0x80118EE0`, `GXDisplayList 0x8011A324`, `GXTransform 0x8011A398`, `GXPerf 0x8011A8E4`.
+**GX** `GXInit 0x80112208`, `GXFifo 0x801133D4`, `GXAttr 0x80113D90` (100%), `GXMisc 0x80114FB4`, `GXGeometry 0x80115720`, `GXFrameBuf 0x80115CE0`, `GXLight 0x80116720`, `GXTexture 0x80116E30`, `GXBump 0x80117CB0`, `GXTev 0x801180FC`, `GXPixel 0x8011877C`, `GXDraw 0x80118EE0`, `GXDisplayList 0x8011A324`, `GXTransform 0x8011A398`, `GXPerf 0x8011A8E4–0x8011B120`. **Done** (task 18): all 15 files linked, 14 Matching, `GXDraw.c` 99.86% (see below).
+
+GX notes (task 18):
+- **GX ends at `0x8011B120`, not `0x8011B478`.** `0x8011B120` (0x30) is `__DVDFSInit` (it stores `0x80000038` into the dvdfs globals), followed by `DVDConvertPathToEntrynum` (0x308) and a 0x20 entry helper. So `dvdfs.c` starts at `0x8011B120`; those three functions are left to the DVD task.
+- **Sources.** `src/revolution/GX/*.c` come from Petari (`src/RVL_SDK/gx`), which compiles against our header tree with only include rewrites (`"private/x.h"` → `<revolution/private/x.h>`, `<mem.h>` → `<string.h>`). Petari's files lack some functions that the May 2007 DOL links. These were taken from tp (`libs/revolution/src/gx`, same register macros as Petari) and translated: drop `CHECK_*`/`ASSERT*`, `__GXData->` → `gx->`, and drop the line argument from the `SC_*` macros. That covers `GXSetVtxDescv`, `GXGetVtxDesc[v]`, `GXGetVtxAttrFmt[v]`, `GXInitLightAttnA/K`, `GXGetLightPos/Dir`, `GXLoadPosMtxIndx`, `GXLoadNrmMtxIndx3x3` and `GXInitFogAdjTable`. `GXDraw.c` is ogws's (cylinder, sphere) plus tp's torus and cube. No shared header was changed, and no ogws GX internal header was needed.
+- **MSL float inlines.** `GXInitFogAdjTable` and `GXDraw` call the double `sqrt`/`cos`/`sin`, as MSL's `math_double.h` inlines `sqrtf(x) { return sqrt(x); }`. Our `math.h` has no `sqrtf`/`cosf`/`sinf`, so the files define them as local `static inline` wrappers. `GXDraw`'s `M_PI` must be the float literal `3.141592653589793f` (ogws `math.h`).
+- **Version differences.** The `__GXVersion` string is `May  8 2007 12:59:16 (0x4199_60831)`. `GXFrameBuf` has 4 render modes in the order `GXNtsc480IntDf`, `GXMpal480IntDf`, `GXPal528IntDf`, `GXEurgb60Hz480IntDf`. There is no `GXNtsc480Int` (Petari has 5), and its declaration in `gx/GXFrameBuf.h` is left as a dangling extern. `GXDraw.c`'s `.bss` (`vcd`/`vat`) is 0x288 bytes; its split runs to `0x802F4500`, where the next 32-byte-aligned object starts.
+- **`GXDrawTorus` (99.28%).** The original loads `ttype` once per outer iteration, right after `GXBegin`, into `r23`. A copy variable reproduces the code, but the copy always gets a higher register than the hoisted temps (`(numt+1)*2`, `0xCC01`, `j % numt`). Declaration orders, block scopes and types were tried.
+- Data splits follow ogws's per-file sizes: GXInit `.data` 0x240/`.bss` 0x680/`.sbss` 0x28/`.sdata2` 0x28, GXFifo `.bss` 0x48/`.sbss` 0x20, GXAttr `.data` 0x274, GXTexture `.sdata` 0x48. mwld dead-strips unreferenced local data (Petari's `GXGetTexBufferSize` jump table, `GXDisplayList`'s 0x700 `.bss`), so leaving dead functions in a source file is harmless.
+- **External renames needed to link GX:** `PPCSync`, `OSSetCurrentContext`, `OSClearContext`, `__OSSetInterruptHandler`, `__OSUnmaskInterrupts`, `OSInitThreadQueue`, `OSGetCurrentThread`, `OSResumeThread`, `OSSuspendThread`, `OSSleepThread`, `OSWakeupThread`, `OSGetTime`, `VIGetTvFormat`. The OS/VI code is at the Forecast Channel address + `0x186DC` (GX is at + `0x18B38`).
 
 **DVD** `dvdfs 0x8011B478`, `dvd 0x8011BEB4` (smg 95%), `dvdqueue 0x80120988`, `dvderror 0x80120BE0`, `dvdidutils 0x801214E4`, `dvdFatal 0x801215D4`, `dvd_broadway 0x80121710`. **AI** `0x801239C8`.
 
@@ -346,7 +355,7 @@ Difficulty: E = mostly drop-in, M = drop-in plus version fixes, H = little or no
 | 15 | lyt | `0x800F0F50–0x800FB9EC` | 43 KB | tp `nw4hbm/lyt` | E–M |
 | 16 | BASE + OS (rest) + `__ppc_eabi_init` | `0x800FB9EC–0x80109434` | 55 KB | ogws/smg | E–M |
 | 17 | EXI, SI, DB, VI, MTX | `0x80109434–0x80112208` | 36 KB | ogws/smg | M |
-| 18 | GX | `0x80112208–0x8011B478` | 37 KB | ogws | E |
+| 18 | GX (**done**; ends `0x8011B120`) | `0x80112208–0x8011B120` | 36 KB | Petari + tp + ogws | E |
 | 19 | DVD + AI | `0x8011B478–0x80123F2C` | 35 KB | smg | M |
 | 20 | AX, AXFX, MEM, DSP | `0x80123F2C–0x8012B540` | 30 KB | ogws (AX/DSP), smg (MEM/AXFX) | E |
 | 21 | NAND, SC, ESP, IPC, FS, PAD | `0x8012B540–0x80134C38` | 38 KB | smg | E–M |
