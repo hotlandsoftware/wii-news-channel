@@ -241,7 +241,7 @@ void Ticker::Layout(const math::VEC2& pos) {
     }
 }
 
-u32 Ticker::UpdateHover() {
+u32 Ticker::UpdateHover(const math::VEC2& pos) {
     f32 minY;
     f32 maxY = 393.0f;
     mPrevHover = mHover;
@@ -358,7 +358,7 @@ void Ticker::StateReturn() {
     }
 }
 
-void Ticker::SetLayout(math::VEC2& pos, f64 scale) {
+f32 Ticker::SetLayout(math::VEC2& pos, f64 scale) {
     if (mArticle->GetTexture()) {
         mThumbLeft = unk24 - 80.0f;
         mThumbTop = pos.y;
@@ -378,7 +378,7 @@ void Ticker::SetLayout(math::VEC2& pos, f64 scale) {
     mTextX = pos.x;
     mTextY = pos.y;
     unk64 = unk60 + CalcRowHeight(mTextScale);
-    pos.y = 5.0f + unk64;
+    return pos.y = 5.0f + unk64;
 }
 
 void Ticker::Dummy() {}

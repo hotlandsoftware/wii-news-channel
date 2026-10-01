@@ -69,6 +69,14 @@ news/Ticker.cpp:
 	.sbss       start:0x80357538 end:0x80357540
 	.sdata2     start:0x80358A10 end:0x80358A80
 
+news/HeadlineList.cpp:
+	.text       start:0x8002C638 end:0x8002E7DC
+	.ctors      start:0x80191F30 end:0x80191F34
+	.data       start:0x801B1E10 end:0x801B1E58
+	.bss        start:0x801EDF40 end:0x801EDF58
+	.sbss       start:0x80357540 end:0x80357550
+	.sdata2     start:0x80358A80 end:0x80358B18
+
 news/Locale.cpp:
 	.text       start:0x8003A0B4 end:0x8003A14C
 	.data       start:0x801B2270 end:0x801B22A0

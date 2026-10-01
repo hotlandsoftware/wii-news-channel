@@ -25,6 +25,9 @@ public:
     void SetPosition(const nw4r::math::VEC2& pos);
     s32 GetPressedChan() const;
 
+    const nw4r::ut::Rect& GetRect() const { return mRect; }
+    f32 GetWidth() const { return mSize.x; }
+
 protected:
     wchar_t* mText;                              // at 0x04
     nw4r::ut::Rect mRect;                        // at 0x08

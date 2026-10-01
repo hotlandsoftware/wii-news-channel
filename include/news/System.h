@@ -23,6 +23,11 @@ extern bool gLargeFont;
 extern f32 gDefaultFontScale;
 extern GXColor gHighlightColor;
 extern GXColor gSeparatorColor;
+extern f32 gTextScale;
+extern nw4r::ut::Font* gHeaderFont;
+extern nw4r::ut::Font* gArticleFont;
+extern bool gLanguageSelectable; // the "Choose a language" button is shown
+extern s32 gUpdateMsgType;
 extern GXRenderModeObj gRenderMode;
 extern TPLPalette* gCommonTpl;
 
@@ -78,5 +83,8 @@ void* LoadArcFile(u32 archive, const char* name, s32 align, u32* size, MEMHeapHa
 
 void StartFade(s32 type, s32 frames, s32 arg2, s32 arg3);
 void ReturnToMenu();
+
+struct OSCalendarTime;
+void MinutesToCalendarTime(u32 minutes, OSCalendarTime* time);
 
 #endif
