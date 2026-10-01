@@ -778,6 +778,127 @@ revolution/PAD/Pad.c:
 	.text       start:0x80134BDC end:0x80134C38
 	.sbss       start:0x80358310 end:0x80358318
 
+revolution/BTE/gki_buffer.c:
+	.text       start:0x8014BCF0 end:0x8014D134
+	.data       start:0x801E7758 end:0x801E78A0
+
+revolution/BTE/gki_time.c:
+	.text       start:0x8014D134 end:0x8014D68C
+
+revolution/BTE/gki_ppc.c:
+	.text       start:0x8014D68C end:0x8014D91C
+	.bss        start:0x8031F2C8 end:0x80347DA8
+
+revolution/BTE/hcisu_h2.c:
+	.text       start:0x8014D91C end:0x8014DFB8
+	.rodata     start:0x801AE6C8 end:0x801AE6E0
+	.data       start:0x801E78A0 end:0x801E7910
+	.bss        start:0x80347DA8 end:0x80347DE0
+	.sdata2     start:0x8035A010 end:0x8035A020
+
+revolution/BTE/uusb_ppc.c:
+	.text       start:0x8014DFB8 end:0x8014EBB0
+	.bss        start:0x80347DE0 end:0x80349E40
+	.sdata      start:0x80357378 end:0x80357388
+	.sbss       start:0x803583C8 end:0x803583E0
+
+revolution/BTE/bta_dm_cfg.c:
+	.rodata     start:0x801AE6E0 end:0x801AE770
+	.sdata      start:0x80357388 end:0x803573A0
+	.sbss2      start:0x8035A6C0 end:0x8035A6C8
+
+revolution/BTE/bta_hh_cfg.c:
+	.rodata     start:0x801AE770 end:0x801AE780
+	.sdata      start:0x803573A0 end:0x803573B0
+
+revolution/BTE/bta_sys_cfg.c:
+	.sdata      start:0x803573B0 end:0x803573B8
+	.sdata2     start:0x8035A020 end:0x8035A028
+
+revolution/BTE/bte_hcisu.c:
+	.text       start:0x8014EBB0 end:0x8014EC68
+	.sbss       start:0x803583E0 end:0x803583E8
+
+revolution/BTE/bte_init.c:
+	.text       start:0x8014EC68 end:0x8014EC94
+
+revolution/BTE/bte_logmsg.c:
+	.text       start:0x8014EC94 end:0x8014EDF8
+	.bss        start:0x80349E40 end:0x8034A620
+	.sdata      start:0x803573B8 end:0x803573C0
+
+revolution/BTE/bte_main.c:
+	.text       start:0x8014EDF8 end:0x8014EF50
+	.bss        start:0x8034A620 end:0x8034B650
+	.sdata      start:0x803573C0 end:0x803573C8
+	.sbss       start:0x803583E8 end:0x803583F0
+
+revolution/BTE/btu_task1.c:
+	.text       start:0x8014EF50 end:0x8014F3A0
+	.bss        start:0x8034B650 end:0x8034B6D8
+	.sdata      start:0x803573C8 end:0x803573D0
+	.sbss       start:0x803583F0 end:0x803583F8
+
+revolution/BTE/bd.c:
+	.text       start:0x8014F3A0 end:0x8014F474
+	.sbss2      start:0x8035A6C8 end:0x8035A6D0
+
+revolution/BTE/bta_sys_conn.c:
+	.text       start:0x8014F474 end:0x8014F6C8
+
+revolution/BTE/bta_sys_main.c:
+	.text       start:0x8014F6C8 end:0x8014F90C
+	.data       start:0x801E7910 end:0x801E7948
+	.bss        start:0x8034B6D8 end:0x8034B768
+	.sbss       start:0x803583F8 end:0x80358400
+
+revolution/BTE/ptim.c:
+	.text       start:0x8014F90C end:0x8014FAEC
+
+revolution/BTE/utl.c:
+	.text       start:0x8014FAEC end:0x8014FB30
+
+revolution/BTE/bta_dm_act.c:
+	.text       start:0x8014FB30 end:0x80151E6C
+	.rodata     start:0x801AE780 end:0x801AE828
+	.data       start:0x801E7948 end:0x801E7A88
+	.bss        start:0x8034B768 end:0x8034B798
+	.sdata2     start:0x8035A028 end:0x8035A030
+
+revolution/BTE/bta_dm_api.c:
+	.text       start:0x80151E6C end:0x801522D8
+	.sdata2     start:0x8035A030 end:0x8035A040
+
+revolution/BTE/bta_dm_main.c:
+	.text       start:0x801522D8 end:0x80152438
+	.rodata     start:0x801AE828 end:0x801AE950
+	.bss        start:0x8034B798 end:0x8034B918
+
+revolution/BTE/bta_dm_pm.c:
+	.text       start:0x80152438 end:0x80152E54
+	.data       start:0x801E7A88 end:0x801E7AD8
+	.bss        start:0x8034B918 end:0x8034B948
+
+revolution/BTE/bta_hh_act.c:
+	.text       start:0x80152E54 end:0x8015459C
+	.data       start:0x801E7AD8 end:0x801E7FD0
+	.sdata      start:0x803573D0 end:0x803573D8
+
+revolution/BTE/bta_hh_api.c:
+	.text       start:0x8015459C end:0x8015496C
+	.data       start:0x801E7FD0 end:0x801E8000
+	.sdata2     start:0x8035A040 end:0x8035A048
+
+revolution/BTE/bta_hh_main.c:
+	.text       start:0x8015496C end:0x80154EC0
+	.rodata     start:0x801AE950 end:0x801AE9D8
+	.data       start:0x801E8000 end:0x801E82E0
+	.bss        start:0x8034B948 end:0x8034BB78
+
+revolution/BTE/bta_hh_utils.c:
+	.text       start:0x80154EC0 end:0x8015526C
+	.data       start:0x801E82E0 end:0x801E85A0
+
 Runtime.PPCEABI.H/__va_arg.c:
 	.text       start:0x80179F80 end:0x8017A048
 
