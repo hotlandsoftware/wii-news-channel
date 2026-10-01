@@ -60,6 +60,18 @@ news/Scroller.cpp:
 	.data       start:0x801B1D68 end:0x801B1DB0
 	.sdata2     start:0x803589F0 end:0x80358A10
 
+news/main.cpp:
+	.text       start:0x8003B328 end:0x8003C538
+	.data       start:0x801B2488 end:0x801B2648
+	.sdata2     start:0x80358D88 end:0x80358DC8
+
+news/DrawUtil.cpp:
+	.text       start:0x8003C538 end:0x8003CECC
+	.ctors      start:0x80191F40 end:0x80191F44
+	.bss        start:0x801EE3D8 end:0x801EE3E8
+	.sbss       start:0x80357638 end:0x80357640
+	.sdata2     start:0x80358DC8 end:0x80358DD8
+
 Runtime.PPCEABI.H/global_destructor_chain.c:
 	.text       start:0x8017A048 end:0x8017A0A8
 	.sbss       start:0x80358418 end:0x80358420
