@@ -313,6 +313,7 @@ config.libs = [
             Object(Matching, "news/FrameTextButton.cpp"),
             Object(Matching, "news/IconTextButton.cpp"),
             Object(Matching, "news/SmallTextButton.cpp"),
+            Object(Matching, "news/Scroller.cpp"),
         ],
     },
 ]
