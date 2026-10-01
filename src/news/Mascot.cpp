@@ -9,41 +9,35 @@ using namespace nw4r;
 
 #define FRAME_NONE 99999
 
-static s32 sWalkInTime = 30;
-static f32 sWalkInSpeed = -0.5f;
+// Shared by the constructor and Reset(). The walk-in parameters are
+// function-local statics, so MWCC knows nothing else stores to them.
+inline void Mascot::Init() {
+    static s32 sWalkInTime = 30;
+    static f32 sWalkInSpeed = -0.5f;
 
-Mascot::Mascot() {
     s32 time = sWalkInTime;
     mState = STATE_WALK_IN;
     mTimer = time;
     f32 offset = time * sWalkInSpeed;
     f32 center = 250.0f + 0.5f * GetScreenWidth();
-    mSpeed = sWalkInSpeed;
+    mX = offset + center;
     mY = 88.0f;
+    mSpeed = sWalkInSpeed;
     mFlip = 0;
     mDirection = 0;
     mAnimId = 0;
-    mFrame = FRAME_NONE;
-    mX = offset + center;
     mAnimTime = 0.0f;
+    mFrame = FRAME_NONE;
+}
+
+Mascot::Mascot() {
+    Init();
 }
 
 Mascot::~Mascot() {}
 
 void Mascot::Reset() {
-    s32 time = sWalkInTime;
-    mState = STATE_WALK_IN;
-    mTimer = time;
-    f32 offset = time * sWalkInSpeed;
-    f32 center = 250.0f + 0.5f * GetScreenWidth();
-    mSpeed = sWalkInSpeed;
-    mY = 88.0f;
-    mFlip = 0;
-    mDirection = 0;
-    mAnimId = 0;
-    mFrame = FRAME_NONE;
-    mX = offset + center;
-    mAnimTime = 0.0f;
+    Init();
 }
 
 void Mascot::Update() {

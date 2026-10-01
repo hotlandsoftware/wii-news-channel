@@ -51,12 +51,6 @@ void fn_8009C730(s32 arg);
 void fn_8009C788(HBMDataInfo* info);
 }
 
-static const char* sLayoutNames[] = {
-    "HomeButton3/LZ77_homeBtn.arc",     "HomeButton3/LZ77_homeBtn_ENG.arc",
-    "HomeButton3/LZ77_homeBtn_GER.arc", "HomeButton3/LZ77_homeBtn_FRA.arc",
-    "HomeButton3/LZ77_homeBtn_SPA.arc", "HomeButton3/LZ77_homeBtn_ITA.arc",
-    "HomeButton3/LZ77_homeBtn_NED.arc",
-};
 
 #define HBM_MEM_SIZE 0x80000
 #define HBM_SOUND_HEAP_SIZE 0x1D000
@@ -72,6 +66,12 @@ HomeMenu::HomeMenu(u32 manualArc, const char* manualPath, const char* startUrl,
     if (mInfo != NULL) {
         BOOL arcWritten = FALSE;
         const char* layoutName;
+        static const char* sLayoutNames[] = {
+            "HomeButton3/LZ77_homeBtn.arc",     "HomeButton3/LZ77_homeBtn_ENG.arc",
+            "HomeButton3/LZ77_homeBtn_GER.arc", "HomeButton3/LZ77_homeBtn_FRA.arc",
+            "HomeButton3/LZ77_homeBtn_SPA.arc", "HomeButton3/LZ77_homeBtn_ITA.arc",
+            "HomeButton3/LZ77_homeBtn_NED.arc",
+        };
 
         mInfo->layoutBuf = NULL;
         mInfo->spkSeBuf = NULL;
@@ -103,9 +103,8 @@ HomeMenu::HomeMenu(u32 manualArc, const char* manualPath, const char* startUrl,
             layoutName = sLayoutNames[6];
             break;
         default:
-            HBMDataInfo* info = mInfo;
-            info->region = 1;
             layoutName = sLayoutNames[1];
+            mInfo->region = 1;
             break;
         }
 
@@ -245,8 +244,8 @@ s32 HomeMenu::Calc() {
     if (mActive) {
         f32 scaleY = 1.2f * (gWidescreen ? 7.0f / 6.0f : 1.0f);
         f32 t = 0.908f * scaleY;
-        t *= 456.0f;
-        f32 scaleX = t * gRenderMode.fbWidth / (gRenderMode.viWidth * GetScreenWidth());
+        f32 height = t * GetScreenHeight();
+        f32 scaleX = height * gRenderMode.fbWidth / (gRenderMode.viWidth * GetScreenWidth());
 
         HBMControllerData con;
         KPADStatus kpads[4];
