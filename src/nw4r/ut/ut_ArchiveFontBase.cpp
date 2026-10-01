@@ -482,50 +482,6 @@ void ArchiveFontBase::CachedStreamReader::Attach(const void* stream, u32 streamS
     mStreamEnd = mStreamBegin + streamSize;
 }
 
-void ArchiveFontBase::CachedStreamReader::Advance(u32 size) {
-    const u32 tempRemain = mpTempStrmBufEnd - mpTempStrmBufPos;
-
-    if (tempRemain > size) {
-        mpTempStrmBufPos += size;
-    } else {
-        const u32 streamSize = size - tempRemain;
-        mpTempStrmBufPos = mpTempStrmBufEnd;
-        mStreamPos += streamSize;
-    }
-}
-
-void ArchiveFontBase::CachedStreamReader::CopyTo(void* pBuffer, u32 size) {
-    const u32 tempRemain = mpTempStrmBufEnd - mpTempStrmBufPos;
-    u8* pDst = static_cast<u8*>(pBuffer);
-
-    if (tempRemain >= size) {
-        memcpy(pDst, mpTempStrmBufPos, size);
-        mpTempStrmBufPos += size;
-    } else {
-        const u32 streamSize = size - tempRemain;
-        memcpy(pDst, mpTempStrmBufPos, tempRemain);
-        memcpy(pDst + tempRemain, mStreamPos, streamSize);
-        mpTempStrmBufPos = mpTempStrmBufEnd;
-        mStreamPos += streamSize;
-    }
-}
-
-void ArchiveFontBase::CachedStreamReader::MoveTo(void* pBuffer, u32 size) {
-    const u32 tempRemain = mpTempStrmBufEnd - mpTempStrmBufPos;
-    u8* pDst = static_cast<u8*>(pBuffer);
-
-    if (tempRemain >= size) {
-        memmove(pDst, mpTempStrmBufPos, size);
-        mpTempStrmBufPos += size;
-    } else {
-        const u32 streamSize = size - tempRemain;
-        memmove(pDst, mpTempStrmBufPos, tempRemain);
-        memmove(pDst + tempRemain, mStreamPos, streamSize);
-        mpTempStrmBufPos = mpTempStrmBufEnd;
-        mStreamPos += streamSize;
-    }
-}
-
 bool ArchiveFontBase::CachedStreamReader::RequestData(ConstructContext* pContext, u32 size) {
     const u32 remain = GetRemain();
 

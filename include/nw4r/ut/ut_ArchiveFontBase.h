@@ -4,6 +4,7 @@
 // Archive (.brfna) font base. There is no public reference decomp for this
 // class; names follow later NW4R revisions where known, the rest are ours.
 #include <types.h>
+#include <string.h>
 #include <nw4r/ut/ut_ResFontBase.h>
 #include <nw4r/ut/ut_binaryFileFormat.h>
 #include <revolution/cx.h>
@@ -148,9 +149,49 @@ public:
 
         void SkipStream(u32 size) { mStreamPos += size; }
 
-        void Advance(u32 size);
-        void CopyTo(void* pDst, u32 size);
-        void MoveTo(void* pDst, u32 size);
+        void Advance(u32 size) {
+            const u32 tempRemain = mpTempStrmBufEnd - mpTempStrmBufPos;
+
+            if (tempRemain > size) {
+                mpTempStrmBufPos += size;
+            } else {
+                const u32 streamSize = size - tempRemain;
+                mpTempStrmBufPos = mpTempStrmBufEnd;
+                mStreamPos += streamSize;
+            }
+        }
+
+        void CopyTo(void* pBuffer, u32 size) {
+            const u32 tempRemain = mpTempStrmBufEnd - mpTempStrmBufPos;
+            u8* pDst = static_cast<u8*>(pBuffer);
+
+            if (tempRemain >= size) {
+                memcpy(pDst, mpTempStrmBufPos, size);
+                mpTempStrmBufPos += size;
+            } else {
+                const u32 streamSize = size - tempRemain;
+                memcpy(pDst, mpTempStrmBufPos, tempRemain);
+                memcpy(pDst + tempRemain, mStreamPos, streamSize);
+                mpTempStrmBufPos = mpTempStrmBufEnd;
+                mStreamPos += streamSize;
+            }
+        }
+
+        void MoveTo(void* pBuffer, u32 size) {
+            const u32 tempRemain = mpTempStrmBufEnd - mpTempStrmBufPos;
+            u8* pDst = static_cast<u8*>(pBuffer);
+
+            if (tempRemain >= size) {
+                memmove(pDst, mpTempStrmBufPos, size);
+                mpTempStrmBufPos += size;
+            } else {
+                const u32 streamSize = size - tempRemain;
+                memmove(pDst, mpTempStrmBufPos, tempRemain);
+                memmove(pDst + tempRemain, mStreamPos, streamSize);
+                mpTempStrmBufPos = mpTempStrmBufEnd;
+                mStreamPos += streamSize;
+            }
+        }
 
         const u8* mStreamBegin;      // at 0x0
         const u8* mStreamPos;        // at 0x4
