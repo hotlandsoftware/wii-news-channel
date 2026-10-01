@@ -488,10 +488,10 @@ nw4r/g3d/g3d_calcmaterial.cpp:
 	.text       start:0x800CD728 end:0x800CDB38
 
 nw4r/g3d/g3d_init.cpp:
-	.text       start:0x800CDB38 end:0x800CDC28
+	.text       start:0x800CDB38 end:0x800CDC20
 
 nw4r/g3d/g3d_fog.cpp:
-	.text       start:0x800CDC28 end:0x800CDD94
+	.text       start:0x800CDC20 end:0x800CDD94
 	.sdata2     start:0x803598E8 end:0x803598F0
 
 nw4r/g3d/g3d_light.cpp:

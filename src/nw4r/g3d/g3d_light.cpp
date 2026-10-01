@@ -228,6 +228,18 @@ void LightSetting::ApplyViewMtx(const math::MTX34& rCamera, u32 numLight) {
  * LightSet
  *
  ******************************************************************************/
+LightObj* LightSet::GetLightObj(u32 lightIdx) {
+    if (IsValid() && lightIdx < G3DState::NUM_LIGHT_IN_LIGHT_SET) {
+        int idx = mpLightSetData->idxLight[lightIdx];
+
+        if (idx >= 0) {
+            return &mpSetting->GetLightObjArray()[idx];
+        }
+    }
+
+    return NULL;
+}
+
 bool LightSet::SelectLightObj(u32 lightIdx, int lightObjIdx) {
     if (IsValid() && lightIdx < G3DState::NUM_LIGHT_IN_LIGHT_SET) {
         if (lightObjIdx < 0) {

@@ -126,6 +126,9 @@ public:
         return mpSetting != NULL && mpLightSetData != NULL;
     }
 
+    // Out of line in this NW4R version (name guessed; called by game code)
+    LightObj* GetLightObj(u32 lightIdx);
+
     bool SelectLightObj(u32 lightIdx, int lightObjIdx);
     bool SelectAmbLightObj(int lightObjIdx);
 

@@ -961,9 +961,9 @@ config.libs = [
             Object(NonMatching, "nw4r/g3d/g3d_scnroot.cpp"),
             Object(NonMatching, "nw4r/g3d/g3d_scnmdlsmpl.cpp"),
             Object(Matching, "nw4r/g3d/g3d_calcmaterial.cpp"),
-            Object(NonMatching, "nw4r/g3d/g3d_init.cpp"),
+            Object(Matching, "nw4r/g3d/g3d_init.cpp"),
             Object(Matching, "nw4r/g3d/g3d_fog.cpp"),
-            Object(NonMatching, "nw4r/g3d/g3d_light.cpp"),
+            Object(Matching, "nw4r/g3d/g3d_light.cpp"),
         ],
     },
 ]
