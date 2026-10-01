@@ -35,7 +35,7 @@ public:
     void ReserveTexCoord(u8 num);
 
 private:
-    ut::Color mVtxColors[VERTEXCOLOR_MAX]; // at 0xD4
+    ut::Color mVtxColors[VERTEXCOLOR_MAX] ATTRIBUTE_ALIGN(4); // at 0xD4
     detail::TexCoordAry mTexCoordAry;      // at 0xE4
 };
 

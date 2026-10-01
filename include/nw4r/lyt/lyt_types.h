@@ -117,6 +117,7 @@ struct Size {
 
     Size() : width(0.0f), height(0.0f) {}
     Size(f32 w, f32 h) : width(w), height(h) {}
+    Size(const Size& other) : width(other.width), height(other.height) {}
 
     friend bool operator==(const Size& a, const Size& b) {
         return a.width == b.width && a.height == b.height;

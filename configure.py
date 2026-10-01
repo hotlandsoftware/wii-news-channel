@@ -291,6 +291,15 @@ cflags_nw4r = [
     "-ipa file",
 ]
 
+# nw4r::lyt is built with the NW4R math types that have no destructors
+# (VEC2 is returned in r3/r4, see docs/platform_layer_map.md)
+cflags_nw4r_lyt = [
+    *cflags_nw4r,
+    "-DNW4R_MATH_VEC2_NO_DTOR",
+    "-DNW4R_MATH_VEC3_NO_DTOR",
+    "-DNW4R_MATH_MTX34_NO_DTOR",
+]
+
 # RVL SDK libraries; flags as in doldecomp/ogws
 cflags_rvl = [
     *cflags_base,
@@ -497,7 +506,7 @@ config.libs = [
     {
         "lib": "nw4r_lyt",
         "mw_version": "GC/3.0a5.2",
-        "cflags": cflags_nw4r,
+        "cflags": cflags_nw4r_lyt,
         "progress_category": "sdk",
         "objects": [
             Object(Matching, "nw4r/lyt/lyt_init.cpp"),

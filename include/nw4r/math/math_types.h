@@ -13,7 +13,11 @@ struct VEC2 : public Vec2 {
         x = fx;
         y = fy;
     }
+    // NW4R library code (lyt) is built without the VEC2/MTX34 destructors:
+    // there an 8-byte VEC2 is returned in r3/r4 (Pane::GetVtxPos).
+#ifndef NW4R_MATH_VEC2_NO_DTOR
     ~VEC2() {}
+#endif
 };
 
 struct VEC3 : public Vec {
@@ -83,7 +87,9 @@ struct MTX34 {
     };
 
     MTX34() {}
+#ifndef NW4R_MATH_MTX34_NO_DTOR
     ~MTX34() {}
+#endif
 
     operator f32*() { return a; }
     operator const f32*() const { return a; }

@@ -50,7 +50,7 @@ public:
     static void* AllocMemory(u32 size) { return MEMAllocFromAllocator(mspAllocator, size); }
     static void FreeMemory(void* ptr) { MEMFreeToAllocator(mspAllocator, ptr); }
 
-    static Pane* BuildPaneObj(s32 kind, const void* dataPtr, const ResBlockSet& resBlockSet);
+    static Pane* BuildPaneObj(s32 kind, const void* dataPtr, const ResBlockSet& resBlockSet) NO_INLINE;
 
     static MEMAllocator* mspAllocator;
 
