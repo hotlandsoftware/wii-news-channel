@@ -1,7 +1,6 @@
 #include <revolution/vf.h>
 
 extern PF_VOLUME_SET VFipf_vol_set;
-static u8 FAT_DELETED = 0xE5;
 
 static u32 VFiPFENT_compareAttr(u8 attr, u8 attr_required, u8 attr_unwanted) {
     u32 is_valid;
@@ -221,6 +220,24 @@ static s32 VFiPFENT_findEmptyTailSFN(struct PF_DIR_ENT* p_ent_containig_dir, con
     return 0;
 }
 
+// Not in ogws (dead-stripped there); names are guesses. Used by pf_dir's mkdir.
+void VFiPFENT_MakeDotName(u8* buf) {
+    u32 i;
+    buf[0] = '.';
+    for (i = 1; i < 11; i++) {
+        buf[i] = ' ';
+    }
+}
+
+void VFiPFENT_MakeDotDotName(u8* buf) {
+    u32 i;
+    buf[0] = '.';
+    buf[1] = '.';
+    for (i = 2; i < 11; i++) {
+        buf[i] = ' ';
+    }
+}
+
 u8 VFiPFENT_CalcCheckSum(struct PF_DIR_ENT* p_ent) {
     u16 i;
     u8 sum;
@@ -254,6 +271,22 @@ void VFiPFENT_loadEntryNumericFieldsFromBuf(struct PF_DIR_ENT* p_ent, const u8* 
     p_ent->file_size = VF_SWAP32(*(u32*)&buf[28]);
 
     p_ent->start_cluster = ((VF_SWAP16(*(u16*)&buf[20])) << 16) | ((u16)(VF_SWAP16(*(u16*)&buf[26])));
+}
+
+// Not in ogws (dead-stripped there); the name is a guess.
+void VFiPFENT_storeEntryNumericFieldsToBuf(u8* buf, const struct PF_DIR_ENT* p_ent) {
+    buf[11] = p_ent->attr;
+    buf[12] = p_ent->small_letter_flag;
+    buf[13] = p_ent->create_time_ms;
+
+    *(u16*)&buf[14] = VF_SWAP16(p_ent->create_time);
+    *(u16*)&buf[16] = VF_SWAP16(p_ent->create_date);
+    *(u16*)&buf[18] = VF_SWAP16(p_ent->access_date);
+    *(u16*)&buf[22] = VF_SWAP16(p_ent->modify_time);
+    *(u16*)&buf[24] = VF_SWAP16(p_ent->modify_date);
+    *(u16*)&buf[20] = VF_SWAP16((u16)(p_ent->start_cluster >> 16));
+    *(u16*)&buf[26] = VF_SWAP16(p_ent->start_cluster);
+    *(u32*)&buf[28] = VF_SWAP32(p_ent->file_size);
 }
 
 s32 VFiPFENT_LoadLFNEntryFieldsFromBuf(struct PF_DIR_ENT* p_ent, const u8* buf) {
@@ -818,9 +851,8 @@ s32 VFiPFENT_RemoveEntry(struct PF_DIR_ENT* p_ent, struct PF_ENT_ITER* p_iter) {
     u16 entry_offset;
     u32 i;
     struct PF_VOLUME* p_vol;
-    u8 dir_fb_free[1];
+    u8 dir_fb_free[1] = {0xE5};  // FAT_DELETED
 
-    dir_fb_free[0] = FAT_DELETED;
     p_vol = p_ent->p_vol;
 
     if (!p_vol) {

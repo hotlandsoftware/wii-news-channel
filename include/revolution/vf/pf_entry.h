@@ -13,6 +13,11 @@ static s32 VFiPFENT_findEmptyTailSFN(struct PF_DIR_ENT* p_ent_containig_dir, con
 u8 VFiPFENT_CalcCheckSum(struct PF_DIR_ENT* p_ent);
 void VFiPFENT_LoadShortNameFromBuf(struct PF_DIR_ENT* p_ent, const u8* buf);
 void VFiPFENT_loadEntryNumericFieldsFromBuf(struct PF_DIR_ENT* p_ent, const u8* buf);
+
+// Not in ogws; names are guesses.
+void VFiPFENT_MakeDotName(u8* buf);
+void VFiPFENT_MakeDotDotName(u8* buf);
+void VFiPFENT_storeEntryNumericFieldsToBuf(u8* buf, const struct PF_DIR_ENT* p_ent);
 s32 VFiPFENT_LoadLFNEntryFieldsFromBuf(struct PF_DIR_ENT* p_ent, const u8* buf);
 void VFiPFENT_storeLFNEntryFieldsToBuf(u8* buf, struct PF_DIR_ENT* p_ent, u8 ord, u8 sum, u32 is_last);
 s32 VFiPFENT_findEntryPos(struct PF_FFD* p_ffd, struct PF_DIR_ENT* p_ent, u32 index_search_from, struct PF_STR* p_pattern, u8 attr_required, u8 attr_unwanted, u32* p_lpos, u32* p_ppos);
