@@ -797,7 +797,7 @@ config.libs = [
         "cflags": cflags_rvl,
         "progress_category": "sdk",
         "objects": [
-            Object(NonMatching, "revolution/WPAD/WPAD.c", extra_cflags=["-fp off"]),
+            Object(Matching, "revolution/WPAD/WPAD.c", extra_cflags=["-fp off"]),
             Object(Matching, "revolution/WPAD/WPADHIDParser.c"),
             Object(Matching, "revolution/WPAD/WPADEncrypt.c"),
             Object(Matching, "revolution/WPAD/WPADMem.c"),

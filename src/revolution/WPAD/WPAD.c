@@ -8,7 +8,7 @@
 #include <cstdio>
 #include <string.h>
 
-static const char* __WPADVersion = "<< RVL_SDK - WPAD \trelease build: Dec 11 2007 01:35:07 (0x4199_60831) >>";
+static const char* __WPADVersion = "<< RVL_SDK - WPAD \trelease build: Jun 28 2007 02:04:52 (0x4199_60831) >>";
 
 extern volatile BOOL __OSIsReturnToIdle;
 
@@ -46,9 +46,6 @@ static u8 _rumbleCnt[WPAD_MAX_CONTROLLERS] = {0, 0, 0, 0};
 static s8 _infRes[4];
 
 static BOOL _initialized;
-static BOOL _startup = FALSE;
-static int _recFlag = -1;
-static int _recCnt = 0;
 
 #define WPAD_DEFAULT_ACC_DIFF_COUNT_THRESHOLD (u16)(6)
 #define WPAD_DEFAULT_ACC_HYST_COUNT_THRESHOLD (u16)(30)
@@ -100,7 +97,7 @@ BOOL OnShutdown(BOOL final, u32 event) {
     if (final == FALSE) {
         if (status == 3) {
             if (WUDIsBusy()) {
-                WUDCancelSyncDevice();
+                WPADStopSimpleSync();
                 ret = FALSE;
             } else {
                 switch (event) {
@@ -919,19 +916,9 @@ void WPADiManageHandler(OSAlarm*, OSContext*) {
                 _initialized = TRUE;
                 WUDSetHidConnCallback(WPADiConnCallback);
                 WUDSetHidRecvCallback(WPADiRecvCallback);
-
-                _recCnt = 50;
             }
         }
         return;
-    } else {
-        if (_recFlag >= 0) {
-            _recCnt--;
-            if (_recCnt <= 0) {
-                __reconnect((BOOL)_recFlag);
-            }
-            return;
-        }
     }
 
     for (chan = 0; chan < WPAD_MAX_CONTROLLERS; chan++) {
@@ -1129,15 +1116,14 @@ void WPADiInitSub() {
     _scSetting = 1;
     _afhChannel = -1;
 
-    OSRegisterVersion(__WPADVersion);
     OSCreateAlarm(&_managerAlarm);
     OSSetPeriodicAlarm(&_managerAlarm, OSGetTime(), OSMillisecondsToTicks(1), WPADiManageHandler0);
+
+    OSRegisterVersion(__WPADVersion);
 }
 
 void WPADInit(void) {
     BOOL result;
-
-    _startup = TRUE;
 
     if (_regShutdown == 0) {
         OSRegisterShutdownFunction(&ShutdownFunctionInfo);
@@ -1148,8 +1134,6 @@ void WPADInit(void) {
 
     if (result) {
         _initialized = FALSE;
-        _recFlag = -1;
-        _recCnt = 50;
         WPADiInitSub();
     }
 }
@@ -1180,6 +1164,18 @@ u32 WPADGetWorkMemorySize(void) {
 
 s32 WPADGetStatus() {
     return WUDGetStatus();
+}
+
+u8 WPADGetRadioSensitivity(s32 chan) {
+    WPADControlBlock* p_wpd = _wpdcb[chan];
+    BOOL enable;
+    u8 sense;
+
+    enable = OSDisableInterrupts();
+    sense = p_wpd->radioSense;
+    OSRestoreInterrupts(enable);
+
+    return sense;
 }
 
 u8 WPADGetSensorBarPosition() {
@@ -2405,19 +2401,14 @@ void __WPADShutdown() {
 void __WPADReconnect(BOOL exec) {
     BOOL enable = OSDisableInterrupts();
 
-    if (!_startup) {
-        OSRestoreInterrupts(enable);
-        return;
-    }
-
     if (_shutdown) {
         OSRestoreInterrupts(enable);
         return;
     }
 
     _shutdown = 1;
-    _recFlag = (exec) ? 1 : 0;
-    DEBUGPrint("Wait for %d ms until start reconnect!\n", _recCnt);
+    BTA_DmSendHciReset();
+    WPADiShutdown(exec);
     OSRestoreInterrupts(enable);
 }
 
