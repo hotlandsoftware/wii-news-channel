@@ -210,7 +210,7 @@ void Ticker::DrawSeparator(const f32& offsetX, const f32& alpha) {
     Draw2D_Line(line[0], line[1], 6, color, color);
 }
 
-void Ticker::Layout(const math::VEC2& pos) {
+void Ticker::Layout(math::VEC2& pos) {
     f32 minY = 0.0f;
     f32 maxY = 456.0f;
     f32 height = CalcRowHeight(mTextScale);
@@ -219,14 +219,14 @@ void Ticker::Layout(const math::VEC2& pos) {
     unk0 = 0;
     mLeft = (pos.x + mTextX) - 5.0f;
     mTop = pos.y + mTextY;
-    f32 width = 10.0f + (GetScreenWidth() - GetSideMargin() * 2);
+    mRight = mLeft + (10.0f + (GetScreenWidth() - GetSideMargin() * 2));
     mBottom = mTop + height;
-    mRight = mLeft + width;
     mHidden = !(mBottom > minY && mTop < maxY);
 
     if (!mHidden) {
         f32 s = mFontScale * mTextScale;
-        mWriter->SetCharSpace(s * gCharSpaceScale);
+        f32 space = gCharSpaceScale;
+        mWriter->SetCharSpace(s * space);
         mWriter->SetScale(s);
         mTextWidth = CalcTextWidth(mArticle->mHeadline);
         if (mArticle->GetTexture()) {

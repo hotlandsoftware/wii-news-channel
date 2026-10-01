@@ -28,7 +28,7 @@ public:
     void Draw(const nw4r::math::VEC2& pos, const f32& offsetX, const f32& scale,
               const f32& alpha);
     void DrawSeparator(const f32& offsetX, const f32& alpha);
-    void Layout(const nw4r::math::VEC2& pos);
+    void Layout(nw4r::math::VEC2& pos);
     u32 UpdateHover();
     void Update();
 
