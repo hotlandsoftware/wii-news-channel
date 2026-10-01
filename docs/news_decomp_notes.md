@@ -61,8 +61,14 @@ So each file ends with a `__sinit` that constructs it, and the `.ctors` table (`
 
 ## Known non-matching
 
-- `Mascot.cpp` (99.96%): the constructor and `Reset` (both inline `Init()`) store `mSpeed` before `mY`, and the centre value lands in f1 instead of f2. All 720 orders of the statements were tried.
-- `NewsArticle.cpp` (99.39%), `LanguageSelect.cpp` (99.92%), `LayoutScreen.cpp` (99.99%), `Camera.cpp` (99.93%; `.sdata2` pool order also differs): register swaps only.
+- `Mascot.cpp` (99.96%): the constructor and `Reset` (both inline `Init()`) store `mSpeed` before `mY`, and the centre value lands in f1 instead of f2.
+  Tried: all statement orders, locals for the centre/half width/speed, inline helpers for the centre, `SetPos`/`SetSpeed` inlines, `-ipa file`, other compilers.
+  In the original the centre can't take f1, so the reloaded `sWalkInSpeed` must be live across the centre's `fadds` when registers are allocated.
+- `NewsArticle.cpp` (99.54%): register swaps in `NewsData::Init` (99.28%, mostly loop counter vs. induction pointer), `GetPicture` (99.10%).
+  The constructor (99.92%) loads `mText` before `mFile` for the location check but compares `locationIdx < numLocations`; every form of the condition gives one or the other.
+- `PointerEffect.cpp` (99.98%): in `Calc`, the shadow position's last `fadds`/`fsubs` should write in place (f0/f1).
+- `Model.cpp` (94.23%): in `CalcMtx`, the original loads `rotate.y` right before the multiply; ours hoists it to the top.
+  `math::MTX34RotXYZDeg(&gWorkMtx, 0.0f, rotate.y, 0.0f)` gets the registers right (constant in f0, `rotate.y` in f2) but not the schedule.
 
 ## More codegen patterns
 
@@ -96,7 +102,7 @@ So each file ends with a `__sinit` that constructs it, and the `.ctors` table (`
 - `ansi_fp.c` only matches with `GC/3.0a3` (`__dec2num`). Every compiler emits a call to `__cvt_dbl_ull`, so the runtime helper at `0x8017AB60` is named that (not `__cvt_dbl_usll`).
 - The old `MSL_C/alloc.c` (`InitDefaultHeap`/`__sys_free`) is now `GCN_mem_alloc.c`; `alloc.c` is MSL's pool allocator (`Block_link` … `free`).
 - `__msl_itoa`/`__msl_strnicmp` live in `file_io.c` (no file boundary is visible between them and `fflush`).
-- `arith.c`: `__msl_mul` (99.4%) has a register-allocation difference (`|*x|` should stay in `r9`); everything else in the file matches.
+- `arith.c`: `__msl_mul` writes `if (a < 0) { a = -a; }` instead of calling `abs()`. The inlined `abs()` gives the same instructions, but `|*x|` lands in a new register instead of staying in `r9`.
 - **Spotting `-inline auto -ipa file` files.** LayoutScreen.cpp (like PaneButton.cpp) needs it. Signs: weak inline copies (iterator helpers, `Pane::GetUserData`, `Pane::SetVisible`) sit right after the first function that *references* them, even where they were inlined (with plain `-inline noauto` they land after the first function that calls them out of line). Other signs: a non-inline function is inlined into a caller defined *before* it (`LayoutScreen::Reset` into the ctor, `SetHover` into `Update`). And recursive helpers show the same depth everywhere: 3 copies out of line and 3 inlined levels at call sites. Without IPA the out-of-line copy always has one level more than the call sites, whatever `inline_depth`/`inline_bottom_up` pragmas you use.
 - **`#pragma dont_inline on` functions** (`LayoutScreenItem::Draw`, `PaneButton::UpdatePane`) call even trivial operators out of line: `__as__8_GXColorFRC8_GXColor` (bytewise), `Color::operator=(const GXColor&)` (word copy), and the `LinkList::Iterator` copy ctor. Write `for (Iterator it = list.GetBeginIter(); ...)` to get the copy ctor. Writing `Iterator it; it = ...` gives the default ctor plus `operator=` instead.
 - **Small POD struct returns.** A function returning `GXColor` (a POD) returns it in `r3`, and the caller stores it bytewise with `srwi`/`extrwi`. Returning `ut::Color` (which has a dtor) uses a hidden pointer instead.
@@ -110,3 +116,13 @@ So each file ends with a `__sinit` that constructs it, and the `.ctors` table (`
 - Same 29 files and layout as the Forecast Channel. Sources are ported from there, built with `GC/2.7` and `cflags_trk` (`-inline deferred,auto -sdata 0 -sdata2 0 -use_lmw_stmw on -str reuse,readonly`). `serpoll.c` and `EXI2_GDEV_GCN/main.c` add `-sdata 8`.
 - `targsupp.c` and `exception.c` were `.s` files in Forecast. They are C files with `asm` functions here. GC/2.7 inline asm has no data directives: the vector table's string and zero padding are `opword`s (`PAD*` macros), and `entry gTRKInterruptVectorTableEnd` makes the end label. `twui` is written `twi 31, r0, 0`.
 - `TRKOpenFile`/`TRKCloseFile`/`TRKPositionFile` are unreferenced. In C they need `#pragma force_active on`, or the linker strips them and `.text` comes out 0x20 short.
+- **Dead code still claims `.sdata2` slots.** Float literals go into the pool in codegen order, even when the code that uses them is dead.
+  Camera's pool has 180/360/-180 ahead of `IsRotationReset`'s constants, although only the later `Approach` uses them. Three unused locals (`f32 half = 180.0f;` …) in `ResetRotation` reproduce this. Branches on a dead value are not removed, so use plain locals.
+- **Inline virtual dtors go to the end.** An inline `virtual ~Camera() {}` is emitted after the last function. The original has it right after the constructor, so it is out of line (`Camera::~Camera() {}` after the ctor). `symbols.txt` may still say `scope:weak`; that is harmless.
+- **`new T[n]` emits the weak dtor before the ctor.** When the original has `T::T` before `T::~T` (LanguageSelect's `Item`), define the dtor out of line after the function that does the `new[]`.
+- **Statics written from other files.** Camera's `sHomeRot` is written by code in another file (`fn_8002E7DC`), so it can't be `static`. It is now `Camera::sHomeRot` (renamed in `symbols.txt`).
+- **Wrapping a loop in a function.** In `LayoutScreen::Calc` the last loop got the right registers only as a member `SetAlpha(int)` inlined by IPA. The volatile registers for its counter and induction pointer swap.
+- **Inline helper for a repeated expression.** In `Camera::Project`, `x *= GetScale(gRenderMode.fbWidth)` (a static inline returning `(f32)GetScreenWidth() / fbWidth`) swapped the `gWidescreen`/`fbWidth` registers into place.
+- **Argument load order.** `PSMTXTrans(m, eye.x, eye.y, eye.z)` from a stack `VEC3` loads x, y, z. The original loads z, y, x, which matched with `f32 ez = eye.z; f32 ey = eye.y; f32 ex = eye.x;`.
+- **Named locals for intermediate sums.** In `PointerEffect::SetState`, `VEC3(x + 3.0f, y + 3.0f, 0)` put the constant in the wrong register. `f32 sy = y + 3.0f; f32 sx = x + 3.0f;` matched.
+- **Indexing vs. post-increment.** In LanguageSelect's item loop, `language[i]` (instead of `*language++`) put the counter increment before the pointer increment.
