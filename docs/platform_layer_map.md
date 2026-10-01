@@ -321,6 +321,31 @@ Findings:
 **BTE** (Petari/tp file names): `gki_buffer 0x8014BCF0`, `gki_time 0x8014D134`, `gki_ppc 0x8014D68C`, `hcisu_h2 0x8014D91C`, `uusb_ppc 0x8014DFB8`, `bte_hcisu ≈0x8014EAC0`, `bte_logmsg ≈0x8014EC94`, `bte_main 0x8014EDF8`, `btu_task1 0x8014EF50`, `bta_sys_conn 0x8014F474`, `bta_sys_main 0x8014F6C8`, `ptim 0x8014F90C`, `bta_dm_act 0x8014FB30`, `bta_dm_api 0x80151E6C`, `bta_dm_main 0x801522D8`, `bta_dm_pm 0x80152438`, `bta_hh_act 0x80152E54`, `bta_hh_api 0x8015459C`, `bta_hh_main 0x8015496C`, `bta_hh_utils 0x80154EC0`, `btm_acl 0x8015526C`, `btm_dev 0x80156FB0`, `btm_devctl 0x8015767C`, `btm_discovery 0x80159004`, `btm_inq 0x80159138`, `btm_pm 0x8015AC2C`, `btm_sco 0x8015B8C0`, `btm_sec 0x8015C6F8`, `btu_hcif 0x8015F6BC`, `gap_conn 0x80160AD0`, `gap_utils 0x8016160C`, `hcicmds 0x80161C28`, `hidd_pm 0x80164534`, `hidh_api 0x801648B0`, `hidh_conn 0x80165630`, `l2c_api 0x80167670`, `l2c_csm 0x8016823C`, `l2c_link 0x80169718`, `l2c_main 0x8016A8A4`, `l2c_utils 0x8016B8D4`, `port_rfc 0x8016D7E8`, `port_utils 0x8016EBE4`, `rfc_l2cap_if 0x8016F1BC`, `rfc_mx_fsm 0x8016FAF0`, `rfc_port_fsm 0x80170734`, `rfc_port_if 0x801718D4`, `rfc_ts_frames 0x80171E00`, `rfc_utils 0x80173448`, `sdp_api 0x80173C28`, `sdp_db 0x80174A90`, `sdp_discovery 0x8017575C`, `sdp_main 0x801769D4`, `sdp_server 0x80177540`, `sdp_utils 0x80178250`.
 Some small `*_cfg.c`, `btu_*` and `hcicmds` neighbours are not listed; take boundaries from Petari's `splits.txt`.
 
+#### BTE part 1 (task 24, done): `0x8014BCF0–0x8015526C`
+
+All 26 files are Matching. The sources are Petari's (`src/RVL_SDK/bte`), copied into `src/revolution/BTE/` with only include rewrites. They are built in lib `bte1` with GC/3.0a5.2 and `[*cflags_rvl, "-i src/revolution/BTE"]`, with no per-file flags. Petari builds BTE with GC/3.0a3 (`uusb_ppc.c` with 3.0a5.2); 3.0a5.2 matches every file here.
+
+| Files (link order) | `.text` |
+| --- | --- |
+| `gki_buffer`, `gki_time`, `gki_ppc` | `0x8014BCF0–0x8014D91C` |
+| `hcisu_h2`, `uusb_ppc` | `0x8014D91C–0x8014EBB0` |
+| `bta_dm_cfg`, `bta_hh_cfg`, `bta_sys_cfg` | data only (`.rodata 0x801AE6E0–0x801AE780`, `.sdata 0x80357388–0x803573B8`, `.sdata2 0x8035A020`, `.sbss2 0x8035A6C0`) |
+| `bte_hcisu`, `bte_init`, `bte_logmsg`, `bte_main`, `btu_task1`, `bd` | `0x8014EBB0–0x8014F474` |
+| `bta_sys_conn`, `bta_sys_main`, `ptim`, `utl` | `0x8014F474–0x8014FB30` |
+| `bta_dm_act`, `bta_dm_api`, `bta_dm_main`, `bta_dm_pm` | `0x8014FB30–0x80152E54` |
+| `bta_hh_act`, `bta_hh_api`, `bta_hh_main`, `bta_hh_utils` | `0x80152E54–0x8015526C` |
+
+Findings:
+
+- **The code is Petari's (SMG) build byte for byte.** Every function has the same size and order. The only difference is that `__ntd_get_allocated_mem_size` (first function of Petari's `uusb_ppc.c`, 0xC bytes) is dead-stripped here. It stays in the source.
+- **Constant offsets to Petari (RMGK01)** for this range: `.text` −0x39F0B4 (−0x39F0C0 after `uusb_ppc`'s first function), `.rodata` −0x3B36B0, `.data` −0x41C808, `.bss` −0x35AF80, `.sdata` −0x35BA18, `.sbss` −0x35F7B0, `.sdata2` −0x3682F0, `.sbss2` −0x368260. The data sections, including all the trace strings, have the same layout as Petari's. The splits were generated from Petari's `splits.txt` with these offsets, and they should work for parts 2 and 3 too (check where the offsets change).
+- **Headers.** All of Petari's BTE-private headers (`bt_types.h`, `gki.h`, `btm_int.h`, `l2c_int.h` …, and `NOTICE`) were copied unchanged into `src/revolution/BTE/`, so parts 2 and 3 can use the same directory. `decomp.h` and `context_rvl.h` (Petari's `libs/RVL_SDK/include`) were copied there too; `context_rvl.h` now uses `<revolution/…>` includes. `include/revolution/bte.h` and `bte/` were not touched. The Petari `gki.h` in `src/` (`BTE_GKI_H`) and the minimal `include/revolution/bte/gki.h` (`GKI_H`) must not be included in the same file.
+- **Include rewrites in the `.c` files:** `"revolution/types.h"` → `<types.h>`, `<mem.h>` → `<string.h>`, `"revolution/os.h"` → `<revolution/os.h>`. In `bte_main.c`, `ATTR_ALIGN` became `ATTRIBUTE_ALIGN`.
+- **New shared header:** `include/stdint.h` (MSL's; `int_least32_t` is `long`). Petari's `data_types.h` needs it.
+- **Data symbols.** `bta_dm_compress_srvcs` is `static` (local), although Petari's `symbols.txt` says global. `tmp$589` (`bte_logmsg`'s 0x7D0-byte static buffer) and the trace strings got their `@NNN` local names, so objdiff reports 100% data for every file.
+- **`block_relocations`:** `0x8019E9B4` is random `.rodata` table data that looks like a pointer into `gki_cb` (`0x80334431`). Without the block, the `gki_ppc` `.bss` split breaks the link.
+- **Names given outside the range for linking** (rename only): IUSB (`IUSB_OpenLib`, `IUSB_CloseLib`, `IUSB_OpenDeviceIds`, `IUSB_CloseDeviceAsync`, `IUSB_ReadIntrMsgAsync`, `IUSB_ReadBlkMsgAsync`, `IUSB_WriteBlkMsgAsync`, `IUSB_WriteCtrlMsgAsync`), WUD (`App_MEMalloc`, `App_MEMfree`, `bta_hh_co_data`/`open`/`close`, `bta_dm_co_get_compress_memory`), and BTM/BTU/GAP/HCI/HID/L2CAP/RFCOMM/SDP functions and data called from part 1 (`BTM_*`, `btm_*`, `btu_hcif_*`, `btu_init_core`, `BTE_Init`, `WBT_ExtCreateRecord`, `GAP_Init`, `btsnd_hcic_write_scan_enable`, `HID_DevInit`, `HID_Host*`, `hidh_proc_repage_timeout`, `L2CA_*`, `l2cap_link_chk_pkt_start`/`end`, `l2c_*`, `l2cu_find_ccb_by_cid`, `RFCOMM_Init`, `rfcomm_process_timeout`, `SDP_*`, `sdp_conn_timeout`, `btm_cb`, `hh_cb`, `l2cb`, `BT_BD_ANY`).
+
 **TPL** `0x80179290`, **NdevExi2AD** `DebuggerDriver 0x801794A4`, `exi2 0x801797D8–0x80179F64`.
 
 ### MetroTRK (`0x8018C7C0–0x80191F00`, ogws, sizes identical)
@@ -476,7 +501,7 @@ Difficulty: E = mostly drop-in, M = drop-in plus version fixes, H = little or no
 | 21 | NAND, SC, ESP, IPC, FS, PAD | `0x8012B540–0x80134C38` | 38 KB | smg | E–M |
 | 22 | WPAD | `0x80134C38–0x80143634` | 60 KB | smg (GC/3.0a5.2) | M |
 | 23 | KPAD, EUART, USB, WUD, TPL, NdevExi2AD | `0x80143634–0x8014BCF0`, `0x80179290–0x80179F64` | 38 KB | smg, ogws | M–H (KPAD, USB) |
-| 24 | BTE part 1: gki, hcisu, bte, bta | `0x8014BCF0–0x8015526C` | 38 KB | smg | E–M |
+| 24 | BTE part 1: gki, hcisu, bte, bta (**done**, all Matching) | `0x8014BCF0–0x8015526C` | 38 KB | smg | E–M |
 | 25 | BTE part 2: btm, btu, gap, hci | `0x8015526C–0x80164534` | 61 KB | smg | E–M |
 | 26 | BTE part 3: hid, l2c, port/rfc, sdp | `0x80164534–0x80179290` | 85 KB | smg | E–M |
 | — | MetroTRK | `0x8018C7C0–0x80191F00` | 22 KB | ogws | E (other agent) |
