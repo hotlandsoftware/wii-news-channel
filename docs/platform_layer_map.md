@@ -180,6 +180,41 @@ The NW4R revision here has out-of-line `CharWriter`/`TextWriterBase` accessors, 
 
 **OS** (ogws/smg order): `OS.c 0x800FBB58`, `OSAlarm 0x800FCF0C` (ogws 100%), `OSAlloc 0x800FD6F0` (100%), `OSArena 0x800FD9F8` (**done**), `OSAudioSystem 0x800FDACC` (100%), `OSCache 0x800FDF80`, `OSContext 0x800FE5B0` (100%), `OSError 0x800FEE38`, `OSExec 0x800FF568`, `OSFatal 0x80101738` (100%), `OSFont 0x8010235C`, `OSInterrupt 0x80103024` (100%), `OSLink 0x801037A8`, `OSMessage 0x801037C0`, `OSMemory 0x801039C4`, `OSMutex 0x801041D8` (100%), `OSReboot 0x801044DC`, `OSReset 0x8010455C`, `OSRtc 0x80104DC0`, `OSSync 0x8010584C`, `OSThread 0x801058CC` (smg 93%), `OSTime 0x80106E84`, `OSUtf 0x80107538`, `OSIpc 0x80107770`, `OSStateTM 0x80107798`, `OSPlayRecord 0x80107F28`, `OSStateFlags 0x80108620`, `OSNet 0x8010882C`, `OSNandbootInfo 0x801088E0`, `OSPlayTime 0x80108AE8`, `__ppc_eabi_init 0x80109380`.
 
+#### BASE + OS status (task 16, done)
+
+Every file in `0x800FB9EC–0x80109434` is split and all but one match. The sources are Petari's (`src/RVL_SDK/os/*.c`, `base/PPCArch.c`, `os/init/*`), which compile against our header tree with only include rewrites. They are built with `cflags_rvl` and GC/3.0a5.2, with no per-file flags.
+
+| File | `.text` | Status |
+| --- | --- | --- |
+| `BASE/PPCArch.c` | `0x800FB9EC–0x800FBB58` | Matching (Petari, plus `PPCMfhid4`) |
+| `OS.c` | `0x800FBB58–0x800FCF0C` | Matching |
+| `OSAlarm`, `OSAlloc`, `OSArena`, `OSAudioSystem`, `OSCache`, `OSContext`, `OSError` | `0x800FCF0C–0x800FF568` | Matching |
+| `OSExec.c` | `0x800FF568–0x80101738` | Matching (includes the `OSLaunch.c` code, see below) |
+| `OSFatal`, `OSFont`, `OSInterrupt`, `OSLink`, `OSMessage`, `OSMemory`, `OSMutex`, `OSReboot`, `OSReset`, `OSRtc`, `OSSync`, `OSThread`, `OSTime`, `OSUtf`, `OSIpc` | `0x80101738–0x80107798` | Matching |
+| `OSStateTM.c` | `0x80107798–0x80107EDC` | **NonMatching** (97.9%) |
+| `time.dolphin.c` | `0x80107EDC–0x80107F28` | Matching (`__get_clock`, `__get_time`, `__to_gm_time`) |
+| `OSPlayRecord`, `OSStateFlags`, `OSNet`, `OSNandbootInfo`, `OSPlayTime` | `0x80107F28–0x80109380` | Matching |
+| `__ppc_eabi_init.c` | `0x80109380–0x80109434` plus `.init 0x800042E0–0x80004338` | Matching |
+| `__start.c` | `.init 0x80004000–0x800042E0` | Matching (outside the `.text` range, but it belongs to OS) |
+
+Findings:
+
+- **Forecast offsets.** For this range the Forecast Channel addresses map to ours with constant offsets: `.text` +0x186DC, `.data` +0x16F40, `.sdata` +0x26AE0, `.sbss` +0x26B60, `.bss` +0x27200, `.sdata2` +0x26F08.
+  All function and data names in `symbols.txt` came from Forecast's `symbols.txt` this way.
+  Forecast's `.sdata2` name `__EXIFreq` at its `0x80332DF8` is wrong: that double is `OSPlayTime`'s int-to-float constant, and `OSPlayTime`'s `.sdata2` ends at `0x80359D00`.
+- **`OSExec.c` contains the launch code.** Between `__OSLaunchMenu` and `__OSBootDolSimple` sit `__OSCheckCompanyCode`, `__OSGetValidTicketIndex`, `__OSRelaunchTitle`, `__OSLaunchTitle`, `LaunchCommon` and `__OSReturnToMenul`, which Petari has in a separate `OSLaunch.c`.
+  The hardcoded line numbers in `LaunchCommon` (0x6B0) and `__OSGetValidTicketIndex` (0x53B) confirm one file.
+  Version differences: `__OSRelaunchTitle(void)` takes no reset code and writes no NAND boot info; `__OSCheckTmdSysVersion` checks `ESP_ListTitleContentsOnCard` (`0x80130E08`, ioctlv 0x10) instead of `NANDSecretGetUsage`; `LaunchCommon` has no `OSLaunchNoReturnFlag` check.
+  The strings of the dead-stripped `__OSLaunchTitle{v,l}ForSystem`, `OSLaunchDisk` and `OSLaunchPartition` are kept with `FORCEACTIVE_*` functions.
+- **Pointer null checks.** `if (p == NULL)` gives `cmpwi`, but the original has `li r0, 0; cmplw r3, r0`. Writing `p == (void*)0` reproduces it (`__OSRelaunchTitle`, `LaunchCommon`).
+- **Other Jun 2007 vs Petari differences.** `OS.c` has no "RVA 1" console case and no `__DVDCheckDevice` check in `OSInit`. `OSFatal` sets the arena high from `bootInfo->FSTLocation` without a fallback. `OSReset`'s `__OSGetDiscState` returns 2 first. `OSTime.c` needs `OSCalendarTimeToTicks` (taken from Forecast). `OSCache.c` needs `LCLoadBlocks` and `LCQueueLength`. `OSPlayTime.c` has no `__OSExpireCallback`, and `__OSPlayTimeRebootCallback` is defined right after `OSPlayTimeIsLimited`. `OSStateTM`'s `OSSetResetCallback`/`OSSetPowerCallback` store the callback as given and return the old one. `OSThread`'s unused `IdleThread` still takes `.bss` (forced active). `OSNet` keeps the strings of its dead NWC24 helpers. `OSMemory` has no `initialized` static.
+- **Line numbers.** `OSPanic`/`OSReport` line literals differ from Petari in `OS.c`, `OSExec.c`, `OSReset.c` and `OSStateTM.c`. Read them off the DOL.
+- **`OSStateTM.c` (97.9%).** The inlined `__OSRegisterStateEvent` and `__OSGetResetButtonStateRaw` keep their `if (...) x = 1; else x = 0;` branches in the original (`li 1`/`li 0`, then `cmpwi` of the result). MWCC turns every if/else form tried into `cntlzw`/`srwi`. Compilers 3.0a3–3.0a5.2, `-ipa function`, `-inline deferred`, `volatile` and moving the helper first all gave the same code. A `default:`-first `switch` comes closest. Forecast's version has the same problem (90%).
+- **dtk side effects.** Once `__OSDispatchInterrupt`/`__OSInitPlayTime` and friends have their real names, dtk's signature analysis creates `__OSLastInterruptTime` (8 bytes) and `__OSExpireTime` (8 bytes). These overlapped the 4-byte `lbl_` symbols, which then had to go. Two `block_relocations` were added to `config.yml`: `OSInit`'s `lis/addi 0x80004000`, and a random word at `0x801E4C9C` that looked like a pointer into `OSFont`'s `HankakuToCode`.
+- **`.bss` alignment of asm units.** When a matched C file's `.bss` is shorter than the split's, the next asm-only unit can land 8 bytes early. Give its first symbol `align:32` (`StmEhInBuf`).
+- **`Pad.c`.** It defines `__PADSpec` in `.sbss`, so its split now has `.sbss 0x80358310–0x80358318`. Without it, naming `__PADSpec` (used by `OSInit`) is a duplicate definition.
+- **Other library names applied for linking:** EXI (`EXIInit`, `EXIImmEx`, `EXISetExiCallback`), SI, VI (`VIInit`, `VIGetRetraceCount` …), DVD (`DVDInit`, `DVDLow*`, `__DVDGetCoverStatus` …), AI DMA, NAND, ESP (`ESP_GetTicketViews`, `ESP_GetTmdView`, `ESP_ListTitleContentsOnCard` …), SC, `IOS_Ioctl`, `IPCCltInit`/`IPCCltReInit`, `GXAbortFrame`.
+
 **EXI** `EXIBios 0x80109434`, `EXIUart 0x8010ACC8`, `EXICommon 0x8010AFFC`. **SI** `SIBios 0x8010B188`, `SISamplingRate 0x8010C190`. **DB** `0x8010C270` (**done**, Petari). **VI** `vi 0x8010C358`, `i2c 0x8010ECFC`, `vi3in1 0x8010F718`. **MTX** `mtx 0x80110DBC`, `mtxvec 0x80111A24`, `mtx44 0x80111A78`, `vec 0x80111C98`, `quat 0x80111EA0`.
 
 **GX** `GXInit 0x80112208`, `GXFifo 0x801133D4`, `GXAttr 0x80113D90` (100%), `GXMisc 0x80114FB4`, `GXGeometry 0x80115720`, `GXFrameBuf 0x80115CE0`, `GXLight 0x80116720`, `GXTexture 0x80116E30`, `GXBump 0x80117CB0`, `GXTev 0x801180FC`, `GXPixel 0x8011877C`, `GXDraw 0x80118EE0`, `GXDisplayList 0x8011A324`, `GXTransform 0x8011A398`, `GXPerf 0x8011A8E4`.
