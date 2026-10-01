@@ -80,3 +80,6 @@ So each file ends with a `__sinit` that constructs it, and the `.ctors` table (`
 - `MSL_C/strtoul.c`: `__strtoull` (99.15%). The original hoists `li r31, -1` (used by `ULLONG_MAX - value`) before the jump-table `lis`; ours hoists it after `addi r29, _current_locale`. Declaration order, `const`, literal vs `ullmax` local and comparison forms made no difference.
 - **MSL is built with `-Cpp_exceptions on`.** Every MSL function with a stack frame has an extab/extabindex entry; without the flag the DOL comes out 0x20 bytes short.
 - **MSL ctype.** `isspace`/`isdigit`/`isalpha`/`toupper` are inline functions over `_current_locale.ctype_cmpt_ptr` (`0x801ED3A8`, field `+0x38`), with a `(c < 0 || c >= 256)` guard.
+- **`const T&` parameters.** MWCC assumes stores can't change a `const&` target, so it moves parameter loads above member stores. If the original keeps them in order, the parameter is a non-const reference (`Ticker::Layout(math::VEC2&)`).
+- **`-ipa file`.** MSL `printf.c` needs `-ipa file` for `__pformatter` to match (one branch pair is otherwise inverted). It didn't help `__strtoull`.
+- **Return types.** If a caller uses `f1` after the call (`fmr f31, f1`), the function returns `f32`. That return value occupying `f1` changes the callee's register allocation (`Ticker::SetLayout`).
