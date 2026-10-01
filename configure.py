@@ -1019,6 +1019,19 @@ config.libs = [
             Object(Matching, "nw4r/g3d/g3d_light.cpp"),
         ],
     },
+    {
+        # nw4r::snd part 2 (MemorySoundArchive ... SoundArchiveLoader), ogws sources
+        "lib": "nw4r_snd2",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_nw4r,
+        "progress_category": "sdk",
+        "objects": [
+            Object(Matching, "nw4r/snd/snd_MemorySoundArchive.cpp"),
+            Object(Matching, "nw4r/snd/snd_SoundArchive.cpp"),
+            Object(NonMatching, "nw4r/snd/snd_SoundArchiveFile.cpp"),
+            Object(Matching, "nw4r/snd/snd_SoundArchiveLoader.cpp"),
+        ],
+    },
 ]
 
 

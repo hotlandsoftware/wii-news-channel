@@ -498,6 +498,21 @@ nw4r/g3d/g3d_light.cpp:
 	.text       start:0x800CDD94 end:0x800CE740
 	.sdata2     start:0x803598F0 end:0x80359920
 
+nw4r/snd/snd_MemorySoundArchive.cpp:
+	.text       start:0x800D5DC8 end:0x800D61FC
+	.data       start:0x801CE098 end:0x801CE118
+
+nw4r/snd/snd_SoundArchive.cpp:
+	.text       start:0x800DA150 end:0x800DA738
+	.data       start:0x801CE440 end:0x801CE460
+
+nw4r/snd/snd_SoundArchiveFile.cpp:
+	.text       start:0x800DA738 end:0x800DB4E8
+	.sbss       start:0x80357CA0 end:0x80357CA8
+
+nw4r/snd/snd_SoundArchiveLoader.cpp:
+	.text       start:0x800DB4E8 end:0x800DBE40
+
 nw4r/ut/ut_list.cpp:
 	.text       start:0x800E84D8 end:0x800E8774
 

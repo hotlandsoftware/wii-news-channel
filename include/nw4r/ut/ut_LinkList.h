@@ -2,6 +2,7 @@
 #define NW4R_UT_LINK_LIST_H
 
 #include <types.h>
+#include <stddef.h>
 #include <nw4r/ut/ut_NonCopyable.h>
 
 namespace nw4r {
@@ -27,8 +28,11 @@ public:
 
     ~LinkListImpl();
 
+    class ConstIterator;
+
     class Iterator {
         friend class LinkListImpl;
+        friend class ConstIterator;
 
     public:
         Iterator() : mPointer(NULL) {}
@@ -47,6 +51,31 @@ public:
         LinkListNode* operator->() const { return mPointer; }
 
         friend bool operator==(Iterator lhs, Iterator rhs) { return lhs.mPointer == rhs.mPointer; }
+
+    private:
+        LinkListNode* mPointer; // at 0x0
+    };
+
+    // Added for snd (ogws): const-view iterator
+    class ConstIterator {
+        friend class LinkListImpl;
+
+    public:
+        explicit ConstIterator(Iterator it) : mPointer(it.mPointer) {}
+
+        ConstIterator& operator++() {
+            mPointer = mPointer->mNext;
+            return *this;
+        }
+
+        ConstIterator& operator--() {
+            mPointer = mPointer->mPrev;
+            return *this;
+        }
+
+        const LinkListNode* operator->() const { return mPointer; }
+
+        friend bool operator==(ConstIterator lhs, ConstIterator rhs) { return lhs.mPointer == rhs.mPointer; }
 
     private:
         LinkListNode* mPointer; // at 0x0
@@ -78,6 +107,37 @@ protected:
 
     u32 mSize;          // at 0x0
     LinkListNode mNode; // at 0x4
+};
+
+// Added for snd (ogws)
+template <typename TIter> class ReverseIterator {
+public:
+    explicit ReverseIterator(TIter it) : mCurrent(it) {}
+
+    TIter GetBase() const { return mCurrent; }
+
+    ReverseIterator& operator++() {
+        --mCurrent;
+        return *this;
+    }
+
+    const typename TIter::TElem* operator->() const { return &this->operator*(); }
+
+    typename TIter::TElem& operator*() const {
+        TIter it = mCurrent;
+        return *--it;
+    }
+
+    friend bool operator==(const ReverseIterator& rLhs, const ReverseIterator& rRhs) {
+        return rLhs.mCurrent == rRhs.mCurrent;
+    }
+
+    friend bool operator!=(const ReverseIterator& rLhs, const ReverseIterator& rRhs) {
+        return !(rLhs.mCurrent == rRhs.mCurrent);
+    }
+
+private:
+    TIter mCurrent; // at 0x0
 };
 
 } // namespace detail
@@ -119,7 +179,61 @@ public:
         detail::LinkListImpl::Iterator mIterator; // at 0x0
     };
 
+    // Added for snd (ogws): const-view iterator
+    class ConstIterator {
+        friend class LinkList;
+
+    public:
+        typedef T TElem;
+
+        explicit ConstIterator(detail::LinkListImpl::Iterator it) : mIterator(it) {}
+        explicit ConstIterator(Iterator it) : mIterator(it.mIterator) {}
+
+        ConstIterator& operator++() {
+            ++mIterator;
+            return *this;
+        }
+
+        ConstIterator& operator--() {
+            --mIterator;
+            return *this;
+        }
+
+        ConstIterator operator++(int) {
+            ConstIterator ret = *this;
+            ++*this;
+            return ret;
+        }
+
+        const T* operator->() const { return GetPointerFromNode(mIterator.operator->()); }
+        const T& operator*() const { return *this->operator->(); }
+
+        friend bool operator==(ConstIterator lhs, ConstIterator rhs) { return lhs.mIterator == rhs.mIterator; }
+        friend bool operator!=(ConstIterator lhs, ConstIterator rhs) { return !(lhs == rhs); }
+
+    private:
+        detail::LinkListImpl::ConstIterator mIterator; // at 0x0
+    };
+
+    typedef detail::ReverseIterator<Iterator> RevIterator;
+    typedef detail::ReverseIterator<ConstIterator> ConstRevIterator;
+
     LinkList() {}
+
+    ConstIterator GetBeginIter() const { return ConstIterator(const_cast<LinkList*>(this)->GetBeginIter()); }
+    ConstIterator GetEndIter() const { return ConstIterator(const_cast<LinkList*>(this)->GetEndIter()); }
+    RevIterator GetBeginReverseIter() { return RevIterator(GetBeginIter()); }
+    RevIterator GetEndReverseIter() { return RevIterator(GetEndIter()); }
+    ConstRevIterator GetBeginReverseIter() const { return ConstRevIterator(GetBeginIter()); }
+    ConstRevIterator GetEndReverseIter() const { return ConstRevIterator(GetEndIter()); }
+
+    static Iterator GetIteratorFromPointer(LinkListNode* node) {
+        return Iterator(detail::LinkListImpl::GetIteratorFromPointer(node));
+    }
+
+    static const T* GetPointerFromNode(const LinkListNode* node) {
+        return reinterpret_cast<const T*>(reinterpret_cast<const u8*>(node) - Ofs);
+    }
 
     Iterator GetBeginIter() { return Iterator(detail::LinkListImpl::GetBeginIter()); }
     Iterator GetEndIter() { return Iterator(detail::LinkListImpl::GetEndIter()); }
@@ -151,5 +265,40 @@ public:
 
 } // namespace ut
 } // namespace nw4r
+
+// ogws macros (added for snd)
+#ifndef DECLTYPE
+#define DECLTYPE(x) __decltype__(x)
+#endif
+
+#define NW4R_UT_LINKLIST_TYPEDEF_DECL(T) typedef nw4r::ut::LinkList<T, offsetof(T, node)> T##List;
+
+#define NW4R_UT_LINKLIST_TYPEDEF_DECL_EX(T, SUFFIX)                                                 \
+    typedef nw4r::ut::LinkList<T, offsetof(T, node##SUFFIX)> T##SUFFIX##List;
+
+#define NW4R_UT_LINKLIST_NODE_DECL() nw4r::ut::LinkListNode node
+
+#define NW4R_UT_LINKLIST_NODE_DECL_EX(SUFFIX) nw4r::ut::LinkListNode node##SUFFIX
+
+#define NW4R_UT_LINKLIST_TYPEDEF_FORCE(T) template struct nw4r::ut::LinkList<T, offsetof(T, node)>
+
+#define NW4R_UT_LINKLIST_FOREACH(NAME, LIST, ...)                                                   \
+    {                                                                                              \
+        typedef DECLTYPE((LIST).GetBeginIter()) IterType;                                          \
+                                                                                                   \
+        for (IterType NAME = (LIST).GetBeginIter(); NAME != (LIST).GetEndIter(); ++NAME) {         \
+            __VA_ARGS__;                                                                           \
+        }                                                                                          \
+    }
+
+#define NW4R_UT_LINKLIST_FOREACH_SAFE(NAME, LIST, ...)                                              \
+    {                                                                                              \
+        typedef DECLTYPE((LIST).GetBeginIter()) IterType;                                          \
+                                                                                                   \
+        for (IterType __impl__ = (LIST).GetBeginIter(); __impl__ != (LIST).GetEndIter();) {        \
+            IterType NAME = __impl__++;                                                            \
+            __VA_ARGS__;                                                                           \
+        }                                                                                          \
+    }
 
 #endif
