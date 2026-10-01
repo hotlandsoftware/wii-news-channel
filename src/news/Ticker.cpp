@@ -377,7 +377,7 @@ void Ticker::SetLayout(math::VEC2& pos, f64 scale) {
     unk60 = pos.y;
     mTextX = pos.x;
     mTextY = pos.y;
-    unk64 = unk60 + CalcRowHeight(scale);
+    unk64 = unk60 + CalcRowHeight(mTextScale);
     pos.y = 5.0f + unk64;
 }
 
