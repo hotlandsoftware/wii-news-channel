@@ -115,9 +115,11 @@ void PointerEffect::Calc() {
                 sShadowNames[sEffectType[mState[i]]], 0, 0);
             mShadowEffect[i] = effect;
             if (effect != NULL) {
-                f32 y = 456.0f - gCursorY[i][0] - 3.0f - dy;
-                f32 x = dx + (3.0f + gCursorX[i][0]);
-                SetEffectPos(effect, x, y);
+                f32 y = gCursorY[i][0];
+                f32 x = gCursorX[i][0];
+                f32 sy = 456.0f - y - 3.0f - dy;
+                f32 sx = dx + (3.0f + x);
+                SetEffectPos(effect, sx, sy);
             }
 
             if (mState[i] == STATE_OPEN_SPIN) {
@@ -202,8 +204,9 @@ void PointerEffect::SetState(s32 chan, s32 state) {
         Mtx mtx;
         f32 y = gCursorY[chan][0];
         f32 x = gCursorX[chan][0];
-        Draw2D_CalcMtx(scale, dir,
-                       math::VEC3(3.0f + x, 3.0f + y, 0.0f), mtx);
+        f32 sy = y + 3.0f;
+        f32 sx = x + 3.0f;
+        Draw2D_CalcMtx(scale, dir, math::VEC3(sx, sy, 0.0f), mtx);
         GXLoadPosMtxImm(mtx, GX_PNMTX1);
         GXColor shadowColor = {0, 0, 0, 255};
         GXSetTevColor(GX_TEVREG0, shadowColor);
@@ -227,14 +230,19 @@ void PointerEffect::SetState(s32 chan, s32 state) {
         GXSetCurrentMtx(GX_PNMTX1);
 
         Mtx mtx;
-        Draw2D_CalcMtx(scale, dir,
-                       math::VEC3(3.0f + gCursorX[chan][0], 3.0f + gCursorY[chan][0], 0.0f), mtx);
+        f32 y = gCursorY[chan][0];
+        f32 x = gCursorX[chan][0];
+        f32 sy = y + 3.0f;
+        f32 sx = x + 3.0f;
+        Draw2D_CalcMtx(scale, dir, math::VEC3(sx, sy, 0.0f), mtx);
         GXLoadPosMtxImm(mtx, GX_PNMTX1);
         GXColor shadowColor = {0, 0, 0, 255};
         GXSetTevColor(GX_TEVREG0, shadowColor);
         Draw2D_Tex(gCommonTpl, 0x51, &offset, 1.0f, 1.0f);
 
-        Draw2D_CalcMtx(scale, dir, math::VEC3(gCursorX[chan][0], gCursorY[chan][0], 0.0f), mtx);
+        y = gCursorY[chan][0];
+        x = gCursorX[chan][0];
+        Draw2D_CalcMtx(scale, dir, math::VEC3(x, y, 0.0f), mtx);
         GXLoadPosMtxImm(mtx, GX_PNMTX1);
         GXColor color = {255, 255, 255, 255};
         GXSetTevColor(GX_TEVREG0, color);
