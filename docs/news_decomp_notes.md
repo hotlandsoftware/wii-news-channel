@@ -59,6 +59,11 @@ So each file ends with a `__sinit` that constructs it, and the `.ctors` table (`
 
 ## Known non-matching
 
-- `Mascot.cpp`:
-  - `Mascot::Mascot` and `Mascot::Reset` are about 72%: instruction scheduling of the initial-position expression.
-  - `UpdateAnim` is 99.5%: one reload of `mAnimId` in the walk-in switch.
+- `Mascot.cpp`: `Mascot::Mascot` (57%) and `Mascot::Reset` (80%).
+  The original loads `sWalkInSpeed` before the `mState`/`mTimer` stores, and the `88.0f` constant before the second `sWalkInSpeed` load.
+  No statement order tried so far reproduces both (720-permutation searches with and without `offset`/`center` locals).
+
+## More codegen patterns
+
+- Switching on an inline getter (`switch (GetAnimId())`) instead of the member stops MWCC from reusing the switch register in a case body.
+  That fixed a reload in `Mascot::UpdateAnim`.
