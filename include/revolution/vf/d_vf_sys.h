@@ -3,13 +3,66 @@
 
 #include <revolution/vf/vf_struct.h>
 
-void (*VFSysGetTimeStampCallback())(struct VFSysTime*);
-void (*VFSysSetTimeStampCallback(void (*i_callback)(struct VFSysTime*)))(struct VFSysTime*);
+#ifdef __cplusplus
+extern "C" {
+#endif
 
+// Find-first/next work area (PrFILE2 PF_DTA); d_vf_sys only uses the volume pointer.
+typedef struct VFSysDTA {
+    u32 unk0;                 // offset 0x0
+    u32 unk4;                 // offset 0x4
+    struct PF_VOLUME* p_vol;  // offset 0x8
+} VFSysDTA;
+
+void VFSysSetLastError(s32 i_err);
+void VFSys_create_cache(struct VF_HANDLE_TYPE* i_handle_p, u32 i_pages, struct MEMiHeapHead* i_heap_handle);
+struct VF_HANDLE_TYPE* VFSysGetHandleP(s32 i_idx);
+s32 VFSysHandleP2Idx(struct VF_HANDLE_TYPE* i_handle_p);
+struct VF_HANDLE_TYPE* VFSysVol2HandleP(struct PF_VOLUME* i_vol_p);
+int VFSysPDMDisk2HandleIdx(const struct PDM_DISK* i_disk_p);
+struct VF_HANDLE_DRIVE* VFSysGetDriveP(s32 i_idx);
+struct VF_HANDLE_DRIVE* VFSysPDMDisk2DriveP(struct PDM_DISK* disk_p);
+void VFSysInit(void* i_heap_start_address_p, u32 i_size);
+s32 VFSysSetDeviceNANDFlash(s32* o_idx_p, void* i_cache_heap_p, u32 i_cache_size);
+s32 VFSysSetDeviceRAM(s32* o_idx_p, void* i_cache_heap_p, u32 i_cache_size);
 s32 VFSysUnsetDevice(s32 i_handle_idx);
 s32 VFSysCheckExistPrfFile_nandflash_sub(const s8* i_prf_file_name_p, u32 i_handle_idx);
 s32 VFSysCheckExistPrfFile_nandflash(struct VF_HANDLE_DEVICE* i_device_p, const s8* i_prf_file_name_p, void* i_memory_p, u32 i_handle_idx);
 s32 VFSysCheckExistPrfFile_ram(struct VF_HANDLE_DEVICE* i_device_p, const s8* i_prf_file_name_p, void* i_memory_p, u32 i_handle_idx);
 s32 VFSysCheckExistPrfFile_dvd(struct VF_HANDLE_DEVICE* i_device_p, const s8* i_prf_file_name_p, void* i_memory_p, u32 i_handle_idx);
+s32 VFSysCheckExistPrfFile(s32 i_handle_idx, const s8* i_prf_file_name_p, void* i_memory_p);
+s32 VFSysCreateSystemFile_nandflash(const s8* i_prf_file_name_p, u32 i_size);
+s32 VFSysCreateSystemFile_ram(void* i_memory_p, u32 i_size);
+s32 VFSysMountDrv(s32 i_handle_idx, const s8* i_prf_file_name_p, void* i_memory_p);
+s32 VFSysUnmountDrv(s32 i_handle_idx, u32 i_mode);
+struct PF_FILE* VFSysOpenFile_current(const s8* i_path_p, const s8* i_mode);
+struct PF_FILE* VFSysOpenFile(s32 i_handle_idx, const s8* i_path_p, const s8* i_mode);
+s32 VFSysCloseFile(struct PF_FILE* i_file_p);
+s32 VFSysSeekFile(struct PF_FILE* i_file_p, s32 i_offset, s32 i_origin);
+s32 VFSysReadFile(u32* o_read_size_p, void* o_buf_p, u32 i_size, struct PF_FILE* i_file_p);
+s32 VFSysWriteFile(void* i_buf_p, u32 i_size, struct PF_FILE* i_file_p);
+s32 VFSysDeleteFile_current(const s8* i_path_p);
+s32 VFSysDeleteFile(s32 i_handle_idx, const s8* i_path_p);
+s32 VFSysCreateDir_current(const s8* i_dir_name_p);
+s32 VFSysCreateDir(s32 i_handle_idx, const s8* i_dir_name_p);
+s32 VFSysGetFileSizeByFd(s32* o_size_p, struct PF_FILE* i_file_p);
+s32 VFSysFindFirst_current(VFSysDTA* o_dta_p, const s8* i_path_p, u32 i_attr);
+s32 VFSysFindFirst(VFSysDTA* o_dta_p, s32 i_handle_idx, const s8* i_path_p, u32 i_attr);
+s32 VFSysFindNext(VFSysDTA* io_dta_p);
+s32 VFSysGetDriveFreeSize(s32 i_handle_idx);
+s32 VFSysGetLastError(void);
+s32 VFSysGetLastDeviceError_current(void);
+s32 VFSysGetLastDeviceError(s32 i_handle_idx);
+void VFSysSetNandFuncNormal(u32 i_handle_idx);
+void VFSysSetNandFuncEx(u32 i_handle_idx);
+s32 VFSysFormatDrive(s32 i_handle_idx);
+s32 VFSysSyncDrive(s32 i_handle_idx, u32 i_mode);
+s32 VFSysSetSyncMode(s32 i_handle_idx, u32 i_mode);
+void (*VFSysSetTimeStampCallback(void (*i_callback)(struct VFSysTime*)))(struct VFSysTime*);
+void (*VFSysGetTimeStampCallback())(struct VFSysTime*);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif  // D_VF_SYS_H
