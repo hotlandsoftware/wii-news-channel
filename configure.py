@@ -524,7 +524,7 @@ config.libs = [
             Object(Matching, "revolution/AX/AXCL.c"),
             Object(Matching, "revolution/AX/AXOut.c"),
             Object(Matching, "revolution/AX/AXSPB.c"),
-            Object(NonMatching, "revolution/AX/AXVPB.c"),
+            Object(Matching, "revolution/AX/AXVPB.c"),
             Object(Matching, "revolution/AX/AXComp.c"),
             Object(Matching, "revolution/AX/DSPCode.c"),
             Object(Matching, "revolution/AX/AXProf.c"),
