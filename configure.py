@@ -473,7 +473,7 @@ config.libs = [
             Object(Matching, "news/Ticker.cpp"),
             Object(Matching, "news/HeadlineList.cpp"),
             Object(Matching, "news/LayoutScreen.cpp", extra_cflags=["-inline auto", "-ipa file"]),
-            Object(NonMatching, "news/Camera.cpp"),
+            Object(Matching, "news/Camera.cpp"),
             Object(Matching, "news/Locale.cpp"),
             Object(NonMatching, "news/PointerEffect.cpp"),
             Object(Matching, "news/ErrorScreen.cpp"),

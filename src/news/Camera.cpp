@@ -5,15 +5,15 @@
 using namespace nw4r;
 
 extern "C" {
-extern math::MTX34 lbl_8020DC88;
-extern const f32 lbl_80358D78;
+extern math::MTX34 gWorkMtx;
+extern const f32 gModelDepth;
 
 void fn_800450D8(math::MTX34* mtx, f32 angle);
 void fn_80045124(math::MTX34* mtx, f32 angle);
 void fn_80045170(math::MTX34* mtx, f32 angle);
 }
 
-static math::VEC3 sHomeRot(0.0f, 0.0f, 0.0f);
+math::VEC3 Camera::sHomeRot(0.0f, 0.0f, 0.0f);
 
 Camera::Camera(g3d::Camera camera)
     : mCamera(camera),
@@ -38,6 +38,8 @@ Camera::Camera(g3d::Camera camera)
     math::MTX44Identity(&mProjMtx);
 }
 
+Camera::~Camera() {}
+
 void Camera::Init(const math::VEC3* rot) {
     mCamera.SetPerspective(mFovy, mAspect, mNear, mFar);
     mCamera.SetScissor(0, 0, gRenderMode.fbWidth, gRenderMode.efbHeight);
@@ -48,33 +50,36 @@ void Camera::Init(const math::VEC3* rot) {
 }
 
 void Camera::Calc() {
-    math::VEC3 up(0.0f, 0.0f, lbl_80358D78);
+    math::VEC3 up(0.0f, 0.0f, gModelDepth);
     math::VEC3 eye(0.0f, 0.0f, mDistance);
     math::MTX34 mtx;
 
-    PSMTXTrans(lbl_8020DC88.mtx, up.x, up.y, up.z);
-    fn_800450D8(&lbl_8020DC88, -mTargetRot.x);
-    fn_80045170(&lbl_8020DC88, mTargetRot.z);
-    fn_80045124(&lbl_8020DC88, mTargetRot.y);
-    PSMTXCopy(lbl_8020DC88.mtx, mtx.mtx);
+    PSMTXTrans(gWorkMtx.mtx, up.x, up.y, up.z);
+    fn_800450D8(&gWorkMtx, -mTargetRot.x);
+    fn_80045170(&gWorkMtx, mTargetRot.z);
+    fn_80045124(&gWorkMtx, mTargetRot.y);
+    PSMTXCopy(gWorkMtx.mtx, mtx.mtx);
     mTarget.x = mtx._03;
     mTarget.y = mtx._13;
     mTarget.z = mtx._23;
 
-    PSMTXTrans(lbl_8020DC88.mtx, eye.x, eye.y, eye.z);
-    fn_800450D8(&lbl_8020DC88, mRot.x);
-    fn_80045170(&lbl_8020DC88, mRot.z);
-    fn_80045124(&lbl_8020DC88, mRot.y);
-    PSMTXConcat(mtx.mtx, lbl_8020DC88.mtx, lbl_8020DC88.mtx);
-    PSMTXCopy(lbl_8020DC88.mtx, mtx.mtx);
+    f32 ez = eye.z;
+    f32 ey = eye.y;
+    f32 ex = eye.x;
+    PSMTXTrans(gWorkMtx.mtx, ex, ey, ez);
+    fn_800450D8(&gWorkMtx, mRot.x);
+    fn_80045170(&gWorkMtx, mRot.z);
+    fn_80045124(&gWorkMtx, mRot.y);
+    PSMTXConcat(mtx.mtx, gWorkMtx.mtx, gWorkMtx.mtx);
+    PSMTXCopy(gWorkMtx.mtx, mtx.mtx);
     mPos.x = mtx._03;
     mPos.y = mtx._13;
     mPos.z = mtx._23;
 
-    lbl_8020DC88._03 = lbl_8020DC88._13 = lbl_8020DC88._23 = 0.0f;
+    gWorkMtx._03 = gWorkMtx._13 = gWorkMtx._23 = 0.0f;
     up.x = up.z = 0.0f;
     up.y = 1.0f;
-    PSMTXMultVec(lbl_8020DC88.mtx, &up, &mUp);
+    PSMTXMultVec(gWorkMtx.mtx, &up, &mUp);
 
     mCamera.SetPosition(mPos.x, mPos.y, mPos.z);
     mDir.x = mTarget.x - mPos.x;
@@ -100,6 +105,10 @@ void Camera::Calc() {
 
 void Camera::ResetRotation() {
     mResetting = true;
+    // Unused, but they put 180/360/-180 into .sdata2 ahead of IsRotationReset's constants.
+    f32 half = 180.0f;
+    f32 full = 360.0f;
+    f32 negHalf = -180.0f;
     bool x = Approach(&mRot.x, sHomeRot.x);
     bool y = Approach(&mRot.y, sHomeRot.y);
     bool z = Approach(&mRot.z, sHomeRot.z);
@@ -165,6 +174,10 @@ bool Camera::Approach(f32* angle, f32 target) {
     return done;
 }
 
+static inline f32 GetScale(s32 fbWidth) {
+    return (f32)GetScreenWidth() / fbWidth;
+}
+
 void Camera::Project(math::VEC2* screen, const math::VEC3* pos) {
     math::MTX34 view;
     math::MTX44 proj;
@@ -179,9 +192,8 @@ void Camera::Project(math::VEC2* screen, const math::VEC3* pos) {
     h *= 0.5f;
     x += w;
     y += h;
-    s32 fbWidth = gRenderMode.fbWidth;
-    x *= (f32)GetScreenWidth() / fbWidth;
-    w *= (f32)GetScreenWidth() / fbWidth;
+    x *= GetScale(gRenderMode.fbWidth);
+    w *= GetScale(gRenderMode.fbWidth);
 
     PSMTXMultVec(view.mtx, pos, &viewPos);
     math::VEC3Transform(&clip, &proj, &viewPos);
