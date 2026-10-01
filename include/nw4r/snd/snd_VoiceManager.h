@@ -33,7 +33,7 @@ public:
     void ChangeVoicePriority(Voice* pVoice);
     void UpdateAllVoicesSync(u32 syncFlag);
 
-    const VoiceList& GetVoiceList() const {
+    VoiceList& GetVoiceList() {
         return mPrioVoiceList;
     }
 
