@@ -34,30 +34,55 @@ static void __OSDefaultPowerCallback(void);
 static void __OSRegisterStateEvent(void);
 static void LockUp(void);
 
-OSPowerCallback OSSetPowerCallback(OSPowerCallback callback) {
+static void __OSRegisterStateEvent(void) {
+    int err, enabled;
+    enabled = OSDisableInterrupts();
+
+    err = IOS_IoctlAsync(StmEhDesc, 0x1000, StmEhInBuf, 0x20, StmEhOutBuf, 0x20, __OSStateEventHandler, (void*)0);
+    // TODO: the original keeps an if/else here (li 1 / li 0); MWCC folds every
+    // if/else form tried into cntlzw. The switch is the closest.
+    switch (err) {
+    default:
+        StmEhRegistered = 0;
+        break;
+    case 0:
+        StmEhRegistered = 1;
+        break;
+    }
+
+    OSRestoreInterrupts(enabled);
+}
+
+OSResetCallback OSSetResetCallback(OSResetCallback callback) {
     BOOL enabled;
-    OSPowerCallback prevCallback;
+    OSResetCallback prevCallback;
 
     enabled = OSDisableInterrupts();
-    prevCallback = PowerCallback;
-
-    if (callback) {
-        PowerCallback = callback;
-    } else {
-        PowerCallback = __OSDefaultPowerCallback;
-    }
+    prevCallback = ResetCallback;
+    ResetCallback = callback;
 
     if (!StmEhRegistered) {
         __OSRegisterStateEvent();
     }
 
     OSRestoreInterrupts(enabled);
+    return prevCallback;
+}
 
-    if (prevCallback == __OSDefaultPowerCallback) {
-        return NULL;
-    } else {
-        return prevCallback;
+OSPowerCallback OSSetPowerCallback(OSPowerCallback callback) {
+    BOOL enabled;
+    OSPowerCallback prevCallback;
+
+    enabled = OSDisableInterrupts();
+    prevCallback = PowerCallback;
+    PowerCallback = callback;
+
+    if (!StmEhRegistered) {
+        __OSRegisterStateEvent();
     }
+
+    OSRestoreInterrupts(enabled);
+    return prevCallback;
 }
 
 BOOL OSGetResetButtonState(void) {
@@ -111,7 +136,7 @@ void __OSShutdownToSBY(void) {
     __VIRegs[1] = 0;
 
     if (!StmReady) {
-        OSPanic(__FILE__, 0x13C, "Error: The firmware doesn't support shutdown feature.\n");
+        OSPanic(__FILE__, 0x119, "Error: The firmware doesn't support shutdown feature.\n");
     }
 
     StmImInBuf[0] = 0;
@@ -125,7 +150,7 @@ void __OSHotReset(void) {
     __VIRegs[1] = 0;
 
     if (!StmReady) {
-        OSPanic(__FILE__, 380, "Error: The firmware doesn't support reboot feature.\n");
+        OSPanic(__FILE__, 0x159, "Error: The firmware doesn't support reboot feature.\n");
     }
 
     result = IOS_Ioctl(StmImDesc, 0x2001, StmImInBuf, sizeof(StmImInBuf), StmImOutBuf, sizeof(StmImOutBuf));
@@ -218,21 +243,6 @@ s32 __OSVIDimReplyHandler(s32 ret, void* pUnused) {
     return 0;
 }
 
-static void __OSRegisterStateEvent(void) {
-    int err, enabled;
-    enabled = OSDisableInterrupts();
-
-    err = IOS_IoctlAsync(StmEhDesc, 0x1000, StmEhInBuf, 0x20, StmEhOutBuf, 0x20, __OSStateEventHandler, (void*)0);
-
-    if (err == IOS_ERROR_OK) {
-        StmEhRegistered = 1;
-    } else {
-        StmEhRegistered = 0;
-    }
-
-    OSRestoreInterrupts(enabled);
-}
-
 void __OSDefaultResetCallback(void) {
 }
 
@@ -244,7 +254,7 @@ static s32 __OSStateEventHandler(s32 ret, void* pUnused) {
     OSResetCallback cb;
 
     if (ret != 0) {
-        OSPanic(__FILE__, 0x314, "Error on STM state event handler\n");
+        OSPanic(__FILE__, 0x2F1, "Error on STM state event handler\n");
     }
 
     StmEhRegistered = 0;
