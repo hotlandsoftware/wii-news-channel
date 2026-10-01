@@ -15,6 +15,10 @@ void Draw2D_TexRect(TPLPalette* tpl, u32 index, const nw4r::ut::Rect* rect, f32 
 void Draw2D_TexPos(TPLPalette* tpl, u32 index, const nw4r::math::VEC3* pos, f32 scaleX, f32 scaleY,
                    u8 flags);
 
+void Draw2D_TexRectTiled(TPLPalette* tpl, u32 index, const nw4r::ut::Rect* rect, f32 z, u32 flags);
+void Draw2D_FillRect(const nw4r::ut::Rect* rect, const nw4r::ut::Color* color);
+void Draw2D_FillQuadGradient(const nw4r::math::VEC3* quad, const nw4r::ut::Color* colors);
+
 void Draw2D_Tex(TPLPalette* tpl, u32 index, const Vec* pos, f32 scaleX, f32 scaleY);
 
 void Draw2D_Line(const nw4r::math::VEC3& p0, const nw4r::math::VEC3& p1, u8 width,
@@ -25,6 +29,7 @@ struct NewsTexture;
 void Draw2D_Icon(u32 index, nw4r::math::VEC3* pos, f32 scaleX, f32 scaleY, u32 flags);
 void Draw2D_Texture(NewsTexture* tex, const nw4r::math::VEC3* pos, f32 scale);
 
+void TPL_GetTexObj(TPLPalette* tpl, u32 index, GXTexObj* texObj);
 u32 TPL_GetWidth(TPLPalette* tpl, u32 index);
 u32 TPL_GetHeight(TPLPalette* tpl, u32 index);
 
