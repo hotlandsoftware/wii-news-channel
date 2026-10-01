@@ -150,6 +150,14 @@ MSL_C/alloc.c:
 	.text       start:0x8017AEF0 end:0x8017AFA8
 	.rodata     start:0x801AEB68 end:0x801AEBD8
 
+MSL_C/mem.c:
+	extab       start:0x800067A0 end:0x800067A8
+	extabindex  start:0x80006D30 end:0x80006D3C
+	.text       start:0x8017DE80 end:0x8017DFF0
+
+MSL_C/mem_funcs.c:
+	.text       start:0x8017DFF0 end:0x8017E2C0
+
 MSL_C/string.c:
 	extab       start:0x80006850 end:0x80006868
 	extabindex  start:0x80006E38 end:0x80006E5C
