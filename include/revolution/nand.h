@@ -172,6 +172,12 @@ s32 NANDPrivateCreateDirAsync(const char*, u8, u8, NANDCallback, NANDCommandBloc
 
 s32 NANDPrivateCreateAsync(const char*, u8, u8, NANDCallback, NANDCommandBlock*);
 
+s32 NANDReadDir(const char*, char*, u32*);
+s32 NANDGetCurrentDir(char[NAND_MAX_PATH]);
+s32 NANDGetType(const char*, u8*);
+s32 NANDCreateDir(const char*, u8, u8);
+s32 NANDPrivateSetStatus(const char*, const NANDStatus*);
+
 #define NAND_BANNER_TEXTURE_SIZE (192 * 64 * 2)
 #define NAND_BANNER_ICON_SIZE (48 * 48 * 2)
 #define NAND_BANNER_COMMENT_SIZE 32

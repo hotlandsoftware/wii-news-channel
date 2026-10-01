@@ -709,12 +709,56 @@ config.libs = [
         ],
     },
     {
+        "lib": "nand",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_rvl,
+        "progress_category": "sdk",
+        "objects": [
+            Object(NonMatching, "revolution/NAND/nand.c"),
+            Object(NonMatching, "revolution/NAND/NANDOpenClose.c"),
+            Object(NonMatching, "revolution/NAND/NANDCore.c"),
+            Object(NonMatching, "revolution/NAND/NANDLogging.c"),
+        ],
+    },
+    {
+        "lib": "sc",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_rvl,
+        "progress_category": "sdk",
+        "objects": [
+            Object(NonMatching, "revolution/SC/scsystem.c"),
+            Object(NonMatching, "revolution/SC/scapi.c"),
+            Object(NonMatching, "revolution/SC/scapi_prdinfo.c"),
+        ],
+    },
+    {
+        "lib": "esp",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_rvl,
+        "progress_category": "sdk",
+        "objects": [
+            Object(NonMatching, "revolution/ESP/esp.c"),
+        ],
+    },
+    {
         "lib": "ipc",
         "mw_version": "GC/3.0a5.2",
         "cflags": cflags_rvl,
         "progress_category": "sdk",
         "objects": [
             Object(Matching, "revolution/IPC/ipcMain.c"),
+            Object(NonMatching, "revolution/IPC/ipcclt.c"),
+            Object(NonMatching, "revolution/IPC/memory.c"),
+            Object(NonMatching, "revolution/IPC/ipcProfile.c"),
+        ],
+    },
+    {
+        "lib": "fs",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_rvl,
+        "progress_category": "sdk",
+        "objects": [
+            Object(NonMatching, "revolution/FS/fs.c"),
         ],
     },
     {
