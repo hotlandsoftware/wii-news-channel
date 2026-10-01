@@ -40,6 +40,14 @@ union VFSysDeviceTableEntry {
 
 s32 VFSysSetSyncMode(s32 i_handle_idx, u32 i_mode);
 
+// CONFLICT (vf_struct.h): in this SDK PF_VOLUME is 0x1898 bytes and drv_char is at 0x187A, but the
+// shared header still has Petari's 0x1880-byte layout (VF part 1 updates it). Read the field by offset.
+#define VF_VOL_DRV_CHAR(vol) (*(s8*)((u8*)(vol) + 0x187A))
+// Same for PF_SFD: PF_FFD is 0x38 bytes here, so ffd.p_vol is at PF_SFD+0x38 (Petari: +0x34).
+#define VF_SFD_VOL(sfd) (*(struct PF_VOLUME**)((u8*)(sfd) + 0x38))
+// And PF_FILE is 0x30 bytes here: cursor.position is at +0x1C (Petari: +0x20).
+#define VF_FILE_POSITION(file) (*(u32*)((u8*)(file) + 0x1C))
+
 s32 VFipf2_format(s8 drv_char, const u8* param);
 s32 VFipf2_fsfirst(const s8* path, u32 attr, VFSysDTA* dta);
 s32 VFipf2_fsnext(VFSysDTA* dta);
@@ -318,7 +326,7 @@ struct VF_HANDLE_TYPE* VFSysVol2HandleP(struct PF_VOLUME* i_vol_p) {
         }
         handle_end_p = handle_p + l_vfsys_vol_max;
         while (handle_p != handle_end_p) {
-            if (handle_p->device_p != NULL && handle_p->drive.pf_drv.drive == i_vol_p->drv_char) {
+            if (handle_p->device_p != NULL && handle_p->drive.pf_drv.drive == VF_VOL_DRV_CHAR(i_vol_p)) {
                 return handle_p;
             }
             handle_p++;
@@ -332,7 +340,7 @@ static struct VF_HANDLE_TYPE* VFSys_file_p_2_handle_p(struct PF_FILE* i_file_p) 
 
     ret_p = NULL;
     if (i_file_p != NULL && i_file_p->p_sfd != NULL) {
-        ret_p = VFSysVol2HandleP(i_file_p->p_sfd->ffd.p_vol);
+        ret_p = VFSysVol2HandleP(VF_SFD_VOL(i_file_p->p_sfd));
     }
     return ret_p;
 }
@@ -882,7 +890,7 @@ s32 VFSysReadFile(u32* o_read_size_p, void* o_buf_p, u32 i_size, struct PF_FILE*
 
     err = VFipf2_finfo(i_file_p, &info);
     if (err == 0) {
-        rest = info.file_size - i_file_p->cursor.position;
+        rest = info.file_size - VF_FILE_POSITION(i_file_p);
         if (i_size > rest) {
             VFipf_memset(o_buf_p, 0, i_size);
             i_size = rest;

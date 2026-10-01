@@ -8,6 +8,10 @@
 
 extern struct PDM_DISK_SET VFipdm_disk_set;
 
+// CONFLICT (vf_struct.h): PDM_DISK is 0x34 bytes in this SDK (no p_erase_func); the shared header
+// still has Petari's 0x38-byte layout (VF part 1 updates it).
+#define VF_PDM_DISK_SIZE 0x34
+
 #ifndef NON_MATCHING
 void _savegpr_22(void);
 void _restgpr_22(void);
@@ -1636,7 +1640,7 @@ s32 nanddrv_BuildUpBootSector(struct PDM_DISK* p_disk, u8* buf, enum FatType* ty
     struct PDM_DISK* realDisk_p;
     u32 drvSPU;
 
-    realDisk_p = (struct PDM_DISK*)((u8*)&VFipdm_disk_set + ((u32)p_disk & 0xFF) * sizeof(struct PDM_DISK));
+    realDisk_p = (struct PDM_DISK*)((u8*)&VFipdm_disk_set + ((u32)p_disk & 0xFF) * VF_PDM_DISK_SIZE);
     drvSPU = *(u32*)((u8*)realDisk_p + 0x1BC);
 
     dCommon_MakeBootSector(buf, type, drvSPU, 1, 0x200, 0xEB, 0x90, 0x3F, dCommon_getResvSecNumFromDisk(p_disk),
