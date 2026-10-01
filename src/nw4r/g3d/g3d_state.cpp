@@ -365,8 +365,20 @@ public:
         if ((flag & FLAG_FIRST_SET) &&
             (flag & FLAG_ALL_LOADED) == FLAG_XF_LOADED) {
 
-            fifo::GDSetGenMode2Ex_BP(mNumTexGens, mNumChans, mNumTevs, mNumInds,
-                                     mCullMode);
+            {
+            u32 cm = fifo::cm2hw[mCullMode];
+            fifo::LoadBPCmd(GX_BP_REG_SSMASK << GX_BP_OPCODE_SHIFT |
+                GX_BP_GENMODE_NUMTEX_MASK | 0b11 << GX_BP_GENMODE_NUMCOLORS_SHIFT |
+                GX_BP_GENMODE_NUMTEVSTAGES_MASK | GX_BP_GENMODE_CULLMODE_MASK |
+                GX_BP_GENMODE_NUMINDSTAGES_MASK);
+            GXCmd1u8(GX_FIFO_CMD_LOAD_BP_REG);
+            GXCmd1u32(mNumTexGens << GX_BP_GENMODE_NUMTEX_SHIFT |
+                mNumChans << GX_BP_GENMODE_NUMCOLORS_SHIFT |
+                mNumTevs - 1 << GX_BP_GENMODE_NUMTEVSTAGES_SHIFT |
+                cm << GX_BP_GENMODE_CULLMODE_SHIFT |
+                mNumInds << GX_BP_GENMODE_NUMINDSTAGES_SHIFT |
+                GX_BP_REG_GENMODE << GX_BP_OPCODE_SHIFT);
+            }
 
             flag |= FLAG_BP_LOADED;
         }
@@ -1182,30 +1194,12 @@ void LightState::LoadLightSet(int id, u32* pDiffColorMask, u32* pDiffAlphaMask,
 
     if (mCurrentLightSetIdx == id) {
 
-#if defined(VERSION_RSPE01_00)
         //! @bug only in rev 0: attempts nullptr write if parameters are empty
         //! this never happens in wii sports from what I (texline) can tell
         *pDiffColorMask = mCurrentMaskDiffColor;
         *pDiffAlphaMask = mCurrentMaskDiffAlpha;
         *pSpecColorMask = mCurrentMaskSpecColor;
         *pSpecAlphaMask = mCurrentMaskSpecAlpha;
-#elif defined(VERSION_RSPE01_01)
-        if (pDiffColorMask != NULL) {
-            *pDiffColorMask = mCurrentMaskDiffColor;
-        }
-
-        if (pDiffAlphaMask != NULL) {
-            *pDiffAlphaMask = mCurrentMaskDiffAlpha;
-        }
-
-        if (pSpecColorMask != NULL) {
-            *pSpecColorMask = mCurrentMaskSpecColor;
-        }
-
-        if (pSpecAlphaMask != NULL) {
-            *pSpecAlphaMask = mCurrentMaskSpecAlpha;
-        }
-#endif
 
         return;
     }
@@ -1692,9 +1686,7 @@ void LoadResTexSrt(const ResTexSrt srt) {
             bool ident = true;
             const TexMtxEffect& rEffect = srt.ref().effect[i];
 
-#if defined(VERSION_RSPE01_01)
             math::MTX34Identity(&mtx);
-#endif
 
             if (rEffect.map_mode != 0) {
                 sScnDependentTexMtxFuncTable.Calc(rEffect.map_mode, &mtx,
