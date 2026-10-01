@@ -2,6 +2,18 @@
 #define NW4R_MATH_TRIANGULAR_H
 
 #include <types.h>
+#include <nw4r/math/math_constant.h>
+
+// Added for g3d (Task 10), from ogws math_triangular.h
+#ifndef NW4R_MATH_IDX_TO_FIDX
+#define NW4R_MATH_IDX_TO_FIDX(x) ((x) * (1.0f / 256.0f))
+#define NW4R_MATH_DEG_TO_FIDX(x) ((x) * (256.0f / 360.0f))
+#define NW4R_MATH_FIDX_TO_DEG(x) ((x) * (360.0f / 256.0f))
+#define NW4R_MATH_RAD_TO_FIDX(x) ((x) * (128.0f / NW4R_MATH_PI))
+#define NW4R_MATH_FIDX_TO_RAD(x) ((x) * (NW4R_MATH_PI / 128.0f))
+#define NW4R_MATH_DEG_TO_RAD(x) ((x) * (NW4R_MATH_PI / 180.0f))
+#define NW4R_MATH_RAD_TO_DEG(x) ((x) * (180.0f / NW4R_MATH_PI))
+#endif
 
 namespace nw4r {
 namespace math {
@@ -39,6 +51,22 @@ inline f32 CosDeg(f32 deg) {
 
 inline f32 SinRad(f32 rad) {
     return SinFIdx(rad * (256.0f / (2.0f * 3.1415927f)));
+}
+
+// Added for g3d (Task 10), from ogws math_triangular.h
+void SinCosFIdx(f32* pSin, f32* pCos, f32 fidx);
+
+inline void SinCosDeg(f32* pSin, f32* pCos, f32 deg) {
+    return SinCosFIdx(pSin, pCos, NW4R_MATH_DEG_TO_FIDX(deg));
+}
+inline void SinCosRad(f32* pSin, f32* pCos, f32 rad) {
+    return SinCosFIdx(pSin, pCos, NW4R_MATH_RAD_TO_FIDX(rad));
+}
+
+f32 AtanFIdx(f32 x);
+
+inline f32 Atan2Deg(f32 y, f32 x) {
+    return NW4R_MATH_FIDX_TO_DEG(Atan2FIdx(y, x));
 }
 
 } // namespace math

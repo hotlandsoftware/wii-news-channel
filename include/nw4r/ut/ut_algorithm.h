@@ -43,6 +43,33 @@ inline s32 GetOffsetFromPtr(const void* start, const void* end) {
     return static_cast<s32>(GetIntPtr(end) - GetIntPtr(start));
 }
 
+// Added for g3d (Task 10), from ogws ut_algorithm.h.
+// The names are parenthesised because revolution/mem/heapCommon.h defines
+// RoundUp/RoundDown macros; callers #undef those (see src/nw4r/g3d).
+inline int ComparePtr(const void* pPtr1, const void* pPtr2) {
+    return static_cast<int>(GetIntPtr(pPtr1) - GetIntPtr(pPtr2));
+}
+
+template <typename T> inline T(RoundUp)(T t, unsigned int alignment) {
+    return (alignment + t - 1) & ~(alignment - 1);
+}
+
+template <typename T> inline void*(RoundUp)(T* pPtr, unsigned int alignment) {
+    u32 value = reinterpret_cast<u32>(pPtr);
+    u32 rounded = (alignment + value - 1) & ~(alignment - 1);
+    return reinterpret_cast<void*>(rounded);
+}
+
+template <typename T> inline T(RoundDown)(T t, unsigned int alignment) {
+    return t & ~(alignment - 1);
+}
+
+template <typename T> inline void*(RoundDown)(T* pPtr, unsigned int alignment) {
+    u32 value = reinterpret_cast<u32>(pPtr);
+    u32 rounded = value & ~(alignment - 1);
+    return reinterpret_cast<void*>(rounded);
+}
+
 } // namespace ut
 } // namespace nw4r
 

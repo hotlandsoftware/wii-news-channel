@@ -101,6 +101,18 @@ f32 PSVECDistance(const Vec*, const Vec*);
 void C_MTXLightPerspective(Mtx m, f32 fovY, f32 aspect, f32 scaleS, f32 scaleT, f32 transS, f32 transT);
 void C_MTXLightOrtho(Mtx m, f32 t, f32 b, f32 l, f32 r, f32 scaleS, f32 scaleT, f32 transS, f32 transT);
 
+/* Added for g3d (Task 10) */
+void C_MTXLookAt(Mtx m, const Point3d* camPos, const Vec* camUp, const Point3d* target);
+void C_MTXFrustum(Mtx44 m, f32 t, f32 b, f32 l, f32 r, f32 n, f32 f);
+void C_MTXLightFrustum(Mtx m, f32 t, f32 b, f32 l, f32 r, f32 n, f32 scaleS, f32 scaleT, f32 transS,
+                       f32 transT);
+void PSMTXConcatArray(const Mtx a, const Mtx srcBase, Mtx dstBase, u32 count);
+u32 PSMTXInvXpose(const Mtx src, Mtx inv);
+void PSMTXMultVecArray(const Mtx m, const Vec* srcBase, Vec* dstBase, u32 count);
+void PSMTXReorder(const Mtx src, f32 (*dest)[4]);
+f32 PSVECSquareDistance(const Vec* a, const Vec* b);
+f32 PSVECSquareMag(const Vec* v);
+
 /* SMG1 uses the paired single versions of matrix / vector operations */
 #define VECNormalize PSVECNormalize
 #define VECMag PSVECMag

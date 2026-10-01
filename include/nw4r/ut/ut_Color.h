@@ -34,6 +34,11 @@ struct Color : public GXColor {
 
     operator u32() const { return ToU32ref(); }
 
+    // Added for g3d (Task 10), from ogws ut_Color.h
+    u32 ToU32() const { return ToU32ref(); }
+    Color operator|(u32 color) const { return Color(ToU32() | color); }
+    Color operator&(u32 color) const { return Color(ToU32() & color); }
+
     void Set(u8 red, u8 green, u8 blue, u8 alpha) {
         r = red;
         g = green;
