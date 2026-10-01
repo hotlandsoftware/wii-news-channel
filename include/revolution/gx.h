@@ -11,6 +11,22 @@ typedef struct _GXColor {
     u8 r, g, b, a;
 } GXColor;
 
+typedef struct _GXRenderModeObj {
+    u32 viTVmode;      // at 0x00
+    u16 fbWidth;       // at 0x04
+    u16 efbHeight;     // at 0x06
+    u16 xfbHeight;     // at 0x08
+    u16 viXOrigin;     // at 0x0A
+    u16 viYOrigin;     // at 0x0C
+    u16 viWidth;       // at 0x0E
+    u16 viHeight;      // at 0x10
+    u32 xFBmode;       // at 0x14
+    u8 field_rendering;       // at 0x18
+    u8 aa;                    // at 0x19
+    u8 sample_pattern[12][2]; // at 0x1A
+    u8 vfilter[7];            // at 0x32
+} GXRenderModeObj;
+
 typedef enum _GXTevRegID {
     GX_TEVPREV,
     GX_TEVREG0,

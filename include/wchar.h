@@ -9,6 +9,7 @@ extern "C" {
 
 size_t wcslen(const wchar_t* str);
 wchar_t* wcscpy(wchar_t* dst, const wchar_t* src);
+wchar_t* wcscat(wchar_t* dst, const wchar_t* src);
 
 #ifdef __cplusplus
 }

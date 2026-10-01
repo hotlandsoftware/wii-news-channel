@@ -13,9 +13,12 @@ public:
     ~TextWriterBase();
 
     void SetCharSpace(f32 space);
+    f32 GetCharSpace() const;
     void SetDrawFlag(u32 flag);
+    u32 GetDrawFlag() const;
     f32 CalcStringWidth(const T* str) const;
     f32 Print(const T* str);
+    using CharWriter::Print;
 
 private:
     f32 mCharSpace;     // at 0x4C

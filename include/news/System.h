@@ -2,6 +2,7 @@
 #define NEWS_SYSTEM_H
 
 #include <types.h>
+#include <revolution/gx.h>
 
 namespace nw4r {
 namespace ut {
@@ -17,6 +18,12 @@ extern bool gFatalError;
 extern u8 gLanguage; // SCGetLanguage() value: 0 = Japanese, 1 = English, ...
 
 extern nw4r::ut::Font* gSysFont;
+extern f32 gCharSpaceScale;      // character spacing relative to the font scale
+extern bool gLargeFont;
+extern f32 gDefaultFontScale;
+extern GXColor gHighlightColor;
+extern GXColor gSeparatorColor;
+extern GXRenderModeObj gRenderMode;
 extern TPLPalette* gCommonTpl;
 
 extern bool gPointerValid[4][16];
@@ -25,8 +32,16 @@ extern f32 gCursorX[4][16];
 extern f32 gCursorY[4][16];
 extern u32 gTrig[4];
 
+inline s32 GetSideMargin() {
+    return gWidescreen ? 36 : 28;
+}
+
 inline s32 GetScreenWidth() {
     return gWidescreen ? 832 : 608;
+}
+
+inline s32 GetContentRight() {
+    return GetScreenWidth() - GetSideMargin();
 }
 
 inline BOOL IsPointerValid(s32 chan) {
