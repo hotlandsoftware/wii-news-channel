@@ -168,6 +168,77 @@ revolution/DB/db.c:
 	.data       start:0x801DDE70 end:0x801DDE88
 	.sbss       start:0x80357EC0 end:0x80357EC8
 
+revolution/GX/GXInit.c:
+	.text       start:0x80112208 end:0x801133D4
+	.data       start:0x801DE960 end:0x801DEBA0
+	.bss        start:0x802F3BA0 end:0x802F4220
+	.sdata      start:0x803570A8 end:0x803570B0
+	.sbss       start:0x80357F98 end:0x80357FC0
+	.sdata2     start:0x80359D60 end:0x80359D88
+
+revolution/GX/GXFifo.c:
+	.text       start:0x801133D4 end:0x80113D90
+	.data       start:0x801DEBA0 end:0x801DEBD0
+	.bss        start:0x802F4220 end:0x802F4268
+	.sbss       start:0x80357FC0 end:0x80357FE0
+
+revolution/GX/GXAttr.c:
+	.text       start:0x80113D90 end:0x80114FB4
+	.data       start:0x801DEBD0 end:0x801DEE44
+	.sdata      start:0x803570B0 end:0x803570C0
+
+revolution/GX/GXMisc.c:
+	.text       start:0x80114FB4 end:0x80115720
+	.sbss       start:0x80357FE0 end:0x80357FF8
+
+revolution/GX/GXGeometry.c:
+	.text       start:0x80115720 end:0x80115CE0
+
+revolution/GX/GXFrameBuf.c:
+	.text       start:0x80115CE0 end:0x80116720
+	.data       start:0x801DEE48 end:0x801DEF38
+	.sdata2     start:0x80359D88 end:0x80359D98
+
+revolution/GX/GXLight.c:
+	.text       start:0x80116720 end:0x80116E30
+	.data       start:0x801DEF38 end:0x801DEF58
+	.sdata2     start:0x80359D98 end:0x80359DD0
+
+revolution/GX/GXTexture.c:
+	.text       start:0x80116E30 end:0x80117CB0
+	.data       start:0x801DEF58 end:0x801DF088
+	.sdata      start:0x803570C0 end:0x80357108
+	.sdata2     start:0x80359DD0 end:0x80359E08
+
+revolution/GX/GXBump.c:
+	.text       start:0x80117CB0 end:0x801180FC
+	.sdata2     start:0x80359E08 end:0x80359E10
+
+revolution/GX/GXTev.c:
+	.text       start:0x801180FC end:0x8011877C
+	.data       start:0x801DF088 end:0x801DF100
+
+revolution/GX/GXPixel.c:
+	.text       start:0x8011877C end:0x80118EE0
+	.data       start:0x801DF100 end:0x801DF120
+	.sdata2     start:0x80359E10 end:0x80359E60
+
+revolution/GX/GXDraw.c:
+	.text       start:0x80118EE0 end:0x8011A324
+	.bss        start:0x802F4268 end:0x802F4500
+	.sdata2     start:0x80359E60 end:0x80359E90
+
+revolution/GX/GXDisplayList.c:
+	.text       start:0x8011A324 end:0x8011A398
+
+revolution/GX/GXTransform.c:
+	.text       start:0x8011A398 end:0x8011A8E4
+	.sdata2     start:0x80359E90 end:0x80359EA8
+
+revolution/GX/GXPerf.c:
+	.text       start:0x8011A8E4 end:0x8011B120
+	.data       start:0x801DF120 end:0x801DF210
+
 revolution/IPC/ipcMain.c:
 	.text       start:0x801314E4 end:0x801315B0
 	.sbss       start:0x803582C8 end:0x803582E0
