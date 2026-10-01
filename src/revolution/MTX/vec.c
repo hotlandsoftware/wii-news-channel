@@ -250,3 +250,47 @@ f32 PSVECDistance( const register Vec *a, const register Vec *b )
     
     return sqdist;
 }
+
+void C_VECHalfAngle(const Vec* a, const Vec* b, Vec* half) {
+    Vec aTmp;
+    Vec bTmp;
+    Vec hTmp;
+
+
+    aTmp.x = -a->x;
+    aTmp.y = -a->y;
+    aTmp.z = -a->z;
+    bTmp.x = -b->x;
+    bTmp.y = -b->y;
+    bTmp.z = -b->z;
+
+    VECNormalize(&aTmp, &aTmp);
+    VECNormalize(&bTmp, &bTmp);
+    VECAdd(&aTmp, &bTmp, &hTmp);
+
+    if (VECDotProduct(&hTmp, &hTmp) > 0.0f) {
+        VECNormalize(&hTmp, half);
+        return;
+    }
+    *half = hTmp;
+}
+
+f32 PSVECSquareDistance(const __REGISTER Vec* a, const __REGISTER Vec* b) {
+    __REGISTER f32 v0yz, v1yz, v0xy, v1xy, dyz, dxy;
+    __REGISTER f32 sqdist;
+
+    asm {
+        psq_l v0yz, 0x4(a), 0, 0
+        psq_l v1yz, 0x4(b), 0, 0
+        ps_sub dyz, v0yz, v1yz
+        psq_l v0xy, 0x0(a), 0, 0
+        psq_l v1xy, 0x0(b), 0, 0
+        ps_mul dyz, dyz, dyz
+        ps_sub dxy, v0xy, v1xy
+        ps_madd sqdist, dxy, dxy, dyz
+        ps_sum0 sqdist, sqdist, dyz, dyz
+    }
+
+    return sqdist;
+}
+

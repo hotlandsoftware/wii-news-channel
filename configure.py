@@ -651,11 +651,11 @@ config.libs = [
         "cflags": cflags_rvl,
         "progress_category": "sdk",
         "objects": [
-            Object(NonMatching, "revolution/MTX/mtx.c"),
-            Object(NonMatching, "revolution/MTX/mtxvec.c"),
-            Object(NonMatching, "revolution/MTX/mtx44.c"),
-            Object(NonMatching, "revolution/MTX/vec.c"),
-            Object(NonMatching, "revolution/MTX/quat.c"),
+            Object(Matching, "revolution/MTX/mtx.c"),
+            Object(Matching, "revolution/MTX/mtxvec.c"),
+            Object(Matching, "revolution/MTX/mtx44.c"),
+            Object(Matching, "revolution/MTX/vec.c"),
+            Object(Matching, "revolution/MTX/quat.c"),
         ],
     },
     {

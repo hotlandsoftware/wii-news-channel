@@ -3,6 +3,22 @@
 
 static f32 Unit01[] = {0.0f, 1.0f};
 
+// Dead-stripped; it puts 1.0f before 0.0f in .sdata2
+void C_MTXIdentity(Mtx m) {
+    m[0][0] = 1;
+    m[0][1] = 0;
+    m[0][2] = 0;
+    m[0][3] = 0;
+    m[1][0] = 0;
+    m[1][1] = 1;
+    m[1][2] = 0;
+    m[1][3] = 0;
+    m[2][0] = 0;
+    m[2][1] = 0;
+    m[2][2] = 1;
+    m[2][3] = 0;
+}
+
 // clang-format off
 void PSMTXIdentity(register Mtx m) {
     register f32 c_zero = 0.0F;
@@ -150,6 +166,132 @@ asm void PSMTXConcat
 #undef UNIT01 
 }
 
+void PSMTXConcatArray(const __REGISTER Mtx a, const __REGISTER Mtx* srcBase, __REGISTER Mtx* dstBase, __REGISTER u32 count) {
+    __REGISTER f32 va0, va1, va2, va3, va4, va5;
+    __REGISTER f32 vb0, vb1, vb2, vb3, vb4, vb5;
+    __REGISTER f32 vd0, vd1, vd2, vd3, vd4, vd5;
+    __REGISTER f32 u01;
+    __REGISTER f32* u01Ptr = Unit01;
+
+    asm {
+        psq_l va0, 0(a), 0, 0;
+        psq_l va1, 8(a), 0, 0;
+        psq_l va2, 16(a), 0, 0;
+        psq_l va3, 24(a), 0, 0;
+        subi count, count, 1;
+        psq_l va4, 32(a), 0, 0;
+        psq_l va5, 40(a), 0, 0;
+        mtctr count;
+        psq_l u01, 0(u01Ptr), 0, 0;
+        psq_l vb0, 0(srcBase), 0, 0;
+        psq_l vb2, 16(srcBase), 0, 0;
+        ps_muls0 vd0, vb0, va0;
+        ps_muls0 vd2, vb0, va2;
+        ps_muls0 vd4, vb0, va4;
+        psq_l vb4, 32(srcBase), 0, 0;
+        ps_madds1 vd0, vb2, va0, vd0;
+        ps_madds1 vd2, vb2, va2, vd2;
+        ps_madds1 vd4, vb2, va4, vd4;
+        psq_l vb1, 8(srcBase), 0, 0;
+        ps_madds0 vd0, vb4, va1, vd0;
+        ps_madds0 vd2, vb4, va3, vd2;
+        ps_madds0 vd4, vb4, va5, vd4;
+        psq_l vb3, 24(srcBase), 0, 0;
+        psq_st vd0, 0(dstBase), 0, 0;
+        ps_muls0 vd1, vb1, va0;
+        ps_muls0 vd3, vb1, va2;
+        ps_muls0 vd5, vb1, va4;
+        psq_l vb5, 40(srcBase), 0, 0;
+        psq_st vd2, 16(dstBase), 0, 0;
+        ps_madds1 vd1, vb3, va0, vd1;
+        ps_madds1 vd3, vb3, va2, vd3;
+        ps_madds1 vd5, vb3, va4, vd5;
+    _loop:
+        addi srcBase, srcBase, sizeof(Mtx);
+        ps_madds0 vd1, vb5, va1, vd1;
+        ps_madds0 vd3, vb5, va3, vd3;
+        ps_madds0 vd5, vb5, va5, vd5;
+        psq_l vb0, 0(srcBase), 0, 0;
+        psq_st vd4, 32(dstBase), 0, 0;
+        ps_madd vd1, u01, va1, vd1;
+        ps_madd vd3, u01, va3, vd3;
+        ps_madd vd5, u01, va5, vd5;
+        psq_l vb2, 16(srcBase), 0, 0;
+        psq_st vd1, 8(dstBase), 0, 0;
+        ps_muls0 vd0, vb0, va0;
+        ps_muls0 vd2, vb0, va2;
+        ps_muls0 vd4, vb0, va4;
+        psq_l vb4, 32(srcBase), 0, 0;
+        psq_st vd3, 24(dstBase), 0, 0;
+        ps_madds1 vd0, vb2, va0, vd0;
+        ps_madds1 vd2, vb2, va2, vd2;
+        ps_madds1 vd4, vb2, va4, vd4;
+        psq_l vb1, 8(srcBase), 0, 0;
+        psq_st vd5, 40(dstBase), 0, 0;
+        addi dstBase, dstBase, sizeof(Mtx);
+        ps_madds0 vd0, vb4, va1, vd0;
+        ps_madds0 vd2, vb4, va3, vd2;
+        ps_madds0 vd4, vb4, va5, vd4;
+        psq_l vb3, 24(srcBase), 0, 0;
+        psq_st vd0, 0(dstBase), 0, 0;
+        ps_muls0 vd1, vb1, va0;
+        ps_muls0 vd3, vb1, va2;
+        ps_muls0 vd5, vb1, va4;
+        psq_l vb5, 40(srcBase), 0, 0;
+        psq_st vd2, 16(dstBase), 0, 0;
+        ps_madds1 vd1, vb3, va0, vd1;
+        ps_madds1 vd3, vb3, va2, vd3;
+        ps_madds1 vd5, vb3, va4, vd5;
+        bdnz _loop;
+        psq_st vd4, 32(dstBase), 0, 0;
+        ps_madds0 vd1, vb5, va1, vd1;
+        ps_madds0 vd3, vb5, va3, vd3;
+        ps_madds0 vd5, vb5, va5, vd5;
+        ps_madd vd1, u01, va1, vd1;
+        ps_madd vd3, u01, va3, vd3;
+        ps_madd vd5, u01, va5, vd5;
+        psq_st vd1, 8(dstBase), 0, 0;
+        psq_st vd3, 24(dstBase), 0, 0;
+        psq_st vd5, 40(dstBase), 0, 0;
+    }
+}
+
+void PSMTXTranspose(const __REGISTER Mtx src, __REGISTER Mtx xPose) {
+    __REGISTER f32 c_zero = 0;
+    __REGISTER f32 row0a;
+    __REGISTER f32 row1a;
+    __REGISTER f32 row0b;
+    __REGISTER f32 row1b;
+    __REGISTER f32 trns0;
+    __REGISTER f32 trns1;
+    __REGISTER f32 trns2;
+
+    asm {
+        psq_l row0a, 0(src), 0, 0
+    }
+    xPose[2][3] = c_zero;
+    asm {
+        psq_l row1a, 16(src), 0, 0
+        ps_merge00 trns0, row0a, row1a
+        psq_l row0b, 8(src), 1, 0
+        ps_merge11 trns1, row0a, row1a
+        psq_l row1b, 24(src), 1, 0
+        psq_st trns0, 0(xPose), 0, 0
+        psq_l row0a, 32(src), 0, 0
+        ps_merge00 trns2, row0b, row1b
+        psq_st trns1, 16(xPose), 0, 0
+        ps_merge00 trns0, row0a, c_zero
+        psq_st trns2, 32(xPose), 0, 0
+        ps_merge10 trns1, row0a, c_zero
+        psq_st trns0, 8(xPose), 0, 0
+    }
+    row0b = src[2][2];
+    asm {
+        psq_st trns1, 24(xPose), 0, 0
+    }
+    xPose[2][2] = row0b;
+}
+
 asm u32 PSMTXInverse(const register Mtx src, register Mtx inv)
 {
     nofralloc
@@ -287,6 +429,14 @@ asm u32 PSMTXInvXpose ( const register Mtx src, register Mtx invX )
     psq_st      fp8,   40(invX), 1, 0
     
     blr
+}
+
+void PSMTXRotRad(Mtx m, char axis, f32 rad) {
+    f32 sinA, cosA;
+
+    sinA = sin(rad);
+    cosA = cos(rad);
+    PSMTXRotTrig(m, axis, sinA, cosA);
 }
 
 void PSMTXRotTrig (
@@ -622,6 +772,26 @@ void C_MTXLookAt(Mtx m, const Point3d* camPos, const Vec* camUp, const Point3d* 
 
 // fun float stuff going on here
 extern f64 tan(f64);
+
+void C_MTXLightFrustum(Mtx m, f32 t, f32 b, f32 l, f32 r, f32 n, f32 scaleS, f32 scaleT, f32 transS, f32 transT) {
+    f32 tmp;
+
+
+    tmp = 1 / (r - l);
+    m[0][0] = (scaleS * (2 * n * tmp));
+    m[0][1] = 0;
+    m[0][2] = (scaleS * (tmp * (r + l))) - transS;
+    m[0][3] = 0;
+    tmp = 1 / (t - b);
+    m[1][0] = 0;
+    m[1][1] = (scaleT * (2 * n * tmp));
+    m[1][2] = (scaleT * (tmp * (t + b))) - transT;
+    m[1][3] = 0;
+    m[2][0] = 0;
+    m[2][1] = 0;
+    m[2][2] = -1;
+    m[2][3] = 0;
+}
 
 void C_MTXLightPerspective(Mtx m, f32 fovY, f32 aspect, float scaleS, float scaleT, float transS, float transT) {
     f32 angle;
