@@ -534,6 +534,7 @@ config.libs = [
             Object(Matching, "revolution/OS/OSUtf.c"),
             Object(Matching, "revolution/OS/OSIpc.c"),
             Object(NonMatching, "revolution/OS/OSStateTM.c"),
+            Object(Matching, "revolution/OS/__start.c"),
             Object(Matching, "revolution/OS/time.dolphin.c"),
             Object(Matching, "revolution/OS/OSPlayRecord.c"),
             Object(Matching, "revolution/OS/OSStateFlags.c"),
