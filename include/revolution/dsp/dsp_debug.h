@@ -1,14 +1,14 @@
-#ifndef DSP_DEBUG_H
-#define DSP_DEBUG_H
-
+#ifndef RVL_SDK_DSP_DEBUG_H
+#define RVL_SDK_DSP_DEBUG_H
+#include <types.h>
+#include <macros.h>
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void __DSP_debug_printf(char *, ...);
+void __DSP_debug_printf(const char* fmt, ...);
 
 #ifdef __cplusplus
 }
 #endif
-
-#endif // DSP_DEBUG_H
+#endif

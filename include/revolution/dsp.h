@@ -1,47 +1,38 @@
 #ifndef DSP_H
 #define DSP_H
 
+// DSP headers come from ogws (DSP is ported from ogws, and ogws AX uses the
+// ogws DSPTask layout).
+
+#include <types.h>
+#include <macros.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <revolution/os.h>
-#include <types.h>
-#include <macros.h>
+// Forward declarations
+typedef struct DSPTask DSPTask;
 
-typedef void (*DSPCallback)(void*);
+// General-purpose typedef
+typedef void* DSPMail;
 
-typedef struct DSPTaskStruct {
-    u32 state;
-    u32 priority;
-    u32 flags;
-    u16* iram_mmem_addr;
-    u32 iram_length;
-    u32 iram_addr;
-    u16* dram_mem_addr;
-    u32 dram_len;
-    u32 dram_addr;
-    u16 dsp_vector;
-    u16 dsp_res_vector;
-    DSPCallback init_cb;
-    DSPCallback res_cb;
-    DSPCallback done_cb;
-    DSPCallback req_cb;
-    struct DSPTaskStruct* next;
-    struct DSPTaskStruct* prev;
-    OSTime context;
-    OSTime task;
-} DSPTaskInfo;
-
-u32 DSPCheckMailToDSP(void);
-u32 DSPCheckMailFromDSP(void);
-u32 DSPReadMailFromDSP(void);
-void DSPSendMailToDSP(u32);
+BOOL DSPCheckMailToDSP(void);
+BOOL DSPCheckMailFromDSP(void);
+DSPMail DSPReadMailFromDSP(void);
+void DSPSendMailToDSP(DSPMail mail);
 void DSPAssertInt(void);
 void DSPInit(void);
+BOOL DSPCheckInit(void);
+DSPTask* DSPAddTask(DSPTask* task);
+DSPTask* DSPAssertTask(DSPTask* task);
 
 #ifdef __cplusplus
 }
 #endif
+
+#include <revolution/dsp/dsp_debug.h>
+#include <revolution/dsp/dsp_hardware.h>
+#include <revolution/dsp/dsp_task.h>
 
 #endif  // DSP_H
