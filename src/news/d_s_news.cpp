@@ -1545,8 +1545,9 @@ BOOL NewsScene::StateSlideshow() {
         lbl_803575BC = false;
         lbl_803575BD = true;
         lbl_803575C8 = 0.0f;
+        u32 i = 0;
         GlobePin** pin = sPins;
-        for (u32 i = 0; i < sNumPins; i++) {
+        for (; i < sNumPins; i++) {
             (*pin++)->mState = 0;
         }
         lbl_80357598 = 1;
@@ -1562,42 +1563,45 @@ BOOL NewsScene::StateSlideshow() {
 #pragma explicit_zero_data on
         static f32 sMarkZ = 0.0f;
 #pragma pop
+        f32 x = 4.0f + GetSideMargin();
         lbl_801EDF70.y = y;
         lbl_801EDF70.z = sMarkZ;
-        f32 x = 4.0f + GetSideMargin();
         lbl_801EDF88.y = y - h;
-        lbl_801EDF70.x = x;
-        lbl_801EDF88.x = x;
+        lbl_801EDF88.x = lbl_801EDF70.x = x;
         lbl_801EDF88.z = sMarkZ;
         break;
     }
-    case 1:
-        break;
-    case 2:
-        fn_80021D88(mSlideshow);
-        switch (lbl_80357598) {
-        case 0:
-            mStep++;
-            fn_80048D20(lbl_8035772C, 25);
-            mTimer = 0;
-            return TRUE;
-        }
-        break;
-    case 3:
     default:
-        if (++mTimer >= 12) {
-            mSlideshow->mShowCursor = false;
+        switch (mStep) {
+        case 2:
+            fn_80021D88(mSlideshow);
+            switch (lbl_80357598) {
+            case 1:
+                break;
+            case 0:
+                mStep++;
+                fn_80048D20(lbl_8035772C, 25);
+                mTimer = 0;
+                return TRUE;
+            }
+            break;
+        case 3:
+        default:
+            if (++mTimer >= 12) {
+                mSlideshow->mShowCursor = false;
+            }
+            if (!lbl_8035772C->mBusy) {
+                mSlideshow->mShowCursor = true;
+                gLargeFont = false;
+                SetDPDAll(1);
+                fn_80021CD0(mSlideshow);
+                fn_80015200(mMainView);
+                ChangeState(&NewsScene::StateMain);
+                return TRUE;
+            }
+            fn_80021D88(mSlideshow);
+            break;
         }
-        if (!lbl_8035772C->mBusy) {
-            mSlideshow->mShowCursor = true;
-            gLargeFont = false;
-            SetDPDAll(1);
-            fn_80021CD0(mSlideshow);
-            fn_80015200(mMainView);
-            ChangeState(&NewsScene::StateMain);
-            return TRUE;
-        }
-        fn_80021D88(mSlideshow);
         break;
     }
     return TRUE;
