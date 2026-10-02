@@ -229,6 +229,9 @@ s32 fn_80086E68(JPEGDecContext* ctx);
 s32 fn_800882F8(JPEGDecContext* ctx);
 
 // jpgd_huff.c
+extern const u8 lbl_80359068[];
+extern const u8 lbl_801AADF0[];
+extern const u8 lbl_801AAE04[];
 extern const u8 lbl_801AAE18[64];
 s32 fn_800898F4(s32* coef, s32* quant, s32* dcPred, JPEGDecContext* ctx);
 s32 fn_80089D2C(s32* coef, s32* quant, s32* dcPred, JPEGDecContext* ctx);

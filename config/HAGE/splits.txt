@@ -596,8 +596,7 @@ revolution/TMCC_JPEG/jpgd_idct.c:
 
 revolution/TMCC_JPEG/jpgd_dec.c:
 	.text       start:0x80081348 end:0x80083554
-	.rodata     start:0x801AACF0 end:0x801AAE18
-	.sdata2     start:0x80359068 end:0x80359070
+	.rodata     start:0x801AACF0 end:0x801AADF0
 
 revolution/TMCC_JPEG/jpgd_idct_scaled.c:
 	.text       start:0x80083554 end:0x80083C60
@@ -613,7 +612,8 @@ revolution/TMCC_JPEG/jpgd_out_rgba8.c:
 
 revolution/TMCC_JPEG/jpgd_huff.c:
 	.text       start:0x800898F4 end:0x8008A0A4
-	.rodata     start:0x801AAE18 end:0x801AAF58
+	.rodata     start:0x801AADF0 end:0x801AAF58
+	.sdata2     start:0x80359068 end:0x80359070
 
 revolution/ARC/arc.c:
 	.text       start:0x8008A0A4 end:0x8008AA44

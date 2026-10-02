@@ -780,28 +780,42 @@ s32 fn_800827D8(JPEGDecContext* ctx) {
     return 0;
 }
 
+static s32 jpgdCheckComps(JPEGDecContext* ctx) {
+    JPEGFrame* f = &ctx->frame;
+    JPEGScan* sc = &ctx->scan;
+    s32 i;
+
+    for (i = 0; i < ctx->frame.numComps; i++) {
+        if (f->hSamp[i] < 1 || f->hSamp[i] > 4) {
+            return -0x50;
+        }
+        if (f->vSamp[i] < 1 || f->vSamp[i] > 4) {
+            return -0x50;
+        }
+        if (sc->quantSel[i] > 4) {
+            return -0x50;
+        }
+    }
+    return 0;
+}
+
 s32 fn_80082910(JPEGDecContext* ctx) {
-    static const u8 numComps[5] = {3, 3, 3, 3, 1};
-    static const u8 hSampTable[5][4] = {
-        {4, 1, 1, 0}, {2, 1, 1, 0}, {2, 1, 1, 0}, {1, 1, 1, 0}, {1, 0, 0, 0},
-    };
-    static const u8 vSampTable[5][4] = {
-        {1, 1, 1, 0}, {1, 1, 1, 0}, {2, 1, 1, 0}, {1, 1, 1, 0}, {1, 0, 0, 0},
-    };
-    u8 c;
+    const u8* a;
     u16 v;
+    const u8* pn;
+    s32 maxH;
+    s32 ret;
+    u16 maxV;
+    const u8* ph;
+    s32 i;
+    const u8* pv;
+    s32 t;
     JPEGFrame* f;
     JPEGScan* sc;
-    u16 maxV;
-    u16 maxH;
-    s32 i;
+    u8 c;
+    s32 hh;
     s32 j;
-    s32 h;
-    s32 t;
-    const u8* pn;
-    const u8* ph;
-    const u8* pv;
-    s32 ret;
+    const u8* bb;
 
     f = &ctx->frame;
     sc = &ctx->scan;
@@ -833,14 +847,19 @@ s32 fn_80082910(JPEGDecContext* ctx) {
     if (ret < 0) {
         return ret;
     }
-    f->numComps = c;
-    if (c <= 0 || c > 4) {
-        return -0x50;
+    {
+        s32 n = c;
+        f->numComps = n;
+        if (n <= 0 || n > 4) {
+            return -0x50;
+        }
     }
 
     maxV = 0;
     maxH = 0;
     for (i = 0; i < f->numComps; i++) {
+        u8 b;
+        u8 h;
         ret = fn_8007FF3C(&c, &ctx->stream);
         if (ret < 0) {
             return ret;
@@ -850,11 +869,12 @@ s32 fn_80082910(JPEGDecContext* ctx) {
         if (ret < 0) {
             return ret;
         }
-        h = c >> 4;
-        f->hSamp[i] = h;
-        f->vSamp[i] = c & 0xF;
-        if (h > maxH) {
-            maxH = h;
+        b = c;
+        hh = b >> 4;
+        f->hSamp[i] = hh;
+        f->vSamp[i] = b & 0xF;
+        if (hh > maxH) {
+            maxH = hh;
         }
         if (f->vSamp[i] > maxV) {
             maxV = f->vSamp[i];
@@ -865,25 +885,25 @@ s32 fn_80082910(JPEGDecContext* ctx) {
         }
         sc->quantSel[i] = c;
     }
-    if (maxH == 0 || maxV == 0) {
+    if ((u16)maxH == 0 || maxV == 0) {
         return -0x50;
     }
 
     f->maxH = maxH;
     f->maxV = maxV;
     f->sampling = 5;
-    pn = numComps;
-    ph = hSampTable[0];
-    pv = vSampTable[0];
+    pn = lbl_80359068;
+    ph = lbl_801AADF0;
+    pv = lbl_801AAE04;
     for (t = 0; t < 5; t++) {
         if (f->numComps == *pn) {
-            const u8* a = ph;
-            const u8* b = pv;
+            a = ph;
+            bb = pv;
             for (j = 0; j < f->numComps; j++) {
-                if (f->hSamp[j] != *a || f->vSamp[j] != *b) {
+                if (f->hSamp[j] != *a || f->vSamp[j] != *bb) {
                     goto next;
                 }
-                b++;
+                bb++;
                 a++;
             }
             f->sampling = t;
@@ -896,25 +916,12 @@ s32 fn_80082910(JPEGDecContext* ctx) {
     if (f->sampling == 5) {
         return -0x70;
     }
-
     f->mcuWidth = maxH * 8;
     f->mcuHeight = maxV * 8;
     f->mcusX = f->width / f->mcuWidth;
     f->mcusY = f->height / f->mcuHeight;
     jpgdCalcMcus(f);
-
-    for (i = 0; i < ctx->frame.numComps; i++) {
-        if (ctx->frame.hSamp[i] < 1 || ctx->frame.hSamp[i] > 4) {
-            return -0x50;
-        }
-        if (ctx->frame.vSamp[i] < 1 || ctx->frame.vSamp[i] > 4) {
-            return -0x50;
-        }
-        if (ctx->scan.quantSel[i] > 4) {
-            return -0x50;
-        }
-    }
-    return 0;
+    return jpgdCheckComps(ctx);
 }
 
 static s32 jpgdSkip3(JPEGStream* s) {
@@ -926,16 +933,15 @@ static s32 jpgdSkip3(JPEGStream* s) {
 }
 
 s32 fn_80082C8C(JPEGDecContext* ctx) {
-    u8 c;
-    u16 len;
-    JPEGScan* sc;
-    JPEGTables* tables;
-    s32 i;
-    s32 j;
-    u8* pc;
     s32 dc;
-    s32 ac;
+    u16 len;
+    s32 i;
+    JPEGScan* sc;
     s32 ret;
+    s32 j;
+    u8 c;
+    s32 ac;
+    JPEGTables* tables;
 
     sc = &ctx->scan;
     tables = &ctx->tables;
@@ -951,7 +957,7 @@ s32 fn_80082C8C(JPEGDecContext* ctx) {
         return ret;
     }
     ctx->frame.scanComps = c;
-    if (c > 4 || c != ctx->frame.numComps) {
+    if (ctx->frame.scanComps > 4 || ctx->frame.scanComps != ctx->frame.numComps) {
         return -0x51;
     }
     for (i = 0; i < ctx->frame.scanComps; i++) {
@@ -960,9 +966,8 @@ s32 fn_80082C8C(JPEGDecContext* ctx) {
             return ret;
         }
         for (j = 0; j < ctx->frame.numComps; j++) {
-            if (c == sc->compId[j]) {
+            if ((s32)c == sc->compId[j]) {
                 sc->comp[i] = j;
-                pc = &sc->comp[i];
                 goto found;
             }
         }
@@ -977,15 +982,15 @@ s32 fn_80082C8C(JPEGDecContext* ctx) {
         if (dc > 1 || ac > 1) {
             return -0x51;
         }
-        sc->dcSel[*pc] = dc;
-        sc->acSel[*pc] = ac;
+        sc->dcSel[sc->comp[i]] = dc;
+        sc->acSel[sc->comp[i]] = ac;
         if (tables->dcDefined[dc] != 1) {
             return -0x40;
         }
         if (tables->acDefined[ac] != 1) {
             return -0x40;
         }
-        if (tables->quantDefined[sc->quantSel[*pc]] != 1) {
+        if (tables->quantDefined[sc->quantSel[i]] != 1) {
             return -0x41;
         }
     }
@@ -1037,28 +1042,28 @@ s32 fn_80082E4C(JPEGDecContext* ctx) {
         if (c > expect) {
             skip = c - expect;
         }
+        skip *= ctx->frame.restartInterval;
+        ctx->scan.nextRestart = (c + 1) & 7;
+        mcusX = h->mcusX;
+        pos = ctx->scan.mcuPos;
+        ctx->scan.dcPred[0] = 0;
+        ctx->scan.dcPred[1] = 0;
+        ctx->scan.dcPred[2] = 0;
+        ctx->scan.dcPred[3] = 0;
+        ctx->scan.restartCount = 0;
+        n = (u8)pos * mcusX + (skip + (pos >> 16));
+        y = n / mcusX;
+        x = n % mcusX;
+        ctx->scan.mcuPos = (x << 16) + y;
+        ret = fn_80080764(&ctx->stream);
+        if (ret < 0) {
+            return ret;
+        }
+        h->mcuX = x;
+        h->mcuY = y;
+        h->readSize = fn_80080354(&ctx->stream);
+        return h->numMcus - h->mcuY * h->mcusX - h->mcuX;
     }
-    mcusX = h->mcusX;
-    skip *= ctx->frame.restartInterval;
-    ctx->scan.nextRestart = (c + 1) & 7;
-    pos = ctx->scan.mcuPos;
-    ctx->scan.dcPred[0] = 0;
-    ctx->scan.dcPred[1] = 0;
-    ctx->scan.dcPred[2] = 0;
-    ctx->scan.dcPred[3] = 0;
-    ctx->scan.restartCount = 0;
-    n = (u8)pos * mcusX + (skip + (pos >> 16));
-    y = n / mcusX;
-    x = n % mcusX;
-    ctx->scan.mcuPos = (x << 16) + y;
-    ret = fn_80080764(&ctx->stream);
-    if (ret < 0) {
-        return ret;
-    }
-    h->mcuX = x;
-    h->mcuY = y;
-    h->readSize = fn_80080354(&ctx->stream);
-    return h->numMcus - h->mcuY * h->mcusX - h->mcuX;
 }
 
 void fn_80083000(JPEGTables* t, s32 dc, s32 ac) {
@@ -1089,8 +1094,8 @@ void fn_80083000(JPEGTables* t, s32 dc, s32 ac) {
 }
 
 s32 fn_80083098(u8* bits, u8* vals, JPEGHuffTable* t) {
+    u32 huffsize[256];
     u32 huffcode[256];
-    u32 huffsize[257];
     JPEGHuffLookup* lookup;
     JPEGHuffCode* codes;
     u8* dstVals;
@@ -1099,27 +1104,34 @@ s32 fn_80083098(u8* bits, u8* vals, JPEGHuffTable* t) {
     s32 j;
     s32 k;
     u32* ps;
+    u8* bp;
     u16 code;
     u8 si;
     s32 l;
     s32 n;
     s32 shift;
     s32 base;
-    JPEGHuffLookup* e;
 
     lookup = t->lookup;
     codes = t->codes;
     dstVals = t->vals;
     count = t->count;
 
-    k = 0;
+    i = 1;
+    j = 1;
     ps = huffsize;
-    for (i = 1, j = 1; i <= 16; i++, j = 1) {
-        for (; j <= bits[i]; j++) {
+    bp = bits + 1;
+    k = 0;
+    do {
+        while (j <= *bp) {
             *ps++ = i;
             k++;
+            j++;
         }
-    }
+        i++;
+        j = 1;
+        bp++;
+    } while (i <= 16);
     huffsize[k] = 0;
 
     ps = huffsize;
@@ -1128,10 +1140,8 @@ s32 fn_80083098(u8* bits, u8* vals, JPEGHuffTable* t) {
     si = huffsize[0];
     while (*ps != 0) {
         while ((u8)*ps == si) {
-            huffcode[k] = code;
             ps++;
-            k++;
-            code++;
+            huffcode[k++] = code++;
         }
         if (code >= (1 << si)) {
             return -0x40;
@@ -1154,11 +1164,10 @@ s32 fn_80083098(u8* bits, u8* vals, JPEGHuffTable* t) {
         for (i = 1; i <= bits[l]; i++) {
             n = 1 << shift;
             base = huffcode[k] << shift;
-            e = &lookup[base];
             for (; n > 0; n--) {
-                e->len = l;
-                e->val = vals[k];
-                e++;
+                lookup[base].len = l;
+                lookup[base].val = vals[k];
+                base++;
             }
             k++;
         }
@@ -1171,8 +1180,8 @@ void fn_800833A8(JPEGHuffTable* t, s32 cls, s32 id, JPEGTables* tables) {
     if (cls == 0) {
         switch (id) {
         case 0:
-            t->vals = tables->dcVals[0];
             t->lookup = tables->dcLookup[0];
+            t->vals = tables->dcVals[0];
             t->codes = tables->dcCodes[0];
             tables->dcDefined[0] = 1;
             memset(tables->dcLookup[0], 0, sizeof(tables->dcLookup[0]));
@@ -1180,8 +1189,8 @@ void fn_800833A8(JPEGHuffTable* t, s32 cls, s32 id, JPEGTables* tables) {
             memset(tables->dcCodes[0], 0, sizeof(tables->dcCodes[0]));
             break;
         case 1:
-            t->vals = tables->dcVals[1];
             t->lookup = tables->dcLookup[1];
+            t->vals = tables->dcVals[1];
             t->codes = tables->dcCodes[1];
             tables->dcDefined[1] = 1;
             memset(tables->dcLookup[1], 0, sizeof(tables->dcLookup[1]));
@@ -1192,8 +1201,8 @@ void fn_800833A8(JPEGHuffTable* t, s32 cls, s32 id, JPEGTables* tables) {
     } else {
         switch (id) {
         case 0:
-            t->vals = tables->acVals[0];
             t->lookup = tables->acLookup[0];
+            t->vals = tables->acVals[0];
             t->codes = tables->acCodes[0];
             tables->acDefined[0] = 1;
             memset(tables->acLookup[0], 0, sizeof(tables->acLookup[0]));
@@ -1201,8 +1210,8 @@ void fn_800833A8(JPEGHuffTable* t, s32 cls, s32 id, JPEGTables* tables) {
             memset(tables->acCodes[0], 0, sizeof(tables->acCodes[0]));
             break;
         case 1:
-            t->vals = tables->acVals[1];
             t->lookup = tables->acLookup[1];
+            t->vals = tables->acVals[1];
             t->codes = tables->acCodes[1];
             tables->acDefined[1] = 1;
             memset(tables->acLookup[1], 0, sizeof(tables->acLookup[1]));
@@ -1212,3 +1221,4 @@ void fn_800833A8(JPEGHuffTable* t, s32 cls, s32 id, JPEGTables* tables) {
         }
     }
 }
+
