@@ -46,12 +46,12 @@ const u8 lbl_80359068[5] = {3, 3, 3, 3, 1};
     }
 
 static inline s32 jpgdHuffDecodeSlow(JPEGHuffCode* codes, u8* vals, JPEGStream* s) {
+    JPEGHuffCode* c;
+    s32 ret;
+    u32 code;
+    JPEGHuffCode hc;
     JPEGHuffCode hc2;
     u32 l;
-    u32 code;
-    s32 ret;
-    JPEGHuffCode hc;
-    JPEGHuffCode* c;
 
     FILL_BITS(s, 17);
     s->numBits -= 9;
@@ -73,21 +73,20 @@ static inline s32 jpgdHuffDecodeSlow(JPEGHuffCode* codes, u8* vals, JPEGStream* 
 }
 
 s32 fn_800898F4(s32* coef, s32* quant, s32* dcPred, JPEGDecContext* ctx) {
-    JPEGStream* s = &ctx->stream;
-    JPEGHuffLookup* lk;
-    JPEGHuffLookup e;
-    JPEGHuffCode* codes;
-    u8* vals;
-    s32 rs;
-    s32 q;
-    s32 k;
     s32 n;
-    s32 v;
-    s32 sz;
-    s32 pos;
+    s32 rs;
     const u8* zz;
-    s32 one;
+    s32 k;
+    JPEGHuffLookup* lk;
     s32 ret;
+    s32 q;
+    JPEGStream* s = &ctx->stream;
+    s32 sz;
+    JPEGHuffCode* codes;
+    JPEGHuffLookup e;
+    u8* vals;
+    s32 v;
+    u8 pos;
 
     lk = ctx->tables.dc.lookup;
     FILL_BITS(s, 8);
@@ -121,7 +120,6 @@ s32 fn_800898F4(s32* coef, s32* quant, s32* dcPred, JPEGDecContext* ctx) {
     k = 1;
     FILL_BITS(s, 8);
     zz = lbl_801AAE18;
-    one = 1;
     e = lk[(s->bits >> (s->numBits - 8)) & 0xFF];
     do {
         if (e.len != 0) {
@@ -142,7 +140,7 @@ s32 fn_800898F4(s32* coef, s32* quant, s32* dcPred, JPEGDecContext* ctx) {
             }
             q = quant[pos];
             FILL_BITS(s, sz + 8);
-            n = one << sz;
+            n = 1 << sz;
             s->numBits -= sz;
             e = lk[(s->bits >> (s->numBits - 8)) & 0xFF];
             v = (n - 1) & (s->bits >> s->numBits);
@@ -160,7 +158,7 @@ s32 fn_800898F4(s32* coef, s32* quant, s32* dcPred, JPEGDecContext* ctx) {
             e = lk[(s->bits >> (s->numBits - 8)) & 0xFF];
         }
     } while (k < 64);
-    return lbl_801AAE58[k - 1];
+    return lbl_801AAE58[(u32)(k - 1)];
 }
 
 s32 fn_80089D2C(s32* coef, s32* quant, s32* dcPred, JPEGDecContext* ctx) {
