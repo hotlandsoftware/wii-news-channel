@@ -1392,6 +1392,32 @@ config.libs = [
             Object(Matching, "nw4r/snd/snd_WsdTrack.cpp"),
         ],
     },
+    {
+        "lib": "news_80007F58",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_game,
+        "progress_category": "game",
+        "objects": [
+            Object(NonMatching, "news/Connect.cpp"),
+            Object(Matching, "news/msg/MsgToSectionSelect.cpp"),
+            Object(Matching, "news/msg/MsgSectionSelect.cpp"),
+            Object(Matching, "news/PunctuationTable.cpp"),
+            Object(NonMatching, "news/SaveData.cpp"),
+            Object(Matching, "news/msg/MsgNewsChannel.cpp"),
+            Object(Matching, "news/msg/MsgOtherAreas.cpp"),
+            Object(Matching, "news/msg/MsgOtherAreasShort.cpp"),
+            Object(Matching, "news/msg/MsgChooseLanguage.cpp"),
+            Object(Matching, "news/msg/MsgRegionalNews.cpp"),
+            Object(Matching, "news/msg/MsgTheNews.cpp"),
+            Object(Matching, "news/msg/MsgUpdated.cpp"),
+            Object(Matching, "news/msg/MsgLastUpdated.cpp"),
+            Object(Matching, "news/msg/MsgToTop.cpp"),
+            Object(NonMatching, "news/ShootingStars.cpp"),
+            Object(NonMatching, "news/GlobePoint.cpp"),
+            Object(NonMatching, "news/GlobeCamera.cpp"),
+            Object(NonMatching, "news/GlobePin.cpp"),
+        ],
+    },
 ]
 
 

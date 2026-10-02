@@ -23,6 +23,85 @@ news/Mascot.cpp:
 	.sbss       start:0x80357460 end:0x80357468
 	.sdata2     start:0x80358460 end:0x803584F0
 
+news/Connect.cpp:
+	.text       start:0x80007F58 end:0x8000A0F8
+	.rodata     start:0x801920C0 end:0x801920F0
+	.data       start:0x801AFFA0 end:0x801B0418
+	.sdata      start:0x80356748 end:0x80356778
+	.sdata2     start:0x803584F0 end:0x80358570
+
+news/msg/MsgToSectionSelect.cpp:
+	.data       start:0x801B0418 end:0x801B0508
+
+news/msg/MsgSectionSelect.cpp:
+	.data       start:0x801B0508 end:0x801B0608
+
+news/PunctuationTable.cpp:
+	.rodata     start:0x801920F0 end:0x80192140
+
+news/SaveData.cpp:
+	.text       start:0x8000A0F8 end:0x8000BE30
+	.rodata     start:0x80192140 end:0x80192158
+	.data       start:0x801B0608 end:0x801B0930
+	.sdata      start:0x80356778 end:0x80356798
+	.sbss       start:0x80357468 end:0x80357470
+	.sdata2     start:0x80358570 end:0x803585A0
+
+news/msg/MsgNewsChannel.cpp:
+	.data       start:0x801B0930 end:0x801B0A18
+
+news/msg/MsgOtherAreas.cpp:
+	.data       start:0x801B0A18 end:0x801B0AA0
+	.sdata      start:0x80356798 end:0x803567A0
+
+news/msg/MsgOtherAreasShort.cpp:
+	.data       start:0x801B0AA0 end:0x801B0B28
+	.sdata      start:0x803567A0 end:0x803567A8
+
+news/msg/MsgChooseLanguage.cpp:
+	.data       start:0x801B0B28 end:0x801B0BF8
+
+news/msg/MsgRegionalNews.cpp:
+	.data       start:0x801B0BF8 end:0x801B0D28
+
+news/msg/MsgTheNews.cpp:
+	.data       start:0x801B0D28 end:0x801B0E50
+
+news/msg/MsgUpdated.cpp:
+	.data       start:0x801B0E50 end:0x801B0F58
+
+news/msg/MsgLastUpdated.cpp:
+	.data       start:0x801B0F58 end:0x801B1070
+
+news/msg/MsgToTop.cpp:
+	.data       start:0x801B1070 end:0x801B1120
+	.sdata      start:0x803567A8 end:0x803567B8
+
+news/ShootingStars.cpp:
+	.text       start:0x8000BE30 end:0x8000C904
+	.sdata2     start:0x803585A0 end:0x80358608
+
+news/GlobePoint.cpp:
+	.text       start:0x8000C904 end:0x8000CA98
+	.data       start:0x801B1120 end:0x801B1130
+	.sdata2     start:0x80358608 end:0x80358610
+
+news/GlobeCamera.cpp:
+	.text       start:0x8000CA98 end:0x8000D01C
+	.data       start:0x801B1130 end:0x801B1170
+	.sdata      start:0x803567B8 end:0x803567C8
+	.sdata2     start:0x80358610 end:0x80358650
+
+news/GlobePin.cpp:
+	.text       start:0x8000D01C end:0x8000FA38
+	.ctors      start:0x80191F08 end:0x80191F0C
+	.rodata     start:0x80192158 end:0x80192178
+	.data       start:0x801B1170 end:0x801B11C0
+	.bss        start:0x801EDD90 end:0x801EDDA8
+	.sdata      start:0x803567C8 end:0x803567D0
+	.sbss       start:0x80357470 end:0x80357480
+	.sdata2     start:0x80358650 end:0x803586E0
+
 news/NewsArticle.cpp:
 	.text       start:0x8000FA38 end:0x80010EB4
 	.rodata     start:0x80192178 end:0x801921B8
