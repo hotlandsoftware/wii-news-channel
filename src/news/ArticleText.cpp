@@ -705,6 +705,7 @@ bool ArticleText::LayoutPicture(const math::VEC2* pos, f32 scale) {
     f32 maxHeight = lbl_80192348[lbl_80356970];
     f32 size[2];
     f32 maxWidth = mSmallPicture ? lbl_80192320[lbl_80356970] : lbl_801922F8[lbl_80356970];
+    f32 maxAspect = maxHeight / maxWidth;
     f32 texWidth = mPicture->width;
     f32 texHeight = mPicture->height;
     size[0] = maxWidth;
@@ -722,7 +723,7 @@ bool ArticleText::LayoutPicture(const math::VEC2* pos, f32 scale) {
         labelHeight = 10.0f;
     }
 
-    mPicTargetScale = aspect > maxHeight / maxWidth ? size[1] / texHeight : size[0] / texWidth;
+    mPicTargetScale = aspect > maxAspect ? size[1] / texHeight : size[0] / texWidth;
     texHeight *= mPicTargetScale;
     if (size[1] > texHeight) {
         size[1] = texHeight;
@@ -749,7 +750,8 @@ bool ArticleText::LayoutPicture(const math::VEC2* pos, f32 scale) {
     }
 
     f32 space = scale * gCharSpaceScale;
-    f32 width = mWrapRight - mLeft;
+    f32 right = mWrapRight;
+    f32 width = right - mLeft;
     TextChar* c = mChars;
     while (c->mChar != 0) {
         if (mCursor.y > mPicBottom) {
@@ -778,7 +780,7 @@ bool ArticleText::LayoutPicture(const math::VEC2* pos, f32 scale) {
         } while (c != NULL);
 
         mCursor.x += wordWidth + space;
-        if (NeedsLineBreak(last, &mCursor.x, mWrapRight, scale)) {
+        if (NeedsLineBreak(last, &mCursor.x, right, scale)) {
             mCursor.x = mLeft;
             mNumLines++;
             mCursor.y += 1.25f * (last->mScaledHeight * scale);
