@@ -266,11 +266,14 @@ void Connect::Update() {
         }
         break;
     }
+    case DL_DONE:
+    case DL_ERROR:
+        break;
     }
 
     switch (mState) {
     case STATE_FADE_IN:
-        if (mFader->mAlpha == 1.0f) {
+        if (mFader->IsFadedOut()) {
             mAlpha = 1.0f;
             fn_80048C80(mFader, 25);
         } else {
@@ -290,7 +293,24 @@ void Connect::Update() {
                 lbl_80357729 = 1;
             }
         } else if (mDownloadState == DL_DONE) {
-            mMessage = GetServerMessage(mFiles[mCurrentFile], mFileSizes[mCurrentFile]);
+            const wchar_t* msg;
+            s32 cur = mCurrentFile;
+            NewsHeader* file = mFiles[cur];
+            if (file->messageOfs == 0) {
+                msg = NULL;
+            } else {
+                msg = (const wchar_t*)file->At(file->messageOfs);
+                const wchar_t* p = msg;
+                s32 n = 0;
+                for (; (u8*)p < (u8*)file + mFileSizes[cur] && n < 0x200; p++, n++) {
+                    if (*p == 0) {
+                        goto found;
+                    }
+                }
+                msg = NULL;
+            }
+        found:
+            mMessage = msg;
             if (mMessage != NULL) {
                 mDownloadState = DL_ERROR;
             } else {
@@ -323,7 +343,7 @@ void Connect::Update() {
                     fn_80047EFC(mTipsLayout);
                     lyt::Pane* pane = fn_80048364(mTipsLayout, "text")->FindPane("textM");
                     mTips = new ConnectTips(pane);
-                    u16 rand = Random();
+                    s32 rand = (u16)Random();
                     mTips->SetTip((rand >> 3) % mTips->GetNumTips());
                     mTipsTimer = 30;
                     mTipsOpen = 0;
@@ -452,13 +472,24 @@ void Connect::Update() {
         break;
     }
 
-    if (mState >= STATE_WAIT && mState < STATE_ERROR) {
+    switch (mState) {
+    case STATE_WAIT:
+    case STATE_FADE_TO_ERROR:
+    case STATE_FADE_TO_NEWS:
+    case STATE_TIPS:
+    case STATE_CLOSE_TIPS:
         if (++mDotTimer >= 72) {
             mDotTimer = 0;
         }
+        break;
     }
 
-    if (mState >= STATE_WAIT && mState < STATE_ERROR) {
+    switch (mState) {
+    case STATE_WAIT:
+    case STATE_FADE_TO_ERROR:
+    case STATE_FADE_TO_NEWS:
+    case STATE_TIPS:
+    case STATE_CLOSE_TIPS:
         mMascot->Update();
         if (mState == STATE_WAIT) {
             for (s32 i = 0; i < 4; i++) {
@@ -499,11 +530,16 @@ void Connect::Update() {
                 }
             }
         }
+        break;
     }
 
     BOOL playing = FALSE;
-    if (mState == STATE_WAIT || (mState >= STATE_TIPS && mState < STATE_ERROR)) {
+    switch (mState) {
+    case STATE_WAIT:
+    case STATE_TIPS:
+    case STATE_CLOSE_TIPS:
         playing = TRUE;
+        break;
     }
     if (playing) {
         if (!mSoundPlaying) {
