@@ -1898,6 +1898,7 @@ BOOL LoadCommonResources() {
     sPrevPreRetrace = VISetPreRetraceCallback(PreRetraceCallback);
     sPrevPostRetrace = VISetPostRetraceCallback(PostRetraceCallback);
 
+    s32 n;
     for (s32 i = 0; i < 6; i++) {
         if (gRenderMode.field_rendering) {
             GXSetViewportJitter(0.0f, 0.0f, gRenderMode.fbWidth, gRenderMode.efbHeight, 0.0f, 1.0f,
@@ -1908,7 +1909,7 @@ BOOL LoadCommonResources() {
         GXInvalidateVtxCache();
         GXInvalidateTexAll();
         DrawLoadingScreen();
-        s32 n = 6 - (i + 1);
+        n = 6 - (i + 1);
         if ((s32)(255.0f * (n / 6.0f)) != 0) {
             Draw2D_SetupGX();
             Draw2D_SetOrtho();
