@@ -47,7 +47,7 @@ Anything matched there can be reused directly.
 | `0x8009C720–0x800BA03C` | 0x1D91C | nw4r::ef | — | ogws | ~50% |
 | `0x800BA03C–0x800CE740` | 0x14704 | nw4r::g3d | — | **ogws** | **done** (36/36 Matching) |
 | `0x800CE740–0x800E84D8` | 0x19D98 | nw4r::snd (old, `Channel`-based) | — | ogws | ~40–60% per file |
-| `0x800E84D8–0x800F02A8` | 0x7DD0 | nw4r::ut | — | **tp `nw4hbm/ut`** + ogws | **done** (17/18 Matching; ArchiveFontBase 99.8%) |
+| `0x800E84D8–0x800F02A8` | 0x7DD0 | nw4r::ut | — | **tp `nw4hbm/ut`** + ogws | **done** (17/18 Matching; ArchiveFontBase 99.87%) |
 | `0x800F02A8–0x800F0B58` | 0x8B0 | nw4r::math | — | tp `nw4hbm/math` / smg / ogws | **done** (3/3 Matching) |
 | `0x800F0B58–0x800FB9EC` | 0xAE94 | nw4r::lyt | — | **tp `nw4hbm/lyt`** | 13/14 files matching (Task 15) |
 | `0x800FB9EC–0x800FBB58` | 0x16C | BASE (`PPCArch.c`) | — | ogws/smg | 97% |
@@ -185,7 +185,7 @@ Sources are in `src/nw4r/ut/` and `src/nw4r/math/` (libs `nw4r_ut` and `nw4r_mat
 | `ut_RomFont.cpp` | `0x800E9DB8–0x800E9DF8` | Matching | ogws (only the weak `Font` dtor/vtable survive) |
 | `ut_ResFontBase.cpp` | `0x800E9DF8–0x800EA4BC` | Matching | ogws + `RemoveResourceBuffer` |
 | `ut_ResFont.cpp` | `0x800EA4BC–0x800EA7C0` | Matching | ogws |
-| `ut_ArchiveFontBase.cpp` | `0x800EA7C0–0x800EBBCC` | NonMatching 99.84% | written from the DOL |
+| `ut_ArchiveFontBase.cpp` | `0x800EA7C0–0x800EBBCC` | NonMatching 99.87% | written from the DOL |
 | `ut_ArchiveFont.cpp` | `0x800EBBCC–0x800EC4D8` | Matching | written from the DOL |
 | `ut_CharWriter.cpp` | `0x800EC4D8–0x800EDFF8` | Matching | tp + `GetTextColor`, `SetScale(f32)`, `GetFontDescent` |
 | `ut_TextWriterBase.cpp` | `0x800EDFF8–0x800F02A8` | Matching | tp bodies in source order |
@@ -199,7 +199,7 @@ Findings:
 - **`ut_RomFont.cpp` is linked but dead.** The weak `Font::~Font` (`0x800E9DB8`) and `Font` vtable (`0x801CE7D0`) come from RomFont.o, which is linked between Font.o and ResFontBase.o (as in ogws). Everything else in it is dead-stripped. It needs `OSInitFont`/`OSGetFontEncode`/`OSGetFontWidth`/`OSGetFontTexture` declarations (added to `os/OSFont.h`); they are not in the DOL.
 - **Archive fonts (`ut_ArchiveFontBase`/`ut_ArchiveFont`, 7.4 KB) have no public reference.** They load `.brfna` files ('RFNA' 1.4 with a 'GLGR' glyph-group block and optionally Huffman-compressed sheets via CX) in a streaming state machine. The game uses `ArchiveFont::GetRequireBufferSize`, the constructor, `Construct` and `Destroy` for `gSysFont`/`gArticleFont` (`fn_8004A074`). Names (`ConstructContext`, `CachedStreamReader`, `ConstructOp*`, `FontGlyphGroupsAcs`, `IncludeName`, `IsValidResource`, `AdjustIndex`) follow what later NW4R revisions are known to use; the rest are ours. `ConstructResult` is `MORE_DATA, FINISH, ERROR, CONTINUE`; the 13 operations are dispatched through the jump table at `0x801CE940`.
 - **ArchiveFont matching tricks.** `GetRequireBufferSize` only matched with an accessor object (`FontGlyphGroupsAcs`) that computes the per-set flag sizes *before* the section offsets, with `ut::AddOffsetToPtr` for the set names, and with `sizeAdjustTable` declared first. In the ops, the buffer checks go through an inline `GetRemain()` method but the buffer pointer is read directly (`target.pCurrent`); an inline accessor for the pointer lets MWCC CSE the load and the code no longer matches. The "task finished" tails are written `if (opSize == 0) { op = opNext; } else { return RequestData(...); } return CONSTRUCT_CONTINUE;`.
-- **ArchiveFontBase leftovers.** `ConstructOpAnalyzeGLGR` (99.29%) and `ConstructOpAnalyzeTGLP` (99.70%) differ only in callee-saved register numbering (the inlined `CachedStreamReader::CopyTo` temporaries in TGLP; several GLGR locals). The types of the GLGR locals move the allocation around (`int glyphsPerSheet`, `u32 numBlocks`, `int sizeAdjustTable` is the best found).
+- **ArchiveFontBase leftovers.** Only `ConstructOpAnalyzeGLGR` (99.29%) differs, in callee-saved register numbering of several locals. The local types move the allocation around (`int glyphsPerSheet`, `u32 numBlocks`, `int sizeAdjustTable` is the best found); declaration order, the buffer check form and the copy code did not help. `ConstructOpAnalyzeTGLP` only matched with a `CachedStreamReader::CopyTo(ConstructContext*, u32)` overload (copy to the buffer position, then advance); the extra inline level changes the register order of the inlined copy temporaries.
 - **ut needs the lyt/g3d NW4R basics.** `CharWriter`'s `ColorMapping`/`VertexColor`/`TextColor` members are default-constructed white (`li r8,-1; stw` x8 in the ctor), so `nw4r_ut` is built with `NW4R_UT_COLOR_DEFAULT_WHITE` and the other lyt/g3d defines (`cflags_nw4r_ut`).
 - **Weak stream inlines live in snd.** `DvdFileStream`'s `GetBufferAlign`…`IsBusy` and `DvdLockedFileStream`'s `CanAsync`/`PeekAsync`/`ReadAsync`/`GetRuntimeTypeInfo` are emitted first by snd (`0x800D4AA4–0x800D4B04`, `DvdSoundArchive`); they were named so the linker drops ut's copies. Only `CanAsync`/`GetSize`/`Tell`/`GetRuntimeTypeInfo` of `DvdFileStream` (`0x800E9904–0x800E9924`) are ut's.
 - **`CharStrmReader::StepStrm` must be ogws's cast-lvalue form** (`static_cast<const T*>(mCharStrm) += offset`); assigning `mCharStrm = ... + offset` makes every reader 4 bytes longer.
