@@ -58,8 +58,8 @@ Anything matched there can be reused directly.
 | `0x8010C358–0x80110DBC` | 0x4A64 | VI (`vi.c`, `i2c.c`, `vi3in1.c`) | Jun 6 2007 | smg | 86% |
 | `0x80110DBC–0x80112208` | 0x144C | MTX | — | ogws | 91% |
 | `0x80112208–0x8011B478` | 0x9270 | GX | May 8 2007 | **ogws** | 97% |
-| `0x8011B478–0x801239C8` | 0x8550 | DVD | Jun 21 2007 | smg | 76% |
-| `0x801239C8–0x80123F2C` | 0x564 | AI | May 8 2007 | ogws/smg | 90% |
+| `0x8011B120–0x801239C8` | 0x88A8 | DVD | Jun 21 2007 | smg | 100% (**done**) |
+| `0x801239C8–0x80123F2C` | 0x564 | AI | May 8 2007 | smg | 100% (**done**) |
 | `0x80123F2C–0x80127930` | 0x3A04 | AX | May 8 2007 | **ogws** | 97% (**done**) |
 | `0x80127930–0x80128994` | 0x1064 | AXFX | — | smg | 65% (**done**) |
 | `0x80128994–0x80129DA4` | 0x1410 | MEM (incl. `mem_unitHeap`) | — | **smg** | 100% (**done**) |
@@ -344,6 +344,32 @@ GX notes (task 18):
 
 **DVD** `dvdfs 0x8011B478`, `dvd 0x8011BEB4` (smg 95%), `dvdqueue 0x80120988`, `dvderror 0x80120BE0`, `dvdidutils 0x801214E4`, `dvdFatal 0x801215D4`, `dvd_broadway 0x80121710`. **AI** `0x801239C8`.
 
+#### DVD + AI (task 19, **done**)
+
+All eight files in `0x8011B120–0x80123F2C` are split and `Matching` (libs `dvd` and `ai`), built with `GC/3.0a5.2` and `cflags_rvl`, with no per-file flags.
+
+| File | `.text` | Data | Source |
+| --- | --- | --- | --- |
+| `DVD/dvdfs.c` | `0x8011B120–0x8011BEB4` | `.data 0x801DF210`, `.sdata 0x80357108`, `.sbss 0x80357FF8` | Petari + `DVDEntrynumIsDir` |
+| `DVD/dvd.c` | `0x8011BEB4–0x80120988` | `.data 0x801DF3B0`, `.bss 0x802F4500–0x802F91B0`, `.sdata 0x80357118`, `.sbss 0x80358018` | Petari (version string changed) |
+| `DVD/dvdqueue.c` | `0x80120988–0x80120BE0` | `.bss 0x802F91B0` | Petari |
+| `DVD/dvderror.c` | `0x80120BE0–0x801214E4` | `.data 0x801DF720`, `.bss 0x802F91E0`, `.sbss 0x803580B8` | Petari |
+| `DVD/dvdidutils.c` | `0x801214E4–0x801215D4` | — | Petari |
+| `DVD/dvdFatal.c` | `0x801215D4–0x80121710` | `.rodata 0x801AE488`, `.data 0x801DF750`, `.sbss 0x803580C8`, `.sdata2 0x80359EA8` | **Forecast** (one message table) |
+| `DVD/dvd_broadway.c` | `0x80121710–0x801239C8` | `.data 0x801DFC00`, `.bss 0x802F9440`, `.sdata 0x80357130`, `.sbss 0x803580D0` | Petari |
+| `AI/ai.c` | `0x801239C8–0x80123F2C` | `.data 0x801E0AC0`, `.sdata 0x80357140`, `.sbss 0x803580F8` | Petari + 2 functions |
+
+Findings:
+
+- **The Feb 2008 Petari DVD sources match this Jun 2007 build unchanged**, apart from the version string (`Jun 21 2007 01:53:48`). Petari functions that are absent here are just dead-stripped: `StampIntType`, `DVDCheckDiskAsync`, `DVDPause`, `DVDCancelAllAsync`, `DVDLowOpenPartitionWithTmdAndTicket`, `DVDLowNoDiscOpenPartition`, `DVDLowWaitForCoverClose`, `DVDLowNotifyReset`, `DVDLowGetCoverStatus`, the DVD-Video commands, `DVDLowGetCoverReg` and `DVDLowEnableDvdVideo`.
+- **dvdfs starts at `0x8011B120`**, right after GXPerf (see the GX notes). `0x8011B458` (0x20) is `DVDEntrynumIsDir` (`return entryIsDir(entrynum);`), which Petari lacks. It sits before `DVDFastOpen`.
+- **RSO export table.** The `.rodata` table at `0x801AC240` (`lbl_801AC240`, names at `0x801ABxxx`, used by RSO) lists `{name string, function}` pairs for every SDK function exported to RSO modules (ARC, DVD, NAND, …). It gives the real names of otherwise unnamed functions such as `DVDEntrynumIsDir`.
+- **dvd_broadway.** Same-size functions can't be told apart by size or by masked bytes (refcmp matched `DVDLowRequestError` to the wrong `0x168` function). The DI ioctl number in each function identifies it: `0xE3` StopMotor, `0x12` Inquiry, `0xE0` RequestError, `0x8A` Reset, `0xE4` AudioBufferConfig, `0xDD` SetMaximumRotation, `0x71` Read, `0xAB` Seek, `0x7A` PrepareCoverRegister, `0x95` PrepareStatusRegister.
+- **dvdFatal** is the older version from the Forecast Channel source: a single 7-language `__DVDErrorMessage` table (`.rodata`) and no `SCGetProductGameRegion` switch (Petari has Default/Europe/104 tables).
+- **AI.** The version string is `May  8 2007 12:54:34`. Two functions Petari lacks are linked: `AIGetDMABytesLeft` (`(__DSPRegs[0x1D] & 0x7FFF) << 5`, after `AIStartDMA`) and `AICheckInit` (returns `__AI_init_flag`, after `AIGetDMALength`; called by game code at `0x8004EC40`). `AIStopDMA`, `AIGetDSPSampleRate` and `AISetDSPSampleRate` are dead-stripped or inlined.
+- **Data names.** The existing names in dvd.c's `.sbss` (from Forecast) were shifted by one or two slots (e.g. `__DVDLayoutFormat` is `0x80358050`, not `0x80358058`). All data symbols in these eight files have been renamed from the compiled objects. `dvd.c`'s `.bss` begins with `__DVDTicketViewBuffer`/`__DVDTmdBuffer` (`0x802F4500`).
+- **Headers.** `ai.h` gained `AIGetDMABytesLeft` and `AICheckInit` (additive). `dvdFatal.c` declares `OSSetFontEncode` locally, as Petari does.
+
 **AX** `AX 0x80123F2C`, `AXAlloc 0x80123F80`, `AXAux 0x80124438`, `AXCL 0x80124C50`, `AXOut 0x801256D4`, `AXSPB 0x80125EC0`, `AXVPB 0x801262E0` (ogws 98%), `AXProf 0x801278F0`. **AXFX** `AXFXReverbHi 0x80127930`, `AXFXReverbHiExp 0x80127A2C`, `AXFXHooks 0x8012895C`.
 
 **MEM** `mem_heapCommon 0x80128994`, `mem_expHeap 0x80128E00`, `mem_frameHeap 0x801296C0`, `mem_allocator 0x80129C0C`, `mem_list ≈0x80129C90`. **DSP** `dsp 0x8012AA20`, `dsp_debug 0x8012AC5C`, `dsp_task 0x8012ACAC`.
@@ -625,7 +651,7 @@ Difficulty: E = mostly drop-in, M = drop-in plus version fixes, H = little or no
 | 16 | BASE + OS (rest) + `__ppc_eabi_init` | `0x800FB9EC–0x80109434` | 55 KB | ogws/smg | E–M |
 | 17 | EXI, SI, DB, VI, MTX | `0x80109434–0x80112208` | 36 KB | ogws/smg | M |
 | 18 | GX (**done**; ends `0x8011B120`) | `0x80112208–0x8011B120` | 36 KB | Petari + tp + ogws | E |
-| 19 | DVD + AI | `0x8011B478–0x80123F2C` | 35 KB | smg | M |
+| 19 | DVD + AI (**done**) | `0x8011B120–0x80123F2C` | 36 KB | smg | M |
 | 20 | AX, AXFX, MEM, DSP | `0x80123F2C–0x8012B540` | 30 KB | ogws (AX/DSP), smg (MEM/AXFX) | E |
 | 21 | NAND, SC, WENC, ESP, IPC, FS, PAD (**done**, 15/15 Matching) | `0x8012B540–0x80134C38` | 38 KB | smg | E–M |
 | 22 | WPAD | `0x80134C38–0x80143634` | 60 KB | smg (GC/3.0a5.2) | M |

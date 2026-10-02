@@ -20,6 +20,8 @@ void AIStartDMA(void);
 void AIStopDMA(void);
 u32 AIGetDMAStartAddr(void);
 u32 AIGetDMALength(void);
+u32 AIGetDMABytesLeft(void);
+BOOL AICheckInit(void);
 void AISetDSPSampleRate(u32);
 void AIInit(u8*);
 

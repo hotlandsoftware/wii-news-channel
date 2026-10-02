@@ -693,6 +693,30 @@ config.libs = [
         ],
     },
     {
+        "lib": "dvd",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_rvl,
+        "progress_category": "sdk",
+        "objects": [
+            Object(Matching, "revolution/DVD/dvdfs.c"),
+            Object(Matching, "revolution/DVD/dvd.c"),
+            Object(Matching, "revolution/DVD/dvdqueue.c"),
+            Object(Matching, "revolution/DVD/dvderror.c"),
+            Object(Matching, "revolution/DVD/dvdidutils.c"),
+            Object(Matching, "revolution/DVD/dvdFatal.c"),
+            Object(Matching, "revolution/DVD/dvd_broadway.c"),
+        ],
+    },
+    {
+        "lib": "ai",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_rvl,
+        "progress_category": "sdk",
+        "objects": [
+            Object(Matching, "revolution/AI/ai.c"),
+        ],
+    },
+    {
         "lib": "ax",
         "mw_version": "GC/3.0a5.2",
         "cflags": cflags_rvl,
