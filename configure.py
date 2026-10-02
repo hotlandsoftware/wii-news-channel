@@ -929,7 +929,7 @@ config.libs = [
             Object(Matching, "revolution/NWC24/NWC24Time.c"),
             Object(Matching, "revolution/NWC24/NWC24Ipc.c"),
             Object(NonMatching, "revolution/NWC24/NWC24Download.c"),
-            Object(NonMatching, "revolution/NWC24/NWC24System.c"),
+            Object(Matching, "revolution/NWC24/NWC24System.c"),
         ],
     },
     {

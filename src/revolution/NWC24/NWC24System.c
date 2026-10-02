@@ -67,6 +67,27 @@ NWC24Err NWC24iRequestShutdown(u32 event, NWC24Err* pResult) {
     return NWC24_IOCTL_DEVICE_ASYNC(nwc24ShtFd, NWC24_IOCTL_SHUTDOWN, shtBuffer, sizeof(shtBuffer), shtResult, sizeof(shtResult), pResult);
 }
 
+// Not in Petari/ogws; called by the game in a retry loop. Name is a guess.
+NWC24Err NWC24iRequestShutdownSync(u32 event) {
+    NWC24Err result;
+    NWC24Err err;
+
+    err = NWC24iRequestShutdown(event, &result);
+    if (err < 0) {
+        return err;
+    }
+
+    while (NWC24iIsAsyncRequestPending()) {
+        OSSleepTicks(OS_MSEC_TO_TICKS((s64)10));
+    }
+
+    if (result >= 0) {
+        return NWC24_OK;
+    }
+
+    return NWC24_ERR_FAILED;
+}
+
 BOOL NWC24Shutdown(BOOL final, u32 event) {
     static BOOL shuttingdown = FALSE;
     static NWC24Err result = NWC24_OK;
