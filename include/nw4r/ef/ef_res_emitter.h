@@ -176,11 +176,9 @@ struct EmitterDrawSetting {
     Lighting mLighting;             // at 0x6A
     f32 mIndTexOffsetMtx[2][3];     // at 0x84
     s8 mIndTexScaleExp;             // at 0x9C
-    s8 pivotX;                      // at 0x9D
-    s8 pivotY;                      // at 0x9E
-    u8 PADDING_0xA3;                // at 0x9F
-    // Older revision (News Channel): the particle type fields are in
-    // EmitterDesc (at 0x8C), not here
+
+    // Older revision (News Channel): the pivot and particle type fields are in
+    // EmitterDesc, before the draw setting, and there is no zOffset.
 };
 
 struct EmitterDesc {
@@ -188,9 +186,8 @@ struct EmitterDesc {
         CMN_FLAG_SYNC_LIFE = (1 << 0),
         CMN_FLAG_DISABLE_DRAW = (1 << 1),
         CMN_FLAG_MAX_LIFE = (1 << 2),
-
-        // Older revision (News Channel): these are common flags, not
-        // EmitterDrawSetting flags
+        // Older revision (News Channel): in EmitterDrawSetting::mFlags in
+        // Wii Sports
         CMN_FLAG_XY_SAME_SIZE = (1 << 3),
         CMN_FLAG_XY_SAME_SCALE = (1 << 4),
 
@@ -250,9 +247,10 @@ struct EmitterDesc {
     u8 lodMinEmit;                  // at 0x86
     u8 lodAlpha;                    // at 0x87
     u32 randomSeed;                 // at 0x88
-    // Older revision (News Channel): the particle type fields come before
-    // the draw setting. Only ptcltype (0x8C) and the draw setting offset
-    // (0xA0, from the alpha flick/lighting fields) are verified.
+
+    // Older revision (News Channel): no user data; the particle type and
+    // pivot fields (in EmitterDrawSetting in Wii Sports) come before the draw
+    // setting.
     u8 ptcltype;                    // at 0x8C
     u8 typeOption;                  // at 0x8D
     u8 typeDir;                     // at 0x8E
@@ -261,8 +259,9 @@ struct EmitterDesc {
     u8 typeOption1;                 // at 0x91
     u8 typeOption2;                 // at 0x92
     u8 PADDING_0x93;                // at 0x93
-    f32 zOffset;                    // at 0x94
-    u8 userdata[8];                 // at 0x98
+    s8 pivotX;                      // at 0x94
+    s8 pivotY;                      // at 0x95
+    u8 UNKNOWN_0x96[0xA0 - 0x96];   // at 0x96
     EmitterDrawSetting drawSetting; // at 0xA0
 
     EmitFormType GetFormType() {

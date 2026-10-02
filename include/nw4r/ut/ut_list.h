@@ -35,6 +35,10 @@ inline u16 List_GetSize(const List* list) { return list->numObjects; }
 
 // List for-each macros (as ogws ut_list.h; added for nw4r::ef)
 #ifndef NW4R_UT_LIST_FOREACH
+// Added for nw4r::ef (Task 9): ogws list macros.
+#define NW4R_UT_LIST_LINK_DECL() nw4r::ut::Link link
+#define NW4R_UT_LIST_INIT(LIST, T) nw4r::ut::List_Init(&(LIST), offsetof(T, link))
+
 #define NW4R_UT_LIST_FOREACH(TYPE, NAME, LIST, ...)                            \
     {                                                                          \
         TYPE* NAME = NULL;                                                     \
@@ -46,6 +50,14 @@ inline u16 List_GetSize(const List* list) { return list->numObjects; }
         }                                                                      \
     }
 
+/**
+ * List for-each macro (reverse order).
+ *
+ * @param TYPE Element type
+ * @param NAME Element name
+ * @param LIST Reference to list
+ * @param ... Statement(s) to execute
+ */
 #define NW4R_UT_LIST_FOREACH_REV(TYPE, NAME, LIST, ...)                        \
     {                                                                          \
         TYPE* NAME = NULL;                                                     \
@@ -57,6 +69,14 @@ inline u16 List_GetSize(const List* list) { return list->numObjects; }
         }                                                                      \
     }
 
+/**
+ * List for-each macro, with robust iteration.
+ *
+ * @param TYPE Element type
+ * @param NAME Element name
+ * @param LIST Reference to list
+ * @param ... Statement(s) to execute
+ */
 #define NW4R_UT_LIST_FOREACH_SAFE(TYPE, NAME, LIST, ...)                       \
     {                                                                          \
         TYPE* NAME;                                                            \
