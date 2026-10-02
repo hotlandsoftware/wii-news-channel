@@ -36,7 +36,33 @@ typedef struct NWC24DlTask {
     u8 data[NWC24_DL_TASK_PUBLIC_SIZE];
 } NWC24DlTask;
 
-NWC24Err NWC24CheckDlTask(const NWC24DlTask* pTask, BOOL wantWrite);
+// CONFLICT (Petari): this SDK's NWC24CheckDlTask takes only the task
+// (the write-permission check is an inline helper in NWC24Download.c).
+// Most names below are guesses (see NWC24Download.c).
+NWC24Err NWC24InitDlTask(NWC24DlTask* pTask, NWC24DlType type);
+NWC24Err NWC24GetDlTaskId(const NWC24DlTask* pTask, u16* pId);
+NWC24Err NWC24SetDlPriority(NWC24DlTask* pTask, u8 priority);
+NWC24Err NWC24SetDlInterval(NWC24DlTask* pTask, u16 interval);
+NWC24Err NWC24GetDlInterval(const NWC24DlTask* pTask, u16* pInterval);
+NWC24Err NWC24SetDlServerInterval(NWC24DlTask* pTask, u32 interval);
+NWC24Err NWC24SetDlMargin(NWC24DlTask* pTask, u16 margin);
+NWC24Err NWC24SetDlUrl(NWC24DlTask* pTask, const char* pUrl);
+NWC24Err NWC24GetDlUrl(const NWC24DlTask* pTask, char* pBuf, u32 size);
+NWC24Err NWC24SetDlOption(NWC24DlTask* pTask, u32 flags);
+NWC24Err NWC24SetDlFilename(NWC24DlTask* pTask, const char* pFileName);
+NWC24Err NWC24GetDlFilename(const NWC24DlTask* pTask, char* pBuf, u32 size, u8 index);
+NWC24Err NWC24SetDlCount(NWC24DlTask* pTask, s16 count);
+NWC24Err NWC24GetDlSubTaskLastUpdate(const NWC24DlTask* pTask, u8 index, s64* pTime);
+NWC24Err NWC24SetDlSubTask(NWC24DlTask* pTask, NWC24DlSubTaskType type, u32 mask, u16 flags);
+NWC24Err NWC24CheckDlTask(const NWC24DlTask* pTask);
+NWC24Err NWC24GetMyDlTask(NWC24DlTask* pTask);
+NWC24Err NWC24IterateDlTask(u16* pId, BOOL first);
+NWC24Err NWC24UpdateDlTask(NWC24DlTask* pTask);
+NWC24Err NWC24DeleteDlTask(NWC24DlTask* pTask);
+NWC24Err NWC24AddDlTask(NWC24DlTask* pTask);
+NWC24Err NWC24GetDlNextTime(const NWC24DlTask* pTask, s64* pTime);
+NWC24Err NWC24GetDlVfPath(const NWC24DlTask* pTask, char* pBuf, u32 size);
+NWC24Err NWC24CreateDlVf(const NWC24DlTask* pTask, u32 size);
 NWC24Err NWC24DeleteDlTaskForced(NWC24DlTask* pTask);
 NWC24Err NWC24GetDlTask(NWC24DlTask* pTask, u16 id);
 

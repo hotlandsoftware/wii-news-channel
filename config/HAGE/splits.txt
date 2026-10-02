@@ -342,6 +342,85 @@ revolution/VF/ram_drv.c:
 revolution/VF/sd_drv.c:
 	.text       start:0x80074ADC end:0x80074AE0
 
+revolution/NWC24/NWC24StdApi.c:
+	.text       start:0x800767C8 end:0x8007732C
+	.data       start:0x801CB190 end:0x801CB218
+
+revolution/NWC24/NWC24FileApi.c:
+	.text       start:0x8007732C end:0x800789B0
+	.data       start:0x801CB218 end:0x801CB248
+	.sdata      start:0x80356D58 end:0x80356D70
+	.sbss       start:0x80357850 end:0x80357860
+
+revolution/NWC24/NWC24Config.c:
+	.text       start:0x800789B0 end:0x80078EFC
+	.data       start:0x801CB248 end:0x801CB2B0
+	.sdata      start:0x80356D70 end:0x80356D80
+	.sbss       start:0x80357860 end:0x80357868
+
+revolution/NWC24/NWC24Utils.c:
+	.text       start:0x80078EFC end:0x80078FEC
+
+revolution/NWC24/NWC24Manage.c:
+	.text       start:0x80078FEC end:0x80079998
+	.data       start:0x801CB2B0 end:0x801CB3C0
+	.sdata      start:0x80356D80 end:0x80356D88
+	.sbss       start:0x80357868 end:0x80357880
+
+revolution/NWC24/NWC24MBoxCtrl.c:
+	.text       start:0x80079998 end:0x8007A54C
+	.data       start:0x801CB3C0 end:0x801CB468
+	.sdata      start:0x80356D88 end:0x80356D98
+	.sbss       start:0x80357880 end:0x80357888
+
+revolution/NWC24/NWC24Mime.c:
+	.text       start:0x8007A54C end:0x8007A82C
+
+revolution/NWC24/NWC24Schedule.c:
+	.text       start:0x8007A82C end:0x8007B430
+	.data       start:0x801CB468 end:0x801CB4E0
+	.bss        start:0x802AFC20 end:0x802AFDA0
+	.sdata      start:0x80356D98 end:0x80356DA0
+	.sbss       start:0x80357888 end:0x80357898
+
+revolution/NWC24/NWC24DateParser.c:
+	.text       start:0x8007B430 end:0x8007BA20
+	.rodata     start:0x801AACC8 end:0x801AACF0
+
+revolution/NWC24/NWC24FriendList.c:
+	.text       start:0x8007BA20 end:0x8007BB3C
+	.data       start:0x801CB4E0 end:0x801CB500
+	.sdata      start:0x80356DA0 end:0x80356DA8
+
+revolution/NWC24/NWC24SecretFList.c:
+	.text       start:0x8007BB3C end:0x8007BC58
+	.data       start:0x801CB500 end:0x801CB520
+	.sdata      start:0x80356DA8 end:0x80356DB0
+
+revolution/NWC24/NWC24Time.c:
+	.text       start:0x8007BC58 end:0x8007C0E8
+	.data       start:0x801CB520 end:0x801CB560
+	.bss        start:0x802AFDA0 end:0x802AFE80
+	.sbss       start:0x80357898 end:0x803578B0
+
+revolution/NWC24/NWC24Ipc.c:
+	.text       start:0x8007C0E8 end:0x8007C25C
+	.sbss       start:0x803578B0 end:0x803578B8
+
+revolution/NWC24/NWC24Download.c:
+	.text       start:0x8007C25C end:0x8007FBBC
+	.data       start:0x801CB560 end:0x801CB5B8
+	.bss        start:0x802AFE80 end:0x802AFF00
+	.sdata      start:0x80356DB0 end:0x80356DD0
+	.sbss       start:0x803578B8 end:0x803578C0
+
+revolution/NWC24/NWC24System.c:
+	.text       start:0x8007FBBC end:0x8007FE28
+	.data       start:0x801CB5B8 end:0x801CB600
+	.bss        start:0x802AFF00 end:0x802AFF60
+	.sdata      start:0x80356DD0 end:0x80356DD8
+	.sbss       start:0x803578C0 end:0x803578D0
+
 nw4r/g3d/res/g3d_resmdl.cpp:
 	.text       start:0x800BA03C end:0x800BA96C
 

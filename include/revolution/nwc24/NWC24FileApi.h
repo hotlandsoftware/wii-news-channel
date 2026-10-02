@@ -55,6 +55,7 @@ NWC24Err NWC24FDeleteVF(const char* pPath);
 NWC24Err NWC24MountVF(const char* pDrive, const char* pFileName);
 NWC24Err NWC24UnmountVF(const char* pDrive);
 NWC24Err NWC24CheckSizeVF(const char* pDrive, u32* pSize);
+NWC24Err NWC24CreateVF(const char* pFileName, u32 size);
 
 #ifdef __cplusplus
 }

@@ -11,6 +11,7 @@ extern "C" {
 
 NWC24Err NWC24iPrepareShutdown(void);
 NWC24Err NWC24iRequestShutdown(u32 event, NWC24Err* pResult);
+NWC24Err NWC24iRequestShutdownSync(u32 event);
 
 #ifdef __cplusplus
 }
