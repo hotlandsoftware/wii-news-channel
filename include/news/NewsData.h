@@ -22,7 +22,10 @@ struct NewsHeader {
     u8 unk10[0x18 - 0x10];
     s32 mTimestamp;     // at 0x18, in minutes (UTC)
     u8 languages[16];   // at 0x1C (SC language codes, 0xFF-terminated)
-    u8 unk2C[0x34 - 0x2C];
+    u8 language;        // at 0x2C (language of the file)
+    u8 unk2D[0x2F - 0x2D];
+    u8 unk2F;           // at 0x2F
+    u32 messageOfs;     // at 0x30 (optional message from the server, wchar_t[])
     u32 numTopics;      // at 0x34
     u32 topicsOfs;      // at 0x38 (NewsTopicRec[])
     u32 numArticles;    // at 0x3C
@@ -33,6 +36,7 @@ struct NewsHeader {
     u32 locationsOfs;   // at 0x50 (NewsLocationRec[])
     u32 numPictures;    // at 0x54
     u32 picturesOfs;    // at 0x58 (NewsPictureRec[])
+    u16 unk5C;          // at 0x5C
 
     void* At(u32 ofs) { return (u8*)this + ofs; }
 };

@@ -24,7 +24,9 @@ s32 WriteSaveData();
 // is running.
 struct Fader {
     u8 unk0[0x50];
-    s32 mBusy;  // at 0x50
+    s32 mBusy;   // at 0x50
+    u8 unk54[0x5C - 0x54];
+    f32 mAlpha;  // at 0x5C (1.0 when faded out)
 };
 
 extern Fader* lbl_8035772C;
