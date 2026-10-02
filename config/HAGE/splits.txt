@@ -1972,6 +1972,10 @@ revolution/NdevExi2AD/DebuggerDriver.c:
 revolution/NdevExi2AD/exi2.c:
 	.text       start:0x801797D8 end:0x80179F64
 
+Runtime.PPCEABI.H/__mem.c:
+	.init       start:0x80004338 end:0x8000446C
+	.text       start:0x80179F64 end:0x80179F80
+
 Runtime.PPCEABI.H/__va_arg.c:
 	.text       start:0x80179F80 end:0x8017A048
 
@@ -2104,13 +2108,42 @@ MSL_C/printf.c:
 	.sdata      start:0x80357430 end:0x80357438
 	.sdata2     start:0x8035A0C0 end:0x8035A0C8
 
+MSL_C/qsort.c:
+	extab       start:0x80006828 end:0x80006830
+	extabindex  start:0x80006DFC end:0x80006E08
+	.text       start:0x801808BC end:0x80180A2C
+
+MSL_C/rand.c:
+	.text       start:0x80180A2C end:0x80180A54
+	.sdata      start:0x80357438 end:0x80357440
+
 MSL_C/float.c:
 	.sdata      start:0x80357440 end:0x80357450
+
+MSL_C/scanf.c:
+	extab       start:0x80006830 end:0x80006848
+	extabindex  start:0x80006E08 end:0x80006E2C
+	.text       start:0x80180A54 end:0x80181FC0
+	.rodata     start:0x801AF208 end:0x801AF230
+	.data       start:0x801ED640 end:0x801ED760
+
+MSL_C/signal.c:
+	extab       start:0x80006848 end:0x80006850
+	extabindex  start:0x80006E2C end:0x80006E38
+	.text       start:0x80181FC0 end:0x80182070
+	.bss        start:0x803541C0 end:0x803541E0
 
 MSL_C/string.c:
 	extab       start:0x80006850 end:0x80006868
 	extabindex  start:0x80006E38 end:0x80006E5C
 	.text       start:0x80182070 end:0x8018261C
+
+MSL_C/strtold.c:
+	extab       start:0x80006868 end:0x80006870
+	extabindex  start:0x80006E5C end:0x80006E68
+	.text       start:0x8018261C end:0x80183A10
+	.rodata     start:0x801AF230 end:0x801AF240
+	.sdata2     start:0x8035A0C8 end:0x8035A0E8
 
 MSL_C/strtoul.c:
 	extab       start:0x80006870 end:0x800068A0
@@ -2118,8 +2151,34 @@ MSL_C/strtoul.c:
 	.text       start:0x80183A10 end:0x80184620
 	.data       start:0x801ED760 end:0x801ED7E8
 
+MSL_C/time.c:
+	extab       start:0x800068A0 end:0x800068E8
+	extabindex  start:0x80006EB0 end:0x80006F1C
+	.text       start:0x80184620 end:0x80185F48
+	.rodata     start:0x801AF240 end:0x801AF368
+	.data       start:0x801ED7E8 end:0x801ED940
+	.bss        start:0x803541E0 end:0x80354268
+	.sdata2     start:0x8035A0E8 end:0x8035A108
+
+MSL_C/wctype.c:
+	.rodata     start:0x801AF368 end:0x801AF968
+
+MSL_C/wmem.c:
+	.text       start:0x80185F48 end:0x80185F78
+
+MSL_C/wprintf.c:
+	extab       start:0x800068E8 end:0x80006928
+	extabindex  start:0x80006F1C end:0x80006F7C
+	.text       start:0x80185F78 end:0x801881BC
+	.rodata     start:0x801AF968 end:0x801AF970
+	.data       start:0x801ED940 end:0x801EDBE8
+	.sdata2     start:0x8035A108 end:0x8035A110
+
 MSL_C/wstring.c:
 	.text       start:0x801881BC end:0x801882C4
+
+MSL_C/wchar_io.c:
+	.text       start:0x801882C4 end:0x80188348
 
 MSL_C/ppc_eabi_stubs.c:
 	.text       start:0x80188348 end:0x80188358
