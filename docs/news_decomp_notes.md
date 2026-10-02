@@ -160,3 +160,48 @@ Notes:
 - `ArticleText` reads tables that live outside both files: the kinsoku table at `0x801920F0` (rodata before NewsArticle) and the picture size tables `0x801922F8`/`0x80192320`/`0x80192348` (part of an `extern const` table block at `0x801921B8`–`0x80192418`, probably its own file).
 - `fn_80040A48` is `operator new[](u32, MEMAllocator*)`; `fn_8000CA98`/`fn_8000CBEC` are `TextChar::TextChar()`/`~TextChar()`; `fn_800137A0` is the weak `VEC2::VEC2()`.
 - The 0x8002E7DC block is the "article view" module that owns the three global `ArticleText`s (`lbl_80357568`/`6C`/`70`) and the caption text (`lbl_80357574`); SlideShow drives it through `fn_8003300C` (set text) etc.
+
+## More codegen patterns (block 0x80007F58–0x8000FA38)
+
+- **Message tables are one translation unit each.** The localized `const wchar_t* gMsgXxx[7]` tables in `.data` (`news/msg/*.cpp`) each start on an 8-byte boundary and repeat strings that `-str reuse` would pool within one file (`gMsgRegionalNews`/`gMsgTheNews` share five strings). So every table is its own data-only file. Strings of at most 8 bytes (`L"Top"`, `L"ほか"`) go to `.sdata`.
+- **16-byte wide strings are 8-byte aligned.** MWCC aligns a 16-byte string literal to 8 (padding after the previous string), so `L" Area"` (12 bytes) is followed by 4 bytes of padding before `L" (u.a.)"`.
+- **Duplicate strings inside one table.** `gMsgOtherAreasShort` has `L" etc."` twice. Literals would be pooled, so that file defines each string as its own `static wchar_t sXX[]` array.
+- **Zero-initialized floats in `.sdata`.** MWCC puts `= 0.0f` globals in `.sbss`. SlideItem's four zero floats in `.sdata` need `#pragma explicit_zero_data on`.
+- **`if (!IsState(&X::State))`.** An inline `IsState(StateFunc s) { return mState == s; }` copies the PTMF constant to the stack before `__ptmf_cmpr`; comparing `mState != &X::State` directly passes the constant's address.
+- **Constants as locals that are not folded.** `f32 margin = 114.0f; f32 top = -margin; f32 bottom = margin + GetScreenHeight();` gives the original `fneg` and runtime `fadds` (SlideItem::Update). Writing `-114.0f`/`570.0f` folds them.
+- **Float literal pool order follows use order in codegen.** `SinDeg(90.0f * t)` pools 90 before 0.7111 (the argument is evaluated before the inline body); `SinFIdx(NW4R_MATH_DEG_TO_FIDX(90.0f * t))` pools 0.7111 first, as in Bubbles.cpp.
+- **`x * c` with the value on the left.** `RandomF() * 1.6f` gives `fmuls f, c, x`. The original's `fmuls f, x, c` came from an inline taking the factor as a parameter: `RandomF(f32 max) { ...; return (f - 1.0f) * max; }`.
+- **`(top + bottom) / 2.0f`.** Division by 2 becomes `fmuls x, 0.5` with the value on the left; `* 0.5f` puts the constant on the left.
+- **Constants from inline functions keep operand order.** `-(...) + GetScreenCenterY()` (an inline returning 228) gives `fadds neg, 228` where `-(...) + 228.0f` swaps the operands.
+- **`obj->F(member)` loads the member before calling `obj` getter.** `fn_80048364(layout, "x")->SetText(mMessage)` loads `mMessage` before the lookup call. The original used two statements.
+- **Ternary assigned to a float member, then read back.** `mPicScale = c ? a / b : a / d;` followed by uses of `mPicScale` gives the original single `stfs` after the branches plus an `frsp` of the forwarded value (GlobePin::LayoutPicture). An `if`/`else` with two stores or a local does not.
+- **Loop-invariant subexpressions as locals.** `f32 offset = ascent - ascent;` before the loop (the original computes it once) instead of writing it inside the loop.
+- **Separate locals for a second loop.** In GlobePin::DrawHeadline the inner loop's cursor/limit are new locals (`x2`, `right2`); reusing the outer `x` changes the FPR numbering.
+- **`while (*p) { if (x > limit) break; ... }`** keeps the string test at the bottom of the loop and the limit test at the top; `while (*p && !(x > limit))` tests both at the bottom.
+- **Nested switch on the same phase.** State functions with phases 1 and 2+ use `default: { ...; switch (mPhase) { case 1: ...; case 2: default: ... } }` (GlobePin::StateRipple).
+- **`switch` for a range test.** `switch (mState) { case 4: case 5: ...; default: ... }` compares against 6 first; `if (mState >= 4 && mState < 6)` compares against 4 first.
+- **Passing a `GXColor` from a `ut::Color`.** `GXSetTevColor(reg, (GXColor)ut::Color(0))` constructs the argument in place with one `stw`; `GXSetTevColor(reg, ut::Color(0))` builds a temporary and copies it bytewise. A local that is passed on is `GXColor c = ut::Color(0);` (word copy).
+- **Copying a member of class type for a call.** `camera->GetG3dCamera().GXSetViewport()` (an inline returning `g3d::Camera` by value) gives the original stack copy before each call.
+- **`__abs(x)`** inlines `abs` (`srawi`/`xor`/`subf`); MSL's `abs()` is an out-of-line call here.
+- **Pointer-to-list loops.** `PaneList& list = pane->GetChildList(); for (it = list.GetBeginIter(); it != list.GetEndIter(); ...)` computes the end once; calling `pane->GetChildList()` in the condition reloads the pane every iteration.
+- **`c = buf[i]; i++;`** instead of `c = buf[i++]` keeps the original load-before-store order of the index.
+- **`switch (c) { case '\n': ... }`** gives a signed `cmpwi` for a `wchar_t` compare; `if (c == L'\n')` gives `cmplwi`.
+
+## Game code map
+
+Block `0x80007F58`–`0x8000FA38` (between `Mascot.cpp` and `NewsArticle.cpp`). Only the last file has a `__sinit` (`.ctors` `0x80191F08`); the others were found by `.sdata2` pool restarts (a second `0.0f` or `1.0f`) and by 8-byte aligned starts of `.data` blocks.
+
+| File | `.text` | Data | Contents |
+| --- | --- | --- | --- |
+| `Connect.cpp` | `0x80007F58`–`0x8000A0F8` | `.rodata 0x801920C0`, `.data 0x801AFFA0`, `.sdata 0x80356748`, `.sdata2 0x803584F0` | `Connect`: the download screen (state machine, progress dots, mascot, tips window, error screen with error codes). `ConnectTips`: the tip text typed out in the tips window. Ends with the weak `lyt::Pane::GetRuntimeTypeInfo`. |
+| `msg/MsgToSectionSelect.cpp` | – | `.data 0x801B0418` | `gMsgToSectionSelect` |
+| `msg/MsgSectionSelect.cpp` | – | `.data 0x801B0508` | `gMsgSectionSelect` |
+| `PunctuationTable.cpp` | – | `.rodata 0x801920F0` | `gPunctuationTable` (byte-swapped UTF-16, used at `0x8002799C`); its position among the data-only files is a guess |
+| `SaveData.cpp` | `0x8000A0F8`–`0x8000BE30` | `.rodata 0x80192140`, `.data 0x801B0608`, `.sdata 0x80356778`, `.sbss 0x80357468`, `.sdata2 0x80358570` | NAND save file `noerase/savedata.dat` (label `HAG0` + CRC32), `SaveErrorDialog` (error2–5 layouts), `FormatSaveTime`, `CheckNewsFiles` (validates the 24 downloaded news files) |
+| `msg/MsgNewsChannel.cpp` … `msg/MsgToTop.cpp` | – | `.data 0x801B0930`–`0x801B1120`, `.sdata 0x80356798`–`0x803567B8` | `gMsgNewsChannel`, `gMsgOtherAreas`, `gMsgOtherAreasShort`, `gMsgChooseLanguage`, `gMsgRegionalNews`, `gMsgTheNews`, `gMsgUpdated`, `gMsgLastUpdated`, `gMsgToTop` (one file each) |
+| `Bubbles.cpp` | `0x8000BE30`–`0x8000C904` | `.sdata2 0x803585A0` | `Bubbles`: background circles and rings |
+| `GlobePoint.cpp` | `0x8000C904`–`0x8000CA98` | `.data 0x801B1120`, `.sdata2 0x80358608` | `GlobePoint`: a news location on the globe |
+| `SlideItem.cpp` | `0x8000CA98`–`0x8000D01C` | `.data 0x801B1130`, `.sdata 0x803567B8`, `.sdata2 0x80358610` | `SlideItem`: an easing list entry (array of 0x70-byte items built at `0x80027674`) |
+| `GlobePin.cpp` | `0x8000D01C`–`0x8000FA38` | `.ctors 0x80191F08`, `.data 0x801B1170`, `.rodata 0x80192158`, `.bss 0x801EDD90`, `.sdata 0x803567C8`, `.sbss 0x80357470`, `.sdata2 0x80358650` | `GlobePin : GlobePoint`: pin, ripples, label and picture cards of a location; also the headline/location truncation used by the globe screen's list |
+
+New globals named from this block: `gRandSeed` (`0x803576A0`, `include/news/Random.h`), the `gMsg*` tables above, `Fader` (`lbl_8035772C`, `include/news/SaveData.h`).
