@@ -112,7 +112,9 @@ private:
 
 public:
     static void createInstance(const HBMDataInfo* pDataInfo);
-    static HomeButton* getInstance();
+    static HomeButton* getInstance() {
+        return spHomeButtonObj;
+    }
     static void deleteInstance();
 
     HomeButton(const HBMDataInfo* pDataInfo);
@@ -192,7 +194,6 @@ private:
     void reset_battery();
 
     void init_sound();
-    void play_sound(int id);
     void fadeout_sound(f32 gain);
 
     void init_msg();
@@ -215,6 +216,13 @@ private:
 
 public:
     void update_sound();
+    void play_sound(int id);
+    void updateSoundArchivePlayer();
+    void setSoundVolume(f32 volume);
+    void stopSound();
+    void initSound(void* pSoundData);
+    void createSound(nw4r::snd::SoundArchive* pSoundArchive, bool bCreateSoundHeap);
+    void deleteSound();
 
 private:
     static HomeButton* spHomeButtonObj;

@@ -70,6 +70,9 @@ typedef enum HBMSoundEvent {
     HBM_SOUND_RETURN_APP,
     HBM_SOUND_STOP,
     HBM_SOUND_PLAY,
+    // May 2007 HBM: sent instead of HBM_SOUND_RETURN_APP when the fade-out
+    // starts with HBM_SELECT_BTN3 selected (name unknown)
+    HBM_SOUND_RETURN_APP_BTN3,
 } HBMSoundEvent;
 
 // Maps to the HomeButtonSe.brsar sound ID

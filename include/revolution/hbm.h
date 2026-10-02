@@ -111,6 +111,15 @@ void HBMCreateSound(void* soundData, void* memBuf, u32 memSize);
 void HBMDeleteSound(void);
 void HBMUpdateSound(void);
 
+// Added for the HBM library port (C API of the May 2007 homebuttonLib)
+void HBMStartBlackOut(void);
+void HBMSetBlackOutColor(u8 r, u8 g, u8 b);
+BOOL HBMIsReassignedControllers(void);
+void HBMPlaySound(int num);
+void HBMUpdateSoundArchivePlayer(void);
+void HBMSetSoundVolume(f32 volume);
+void HBMStopSound(void);
+
 #ifdef __cplusplus
 }
 #endif
