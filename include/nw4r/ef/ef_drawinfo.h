@@ -11,8 +11,10 @@ namespace ef {
 
 class DrawInfo {
 private:
-    math::MTX34 mViewMtx; // at 0x0
-    math::MTX34 mProjMtx; // at 0x30
+    // POD matrices: the DrawInfo constructor must not construct members
+    // (News Channel PointerEffect::Draw)
+    math::_MTX34 mViewMtx; // at 0x0
+    math::_MTX34 mProjMtx; // at 0x30
     bool mLightEnable;    // at 0x60
     GXLightID mLightMask; // at 0x64
     bool mIsSpotLight;    // at 0x68
@@ -25,8 +27,9 @@ private:
 
 public:
     DrawInfo() {
-        math::MTX34Identity(&mViewMtx);
-        math::MTX34Identity(&mProjMtx);
+        // The News Channel's DrawInfo calls PSMTXIdentity directly
+        PSMTXIdentity(mViewMtx.mtx);
+        PSMTXIdentity(mProjMtx.mtx);
 
         mLightEnable = false;
         mLightMask = GX_LIGHT_NULL;
@@ -40,17 +43,17 @@ public:
     }
 
     const math::MTX34* GetViewMtx() const {
-        return &mViewMtx;
+        return reinterpret_cast<const math::MTX34*>(&mViewMtx);
     }
     void SetViewMtx(const math::MTX34& rMtx) {
-        mViewMtx = rMtx;
+        *reinterpret_cast<math::MTX34*>(&mViewMtx) = rMtx;
     }
 
     const math::MTX34* GetProjMtx() const {
-        return &mProjMtx;
+        return reinterpret_cast<const math::MTX34*>(&mProjMtx);
     }
     void SetProjMtx(const math::MTX34& rMtx) {
-        mProjMtx = rMtx;
+        *reinterpret_cast<math::MTX34*>(&mProjMtx) = rMtx;
     }
 
     bool IsLightEnable() const {
