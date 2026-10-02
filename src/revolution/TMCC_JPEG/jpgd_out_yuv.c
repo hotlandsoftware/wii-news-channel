@@ -1,6 +1,80 @@
 #include <string.h>
 #include "jpgd_internal.h"
 
+s32 fn_80083C60(JPEGDecContext* ctx) {
+    JPEGPixelBuffer* pix = &ctx->pix;
+    JPEGDecHandle* h = ctx->handle;
+
+    switch (ctx->frame.sampling) {
+    case 0:
+        ctx->output = fn_80083F14;
+        ctx->outputEdge = fn_800844A4;
+        ctx->blockOut[0] = pix->y;
+        ctx->blockOut[1] = ctx->blockOut[0] + ctx->blockSize;
+        ctx->blockOut[2] = ctx->blockOut[1] + ctx->blockSize;
+        ctx->blockOut[3] = ctx->blockOut[2] + ctx->blockSize;
+        ctx->blockOut[5] = pix->cb;
+        ctx->blockOut[6] = pix->cr;
+        ctx->stride = 32;
+        ctx->unk19E0 = 0;
+        break;
+    case 1:
+        ctx->output = fn_80084AC0;
+        ctx->outputEdge = fn_8008522C;
+        ctx->blockOut[0] = pix->y;
+        ctx->blockOut[1] = ctx->blockOut[0] + ctx->blockSize;
+        ctx->blockOut[5] = pix->y + 0x80;
+        ctx->blockOut[6] = pix->y + 0xC0;
+        ctx->stride = 16;
+        ctx->unk19E0 = 0;
+        break;
+    case 2:
+        ctx->output = fn_80085848;
+        ctx->outputEdge = fn_80085FB0;
+        ctx->blockOut[0] = pix->y;
+        ctx->blockOut[1] = ctx->blockOut[0] + ctx->blockSize;
+        ctx->blockOut[2] = ctx->blockOut[0] + ctx->blockSize * 16;
+        ctx->blockOut[3] = ctx->blockOut[2] + ctx->blockSize;
+        ctx->blockOut[5] = pix->cb;
+        ctx->blockOut[6] = pix->cr;
+        ctx->stride = 16;
+        ctx->unk19E0 = 0;
+        break;
+    case 3:
+        ctx->output = fn_800865D8;
+        ctx->outputEdge = fn_80086764;
+        ctx->blockOut[0] = pix->y;
+        ctx->blockOut[5] = pix->y + 0x40;
+        ctx->blockOut[6] = pix->y + 0x80;
+        ctx->stride = 8;
+        ctx->unk19E0 = 0;
+        break;
+    case 4:
+        ctx->output = fn_80086924;
+        ctx->outputEdge = fn_80086BAC;
+        ctx->blockOut[0] = pix->y;
+        ctx->stride = 8;
+        ctx->unk19E0 = 0;
+        break;
+    default:
+        return -0x70;
+    }
+
+    {
+        u16 w = h->width;
+        u16 hg = h->height;
+        h->strideY = (w / 8 + (w % 8 != 0)) * 8;
+        h->heightY = (hg / 4 + (hg % 4 != 0)) * 4;
+    }
+    {
+        u16 w = h->cWidth;
+        u16 hg = h->cHeight;
+        h->strideC = (w / 8 + (w % 8 != 0)) * 8;
+        h->heightC = (hg / 4 + (hg % 4 != 0)) * 4;
+    }
+    return 0;
+}
+
 #define PUT_I8(p, x, y, tiles, v)                       \
     t = ((x) >> 3) + ((y) >> 2) * (tiles);              \
     (p)[(t << 5) + (((y) & 3) << 3) + ((x) & 7)] = (v)
