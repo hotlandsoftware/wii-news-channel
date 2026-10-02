@@ -624,7 +624,7 @@ NWC24Err NWC24IterateDlTask(u16* pId, BOOL first) {
         return NWC24_ERR_DONE;
     }
 
-    for (id = *pId; id < NWC24iGetCachedDlHeader()->maxTasks; id++) {
+    for (id = *pId; id < (NWC24WorkP == NULL ? NULL : (NWC24iDlHeader*)NWC24WorkP->dlHeader)->maxTasks; id++) {
         if (CheckDlEntryAvailable(id) >= 0) {
             *pId = id;
             return NWC24_OK;
