@@ -59,6 +59,10 @@ public:
     void* LoadGroup(u32 id, SoundMemoryAllocatable* pAllocatable,
                     void** ppWaveBuffer, u32 blockSize);
 
+    // Added (snd part 3): used by SoundArchivePlayer's SeqLoadTask
+    void* LoadFile(u32 id, SoundMemoryAllocatable* pAllocatable);
+    void Cancel();
+
 private:
     mutable OSMutex mMutex;   // at 0x0
     const SoundArchive& mArc; // at 0x18

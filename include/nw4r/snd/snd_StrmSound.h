@@ -51,6 +51,7 @@ private:
     StrmPlayer mStrmPlayer;                    // at 0xD8
     StrmSoundHandle* mTempSpecialHandle;       // at 0x5F8
     SoundInstanceManager<StrmSound>* mManager; // at 0x5FC
+    u8 UNK_0x600[0x618 - 0x600];               // at 0x600 (unused here)
 };
 
 } // namespace detail

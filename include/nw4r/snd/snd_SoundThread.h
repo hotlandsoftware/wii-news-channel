@@ -47,6 +47,10 @@ public:
 public:
     static SoundThread& GetInstance();
 
+    OSMutex& GetSoundMutex() {
+        return mMutex;
+    }
+
     bool Create(s32 priority, void* pStack, u32 stackSize);
     void Shutdown();
 

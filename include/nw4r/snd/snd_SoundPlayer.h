@@ -115,8 +115,6 @@ private:
     int mOutputLineFlag;                        // at 0x30
     f32 mMainOutVolume;                         // at 0x34
     f32 mRemoteOutVolume[WPAD_MAX_CONTROLLERS]; // at 0x38
-
-    mutable OSMutex mMutex; // at 0x48
 };
 
 } // namespace snd

@@ -67,12 +67,17 @@ void TaskManager::CancelByTaskId(u32 taskId) {
     ut::AutoInterruptLock lock;
 
     for (int i = 0; i < PRIORITY_MAX; i++) {
-        NW4R_UT_LINKLIST_FOREACH_SAFE (it, mTaskList[i], {
-            if (taskId == it->mTaskId) {
-                mTaskList[i].Erase(it);
-                Free(&*it);
+        TaskList& rList = mTaskList[i];
+
+        for (TaskList::Iterator it = rList.GetBeginIter();
+             it != rList.GetEndIter();) {
+            TaskList::Iterator curr = it++;
+
+            if (taskId == curr->mTaskId) {
+                rList.Erase(curr);
+                Free(&*curr);
             }
-        })
+        }
     }
 
     if (mCurrentTask != NULL && taskId == mCurrentTask->mTaskId) {
