@@ -537,17 +537,20 @@ void Connect::Draw() {
         fn_80048364(mLayout, "text")->SetSelIndex(mDone);
         fn_800484A4(mLayout, 255.0f * mAlpha);
         fn_80048154(mLayout);
-        if (mState >= STATE_TIPS && mState < STATE_ERROR) {
+        switch (mState) {
+        case STATE_TIPS:
+        case STATE_CLOSE_TIPS: {
             if (mTipsOpen < 20) {
-                DrawProgress((1.0f - math::SinRad(1.5707964f * (mTipsOpen / 20.0f))) * mAlpha);
+                DrawProgress(mAlpha * (1.0f - math::SinRad(1.5707964f * (mTipsOpen / 20.0f))));
             }
             f32 t = math::SinRad(1.5707964f * (mTipsOpen / 20.0f));
             fn_80035CD0(192.0f * t);
             f32 mx = mMascot->mX;
             f32 my = mMascot->mY;
-            s32 alpha = 255.0f * t;
-            f32 x = mx + t * (0.5f * GetScreenWidth() - mx);
+            s32 width = GetScreenWidth();
+            f32 x = mx + t * (0.5f * width - mx);
             f32 y = my + t * (228.0f - my);
+            s32 alpha = 255.0f * t;
             math::VEC3 scale(t, t, 1.0f);
             f32 aspect = gWidescreen ? 1.3684211f : 1.0f;
             math::VEC3 trans((x - 0.5f * GetScreenWidth()) / aspect, -(y - 228.0f), 0.0f);
@@ -566,8 +569,7 @@ void Connect::Draw() {
             f32 s = 0.5f + 0.5f * t;
             TPL_GetWidth(gCommonTpl, 11);
             f32 h = s * TPL_GetHeight(gCommonTpl, 11);
-            ut::Color color(255, 255, 255, 128.0f * t);
-            GXSetTevColor(GX_TEVREG0, color);
+            GXSetTevColor(GX_TEVREG0, ut::Color(255, 255, 255, 128.0f * t));
             math::VEC3 pos0(px, py - h, 0.0f);
             Draw2D_Tex(gCommonTpl, 11, &pos0, -s, s);
             math::VEC3 pos1(px, py - h, 0.0f);
@@ -576,8 +578,11 @@ void Connect::Draw() {
             Draw2D_Tex(gCommonTpl, 11, &pos2, -s, -s);
             math::VEC3 pos3(px, py + h, 0.0f);
             Draw2D_Tex(gCommonTpl, 11, &pos3, s, -s);
-        } else {
+            break;
+        }
+        default:
             DrawProgress(mAlpha);
+            break;
         }
         mMascot->mAlpha = 255.0f * mAlpha;
         mMascot->Draw();
@@ -609,7 +614,8 @@ void Connect::Draw() {
             break;
         case 0:
             if (mMessage != NULL) {
-                fn_80048364(mErrorLayout, "error_server")->SetText(mMessage);
+                PaneButton* server = fn_80048364(mErrorLayout, "error_server");
+                server->SetText(mMessage);
                 button->SetSelIndex(-1);
             } else if (mCheckResult == -3) {
                 button->SetSelIndex(8);
@@ -736,7 +742,7 @@ void Connect::ShowErrorCode(s32 errorCode, s32 code) {
 }
 
 ConnectTips::ConnectTips(lyt::Pane* pane) {
-    char name[16];
+    char name[128];
     sprintf(name, "%s%s", pane->GetName(), GetLanguageSuffix());
     mRoot = pane->FindPaneByName(name, true);
     mTip = NULL;

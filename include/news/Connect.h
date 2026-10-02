@@ -111,7 +111,7 @@ public:
     f32 mAlpha;                    // at 0x3F4
     s32 mTimer;                    // at 0x3F8
     bool mDone;                    // at 0x3FC
-    u32 mState;                    // at 0x400
+    s32 mState;                    // at 0x400
     nw4r::snd::SoundHandle mSound; // at 0x404
     bool mSoundPlaying;            // at 0x408
     bool mHover[4];                // at 0x409
