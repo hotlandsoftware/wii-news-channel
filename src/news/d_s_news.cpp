@@ -110,7 +110,7 @@ TextView* fn_80027674(void* mem, MEMAllocator* allocator, ut::TextWriterBase<wch
                       s32 length, math::VEC2* size, f32 scale);
 void fn_8002780C(TextView* view, s32 flag);
 void fn_80027F94(TextView* view, const wchar_t* text, NewsPicture* picture, s32 arg3, s32 arg4,
-                 s32 arg5, math::VEC2* size, s32 arg7, f32 x, f32 scale, u8 latest, s32 arg9);
+                 s32 arg5, const math::VEC2* size, s32 arg7, f32 x, f32 scale, u8 latest, s32 arg9);
 void fn_800284C0(TextView* view, const math::VEC2* pos, s32 arg, f32 alpha, f32 arg2);
 void fn_80028DC8(TextView* view, s32 arg0, s32 arg1, f32 arg2);
 void fn_80029178(TextView* view);
@@ -2366,7 +2366,7 @@ void FormatElapsedTime(s32 time) {
 }
 
 BOOL Article_Set(NewsArticle* article, const wchar_t* title, BOOL withPicture, s32 arg3, s32 arg4,
-                 s32 arg5, math::VEC2* size, s32 arg7, f32 x, u8 latest) {
+                 s32 arg5, const math::VEC2& size, s32 arg7, f32 x, bool latest) {
     sSourceIconType = article->mSource->noLogo;
     sSourceLayout = ((u8*)article->mSource)[1];
     NewsTexture* logo = sSourceIconType == 0 ? article->mSourceLogo : NULL;
@@ -2375,7 +2375,7 @@ BOOL Article_Set(NewsArticle* article, const wchar_t* title, BOOL withPicture, s
     sSourceLogo = logo;
     sScrollLine = 0;
     sIsLatest = latest;
-    sArticleSize = *size;
+    sArticleSize = size;
 
     lbl_8020E4C0.SetFont(*gSysFont);
     lbl_8020E4C0.SetScale(0.6f);
@@ -2384,17 +2384,23 @@ BOOL Article_Set(NewsArticle* article, const wchar_t* title, BOOL withPicture, s
         sTitleWidth = lbl_8020E4C0.CalcStringWidth(lbl_80357564);
     }
     if (lbl_80357560) {
-        s32 timestamp = lbl_80357560->mText->unk14[4];
+        s32 time = *(s32*)&lbl_80357560->mText->unk14[4];
         switch (gLanguage) {
         case 0: {
-            OSCalendarTime time;
-            MinutesToCalendarTime(*(s32*)((u8*)lbl_80357560->mText + 0x18) + 540, &time);
-            swprintf(sDateBuf, 256, L"%d\x6708%d\x65E5(%ls) %d\x6642%02d\x5206\x66F4\x65B0", time.mon + 1, time.mday,
-                     lbl_801B2958[gLanguage][time.wday], time.hour, time.min);
+            OSCalendarTime cal;
+            MinutesToCalendarTime(time + 540, &cal);
+            swprintf(sDateBuf, 256, L"%d\x6708%d\x65E5(%ls) %d\x6642%02d\x5206\x66F4\x65B0", cal.mon + 1,
+                     cal.mday, lbl_801B2958[gLanguage][cal.wday], cal.hour, cal.min);
             break;
         }
+        case 1:
+        case 2:
+        case 3:
+        case 4:
+        case 5:
+        case 6:
         default:
-            FormatElapsedTime(*(s32*)((u8*)lbl_80357560->mText + 0x18));
+            FormatElapsedTime(time);
             break;
         }
         sDateWidth = lbl_8020E4C0.CalcStringWidth(sDateBuf);
@@ -2412,11 +2418,11 @@ BOOL Article_Set(NewsArticle* article, const wchar_t* title, BOOL withPicture, s
     } else {
         scale = gDefaultFontScale;
     }
-    fn_80027F94(lbl_80357568, article->mHeadlineText, NULL, arg3, arg4, arg5, size, arg7, x, scale,
+    fn_80027F94(lbl_80357568, article->mHeadlineText, NULL, arg3, arg4, arg5, &size, arg7, x, scale,
                 latest, 0);
     fn_80027F94(sBodyView, article->mBody, withPicture ? article->mPicture : NULL, arg3, arg4, arg5,
-                size, arg7, x, 0.8f, latest, 0);
-    fn_80027F94(sCreditView, article->mCopyright, NULL, arg3, arg4, arg5, size, arg7, x, 0.6f,
+                &size, arg7, x, 0.8f, latest, 0);
+    fn_80027F94(sCreditView, article->mCopyright, NULL, arg3, arg4, arg5, &size, arg7, x, 0.6f,
                 latest, 0);
     return TRUE;
 }
