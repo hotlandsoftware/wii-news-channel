@@ -22,6 +22,7 @@ typedef struct NWC24Work {
 NWC24Err NWC24OpenLib(void* pWork);
 NWC24Err NWC24CloseLib(void);
 s32 NWC24GetErrorCode(void);
+NWC24Err NWC24Check(u32 usage);
 BOOL NWC24IsMsgLibOpened(void);
 BOOL NWC24IsMsgLibOpenedByTool(void);
 BOOL NWC24IsMsgLibOpenBlocking(void);

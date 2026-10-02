@@ -17,6 +17,7 @@ const char* NWC24GetAccountDomain(void);
 const char* NWC24GetMBoxDir(void);
 u32 NWC24GetAppId(void);
 u16 NWC24GetGroupId(void);
+NWC24Err NWC24GetIdCreationStage(NWC24IDCreationStage* pStage);
 
 #ifdef __cplusplus
 }
