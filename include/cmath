@@ -14,19 +14,41 @@ inline float ldexpf(float value, int exp) {
 #endif
 #endif
 
-// Added for nw4r::ef: as in MSL (std::sinf/cosf/sqrtf call the double versions)
+// Added for nw4r::ef (Task 9): MSL's float wrappers (math_double.h) and the
+// std::fabs(float) of MSL <cmath>, as ogws's ef sources use them.
 #ifdef __cplusplus
-#ifndef CMATH_STD_SINF
-#define CMATH_STD_SINF
+#ifndef CMATH_STD_FLOAT_WRAPPERS
+#define CMATH_STD_FLOAT_WRAPPERS
 namespace std {
-inline float sinf(float x) {
-    return sin(x);
+inline float acosf(float x) {
+    return acos(x);
+}
+inline float asinf(float x) {
+    return asin(x);
+}
+inline float atan2f(float x, float y) {
+    return atan2(x, y);
 }
 inline float cosf(float x) {
     return cos(x);
 }
+inline float sinf(float x) {
+    return sin(x);
+}
 inline float sqrtf(float x) {
     return sqrt(x);
+}
+inline float tanf(float x) {
+    return tan(x);
+}
+inline float fmodf(float x, float y) {
+    return fmod(x, y);
+}
+inline double fabs_wrapper(double x) {
+    return __fabs(x);
+}
+inline float fabs(float x) {
+    return fabs_wrapper(x);
 }
 } // namespace std
 #endif

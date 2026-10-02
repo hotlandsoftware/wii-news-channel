@@ -20,7 +20,7 @@ enum EmitFormType {
 
 class EmitFormBuilder {
 public:
-    // Older revision (News Channel): static, no builder object
+    // Older revision (News Channel): static
     static EmitterForm* Create(EmitFormType type);
 };
 

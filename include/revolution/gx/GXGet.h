@@ -20,6 +20,12 @@ void GXGetTexObjLODAll(const GXTexObj *, GXTexFilter *, GXTexFilter *, f32 *, f3
 GXTexFmt GXGetTexObjFmt(const GXTexObj *);
 GXBool GXGetTexObjMipMap(const GXTexObj *); 
 
+// Added for nw4r::ef (Task 9) (GXAttr.c)
+void GXGetVtxDesc(GXAttr attr, GXAttrType* type);
+void GXGetVtxDescv(GXVtxDescList* vcd);
+void GXGetVtxAttrFmt(GXVtxFmt fmt, GXAttr attr, GXCompCnt* cnt, GXCompType* type, u8* frac);
+void GXGetVtxAttrFmtv(GXVtxFmt fmt, GXVtxAttrFmtList* vat);
+
 #ifdef __cplusplus
 }
 #endif

@@ -3,6 +3,7 @@
 #include <nw4r/types_nw4r.h>
 
 #include <nw4r/ef/ef_drawstrategy.h>
+#include <nw4r/ef/ef_gxvert.h>
 #include <nw4r/ef/ef_particle.h>
 #include <nw4r/ef/ef_particlemanager.h>
 #include <nw4r/ef/ef_types.h>
@@ -302,7 +303,8 @@ protected:
         while (pIt != NULL &&
                pIt->GetLifeStatus() != ReferencedObject::NW4R_EF_LS_ACTIVE) {
 
-            pIt = GetElderDrawParticle(pManager, pIt);
+            // Older revision (News Channel): GetElderParticle
+            pIt = GetElderParticle(pManager, pIt);
         }
 
         return pIt;
@@ -365,7 +367,7 @@ protected:
     static const math::VEC3 mZUnitVec;
 
     static const math::VEC3 mZeroVec;
-    static const math::MTX34 mIdentityMtx;
+    // Older revision (News Channel): no mIdentityMtx
 };
 
 /******************************************************************************

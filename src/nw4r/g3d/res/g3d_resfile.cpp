@@ -601,5 +601,11 @@ bool ResFile::CheckRevision() const {
     return true;
 }
 
+// Not in the DOL (dead-stripped at link time). The original object keeps the
+// "External" group name in .data, so something in it referenced the name.
+const ResNameData27* g3d_resfile_cpp_ForceActive() {
+    return &ResNameData_Ext;
+}
+
 } // namespace g3d
 } // namespace nw4r
