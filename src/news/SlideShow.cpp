@@ -1590,8 +1590,8 @@ void SlideShow::SubStateDrag() {
     case 0:
         mSubStateFrame++;
         lbl_801EDFA0[1] = gWidescreen ? 19 : 34;
-        lbl_80357600.a = 100;
         lbl_801EDFB8[1] = (456 - (gWidescreen ? 19 : 34)) - lbl_803575D0;
+        lbl_80357600.a = 100;
         PlaySE(0x16);
         break;
     default: {
@@ -1615,29 +1615,13 @@ void SlideShow::SubStateDrag() {
 
         f32 move = 0.0f;
         s32 count = 0;
-        lbl_801EDFD0[0] = 1;
-        if (lbl_801F0908[0] & 0x400) {
-            count++;
-            lbl_801EDFD0[0] = 5;
-            move += 0.1f * lbl_8020E468[0];
-        }
-        lbl_801EDFD0[1] = 1;
-        if (lbl_801F0908[1] & 0x400) {
-            count++;
-            lbl_801EDFD0[1] = 5;
-            move += 0.1f * lbl_8020E468[1];
-        }
-        lbl_801EDFD0[2] = 1;
-        if (lbl_801F0908[2] & 0x400) {
-            count++;
-            lbl_801EDFD0[2] = 5;
-            move += 0.1f * lbl_8020E468[2];
-        }
-        lbl_801EDFD0[3] = 1;
-        if (lbl_801F0908[3] & 0x400) {
-            count++;
-            lbl_801EDFD0[3] = 5;
-            move += 0.1f * lbl_8020E468[3];
+        for (s32 i = 0; i < 4; i++) {
+            lbl_801EDFD0[i] = 1;
+            if (lbl_801F0908[i] & 0x400) {
+                count++;
+                lbl_801EDFD0[i] = 5;
+                move += 0.1f * lbl_8020E468[i];
+            }
         }
         if (count != 0) {
             mScrollSpeed = move / count;
