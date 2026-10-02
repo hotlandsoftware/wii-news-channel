@@ -157,7 +157,7 @@ void fn_8004CAE4(void* globe, math::VEC3* pos, s32 arg, f32 scale);
 void fn_8004CB38(void* globe);
 void fn_8004DA8C(void* globe, s32 arg0, s32 arg1);
 void fn_8004DB4C(void* globe, s32 arg);
-void fn_8004E0B8(void* globe, f32 arg);
+void fn_8004E0B8(void* globe, s32 level);
 void fn_8004E0D4(void* globe, f32 arg);
 
 // Sound (0x8004E9A4..)
@@ -372,10 +372,10 @@ public:
 // ---------------------------------------------------------------------------
 // Globals
 
-math::VEC3 lbl_801EDF70;              // "new" marker position
-math::VEC3 lbl_801EDF88;              // marker icon position
-math::VEC3 lbl_801EDFA0;              // up arrow position
-math::VEC3 lbl_801EDFB8;              // down arrow position
+math::VEC3 lbl_801EDF70(0.0f, 0.0f, 0.0f);              // "new" marker position
+math::VEC3 lbl_801EDF88(0.0f, 0.0f, 0.0f);              // marker icon position
+math::VEC3 lbl_801EDFA0(0.0f, 0.0f, 0.0f);              // up arrow position
+math::VEC3 lbl_801EDFB8(0.0f, 0.0f, 0.0f);              // down arrow position
 TPLPalette* sNewsTpl;                 // 0x80357554
 NewsData* gNewsData;
 HeadlineList* lbl_8035755C;          // 0x8035755C
@@ -391,7 +391,7 @@ GlobePin* lbl_80357580;               // 0x80357580
 NewsTexture* sSourceLogo;             // 0x80357584
 void* sHeaderFontData;                // 0x80357588
 ut::Font* gHeaderFont;
-math::VEC2 sArticleSize;              // 0x80357590
+math::VEC2 sArticleSize(0.0f, 0.0f);              // 0x80357590
 s32 lbl_80357598;                     // screen mode
 s32 sScrollLine;                      // 0x8035759C
 s32 lbl_803575A0;
@@ -416,7 +416,7 @@ f32 lbl_803575D0;                    // 0x803575D0
 f32 lbl_803575D4;
 f32 lbl_803575D8;
 f32 lbl_803575DC;
-u32 lbl_803575E0;                   // 0x803575E0
+s32 lbl_803575E0;                   // 0x803575E0
 u32 sNumPins;                         // 0x803575E4
 s32 gCurrentTime;
 void* sHeapBlock1;                    // 0x803575EC
@@ -441,14 +441,54 @@ bool gLargeFont;
 bool sSettingsReady;                  // 0x80357621
 ut::Color gSeparatorColor(80, 80, 80, 255);
 
-#define C(v) ut::Color(v)
-PaneButtonColors lbl_801EE270[4] = {
-    {C(0xD8D8D800), C(0xD8D8D800), C(0xD8D8D800), C(0x47C52800), C(0x00A2DE00), C(0xD8D8D800),
-     C(0xFFFFFF00), C(0xFFFFFF00), C(0x8C000000), C(0xFFFFFF00), C(0xD8D8D800), C(0xD8D8D800),
-     C(0xD8D8D800), C(0xD8D8D800), C(0x47C52800), 0, 0, C(0x00A2DE00), C(0xD8D8D800),
-     C(0xFFFFFF00)},
-};
-#undef C
+// Colours of the layout buttons (passed to PaneButton by the screens).
+static const GXColor cBtnBaseTop = {0x00, 0x00, 0x00, 0x00};
+static const GXColor cBtnBaseBottom = {0x8C, 0xCB, 0x9A, 0x00};
+static const GXColor cBtnIconTop = {0x00, 0x00, 0x00, 0x00};
+static const GXColor cBtnIconBottom = {0xD8, 0xD8, 0xD8, 0x00};
+static const GXColor cBtnText = {0xD8, 0xD8, 0xD8, 0x00};
+static const GXColor cBtnBaseTopHover0 = {0xD8, 0xD8, 0xD8, 0x00};
+static const GXColor cBtnBaseTopHover1 = {0x47, 0xC5, 0x28, 0x00};
+static const GXColor cBtnBaseTopHover2 = {0x00, 0xA2, 0xDE, 0x00};
+static const GXColor cBtnBaseTopHover3 = {0xD8, 0xD8, 0xD8, 0x00};
+static const GXColor cBtnBaseBottomHover = {0xFF, 0xFF, 0xFF, 0x00};
+static const GXColor cBtnIconTopHover = {0xFF, 0xFF, 0xFF, 0x00};
+static const GXColor cBtnIconBottomHover = {0x00, 0x00, 0x00, 0x00};
+static const GXColor cBtnTextHover = {0x00, 0x00, 0x00, 0x00};
+static const GXColor cBtnBaseTopSelect = {0x8C, 0x00, 0x00, 0x00};
+static const GXColor cBtnBaseBottomSelect = {0xFF, 0xFF, 0xFF, 0x00};
+static const GXColor cBtnIconTopSelect = {0xD8, 0xD8, 0xD8, 0x00};
+static const GXColor cBtnIconBottomSelect = {0xD8, 0xD8, 0xD8, 0x00};
+static const GXColor cBtnTextSelect = {0xD8, 0xD8, 0xD8, 0x00};
+static const GXColor cBtnUnk3C0 = {0xD8, 0xD8, 0xD8, 0x00};
+static const GXColor cBtnUnk3C1 = {0x47, 0xC5, 0x28, 0x00};
+static const GXColor cBtnUnk3C2 = {0x00, 0xA2, 0xDE, 0x00};
+static const GXColor cBtnUnk3C3 = {0xD8, 0xD8, 0xD8, 0x00};
+static const GXColor cBtnUnk40 = {0xFF, 0xFF, 0xFF, 0x00};
+static const GXColor cBtnIconTopBlend0 = {0xFF, 0xFF, 0xFF, 0x00};
+static const GXColor cBtnIconTopBlend1 = {0xFF, 0xFF, 0xFF, 0x00};
+static const GXColor cBtnIconTopBlend2 = {0xFF, 0xFF, 0xFF, 0x00};
+static const GXColor cBtnIconTopBlend3 = {0x00, 0x00, 0x00, 0x00};
+static const GXColor cBtnIconBottomBlend0 = {0x00, 0x00, 0x00, 0x00};
+static const GXColor cBtnIconBottomBlend1 = {0x00, 0x00, 0x00, 0x00};
+static const GXColor cBtnIconBottomBlend2 = {0x00, 0x00, 0x00, 0x00};
+static const GXColor cBtnIconBottomBlend3 = {0xD8, 0xD8, 0xD8, 0x00};
+static const GXColor cBtnTextBlend0 = {0x00, 0x00, 0x00, 0x00};
+static const GXColor cBtnTextBlend1 = {0x00, 0x00, 0x00, 0x00};
+static const GXColor cBtnTextBlend2 = {0xD8, 0xD8, 0xD8, 0x00};
+static const GXColor cBtnTextBlend3 = {0xD8, 0xD8, 0xD8, 0x00};
+
+#define BTN_COLORS(n)                                                                          \
+    {                                                                                          \
+        cBtnBaseTop, cBtnBaseBottom, cBtnIconTop, cBtnIconBottom, cBtnText,                    \
+            cBtnBaseTopHover##n, cBtnBaseBottomHover, cBtnIconTopHover, cBtnIconBottomHover,   \
+            cBtnTextHover, cBtnBaseTopSelect, cBtnBaseBottomSelect, cBtnIconTopSelect,         \
+            cBtnIconBottomSelect, cBtnTextSelect, *(const u32*)&cBtnUnk3C##n,                  \
+            *(const u32*)&cBtnUnk40, cBtnIconTopBlend##n, cBtnIconBottomBlend##n,              \
+            cBtnTextBlend##n                                                                   \
+    }
+PaneButtonColors lbl_801EE270[4] = {BTN_COLORS(0), BTN_COLORS(1), BTN_COLORS(2), BTN_COLORS(3)};
+#undef BTN_COLORS
 
 s32 lbl_80356970 = 3;                 // text size
 s32 sSourceIconType = 1;                 // article icon type
@@ -463,7 +503,7 @@ const f32 lbl_801922D0[10] = {0.6f, 0.7f, 0.8f, 0.9f, 1.0f, 1.1f, 1.2f, 1.3f, 1.
 
 static const s32 sLinesPerPage[10] = {7, 6, 6, 5, 4, 4, 3, 3, 2, 2};
 static const u32 sFadeParam[4] = {0x005C1000, 0x00280000, 0, 0x00280000};
-static const u32 sBarColors[3] = {0x00FF884B, 0x0040B420, 0};
+static const GXColor sBarColors[3] = {{0x00, 0xFF, 0x88, 0x4B}, {0x00, 0x40, 0xB4, 0x20}, {0, 0, 0, 0}};
 static const u32 sLogoIndex[8] = {0x58, 0x5A, 0x56, 0x55, 0x59, 0x57, 0x54, 0};
 
 static f32 sMarkPosX = 0.0f;
@@ -483,8 +523,8 @@ void PostRetraceCallback(u32 retraceCount);
 void Pins_ResetStacks();
 void Pins_Sort();
 void FormatElapsedTime(s32 time);
-void Article_DrawDate(math::VEC2* pos, u8 alpha);
-void Article_DrawSourceAndDate(math::VEC2* pos, u8 alpha);
+void Article_DrawDate(math::VEC2* pos, s32 alpha);
+void Article_DrawSourceAndDate(math::VEC2* pos, s32 alpha);
 void SetupTexGX();
 u32 GetSourceIconIndex();
 
@@ -494,6 +534,17 @@ inline BOOL IsOutOfMemory() {
 
 void SetDPDAll(s32 value);
 BOOL Article_IsShort();
+
+static inline bool IsArticleShort() {
+    return (s32)(sCreditView->mY + 60.0f) <= (s32)sArticleSize.y;
+}
+
+static inline s32 GetMaxScrollLine() {
+    s32 max = (lbl_80357568->mNumLines + sBodyView->mNumLines + sCreditView->mNumLines + 1) -
+              sLinesPerPage[lbl_80356970];
+    return max & ~(max >> 31);
+}
+
 
 // ---------------------------------------------------------------------------
 
@@ -1337,9 +1388,9 @@ void Bgm_PlaySlideshow() {
     sBgmVolume[3].mStep = Abs(1.0f - sBgmVolume[3].mValue) / 60.0f;
 }
 
-void Bgm_SetSlideshowVolume(f32 volume) {
+void Bgm_SetSlideshowVolume(f64 volume) {
     sBgmVolume[3].mTarget = volume;
-    sBgmVolume[3].mStep = Abs(volume - sBgmVolume[3].mValue) / 120.0f;
+    sBgmVolume[3].mStep = Abs((f32)volume - sBgmVolume[3].mValue) / 120.0f;
 }
 
 BOOL NewsScene::StateMain() {
@@ -1914,8 +1965,9 @@ BOOL HeadlineList_IsAtTop() {
 }
 
 BOOL HeadlineList_IsAtBottom() {
-    if (lbl_8035755C) {
-        return lbl_8035755C->GetMaxIndex() <= lbl_8035755C->mIndex;
+    HeadlineList* list = lbl_8035755C;
+    if (list) {
+        return list->GetMaxIndex() <= list->mIndex;
     }
     return FALSE;
 }
@@ -1979,9 +2031,9 @@ void Globe_ResetFocus() {
     }
 }
 
-void Globe_SetZoom(f32 arg) {
+void Globe_SetZoom(s32 level) {
     if (lbl_8035775C) {
-        fn_8004E0B8(lbl_8035775C, arg);
+        fn_8004E0B8(lbl_8035775C, level);
     }
 }
 
@@ -2266,12 +2318,12 @@ BOOL Article_Set(NewsArticle* article, const wchar_t* title, BOOL withPicture, s
     return TRUE;
 }
 
-void Article_LayoutHeadline(s32 arg0, s32 arg1) {
-    fn_80028DC8(lbl_80357568, arg0, arg1, 0.0f);
+void Article_LayoutHeadline(s32 arg0, s32 arg1, f32 arg2) {
+    fn_80028DC8(lbl_80357568, arg0, arg1, arg2);
 }
 
 void Article_Layout(s32 arg, f32 y) {
-    if (Article_IsShort()) {
+    if ((s32)(60.0f + sCreditView->mY) <= (s32)sArticleSize.y) {
         sScrollLine = 0;
     }
     fn_80028DC8(lbl_80357568, arg, 0, y);
@@ -2354,19 +2406,16 @@ void Article_SetSelection(s32 arg0, s32 arg1, s32 arg2, s32 arg3) {
     fn_80029E30(sCreditView, arg0, arg1, arg2, arg3);
 }
 
-void Article_DrawHeadline(math::VEC2* pos, s32 arg) {
-    fn_800284C0(lbl_80357568, pos, arg, 1.0f, 1.0f);
+void Article_DrawHeadline(math::VEC2* pos, s32 arg, f32 alpha) {
+    fn_800284C0(lbl_80357568, pos, arg, alpha, 1.0f);
 }
 
 void Article_DrawFrame(math::VEC2* pos, s32 type, f32 alpha) {
-    u8 a = 255.0f * alpha;
-    ut::Rect rect;
-    rect.left = 14.0f + pos->x;
-    rect.top = pos->y - 20.0f;
-    rect.right = (pos->x + sArticleSize.x) - 14.0f;
-    rect.bottom = 0.0f;
-    ut::Color color = *(ut::Color*)&sBarColors[type];
+    s32 a = 255.0f * alpha;
+    f32 width = GetScreenWidth() - GetSideMargin() * 2;
+    ut::Color color = sBarColors[type];
     ut::Color black(0, 0, 0, a);
+    ut::Rect rect(14.0f + pos->x, pos->y - 20.0f, (pos->x + sArticleSize.x) - 14.0f, 0.0f);
     color.a = a;
     SetupTexGX();
     if (type) {
@@ -2382,20 +2431,20 @@ void Article_DrawFrame(math::VEC2* pos, s32 type, f32 alpha) {
     Draw2D_FillRect(&rect, &black);
 
     switch (sSourceLayout) {
-    case 1:
-    case 2:
-        Article_DrawSourceAndDate(pos, a);
-        break;
     case 3:
     case 4:
     case 5:
     case 6:
         Article_DrawDate(pos, a);
         break;
+    case 1:
+    case 2:
+        Article_DrawSourceAndDate(pos, a);
+        break;
     }
 }
 
-void Article_DrawDate(math::VEC2* pos, u8 alpha) {
+void Article_DrawDate(math::VEC2* pos, s32 alpha) {
     f32 maxWidth = sArticleSize.x - 20.0f;
     math::VEC2 p(14.0f + pos->x, pos->y - 20.0f);
     lbl_8020E4C0.SetFont(*gSysFont);
@@ -2417,7 +2466,7 @@ void Article_DrawDate(math::VEC2* pos, u8 alpha) {
     }
 }
 
-void Article_DrawSourceAndDate(math::VEC2* pos, u8 alpha) {
+void Article_DrawSourceAndDate(math::VEC2* pos, s32 alpha) {
     f32 maxWidth = sArticleSize.x - 20.0f;
     ut::Color white(255, 255, 255, alpha);
     math::VEC2 p(14.0f + pos->x, pos->y - 20.0f);
@@ -2576,25 +2625,19 @@ s32 Article_GetLineAt(const f32& offset) {
 }
 
 
-static inline s32 GetMaxScrollLine() {
-    s32 max = (lbl_80357568->mNumLines + sBodyView->mNumLines + sCreditView->mNumLines + 1) -
-              sLinesPerPage[lbl_80356970];
-    return max & ~(max >> 31);
-}
-
 BOOL Article_IsShort() {
-    return (s32)(60.0f + sCreditView->mY) <= (s32)sArticleSize.y;
+    return IsArticleShort();
 }
 
 void Article_PageUp(s32 size, const f32& offset) {
-    if (Article_IsShort()) {
+    if ((s32)(60.0f + sCreditView->mY) <= (s32)sArticleSize.y) {
         sScrollLine = 0;
         return;
     }
-    s32 lines = sLinesPerPage[size];
-    s32 line = Article_GetLineAt(offset) - lines;
+    s32 line = Article_GetLineAt(offset);
+    line -= sLinesPerPage[size];
     if (line >= sScrollLine) {
-        line = sScrollLine - lines;
+        line = sScrollLine - sLinesPerPage[size];
     }
     sScrollLine = line;
     if (line < 0) {
@@ -2603,7 +2646,7 @@ void Article_PageUp(s32 size, const f32& offset) {
 }
 
 void Article_PageDown(s32 size, const f32& offset) {
-    if (Article_IsShort()) {
+    if ((s32)(60.0f + sCreditView->mY) <= (s32)sArticleSize.y) {
         sScrollLine = 0;
         return;
     }
@@ -2619,7 +2662,7 @@ BOOL Article_IsAtTop() {
 }
 
 BOOL Article_IsAtBottom() {
-    if (Article_IsShort()) {
+    if ((s32)(60.0f + sCreditView->mY) <= (s32)sArticleSize.y) {
         return TRUE;
     }
     return sScrollLine == GetMaxScrollLine();
@@ -3099,22 +3142,28 @@ void OnExitRequested() {
 }
 
 u32 GetSourceIconIndex() {
+    u32 index = -1;
+    if (sSourceIconType != 0) {
     switch (sSourceIconType) {
-    case 0:
-        return -1;
-    case 1:
-        return 0x3F;
-    case 2:
-        return 0x40;
     case 3:
-        return 0x3D;
+        index = 0x3D;
+        break;
+    case 1:
+        index = 0x3F;
+        break;
+    case 2:
+        index = 0x40;
+        break;
     case 4:
-        return 0x3A;
+        index = 0x3A;
+        break;
     case 5:
-        return 0x3B;
+        index = 0x3B;
+        break;
     case 6:
-        return 0x3C;
-    default:
-        return -1;
+        index = 0x3C;
+        break;
     }
+    }
+    return index;
 }
