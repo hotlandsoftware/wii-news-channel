@@ -3044,14 +3044,14 @@ BOOL Article_GetZoomedPictureRect(ut::Rect* rect) {
     return TRUE;
 }
 
-void Article_DrawZoomedPicture(ut::Rect* from, ut::Rect* to, f32 t) {
+void Article_DrawZoomedPicture(const ut::Rect& from, const ut::Rect& to, f32 t) {
     NewsTexture* tex = sBodyView->mTexture;
     if (tex) {
-        f32 left = from->left;
-        f32 top = from->top;
-        f32 right = from->right;
-        math::VEC3 pos(left + t * (to->left - left), top + t * (to->top - top), 0.0f);
-        f32 scale = ((right + t * (to->right - right)) - pos.x) / tex->width;
+        f32 left = from.left;
+        f32 top = from.top;
+        f32 right = from.right;
+        math::VEC3 pos(left + t * (to.left - left), top + t * (to.top - top), 0.0f);
+        f32 scale = ((right + t * (to.right - right)) - pos.x) / tex->width;
         Draw2D_SetupGX();
         Draw2D_SetOrtho();
         GXSetZMode(GX_FALSE, GX_NEVER, GX_FALSE);
@@ -3059,7 +3059,7 @@ void Article_DrawZoomedPicture(ut::Rect* from, ut::Rect* to, f32 t) {
         const wchar_t* caption = sBodyView->mCaption;
         if (caption) {
             ut::TextWriterBase<wchar_t> writer;
-            f32 x = to->right;
+            f32 x = to.right;
             if (x > GetScreenWidth() - GetSideMargin()) {
                 x = GetScreenWidth() - GetSideMargin();
             }
@@ -3068,7 +3068,7 @@ void Article_DrawZoomedPicture(ut::Rect* from, ut::Rect* to, f32 t) {
             writer.SetFont(*gSysFont);
             writer.SetupGX();
             writer.SetTextColor(ut::Color(192, 192, 192, 255.0f * t));
-            writer.SetCursor(x - 4.0f * (1.0f - t), to->bottom);
+            writer.SetCursor(x - 4.0f * (1.0f - t), to.bottom);
             writer.SetDrawFlag(0x22);
             writer.SetScale(0.5f);
             f32 width = writer.CalcStringWidth(caption);
@@ -3136,13 +3136,13 @@ void FormatElapsedB_NL(s32 minutes, wchar_t* buf, u32 size) {
              minutes % 60);
 }
 
-void DrawTabRect(ut::Rect* rect, u8 alpha, f32 z) {
+void DrawTabRect(const ut::Rect& rect, u8 alpha, f32 z) {
     u32 w = TPL_GetWidth(gCommonTpl, 5);
-    f32 left = rect->left;
-    f32 right = rect->right;
-    f32 top = rect->top;
+    f32 left = rect.left;
+    f32 right = rect.right;
+    f32 top = rect.top;
     f32 x0 = left - w;
-    f32 bottom = rect->bottom;
+    f32 bottom = rect.bottom;
     ut::Color unused(255, 255, 255, alpha);
     ut::Color color(255, 255, 255, alpha);
     GXSetTevColor(GX_TEVREG0, color);
