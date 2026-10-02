@@ -1414,7 +1414,7 @@ config.libs = [
             Object(Matching, "news/msg/MsgToTop.cpp"),
             Object(NonMatching, "news/ShootingStars.cpp"),
             Object(Matching, "news/GlobePoint.cpp"),
-            Object(NonMatching, "news/GlobeCamera.cpp"),
+            Object(Matching, "news/SlideItem.cpp"),
             Object(NonMatching, "news/GlobePin.cpp"),
         ],
     },
