@@ -1053,12 +1053,12 @@ config.libs = [
     {
         "lib": "nw4r_ef2",
         "mw_version": "GC/3.0a5.2",
-        "cflags": cflags_nw4r,
+        "cflags": cflags_nw4r_g3d,
         "progress_category": "sdk",
         "objects": [
-            Object(NonMatching, "nw4r/ef/ef_util.cpp"),
-            Object(NonMatching, "nw4r/ef/ef_memorymanager.cpp"),
-            Object(NonMatching, "nw4r/ef/ef_emitterform.cpp"),
+            Object(Matching, "nw4r/ef/ef_util.cpp"),
+            Object(Matching, "nw4r/ef/ef_memorymanager.cpp"),
+            Object(Matching, "nw4r/ef/ef_emitterform.cpp"),
             Object(NonMatching, "nw4r/ef/ef_creationqueue.cpp"),
             Object(NonMatching, "nw4r/ef/emform/ef_emform.cpp"),
             Object(NonMatching, "nw4r/ef/emform/ef_point.cpp"),
