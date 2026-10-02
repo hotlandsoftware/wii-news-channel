@@ -80,11 +80,11 @@ public:
 
     virtual void SendClosing(); // at 0x8
     virtual void DestroyFunc(); // at 0xC
-    virtual bool Initialize(u16 life, math::VEC3 pos, math::VEC3 vel,
-                            ParticleManager* pManager,
-                            const math::MTX34* pSpace, float momentum,
-                            const EmitterInheritSetting* pSetting,
-                            Particle* pReferencePtcl); // at 0x10
+    // Older revision (News Channel): not virtual.
+    bool Initialize(u16 life, math::VEC3 pos, math::VEC3 vel,
+                    ParticleManager* pManager, const math::MTX34* pSpace,
+                    float momentum, const EmitterInheritSetting* pSetting,
+                    Particle* pReferencePtcl);
 
     ParticleParameter* GetParticleParameter() {
         return &mParameter;

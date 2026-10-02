@@ -1059,7 +1059,7 @@ config.libs = [
             Object(Matching, "nw4r/ef/ef_util.cpp"),
             Object(Matching, "nw4r/ef/ef_memorymanager.cpp"),
             Object(Matching, "nw4r/ef/ef_emitterform.cpp"),
-            Object(NonMatching, "nw4r/ef/ef_creationqueue.cpp"),
+            Object(Matching, "nw4r/ef/ef_creationqueue.cpp"),
             Object(NonMatching, "nw4r/ef/emform/ef_emform.cpp"),
             Object(NonMatching, "nw4r/ef/emform/ef_point.cpp"),
             Object(NonMatching, "nw4r/ef/emform/ef_line.cpp"),

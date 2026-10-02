@@ -1,5 +1,7 @@
 #include <nw4r/ef.h>
 
+#include <revolution/os.h>
+
 namespace nw4r {
 namespace ef {
 
@@ -11,6 +13,7 @@ void CreationQueue::AddParticleCreation(const EmitterInheritSetting* pSetting,
                                         u16 calcRemain) {
 
     if (mNumItem >= QUEUE_SIZE) {
+        OSReport("EffectLib: CreationQueue Full\n");
         return;
     }
 
@@ -33,6 +36,7 @@ void CreationQueue::AddEmitterCreation(const EmitterInheritSetting* pSetting,
                                        u16 calcRemain) {
 
     if (mNumItem >= QUEUE_SIZE) {
+        OSReport("EffectLib: CreationQueue Full\n");
         return;
     }
 

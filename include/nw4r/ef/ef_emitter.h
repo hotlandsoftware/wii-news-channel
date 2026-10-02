@@ -110,18 +110,18 @@ public:
     virtual void SendClosing(); // at 0x8
     virtual void DestroyFunc(); // at 0xC
 
-    virtual bool Initialize(Effect* pParent, EmitterResource* pResource,
-                            u8 drawWeight); // at 0x10
+    // Older revision (News Channel): only SendClosing and DestroyFunc are
+    // virtual.
+    bool Initialize(Effect* pParent, EmitterResource* pResource, u8 drawWeight);
 
-    virtual Emitter* CreateEmitter(EmitterResource* pResource,
-                                   EmitterInheritSetting* pSetting,
-                                   Particle* pParticle,
-                                   u16 calcRemain); // at 0x14
+    Emitter* CreateEmitter(EmitterResource* pResource,
+                           EmitterInheritSetting* pSetting, Particle* pParticle,
+                           u16 calcRemain);
 
-    virtual void CalcEmitter();   // at 0x18
-    virtual void CalcParticle();  // at 0x1C
-    virtual void CalcEmission();  // at 0x20
-    virtual void CalcBillboard(); // at 0x24
+    void CalcEmitter();
+    void CalcParticle();
+    void CalcEmission();
+    void CalcBillboard();
 
     bool Closing(ParticleManager* pManager);
 
