@@ -93,6 +93,10 @@ static NWC24Err CheckDlTask(const NWC24iDlTask* pTask, BOOL wantWrite) {
     return NWC24_OK;
 }
 
+static u16 GetMaxTasks(void) {
+    return NWC24iGetCachedDlHeader()->maxTasks;
+}
+
 static BOOL IsGroupWritable(u16 groupId, u32 flags) {
     return (flags & DL_FLAG_GROUP_WRITABLE) && groupId == NWC24GetGroupId();
 }
@@ -106,7 +110,10 @@ static BOOL IsPrivateId(u16 id) {
 }
 
 static BOOL IsOctetStream(NWC24DlType type) {
-    return type == NWC24_DLTYPE_OCTETSTREAM_V1 || type == NWC24_DLTYPE_OCTETSTREAM_V2;
+    if (type == NWC24_DLTYPE_OCTETSTREAM_V1 || type == NWC24_DLTYPE_OCTETSTREAM_V2) {
+        return TRUE;
+    }
+    return FALSE;
 }
 
 static NWC24Err CheckDlUrl(const char* pUrl) {
@@ -411,6 +418,11 @@ NWC24Err NWC24SetDlOption(NWC24DlTask* pTask, u32 flags) {
         }
         break;
     }
+    case NWC24_DLTYPE_MULTIPART_V2:
+    case NWC24_DLTYPE_OCTETSTREAM_V2:
+    default: {
+        break;
+    }
     }
 
     pTaskImpl->flags = flags;
@@ -527,7 +539,7 @@ NWC24Err NWC24SetDlSubTask(NWC24DlTask* pTask, NWC24DlSubTaskType type, u32 mask
         return result;
     }
 
-    if (type > NWC24_DL_STTYPE_TIME_DAY || (type != NWC24_DL_STTYPE_NONE && mask == 0)) {
+    if (type >= 5 || (type != NWC24_DL_STTYPE_NONE && mask == 0)) {
         return NWC24_ERR_INVALID_VALUE;
     }
 
@@ -618,10 +630,14 @@ NWC24Err NWC24IterateDlTask(u16* pId, BOOL first) {
     return NWC24_ERR_DONE;
 }
 
+static BOOL IsKeyBefore(s32 lhs, s32 rhs, BOOL desc) {
+    return desc ? rhs < lhs : lhs < rhs;
+}
+
 NWC24Err NWC24iIterateDlTaskSorted(NWC24iDlSortIter* pIter, u16* pId) {
-    NWC24iDlKeyFunc getKey;
-    BOOL found = FALSE;
     BOOL desc;
+    BOOL found = FALSE;
+    NWC24iDlKeyFunc getKey;
     NWC24Err result;
     u16 id;
     s32 key;
@@ -656,8 +672,8 @@ NWC24Err NWC24iIterateDlTaskSorted(NWC24iDlSortIter* pIter, u16* pId) {
             if (key == pIter->cur && pIter->lastId < id) {
                 *pId = id;
                 pIter->cur = key;
-                pIter->prev = key;
                 pIter->lastId = id;
+                pIter->prev = key;
                 return NWC24_OK;
             }
         }
@@ -674,7 +690,7 @@ NWC24Err NWC24iIterateDlTaskSorted(NWC24iDlSortIter* pIter, u16* pId) {
     for (result = NWC24IterateDlTask(&id, TRUE); result >= 0; result = NWC24IterateDlTask(&id, FALSE)) {
         key = getKey(id);
 
-        if ((desc ? key < pIter->prev : pIter->prev < key) && (desc ? pIter->cur < key : key < pIter->cur)) {
+        if (IsKeyBefore(pIter->prev, key, desc) && IsKeyBefore(key, pIter->cur, desc)) {
             found = TRUE;
             *pId = id;
             pIter->cur = key;
@@ -691,8 +707,7 @@ NWC24Err NWC24iIterateDlTaskSorted(NWC24iDlSortIter* pIter, u16* pId) {
     return NWC24_ERR_DONE;
 }
 
-NWC24Err NWC24UpdateDlTask(NWC24DlTask* pTask) {
-    NWC24iDlTask* pTaskImpl = (NWC24iDlTask*)pTask;
+static inline NWC24Err UpdateDlTask(NWC24iDlTask* pTaskImpl) {
     NWC24Err result;
 
     result = CheckDlTask(pTaskImpl, TRUE);
@@ -722,6 +737,10 @@ NWC24Err NWC24UpdateDlTask(NWC24DlTask* pTask) {
     }
 
     return WriteDlTask(pTaskImpl);
+}
+
+NWC24Err NWC24UpdateDlTask(NWC24DlTask* pTask) {
+    return UpdateDlTask((NWC24iDlTask*)pTask);
 }
 
 NWC24Err NWC24DeleteDlTask(NWC24DlTask* pTask) {
@@ -797,16 +816,9 @@ NWC24Err NWC24GetDlNextTime(const NWC24DlTask* pTask, s64* pTime) {
 static NWC24Err InitDlSortIter(NWC24iDlSortIter* pIter, u32 key, BOOL desc) {
     memset(pIter, 0, sizeof(NWC24iDlSortIter));
 
-    pIter->mode = key;
-    if (desc) {
-        pIter->mode |= 0x80000000;
-        pIter->cur = 0x80000001;
-        pIter->prev = 0x7FFFFFFF;
-    } else {
-        pIter->cur = 0x7FFFFFFF;
-        pIter->prev = 0x80000001;
-    }
-
+    pIter->cur = desc ? 0x80000001 : 0x7FFFFFFF;
+    pIter->prev = desc ? 0x7FFFFFFF : 0x80000001;
+    pIter->mode = key | (desc ? 0x80000000 : 0);
     pIter->lastId = -1;
     pIter->first = TRUE;
     pIter->valid = TRUE;
@@ -824,26 +836,31 @@ NWC24Err NWC24iDeleteOldestDlTask(void) {
         return result;
     }
 
-    do {
-        result = NWC24iIterateDlTaskSorted(&iter, &id);
-    } while (result == NWC24_OK && IsPrivateId(id));
-
-    if (result < 0) {
-        if (result == NWC24_ERR_DONE) {
-            result = NWC24_ERR_FAILED;
+    while ((result = NWC24iIterateDlTaskSorted(&iter, &id)) == NWC24_OK) {
+        if (!IsPrivateId(id)) {
+            break;
         }
-        return result;
     }
 
-    result = NWC24GetDlTask(&task, id);
-    if (result < 0) {
-        return result;
+    if (result >= 0) {
+        result = NWC24GetDlTask(&task, id);
+        if (result < 0) {
+            return result;
+        }
+
+        result = NWC24DeleteDlTaskForced(&task);
+        if (result < 0) {
+            return result;
+        }
+    } else if (result == NWC24_ERR_DONE) {
+        result = NWC24_ERR_FAILED;
     }
 
-    return NWC24DeleteDlTaskForced(&task);
+    return result;
 }
 
-static NWC24Err GetDlTitleDir(const NWC24iDlTask* pTask, char* pBuf, u32 size) {
+static NWC24Err GetDlTitleDir(const NWC24DlTask* pPublic, char* pBuf, u32 size) {
+    const NWC24iDlTask* pTask = (const NWC24iDlTask*)pPublic;
     NWC24Err result;
 
     result = CheckDlTask(pTask, FALSE);
@@ -863,28 +880,32 @@ static NWC24Err GetDlTitleDir(const NWC24iDlTask* pTask, char* pBuf, u32 size) {
     return NWC24_OK;
 }
 
-NWC24Err NWC24GetDlVfPath(const NWC24DlTask* pTask, char* pBuf, u32 size) {
-    const NWC24iDlTask* pTaskImpl = (const NWC24iDlTask*)pTask;
+static NWC24Err GetDlVfPath(const NWC24iDlTask* pTask, char* pBuf, u32 size) {
+    const char* pFileName = DL_VF_FILE;
     NWC24Err result;
     u32 len;
 
-    result = CheckDlTask(pTaskImpl, FALSE);
+    result = CheckDlTask(pTask, FALSE);
     if (result != NWC24_OK) {
         return result;
     }
 
-    if (pTaskImpl->appId == 0) {
+    if (pTask->appId == 0) {
         return NWC24_ERR_INVALID_VALUE;
     }
 
-    result = GetDlTitleDir(pTaskImpl, pBuf, size);
+    result = GetDlTitleDir((const NWC24DlTask*)pTask, pBuf, size);
     if (result < 0) {
         return result;
     }
 
     len = strlen(pBuf);
-    snprintf(pBuf + len, size - len, "/%s", DL_VF_FILE);
+    snprintf(pBuf + len, size - len, "/%s", pFileName);
     return NWC24_OK;
+}
+
+NWC24Err NWC24GetDlVfPath(const NWC24DlTask* pTask, char* pBuf, u32 size) {
+    return GetDlVfPath((const NWC24iDlTask*)pTask, pBuf, size);
 }
 
 NWC24Err NWC24CreateDlVf(const NWC24DlTask* pTask, u32 size) {
@@ -900,7 +921,7 @@ NWC24Err NWC24CreateDlVf(const NWC24DlTask* pTask, u32 size) {
         return NWC24_ERR_INVALID_VALUE;
     }
 
-    NWC24GetDlVfPath(pTask, path, sizeof(path));
+    GetDlVfPath((const NWC24iDlTask*)pTask, path, sizeof(path));
     return NWC24CreateVF(path, size);
 }
 
@@ -1147,7 +1168,7 @@ static NWC24Err AddDlTask(NWC24iDlTask* pTask, u16 minId, u16 maxId) {
 
     while (TRUE) {
         if (pTask->id != 0xFFFF) {
-            return NWC24UpdateDlTask((NWC24DlTask*)pTask);
+            return UpdateDlTask(pTask);
         }
 
         result = AssignDlTaskId(pTask, minId, maxId);
