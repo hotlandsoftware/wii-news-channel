@@ -2,6 +2,7 @@
 #include <news/Draw2D.h>
 #include <news/PaneButton.h>
 #include <news/PaneLayout.h>
+#include <news/NewsData.h>
 #include <news/System.h>
 #include <nw4r/math/math_types.h>
 #include <nw4r/ut/ut_TextWriterBase.h>
@@ -19,6 +20,7 @@ extern "C" {
 void fn_800365C0();
 void fn_80048C80(Fader* fader, s32 frames); // fade in
 void fn_80048D20(Fader* fader, s32 frames); // fade out
+u32 fn_80044F08(); // current time in minutes
 }
 
 #define SAVE_PERM (NAND_PERM_RUSR | NAND_PERM_WUSR | NAND_PERM_RGRP | NAND_PERM_WGRP | NAND_PERM_ROTH)
@@ -426,4 +428,413 @@ void FormatSaveTime(wchar_t* buf, u32 size, OSTime time, s32 msgType, u8 languag
                  cal.min);
         break;
     }
+}
+
+s32 CheckNewsFiles(NewsHeader** files, u32* sizes, s32* current, u32* mask) {
+    s32 result = 0;
+    u32 bad = 0;
+    u32 now = fn_80044F08();
+    OSGetTick();
+
+    NewsHeader* headers[NEWS_FILE_MAX];
+    NewsTextBuffer* articles[NEWS_FILE_MAX];
+    NewsSourceRec* sources[NEWS_FILE_MAX];
+    NewsLocationRec* locations[NEWS_FILE_MAX];
+    NewsPictureRec* pictures[NEWS_FILE_MAX];
+
+    for (s32 i = 0; i < NEWS_FILE_MAX; i++) {
+        NewsHeader* file = files[i];
+        if (file != NULL) {
+            if ((u32)file & 3) {
+                headers[i] = NULL;
+                result = -1;
+                break;
+            }
+            headers[i] = file;
+            u8* p = (u8*)file + headers[i]->articlesOfs;
+            if ((u32)p & 3) {
+                articles[i] = NULL;
+                result = -1;
+                break;
+            }
+            articles[i] = (NewsTextBuffer*)p;
+            p = (u8*)file + headers[i]->sourcesOfs;
+            if ((u32)p & 3) {
+                sources[i] = NULL;
+                result = -1;
+                break;
+            }
+            sources[i] = (NewsSourceRec*)p;
+            p = (u8*)file + headers[i]->locationsOfs;
+            if ((u32)p & 3) {
+                locations[i] = NULL;
+                result = -1;
+                break;
+            }
+            locations[i] = (NewsLocationRec*)p;
+            p = (u8*)file + headers[i]->picturesOfs;
+            if ((u32)p & 3) {
+                pictures[i] = NULL;
+                result = -1;
+                break;
+            }
+            pictures[i] = (NewsPictureRec*)p;
+        } else {
+            headers[i] = NULL;
+            articles[i] = NULL;
+            sources[i] = NULL;
+            locations[i] = NULL;
+            pictures[i] = NULL;
+        }
+    }
+    *mask = 0xFFFFFF;
+    if (result == -1) {
+        return result;
+    }
+
+    for (s32 i = 0; i < NEWS_FILE_MAX; i++) {
+        NewsHeader* header = headers[i];
+        if (header != NULL) {
+            if (header->fileSize != sizes[i]) {
+                return -1;
+            }
+            if (header->crc != NETCalcCRC32((u8*)files[i] + 0xC, sizes[i] - 0xC)) {
+                return -1;
+            }
+        }
+    }
+
+    for (s32 i = 0; i < NEWS_FILE_MAX; i++) {
+        NewsHeader* header = headers[i];
+        if (header == NULL) {
+            continue;
+        }
+        if (header->version & 0xFFFF0000) {
+            return -3;
+        }
+        if (header->expireTime < now && header->messageOfs == 0) {
+            bad |= 1 << i;
+            if (result == 0) {
+                result = -2;
+            }
+        }
+        u32 size = header->fileSize;
+        if (header->messageOfs >= size) {
+            return -1;
+        }
+        if (header->messageOfs & 1) {
+            return -1;
+        }
+        if (header->mTimestamp > now + 1440) {
+            result = -1;
+        }
+        s32 n;
+        for (n = 0; n < 16; n++) {
+            if (header->languages[n] == 0xFF) {
+                break;
+            }
+        }
+        if (n >= 16) {
+            result = -1;
+        }
+        for (s32 k = 0; k < n; k++) {
+            if (header->languages[k] >= 7) {
+                result = -1;
+            }
+        }
+        if (header->unk2D >= 2) {
+            result = -1;
+        }
+        if (header->unk2E >= 2) {
+            result = -1;
+        }
+        if (header->topicsOfs + header->numTopics * sizeof(NewsTopicRec) > size) {
+            result = -1;
+        }
+        if (header->topicsOfs & 3) {
+            result = -1;
+        }
+        if (header->articlesOfs + header->numArticles * sizeof(NewsTextBuffer) > size) {
+            result = -1;
+        }
+        if (header->articlesOfs & 3) {
+            result = -1;
+        }
+        if (header->sourcesOfs + header->numSources * sizeof(NewsSourceRec) > size) {
+            result = -1;
+        }
+        if (header->sourcesOfs & 3) {
+            result = -1;
+        }
+        if (header->locationsOfs + header->numLocations * sizeof(NewsLocationRec) > size) {
+            result = -1;
+        }
+        if (header->locationsOfs & 3) {
+            result = -1;
+        }
+        if (header->picturesOfs + header->numPictures * sizeof(NewsPictureRec) > size) {
+            result = -1;
+        }
+        if (header->picturesOfs & 3) {
+            result = -1;
+        }
+    }
+
+    for (s32 i = 0; i < NEWS_FILE_MAX; i++) {
+        NewsHeader* cur = headers[i];
+        NewsHeader* prev = headers[(i + NEWS_FILE_MAX - 1) % NEWS_FILE_MAX];
+        NewsHeader* next = headers[(i + 1) % NEWS_FILE_MAX];
+        if (cur != NULL && prev != NULL && next != NULL) {
+            if (cur->id < prev->id && cur->id < next->id && prev->id < next->id) {
+                bad |= 1 << i;
+                if (result == 0) {
+                    result = -2;
+                }
+            }
+            if ((u32)cur->mTimestamp < (u32)prev->mTimestamp &&
+                (u32)cur->mTimestamp < (u32)next->mTimestamp &&
+                (u32)prev->mTimestamp < (u32)next->mTimestamp) {
+                bad |= 1 << i;
+                if (result == 0) {
+                    result = -2;
+                }
+            }
+        } else if (cur == NULL) {
+            bad = 0xFFFFFF;
+            result = -2;
+        }
+    }
+    if (bad != 0) {
+        OSCalendarTime cal;
+        NETGetUniversalCalendar(&cal);
+        bad |= 1 << cal.hour;
+    }
+    *mask = bad;
+    if (result == -1) {
+        return result;
+    }
+
+    u32 latest = 0;
+    s32 newest = -1;
+    for (s32 i = 0; i < NEWS_FILE_MAX; i++) {
+        if (headers[i] != NULL && latest < (u32)headers[i]->mTimestamp) {
+            latest = headers[i]->mTimestamp;
+            newest = i;
+        }
+    }
+    if (newest < 0) {
+        return -1;
+    }
+    *current = newest;
+
+    NewsHeader* header = headers[newest];
+    NewsTopicRec* topic = (NewsTopicRec*)((u8*)files[newest] + header->topicsOfs);
+    for (u32 t = 0; t < header->numTopics; t++, topic++) {
+        u32 entriesOfs = topic->entriesOfs;
+        if (entriesOfs & 3) {
+            result = -1;
+            break;
+        }
+        NewsEntryRec* entries = (NewsEntryRec*)((u8*)files[newest] + entriesOfs);
+        if (t > 0 && topic->nameOfs == 0) {
+            result = -1;
+            break;
+        }
+        if (topic->nameOfs >= header->fileSize) {
+            result = -1;
+            break;
+        }
+        if (topic->nameOfs & 1) {
+            result = -1;
+            break;
+        }
+        if (entriesOfs + topic->numEntries * sizeof(NewsEntryRec) > header->fileSize) {
+            result = -1;
+        }
+        for (u32 e = 0; e < topic->numEntries; e++) {
+            NewsEntryRec* entry = &entries[e];
+            s32 fileIdx = -1;
+            s32 articleIdx = -1;
+            BOOL remove = FALSE;
+            for (s32 k = 0; k < NEWS_FILE_MAX; k++) {
+                if (headers[k] != NULL && entry->fileId == headers[k]->id) {
+                    fileIdx = k;
+                    break;
+                }
+            }
+            if (fileIdx >= 0) {
+                NewsTextBuffer* text = articles[fileIdx];
+                for (u32 a = 0; a < headers[fileIdx]->numArticles; a++, text++) {
+                    if (entry->articleId == text->id) {
+                        articleIdx = a;
+                        break;
+                    }
+                }
+            }
+            if (fileIdx >= 0 && articleIdx >= 0) {
+                NewsTextBuffer* text = &articles[fileIdx][articleIdx];
+                NewsHeader* file = headers[fileIdx];
+                if (text->sourceIdx >= file->numSources && text->sourceIdx != 0xFFFFFFFF) {
+                    result = -1;
+                }
+                if (text->locationIdx >= file->numLocations && text->locationIdx != 0xFFFFFFFF) {
+                    result = -1;
+                }
+                u32 picFile = text->pictureFileId;
+                if (picFile != 0) {
+                    s32 picIdx = -1;
+                    for (s32 k = 0; k < NEWS_FILE_MAX; k++) {
+                        if (headers[k] != NULL && picFile == headers[k]->id) {
+                            picIdx = k;
+                            break;
+                        }
+                    }
+                    if (picIdx >= 0 && text->pictureIdx >= headers[picIdx]->numPictures &&
+                        text->pictureIdx != 0xFFFFFFFF) {
+                        result = -1;
+                    }
+                }
+                u32 textSize = text->size;
+                u32 textOfs = text->headlineOfs;
+                u32 fileSize = file->fileSize;
+                if (textOfs + textSize > fileSize) {
+                    result = -1;
+                }
+                if (textOfs & 1) {
+                    result = -1;
+                }
+                if (textSize == 0 && textOfs != 0) {
+                    result = -1;
+                }
+                textSize = text->unk24;
+                textOfs = text->bodyOfs;
+                if (textOfs + textSize > fileSize) {
+                    result = -1;
+                }
+                if (textOfs & 1) {
+                    result = -1;
+                }
+                if (textSize >= 20000) {
+                    remove = TRUE;
+                }
+                if (textSize == 0 && textOfs != 0) {
+                    result = -1;
+                }
+            } else {
+                remove = TRUE;
+            }
+            if (remove) {
+                for (u32 m = e; m < topic->numEntries - 1; m++) {
+                    entries[m] = entries[m + 1];
+                }
+                topic->numEntries--;
+                e--;
+            }
+        }
+    }
+    if (result == -1) {
+        return result;
+    }
+
+    for (s32 i = 0; i < NEWS_FILE_MAX; i++) {
+        if (files[i] == NULL) {
+            continue;
+        }
+        NewsHeader* file = headers[i];
+        NewsSourceRec* rec = sources[i];
+        for (u32 s = 0; s < file->numSources; s++, rec++) {
+            u8 logo = rec->noLogo;
+            if (logo >= 7) {
+                result = -1;
+            }
+            if (rec->unk1 == 0 || rec->unk1 >= 7) {
+                result = -1;
+            }
+            u32 logoSize = rec->logoSize;
+            if ((logoSize != 0 && logo == 0) || (logoSize == 0 && logo != 0)) {
+                result = -1;
+            }
+            u32 logoOfs = rec->logoOfs;
+            if ((logoOfs != 0 && logo == 0) || (logoOfs == 0 && logo != 0)) {
+                result = -1;
+            }
+            u32 fileSize = file->fileSize;
+            if (logoOfs + logoSize > fileSize) {
+                result = -1;
+            }
+            u32 strSize = rec->nameSize;
+            u32 strOfs = rec->nameOfs;
+            if (strOfs + strSize > fileSize) {
+                result = -1;
+            }
+            if (strOfs & 1) {
+                result = -1;
+            }
+            if (strSize == 0 && strOfs != 0) {
+                result = -1;
+            }
+            strSize = rec->unk14;
+            strOfs = rec->copyrightOfs;
+            if (strOfs + strSize > fileSize) {
+                result = -1;
+            }
+            if (strOfs & 1) {
+                result = -1;
+            }
+            if (strSize == 0 && strOfs != 0) {
+                result = -1;
+            }
+        }
+        NewsLocationRec* loc = locations[i];
+        for (u32 l = 0; l < file->numLocations; l++, loc++) {
+            u32 ofs = loc->nameOfs;
+            if (ofs == 0) {
+                result = -1;
+            }
+            if (ofs >= file->fileSize) {
+                result = -1;
+            }
+            if (ofs & 1) {
+                result = -1;
+            }
+        }
+        NewsPictureRec* pic = pictures[i];
+        for (u32 p = 0; p < file->numPictures; p++, pic++) {
+            u32 fileSize = file->fileSize;
+            u32 strSize = pic->unk0;
+            u32 strOfs = pic->captionOfs;
+            if (strOfs + strSize > fileSize) {
+                result = -1;
+            }
+            if (strOfs & 1) {
+                result = -1;
+            }
+            if (strSize == 0 && strOfs != 0) {
+                result = -1;
+            }
+            strSize = pic->unk8;
+            strOfs = pic->creditOfs;
+            if (strOfs + strSize > fileSize) {
+                result = -1;
+            }
+            if (strOfs & 1) {
+                result = -1;
+            }
+            if (strSize == 0 && strOfs != 0) {
+                result = -1;
+            }
+            u32 dataSize = pic->size;
+            if (dataSize == 0) {
+                result = -1;
+            }
+            u32 dataOfs = pic->dataOfs;
+            if (dataOfs == 0) {
+                result = -1;
+            }
+            if (dataOfs + dataSize > fileSize) {
+                result = -1;
+            }
+        }
+    }
+    return result;
 }

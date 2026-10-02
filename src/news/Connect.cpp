@@ -217,7 +217,7 @@ void Connect::Update() {
         DownloadTask* task = &lbl_8020CEB8[mTask];
         if ((mTaskStatus = task->mStatus) == 0) {
             if ((mTaskResult = task->mResult) == 0) {
-                mCheckResult = fn_8000AFC8(mFiles, mFileSizes, &mCurrentFile, (s32*)&mFileMask);
+                mCheckResult = CheckNewsFiles(mFiles, mFileSizes, &mCurrentFile, &mFileMask);
                 if (mCheckResult == 0) {
                     NewsHeader* file = mFiles[mCurrentFile];
                     mTask = fn_80041514(mURL, 0x3A0000, 0, file->unk2F, file->unk5C);
@@ -241,7 +241,7 @@ void Connect::Update() {
         DownloadTask* task = &lbl_8020CEB8[mTask];
         if ((mTaskStatus = task->mStatus) == 0) {
             if ((mTaskResult = task->mResult) == 0) {
-                mCheckResult = fn_8000AFC8(mFiles, mFileSizes, &mCurrentFile, (s32*)&mFileMask);
+                mCheckResult = CheckNewsFiles(mFiles, mFileSizes, &mCurrentFile, &mFileMask);
                 if (mCheckResult == 0 || mCheckResult == -2) {
                     NewsHeader* file = mFiles[mCurrentFile];
                     mTask = fn_80041514(mURL, 0x3A0000, 0, file->unk2F, file->unk5C);

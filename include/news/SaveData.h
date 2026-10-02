@@ -64,7 +64,10 @@ public:
 
 void FormatSaveTime(wchar_t* buf, u32 size, OSTime time, s32 msgType, u8 language);
 
-// Checks a set of downloaded news files.
-extern "C" s32 fn_8000AFC8(NewsHeader** files, u32* arg1, s32* arg2, s32* arg3);
+// Checks the downloaded news files. Returns 0 if they are valid, -1 if they
+// are broken, -2 if some of them are outdated (*mask gets the slots to
+// download again) and -3 for an unsupported version. *current gets the slot
+// of the newest file.
+s32 CheckNewsFiles(NewsHeader** files, u32* sizes, s32* current, u32* mask);
 
 #endif

@@ -17,13 +17,17 @@ struct NewsLocationRec {
 // News file header (one file per downloaded hour). All offsets are relative to the file
 // start.
 struct NewsHeader {
-    u8 unk0[0xC];       // at 0x00
+    u32 version;        // at 0x00
+    u32 fileSize;       // at 0x04
+    u32 crc;            // at 0x08 (CRC32 of everything after it)
     u32 id;             // at 0x0C
-    u8 unk10[0x18 - 0x10];
+    u32 expireTime;     // at 0x10 (minutes)
+    u32 unk14;          // at 0x14
     s32 mTimestamp;     // at 0x18, in minutes (UTC)
     u8 languages[16];   // at 0x1C (SC language codes, 0xFF-terminated)
     u8 language;        // at 0x2C (language of the file)
-    u8 unk2D[0x2F - 0x2D];
+    u8 unk2D;           // at 0x2D
+    u8 unk2E;           // at 0x2E
     u8 unk2F;           // at 0x2F
     u32 messageOfs;     // at 0x30 (optional message from the server, wchar_t[])
     u32 numTopics;      // at 0x34
@@ -69,6 +73,7 @@ struct NewsTextBuffer {
 
 struct NewsSourceRec {
     u8 noLogo;       // at 0x00
+    u8 unk1;         // at 0x01
     u32 logoSize;    // at 0x04
     u32 logoOfs;     // at 0x08
     u32 nameSize;    // at 0x0C (bytes)
