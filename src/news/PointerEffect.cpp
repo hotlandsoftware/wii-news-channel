@@ -1,7 +1,7 @@
 #include <news/PointerEffect.h>
 #include <news/Draw2D.h>
 #include <news/System.h>
-#include <nw4r/ef/ef_effectsystem.h>
+#include <nw4r/ef.h>
 #include <nw4r/math/math_triangular.h>
 #include <nw4r/math/math_types.h>
 #include <revolution/gx.h>
@@ -15,9 +15,9 @@ extern math::VEC2 gCursorHorizon[4]; // KPADStatus::horizon of each channel
 inline void SetEffectPos(ef::Effect* effect, f32 x, f32 y) {
     math::VEC3 pos(x, y, 0.0f);
     ef::Emitter* emitter = effect->GetRootEmitter();
-    emitter->mTranslate.x = pos.x;
-    emitter->mTranslate.y = pos.y;
-    emitter->mTranslate.z = pos.z;
+    emitter->mParameter.mTranslate.x = pos.x;
+    emitter->mParameter.mTranslate.y = pos.y;
+    emitter->mParameter.mTranslate.z = pos.z;
     emitter->SetMtxDirty();
 }
 
@@ -28,10 +28,7 @@ PointerEffect::PointerEffect() {
     mMemManager = manager;
 
     ef::EffectSystem* system = ef::EffectSystem::GetInstance();
-    system->mMemoryManager = manager;
-    if (manager != NULL) {
-        system->Initialize(1);
-    }
+    system->SetMemoryManager(manager, 1);
 
     mBreff = NULL;
     mBreft = NULL;
@@ -84,15 +81,15 @@ void PointerEffect::Calc() {
 
     for (s32 i = 0; i < 4; i++) {
         if (mEffect[i] != NULL) {
-            mEffect[i]->SendClosing();
+            mEffect[i]->RetireEmitterAll();
             mEffect[i] = NULL;
         }
         if (mOpenEffect[i] != NULL) {
-            mOpenEffect[i]->SendClosing();
+            mOpenEffect[i]->RetireEmitterAll();
             mOpenEffect[i] = NULL;
         }
         if (mShadowEffect[i] != NULL) {
-            mShadowEffect[i]->SendClosing();
+            mShadowEffect[i]->RetireEmitterAll();
             mShadowEffect[i] = NULL;
         }
     }
@@ -254,18 +251,19 @@ void PointerEffect::SetParticleColor(ef::Effect* effect, f32 rotate, f32 alpha) 
     for (u16 i = 0; i < effect->GetNumEmitter(); i++) {
         ef::Emitter* emitter = effect->GetEmitter(i);
         for (u16 j = 0; j < emitter->GetNumParticleManager(); j++) {
-            ut::List* list = &emitter->GetParticleManager(j)->mParticleList;
+            ut::List* list = &emitter->GetParticleManager(j)->mActivityList.mActiveList;
             ef::Particle* particle = NULL;
             while ((particle = (ef::Particle*)ut::List_GetNext(list, particle)) != NULL) {
-                s32 status = particle->mLifeStatus;
-                if (status != ef::NW4R_EF_LS_ACTIVE && status != ef::NW4R_EF_LS_WAIT) {
+                s32 status = particle->GetLifeStatus();
+                if (status != ef::ReferencedObject::NW4R_EF_LS_ACTIVE &&
+                    status != ef::ReferencedObject::NW4R_EF_LS_WAIT) {
                     continue;
                 }
 
-                particle->mRotate = rotate;
+                particle->mParameter.mRotate.z = rotate;
                 for (s32 k = 0; k < 2; k++) {
                     for (s32 l = 0; l < 2; l++) {
-                        GXColor& c = particle->mColor[k][l];
+                        GXColor& c = particle->mParameter.mColor[k][l];
                         c.r = c.r * alpha;
                         c.g = c.g * alpha;
                         c.b = c.b * alpha;

@@ -1,0 +1,28 @@
+#ifndef MSL_CPP_LIMITS_H
+#define MSL_CPP_LIMITS_H
+
+// Added for nw4r::ef (Task 9): the part of MSL <limits> that ogws's ef uses.
+#include <limits.h>
+
+#ifdef __cplusplus
+
+namespace std {
+
+template <typename T> class numeric_limits {
+public:
+    static const T epsilon() {
+        return T();
+    }
+};
+
+template <> class numeric_limits<float> {
+public:
+    static const float epsilon() {
+        return 1.1920929e-7f; // FLT_EPSILON
+    }
+};
+
+} // namespace std
+
+#endif
+#endif

@@ -342,6 +342,112 @@ revolution/VF/ram_drv.c:
 revolution/VF/sd_drv.c:
 	.text       start:0x80074ADC end:0x80074AE0
 
+nw4r/ef/ef_util.cpp:
+	.text       start:0x800ABAE0 end:0x800AC4C4
+	.sdata2     start:0x80359498 end:0x803594B0
+
+nw4r/ef/ef_memorymanager.cpp:
+	.text       start:0x800AC4C4 end:0x800AD3F8
+	.data       start:0x801CD9E8 end:0x801CDA80
+
+nw4r/ef/ef_emitterform.cpp:
+	.text       start:0x800AD3F8 end:0x800AD9E8
+	.sdata2     start:0x803594B0 end:0x803594E8
+
+nw4r/ef/ef_creationqueue.cpp:
+	.text       start:0x800AD9E8 end:0x800ADCDC
+	.data       start:0x801CDA80 end:0x801CDAA0
+
+nw4r/ef/emform/ef_emform.cpp:
+	.text       start:0x800ADCDC end:0x800ADD94
+	.ctors      start:0x80191F74 end:0x80191F78
+	.data       start:0x801CDAA0 end:0x801CDAD0
+	.sbss       start:0x80357C08 end:0x80357C28
+
+nw4r/ef/emform/ef_point.cpp:
+	.text       start:0x800ADD94 end:0x800AE2E8
+	.data       start:0x801CDAD0 end:0x801CDAE0
+	.sdata2     start:0x803594E8 end:0x80359528
+
+nw4r/ef/emform/ef_line.cpp:
+	.text       start:0x800AE2E8 end:0x800AE900
+	.data       start:0x801CDAE0 end:0x801CDAF0
+	.sdata2     start:0x80359528 end:0x80359568
+
+nw4r/ef/emform/ef_disc.cpp:
+	.text       start:0x800AE900 end:0x800AF040
+	.data       start:0x801CDAF0 end:0x801CDB00
+	.sdata2     start:0x80359568 end:0x803595B8
+
+nw4r/ef/emform/ef_sphere.cpp:
+	.text       start:0x800AF040 end:0x800AFB20
+	.data       start:0x801CDB00 end:0x801CDB10
+	.sdata2     start:0x803595B8 end:0x80359600
+
+nw4r/ef/emform/ef_cylinder.cpp:
+	.text       start:0x800AFB20 end:0x800B04EC
+	.data       start:0x801CDB10 end:0x801CDB20
+	.sdata2     start:0x80359600 end:0x80359648
+
+nw4r/ef/emform/ef_torus.cpp:
+	.text       start:0x800B04EC end:0x800B0DF4
+	.data       start:0x801CDB20 end:0x801CDB30
+	.sdata2     start:0x80359648 end:0x803596A0
+
+nw4r/ef/emform/ef_cube.cpp:
+	.text       start:0x800B0DF4 end:0x800B2B50
+	.data       start:0x801CDB30 end:0x801CDB40
+	.sdata2     start:0x803596A0 end:0x803596E0
+
+nw4r/ef/drawstrategy/ef_drawstrategybuilder.cpp:
+	.text       start:0x800B2B50 end:0x800B2E90
+	.bss        start:0x802B7D30 end:0x802B81E0
+	.sbss       start:0x80357C28 end:0x80357C30
+
+nw4r/ef/drawstrategy/ef_drawstrategyimpl.cpp:
+	.text       start:0x800B2E90 end:0x800B4A78
+	.ctors      start:0x80191F78 end:0x80191F7C
+	.data       start:0x801CDB40 end:0x801CDB58
+	.bss        start:0x802B81E0 end:0x802B8220
+	.sdata2     start:0x803596E0 end:0x80359710
+
+nw4r/ef/drawstrategy/ef_drawbillboardstrategy.cpp:
+	.text       start:0x800B4A78 end:0x800B6378
+	.data       start:0x801CDB58 end:0x801CDB78
+	.sdata      start:0x80356F00 end:0x80356F20
+	.sdata2     start:0x80359710 end:0x80359738
+
+nw4r/ef/drawstrategy/ef_drawdirectionalstrategy.cpp:
+	.text       start:0x800B6378 end:0x800B7094
+	.rodata     start:0x801AC700 end:0x801AC760
+	.data       start:0x801CDB78 end:0x801CDB98
+	.sdata      start:0x80356F20 end:0x80356F40
+	.sdata2     start:0x80359738 end:0x80359758
+
+nw4r/ef/drawstrategy/ef_drawfreestrategy.cpp:
+	.text       start:0x800B7094 end:0x800B776C
+	.rodata     start:0x801AC760 end:0x801AC7C0
+	.data       start:0x801CDB98 end:0x801CDBB0
+	.sdata      start:0x80356F40 end:0x80356F48
+	.sdata2     start:0x80359758 end:0x80359770
+
+nw4r/ef/drawstrategy/ef_drawlinestrategy.cpp:
+	.text       start:0x800B776C end:0x800B7C48
+	.data       start:0x801CDBB0 end:0x801CDBC8
+	.sdata      start:0x80356F48 end:0x80356F50
+	.sdata2     start:0x80359770 end:0x80359780
+
+nw4r/ef/drawstrategy/ef_drawpointstrategy.cpp:
+	.text       start:0x800B7C48 end:0x800B7F3C
+	.data       start:0x801CDBC8 end:0x801CDBE0
+	.sdata      start:0x80356F50 end:0x80356F58
+	.sdata2     start:0x80359780 end:0x80359790
+
+nw4r/ef/drawstrategy/ef_drawstripestrategy.cpp:
+	.text       start:0x800B7F3C end:0x800B9690
+	.data       start:0x801CDBE0 end:0x801CDC20
+	.sdata2     start:0x80359790 end:0x803597B0
+
 nw4r/g3d/res/g3d_rescommon.cpp:
 	.text       start:0x800B9690 end:0x800B9734
 

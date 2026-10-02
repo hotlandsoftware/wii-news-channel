@@ -2,7 +2,7 @@
 #define NEWS_POINTER_EFFECT_H
 
 #include <types.h>
-#include <nw4r/ef/ef_effectsystem.h>
+#include <nw4r/ef.h>
 
 // Draws the Wii Remote pointers with the nw4r::ef "defcursor" effects
 // (the same breff/breft the HOME Menu uses).

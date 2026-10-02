@@ -1,78 +1,78 @@
 #ifndef NW4R_EF_EFFECT_SYSTEM_H
 #define NW4R_EF_EFFECT_SYSTEM_H
+#include <nw4r/types_nw4r.h>
 
-#include <types.h>
-#include <revolution/mtx.h>
-#include <nw4r/math/math_types.h>
-#include <nw4r/ef/ef_effect.h>
+#include <nw4r/ef/ef_creationqueue.h>
+#include <nw4r/ef/ef_random.h>
+#include <nw4r/math.h>
 
 namespace nw4r {
 namespace ef {
 
+// Forward declarations
+class ActivityList;
+class DrawInfo;
+class DrawOrderBase;
+class DrawStrategyBuilder;
+class EmitFormBuilder;
 class MemoryManagerBase;
 
-// Memory manager working out of one fixed buffer.
-class MemoryManager {
-public:
-    MemoryManager(void* buffer, u32 size, u32 numEffect, u32 numEmitter, u32 numParticleManager,
-                  u32 numParticle);
-
-    u8 _00[0x4C];
-};
-
-class DrawInfo {
-public:
-    DrawInfo() {
-        PSMTXIdentity(mViewMtx);
-        PSMTXIdentity(mProjMtx);
-        mZSort = false;
-        mDrawOrder = 0;
-        mFogEnable = true;
-        mFog = NULL;
-        mNear = 0.0f;
-        mFar = 1.0f;
-        mScreenLeft = 0.0f;
-        mScreenRight = 1.0f;
-    }
-
-    void SetViewMtx(const math::MTX34& mtx) { *reinterpret_cast<math::MTX34*>(mViewMtx) = mtx; }
-
-    Mtx mViewMtx; // at 0x00
-    Mtx mProjMtx; // at 0x30
-    bool mZSort;          // at 0x60
-    s32 mDrawOrder;       // at 0x64
-    bool mFogEnable;      // at 0x68
-    void* mFog;           // at 0x6C
-    f32 mNear;            // at 0x70
-    f32 mFar;             // at 0x74
-    f32 mScreenLeft;      // at 0x78
-    f32 mScreenRight;     // at 0x7C
-    u8 _80[0x8];
-};
-
 class EffectSystem {
+private:
+    MemoryManagerBase* mMemoryManager; // at 0x0
+
+public:
+    // Older revision (News Channel): no draw order/draw strategy/emitter form
+    // builder pointers (the builders' Create functions are static).
+    CreationQueue mCreationQueue;              // at 0x4
+    u32 mMaxGroupID;                           // at 0x5008
+    ActivityList* mActivityList;               // at 0x500C
+    Random mRandom;                            // at 0x5010
+    math::VEC3 mProcessCameraPos;              // at 0x5014
+    math::MTX34 mProcessCameraMtx;             // at 0x5020
+    f32 mProcessCameraFar;                     // at 0x5050
+    f32 mProcessCameraNear;                    // at 0x5054
+    bool mXFFlushSafe;                         // at 0x5058
+
+    static bool mDisplayVersion;
+    static EffectSystem instance;
+
 public:
     static EffectSystem* GetInstance();
 
-    bool Initialize(u32 numGroup);
-    Effect* CreateEffect(const char* name, u32 groupID, u16 calcRemain);
-    void SetProcessCamera(const math::VEC3& pos, const math::MTX34& mtx, f32 near, f32 far);
-    void Calc(u32 groupID, bool forceCalc);
-    void Draw(const DrawInfo& info, u32 groupID);
+    EffectSystem();
+    ~EffectSystem();
 
-    MemoryManager* mMemoryManager; // at 0x0
-};
+    bool Initialize(u32 maxGroupID);
+    bool Closing(Effect* pEffect);
 
-class EffectProject;
-class TextureProject;
+    Effect* CreateEffect(const char* pName, u32 groupID, u16 calcRemain);
+    u32 RetireEffect(Effect* pEffect);
 
-class Resource {
-public:
-    static Resource* GetInstance();
+    u32 RetireEffectAll(u32 groupID);
+    u32 RetireEmitterAll(u32 groupID);
+    u32 RetireParticleAll(u32 groupID);
 
-    EffectProject* Add(u8* data);
-    TextureProject* AddTexture(u8* data);
-    void BindTexture();
+    void Calc(u32 groupID, bool onlyBillboard);
+    void Draw(const DrawInfo& rInfo, u32 groupID);
+
+    void SetProcessCamera(const math::VEC3& rPos, const math::MTX34& rMtx,
+                          f32 near, f32 far);
+
+    MemoryManagerBase* GetMemoryManager() const {
+        return mMemoryManager;
+    }
+    void SetMemoryManager(MemoryManagerBase* pManager, u32 maxGroupID) {
+        mMemoryManager = pManager;
+
+        if (mMemoryManager != NULL) {
+            Initialize(maxGroupID);
+        }
+    }
+
+    void SetXFFlushSafe(bool safe) {
+        mXFFlushSafe = safe;
+    }
 };
 
 } // namespace ef

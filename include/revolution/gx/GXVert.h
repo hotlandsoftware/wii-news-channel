@@ -74,6 +74,8 @@ __GXCDEFX(GXPosition1x8, 1, u8)
 __GXCDEF(GXNormal, 3, f32)
 __GXCDEF(GXNormal, 3, s16)
 __GXCDEF(GXNormal, 3, s8)
+__GXCDEF(GXNormal, 3, u8)  // added for nw4r::ef (Task 9)
+__GXCDEF(GXNormal, 3, u16) // added for nw4r::ef (Task 9)
 __GXCDEFX(GXNormal1x16, 1, u16)
 __GXCDEFX(GXNormal1x8, 1, u8)
 
