@@ -175,6 +175,8 @@ static f32 sUnused[3] = {5.0f, 25.0f, 50.0f};
 static ut::Color sWhite(0xFFFFFFFF);
 
 #pragma explicit_zero_data on
+static f32 sPrevPicZ = 0.0f;
+static f32 sPicZ = 0.0f;
 static f32 sGlobeOfsX = 0.0f;
 static f32 sGlobeOfsY = 0.0f;
 #pragma explicit_zero_data reset
@@ -1711,8 +1713,10 @@ void SlideShow::DrawPictures() {
             f32 width = mPrevPicScale * prev->width;
             f32 height = mPrevPicScale * prev->height;
             f32 border = 0.05f * height;
-            Vec pos2 = {(mPrevPicCenter[0] + mSlideDist * slide) - 0.5f * width,
-                        mPrevPicCenter[1] - 0.5f * height, 0.0f};
+            Vec pos2;
+            pos2.x = (mPrevPicCenter[0] + mSlideDist * slide) - 0.5f * width;
+            pos2.y = mPrevPicCenter[1] - 0.5f * height;
+            pos2.z = sPrevPicZ;
             rect.left = 10.0f + pos2.x;
             rect.top = 10.0f + pos2.y;
             rect.right = border + (rect.left + width);
@@ -1739,8 +1743,10 @@ void SlideShow::DrawPictures() {
             f32 width = mPicScale * (picture != NULL ? picture->texture : NULL)->width;
             f32 height = mPicScale * (picture != NULL ? picture->texture : NULL)->height;
             f32 border = 0.05f * height;
-            Vec pos2 = {(mPicCenter[0] - mSlideDist * (1.0f - slide)) - 0.5f * width,
-                        mPicCenter[1] - 0.5f * height, 0.0f};
+            Vec pos2;
+            pos2.x = (mPicCenter[0] - mSlideDist * (1.0f - slide)) - 0.5f * width;
+            pos2.y = mPicCenter[1] - 0.5f * height;
+            pos2.z = sPicZ;
             rect.left = 10.0f + pos2.x;
             rect.top = 10.0f + pos2.y;
             rect.right = border + (rect.left + width);
