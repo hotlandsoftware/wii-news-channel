@@ -186,6 +186,10 @@ struct EmitterDesc {
         CMN_FLAG_SYNC_LIFE = (1 << 0),
         CMN_FLAG_DISABLE_DRAW = (1 << 1),
         CMN_FLAG_MAX_LIFE = (1 << 2),
+        // Older revision (News Channel): in EmitterDrawSetting::mFlags in
+        // Wii Sports
+        CMN_FLAG_XY_SAME_SIZE = (1 << 3),
+        CMN_FLAG_XY_SAME_SCALE = (1 << 4),
 
         CMN_FLAG_INHERIT_PTCL_SCALE = (1 << 5),
         CMN_FLAG_INHERIT_PTCL_ROT = (1 << 6),
