@@ -170,6 +170,7 @@ ArticleText::ArticleText(MEMAllocator* allocator, ut::CharWriter* writer, s32 ma
     mChars = new (mAllocator) TextChar[mMaxChars];
     if (mChars == NULL) {
         gAllocFailed = true;
+        return;
     }
 }
 
@@ -607,8 +608,8 @@ void ArticleText::Update(const math::VEC2* pos, bool clip, f32 scroll) {
     fn_80044534(&mSubPos, &mSubTarget, 0.2f, 100.0f, 0.01f);
 
     mLastVisible = 0;
-    bool overflow = false;
     s32 i = 0;
+    bool overflow = false;
     mFirstVisible = mCount;
     mLastFull = 0;
     for (; c->mChar != 0; c++) {
