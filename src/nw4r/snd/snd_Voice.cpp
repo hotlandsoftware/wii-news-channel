@@ -830,10 +830,287 @@ void Voice::TransformDpl2Pan(f32* pPan, f32* pSurroundPan, f32 pan,
 void Voice::CalcAXPBMIX(int channel, int voice, AxVoice::MixParam* pMix) {
     ut::AutoInterruptLock lock;
 
-    // TODO: not matched yet
-    (void)channel;
-    (void)voice;
-    (void)pMix;
+    f32 m_l = 1.0f, m_r = 1.0f, m_s = 1.0f;
+    f32 a_l = 1.0f, a_r = 1.0f, a_s = 1.0f;
+    f32 b_l = 1.0f, b_r = 1.0f, b_s = 1.0f;
+    f32 c_l = 1.0f, c_r = 1.0f, c_s = 1.0f;
+
+    // In DPL2 mode the aux C channels carry the right surround channels
+    f32& m_sl = m_s;
+    f32& m_sr = c_l;
+    f32& a_sl = a_s;
+    f32& a_sr = c_r;
+    f32& b_sl = b_s;
+    f32& b_sr = c_s;
+
+    switch (AxManager::GetInstance().GetOutputMode()) {
+    case OUTPUT_MODE_STEREO:
+    case OUTPUT_MODE_MONO: {
+        m_s = 0.0f;
+        a_s = 0.0f;
+        b_s = 0.0f;
+        c_s = 0.0f;
+        break;
+    }
+    }
+
+    // Main output volume
+    f32 volume = 1.0f;
+    if (mOutputLineFlag & OUTPUT_LINE_MAIN) {
+        volume *= mMainOutVolume;
+    } else {
+        volume = 0.0f;
+    }
+
+    switch (AxManager::GetInstance().GetOutputMode()) {
+    case OUTPUT_MODE_STEREO:
+    case OUTPUT_MODE_MONO: {
+        m_l *= volume;
+        m_r *= volume;
+        a_l *= volume;
+        a_r *= volume;
+        b_l *= volume;
+        b_r *= volume;
+        c_l *= volume;
+        c_r *= volume;
+        break;
+    }
+
+    case OUTPUT_MODE_SURROUND: {
+        m_l *= volume;
+        m_r *= volume;
+        m_s *= volume;
+        a_l *= volume;
+        a_r *= volume;
+        a_s *= volume;
+        b_l *= volume;
+        b_r *= volume;
+        b_s *= volume;
+        c_l *= volume;
+        c_r *= volume;
+        c_s *= volume;
+        break;
+    }
+
+    case OUTPUT_MODE_DPL2: {
+        m_l *= volume;
+        m_r *= volume;
+        m_sl *= volume;
+        m_sr *= volume;
+        a_l *= volume;
+        a_r *= volume;
+        a_sl *= volume;
+        a_sr *= volume;
+        b_l *= volume;
+        b_r *= volume;
+        b_sl *= volume;
+        b_sr *= volume;
+        break;
+    }
+    }
+
+    // Pan
+    f32 voicePan = 0.0f;
+    if (mChannelCount == 2) {
+        if (channel == 0) {
+            voicePan = -1.0f;
+        }
+        if (channel == 1) {
+            voicePan = 1.0f;
+        }
+    }
+
+    f32 pan, surroundPan;
+
+    switch (AxManager::GetInstance().GetOutputMode()) {
+    case OUTPUT_MODE_DPL2: {
+        TransformDpl2Pan(&pan, &surroundPan,
+                         voicePan + (mPan + mPan2) + mVoiceOutParam[voice].pan,
+                         mSurroundPan + mSurroundPan2 +
+                             mVoiceOutParam[voice].surroundPan);
+        break;
+    }
+
+    case OUTPUT_MODE_MONO: {
+        pan = 0.0f;
+        surroundPan = 0.0f;
+        break;
+    }
+
+    case OUTPUT_MODE_STEREO:
+    case OUTPUT_MODE_SURROUND:
+    default: {
+        pan = voicePan + (mPan + mPan2) + mVoiceOutParam[voice].pan;
+        surroundPan =
+            mSurroundPan + mSurroundPan2 + mVoiceOutParam[voice].surroundPan;
+        break;
+    }
+    }
+
+    f32 left = Util::CalcPanRatio(pan);
+    f32 right = Util::CalcPanRatio(-pan);
+    f32 surround = Util::CalcVolumeRatio(-3.0f);
+
+    switch (AxManager::GetInstance().GetOutputMode()) {
+    case OUTPUT_MODE_STEREO:
+    case OUTPUT_MODE_MONO: {
+        m_l *= left;
+        m_r *= right;
+        a_l *= left;
+        a_r *= right;
+        b_l *= left;
+        b_r *= right;
+        c_l *= left;
+        c_r *= right;
+        break;
+    }
+
+    case OUTPUT_MODE_SURROUND: {
+        m_l *= left;
+        m_r *= right;
+        m_s *= surround;
+        a_l *= left;
+        a_r *= right;
+        a_s *= surround;
+        b_l *= left;
+        b_r *= right;
+        b_s *= surround;
+        c_l *= left;
+        c_r *= right;
+        c_s *= surround;
+        break;
+    }
+
+    case OUTPUT_MODE_DPL2: {
+        m_l *= left;
+        m_r *= right;
+        m_sl *= left;
+        m_sr *= right;
+        a_l *= left;
+        a_r *= right;
+        a_sl *= left;
+        a_sr *= right;
+        b_l *= left;
+        b_r *= right;
+        b_sl *= left;
+        b_sr *= right;
+        break;
+    }
+    }
+
+    // Surround pan
+    f32 front = Util::CalcSurroundPanRatio(surroundPan);
+    f32 rear = Util::CalcSurroundPanRatio(2.0f - surroundPan);
+
+    switch (AxManager::GetInstance().GetOutputMode()) {
+    case OUTPUT_MODE_STEREO: {
+        break;
+    }
+
+    case OUTPUT_MODE_SURROUND: {
+        m_l *= front;
+        m_r *= front;
+        m_s *= rear;
+        a_l *= front;
+        a_r *= front;
+        a_s *= rear;
+        b_l *= front;
+        b_r *= front;
+        b_s *= rear;
+        c_l *= front;
+        c_r *= front;
+        c_s *= rear;
+        break;
+    }
+
+    case OUTPUT_MODE_DPL2: {
+        m_l *= front;
+        m_r *= front;
+        m_sl *= rear;
+        m_sr *= rear;
+        a_l *= front;
+        a_r *= front;
+        a_sl *= rear;
+        a_sr *= rear;
+        b_l *= front;
+        b_r *= front;
+        b_sl *= rear;
+        b_sr *= rear;
+        break;
+    }
+
+    case OUTPUT_MODE_MONO:
+    default: {
+        break;
+    }
+    }
+
+    // Sends
+    f32 mainSend = mMainSend;
+    f32 fxSendA = ut::Clamp(mFxSend[AUX_A] + mVoiceOutParam[voice].fxSend,
+                            0.0f, 1.0f);
+    f32 fxSendB = mFxSend[AUX_B];
+    f32 fxSendC = mFxSend[AUX_C];
+
+    switch (AxManager::GetInstance().GetOutputMode()) {
+    case OUTPUT_MODE_STEREO:
+    case OUTPUT_MODE_MONO: {
+        m_l *= mainSend;
+        m_r *= mainSend;
+        a_l *= fxSendA;
+        a_r *= fxSendA;
+        b_l *= fxSendB;
+        b_r *= fxSendB;
+        c_l *= fxSendC;
+        c_r *= fxSendC;
+        break;
+    }
+
+    case OUTPUT_MODE_SURROUND: {
+        m_l *= mainSend;
+        m_r *= mainSend;
+        m_s *= mainSend;
+        a_l *= fxSendA;
+        a_r *= fxSendA;
+        a_s *= fxSendA;
+        b_l *= fxSendB;
+        b_r *= fxSendB;
+        b_s *= fxSendB;
+        c_l *= fxSendC;
+        c_r *= fxSendC;
+        c_s *= fxSendC;
+        break;
+    }
+
+    case OUTPUT_MODE_DPL2: {
+        m_l *= mainSend;
+        m_r *= mainSend;
+        m_sl *= mainSend;
+        m_sr *= mainSend;
+        a_l *= fxSendA;
+        a_r *= fxSendA;
+        a_sl *= fxSendA;
+        a_sr *= fxSendA;
+        b_l *= fxSendB;
+        b_r *= fxSendB;
+        b_sl *= fxSendB;
+        b_sr *= fxSendB;
+        break;
+    }
+    }
+
+    pMix->vL = ut::Min<u32>(USHRT_MAX, static_cast<u32>(AX_MAX_VOLUME * m_l));
+    pMix->vR = ut::Min<u32>(USHRT_MAX, static_cast<u32>(AX_MAX_VOLUME * m_r));
+    pMix->vS = ut::Min<u32>(USHRT_MAX, static_cast<u32>(AX_MAX_VOLUME * m_s));
+    pMix->vAuxAL = ut::Min<u32>(USHRT_MAX, static_cast<u32>(AX_MAX_VOLUME * a_l));
+    pMix->vAuxAR = ut::Min<u32>(USHRT_MAX, static_cast<u32>(AX_MAX_VOLUME * a_r));
+    pMix->vAuxAS = ut::Min<u32>(USHRT_MAX, static_cast<u32>(AX_MAX_VOLUME * a_s));
+    pMix->vAuxBL = ut::Min<u32>(USHRT_MAX, static_cast<u32>(AX_MAX_VOLUME * b_l));
+    pMix->vAuxBR = ut::Min<u32>(USHRT_MAX, static_cast<u32>(AX_MAX_VOLUME * b_r));
+    pMix->vAuxBS = ut::Min<u32>(USHRT_MAX, static_cast<u32>(AX_MAX_VOLUME * b_s));
+    pMix->vAuxCL = ut::Min<u32>(USHRT_MAX, static_cast<u32>(AX_MAX_VOLUME * c_l));
+    pMix->vAuxCR = ut::Min<u32>(USHRT_MAX, static_cast<u32>(AX_MAX_VOLUME * c_r));
+    pMix->vAuxCS = ut::Min<u32>(USHRT_MAX, static_cast<u32>(AX_MAX_VOLUME * c_s));
 }
 
 void Voice::CalcAXPBRMTMIX(int channel, int voice, AXPBRMTMIX* pMix) {
@@ -841,12 +1118,13 @@ void Voice::CalcAXPBRMTMIX(int channel, int voice, AXPBRMTMIX* pMix) {
 
     f32 main[WPAD_MAX_CONTROLLERS];
     f32 fx[WPAD_MAX_CONTROLLERS];
-    f32* pMain = main;
-    f32* pFx = fx;
 
     for (int i = 0; i < WPAD_MAX_CONTROLLERS; i++) {
-        pMain[i] = 1.0f;
-        pFx[i] = 1.0f;
+        f32& rMain = main[i];
+        f32& rFx = fx[i];
+
+        rMain = 1.0f;
+        rFx = 1.0f;
 
         f32 volume = 1.0f;
         if (mOutputLineFlag & (OUTPUT_LINE_REMOTE_N << i)) {
@@ -855,20 +1133,22 @@ void Voice::CalcAXPBRMTMIX(int channel, int voice, AXPBRMTMIX* pMix) {
             volume = 0.0f;
         }
 
-        pMain[i] *= volume;
-        pFx[i] *= volume;
+        rMain *= volume;
+        rFx *= volume;
 
-        pMain[i] *= mRemoteSend[i];
-        pFx[i] *= mRemoteFxSend[i];
+        f32 send = mRemoteSend[i];
+        f32 fxSend = mRemoteFxSend[i];
+        rMain *= send;
+        rFx *= fxSend;
     }
 
-    pMix->vMain0 = CalcMixVolume(main[0]);
+    pMix->vMain0 = ut::Min<u32>(USHRT_MAX, static_cast<u32>(AX_MAX_VOLUME * main[0]));
     pMix->vAux0 = 0;
-    pMix->vMain1 = CalcMixVolume(main[1]);
+    pMix->vMain1 = ut::Min<u32>(USHRT_MAX, static_cast<u32>(AX_MAX_VOLUME * main[1]));
     pMix->vAux1 = 0;
-    pMix->vMain2 = CalcMixVolume(main[2]);
+    pMix->vMain2 = ut::Min<u32>(USHRT_MAX, static_cast<u32>(AX_MAX_VOLUME * main[2]));
     pMix->vAux2 = 0;
-    pMix->vMain3 = CalcMixVolume(main[3]);
+    pMix->vMain3 = ut::Min<u32>(USHRT_MAX, static_cast<u32>(AX_MAX_VOLUME * main[3]));
     pMix->vAux3 = 0;
 
     pMix->vDeltaMain0 = 0;
