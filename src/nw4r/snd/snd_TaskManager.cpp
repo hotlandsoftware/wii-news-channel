@@ -41,25 +41,18 @@ void TaskManager::Execute() {
 }
 
 bool TaskManager::ExecuteSingle() {
-    OSLockMutex(&mMutex);
+    ut::detail::AutoLock<OSMutex> lock(mMutex);
 
-    mCurrentTask = PopTask(PRIORITY_HIGH);
-    if (mCurrentTask == NULL) {
-        mCurrentTask = PopTask(PRIORITY_MIDDLE);
-        if (mCurrentTask == NULL) {
-            mCurrentTask = PopTask(PRIORITY_LOW);
-            if (mCurrentTask == NULL) {
-                OSUnlockMutex(&mMutex);
-                return false;
-            }
-        }
+    if ((mCurrentTask = PopTask(PRIORITY_HIGH)) == NULL &&
+        (mCurrentTask = PopTask(PRIORITY_MIDDLE)) == NULL &&
+        (mCurrentTask = PopTask(PRIORITY_LOW)) == NULL) {
+        return false;
     }
 
     mCurrentTask->Execute();
     Free(mCurrentTask);
     mCurrentTask = NULL;
 
-    OSUnlockMutex(&mMutex);
     return true;
 }
 
