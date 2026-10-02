@@ -2359,7 +2359,7 @@ BOOL Article_Set(NewsArticle* article, const wchar_t* title, BOOL withPicture, s
         case 0: {
             OSCalendarTime time;
             MinutesToCalendarTime(*(s32*)((u8*)lbl_80357560->mText + 0x18) + 540, &time);
-            swprintf(sDateBuf, 256, L"%d月%d日(%ls) %d時%02d分", time.mon + 1, time.mday,
+            swprintf(sDateBuf, 256, L"%d\x6708%d\x65E5(%ls) %d\x6642%02d\x5206\x66F4\x65B0", time.mon + 1, time.mday,
                      lbl_801B2958[gLanguage][time.wday], time.hour, time.min);
             break;
         }
