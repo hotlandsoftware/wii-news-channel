@@ -1056,6 +1056,9 @@ config.libs = [
         "cflags": cflags_nw4r_g3d,
         "progress_category": "sdk",
         "objects": [
+            Object(Matching, "nw4r/g3d/res/g3d_rescommon.cpp"),
+            Object(Matching, "nw4r/g3d/res/g3d_resdict.cpp"),
+            Object(Matching, "nw4r/g3d/res/g3d_resfile.cpp"),
             Object(Matching, "nw4r/g3d/res/g3d_resmdl.cpp"),
             Object(Matching, "nw4r/g3d/res/g3d_resshp.cpp"),
             Object(Matching, "nw4r/g3d/res/g3d_restev.cpp"),
