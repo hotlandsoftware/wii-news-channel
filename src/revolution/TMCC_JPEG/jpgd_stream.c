@@ -1,32 +1,5 @@
-#include <types.h>
 #include <string.h>
-
-typedef s32 (*JPEGReadFunc)(void* arg, void* dst, u32 size);
-
-typedef struct JPEGSource {
-    u8* buffer;         // 0x00
-    u32 bufferSize;     // 0x04
-    u32 dataSize;       // 0x08
-    JPEGReadFunc read;  // 0x0C
-    void* readArg;      // 0x10
-} JPEGSource;
-
-typedef struct JPEGStream {
-    u32 bits;           // 0x00
-    s32 numBits;        // 0x04
-    u8* base;           // 0x08
-    u8* cur;            // 0x0C
-    u8* end;            // 0x10
-    u8 bitsEnd;         // 0x14
-    u8* buffer;         // 0x18
-    u32 bufferSize;     // 0x1C
-    u32 remain;         // 0x20
-    JPEGReadFunc read;  // 0x24
-    void* readArg;      // 0x28
-} JPEGStream;
-
-s32 fn_800805A4(JPEGStream* s);
-
+#include "jpgd_internal.h"
 s32 fn_8007FE28(JPEGStream* s, JPEGSource* src) {
     u32 size;
     u8* dst;
@@ -314,3 +287,4 @@ s32 fn_80080774(JPEGStream* s) {
     s->bits = 0;
     return 0;
 }
+

@@ -588,10 +588,32 @@ revolution/NWC24/NWC24System.c:
 	.sdata      start:0x80356DD0 end:0x80356DD8
 	.sbss       start:0x803578C0 end:0x803578D0
 
-revolution/TMCC_JPEG/jpegdec.c:
-	.text       start:0x8007FE28 end:0x8008A0A4
-	.rodata     start:0x801AACF0 end:0x801AAF58
+revolution/TMCC_JPEG/jpgd_stream.c:
+	.text       start:0x8007FE28 end:0x8008082C
+
+revolution/TMCC_JPEG/jpgd_idct.c:
+	.text       start:0x8008082C end:0x80081348
+
+revolution/TMCC_JPEG/jpgd_dec.c:
+	.text       start:0x80081348 end:0x80083554
+	.rodata     start:0x801AACF0 end:0x801AAE18
 	.sdata2     start:0x80359068 end:0x80359070
+
+revolution/TMCC_JPEG/jpgd_idct_scaled.c:
+	.text       start:0x80083554 end:0x80083C60
+
+revolution/TMCC_JPEG/jpgd_out_yuv.c:
+	.text       start:0x80083C60 end:0x80086E68
+
+revolution/TMCC_JPEG/jpgd_out_rgb565.c:
+	.text       start:0x80086E68 end:0x800882F8
+
+revolution/TMCC_JPEG/jpgd_out_rgba8.c:
+	.text       start:0x800882F8 end:0x800898F4
+
+revolution/TMCC_JPEG/jpgd_huff.c:
+	.text       start:0x800898F4 end:0x8008A0A4
+	.rodata     start:0x801AAE18 end:0x801AAF58
 
 revolution/ARC/arc.c:
 	.text       start:0x8008A0A4 end:0x8008AA44
