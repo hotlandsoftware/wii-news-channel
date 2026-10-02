@@ -105,8 +105,10 @@ static inline bool IsDigit(wchar_t c) {
 }
 
 static inline bool IsNoBreakBefore(wchar_t c) {
-    if (IsInList(sNoBreakBefore, c)) {
-        return true;
+    for (const wchar_t* s = sNoBreakBefore; *s != 0; s++) {
+        if (*s == c) {
+            return true;
+        }
     }
     for (s32 i = 0; i < 39; i++) {
         if (c == lbl_801920F0[i]) {
@@ -193,10 +195,12 @@ bool ArticleText::IsNoBreak(const wchar_t* p, const wchar_t* start) {
 
     if (gLanguage != 0) {
         wchar_t c = p[0];
-        for (const wchar_t* s = sSpaces; *s != 0; s++) {
+        const wchar_t* s = sSpaces;
+        while (*s != 0) {
             if (*s == c) {
                 return false;
             }
+            s++;
         }
         return true;
     }
