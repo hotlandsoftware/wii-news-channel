@@ -1056,6 +1056,31 @@ config.libs = [
             Object(Matching, "nw4r/g3d/g3d_light.cpp"),
         ],
     },
+    {
+        "lib": "nw4r_snd",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_nw4r,
+        "progress_category": "sdk",
+        "objects": [
+            Object(Matching, "nw4r/snd/snd_AxManager.cpp"),
+            Object(Matching, "nw4r/snd/snd_AxVoice.cpp"),
+            Object(Matching, "nw4r/snd/snd_AxVoiceManager.cpp"),
+            Object(Matching, "nw4r/snd/snd_AxfxImpl.cpp"),
+            Object(Matching, "nw4r/snd/snd_Bank.cpp"),
+            Object(Matching, "nw4r/snd/snd_BankFile.cpp"),
+            Object(Matching, "nw4r/snd/snd_BasicPlayer.cpp"),
+            Object(Matching, "nw4r/snd/snd_BasicSound.cpp"),
+            Object(Matching, "nw4r/snd/snd_Channel.cpp"),
+            Object(Matching, "nw4r/snd/snd_DisposeCallbackManager.cpp"),
+            Object(Matching, "nw4r/snd/snd_DvdSoundArchive.cpp"),
+            Object(Matching, "nw4r/snd/snd_EnvGenerator.cpp"),
+            Object(Matching, "nw4r/snd/snd_ExternalSoundPlayer.cpp"),
+            Object(Matching, "nw4r/snd/snd_FrameHeap.cpp"),
+            Object(Matching, "nw4r/snd/snd_FxReverbHi.cpp"),
+            Object(Matching, "nw4r/snd/snd_InstancePool.cpp"),
+            Object(Matching, "nw4r/snd/snd_Lfo.cpp"),
+        ],
+    },
 ]
 
 

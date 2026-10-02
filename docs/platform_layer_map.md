@@ -160,10 +160,52 @@ Animation-resource files (`res/g3d_resanm*`, `g3d_anm*`) are mostly dead-strippe
 
 ### nw4r::snd (`0x800CE740–0x800E84D8`, ogws)
 
-This is an older snd than Wii Sports' (no `AxVoice`, `Channel`-based voices).
+This is an older snd than Wii Sports' (`Channel`-based, older `AxVoice` without `AxVoiceParamBlock`).
 Anchors (ogws order): `snd_AxManager 0x800CE740`, `snd_AxfxImpl 0x800D19F0` (100%), `snd_Bank 0x800D1B60`, `snd_BankFile 0x800D1D84` (94%), `snd_BasicPlayer 0x800D218C`, `snd_BasicSound 0x800D22D4–0x800D335C`†, `snd_Channel 0x800D335C`, `snd_DvdSoundArchive 0x800D44EC` (82%), `snd_EnvGenerator 0x800D4C38`, `snd_ExternalSoundPlayer 0x800D4EBC`, `snd_FrameHeap 0x800D4F9C`, `snd_InstancePool 0x800D5B1C`, `snd_Lfo 0x800D5BC0` (85%), `snd_MemorySoundArchive 0x800D5DC8` (92%), `snd_MidiSeqPlayer ≈0x800D61FC`, `snd_MmlParser ≈0x800D6F88`, `snd_MmlSeqTrack 0x800D710C`, `snd_MmlSeqTrackAllocator 0x800D71CC`, `snd_RemoteSpeaker 0x800D7494`, `snd_RemoteSpeakerManager 0x800D7B50`, `snd_SeqFile ≈0x800D7D8C`, `snd_SeqPlayer` ends `0x800D8BC8`†, `snd_SeqSound` ends `0x800D902C`†, `snd_SeqSoundHandle 0x800D902C`, `snd_SeqTrack 0x800D916C`, `snd_SoundArchive 0x800DA150` (89%), `snd_SoundArchiveFile 0x800DA738`, `snd_SoundArchiveLoader 0x800DB4E8` (94%), `snd_SoundArchivePlayer 0x800DC00C`, `snd_SoundHandle 0x800DE7B0`, `snd_SoundHeap 0x800DE84C`, `snd_StrmChannel 0x800E0198` (99%), `snd_StrmFile 0x800E03B8`, `snd_StrmPlayer` ends `0x800E23E0`†, `snd_StrmSound` ends `0x800E274C`†, then `StrmSoundHandle`/`Task*`/`Util`/`WaveFile`, a file ending `0x800E6E7C`† (`WavePlayer`?), `snd_WaveSound` ends `0x800E71C8`†, `snd_WaveSoundHandle 0x800E71C8`, `snd_WsdFile 0x800E7200` (93%), a file ending `0x800E7BD4`† (`WsdPlayer`?), and the rest to `0x800E84D8`.
 
 ### nw4r::ut / math (`0x800E84D8–0x800F0B58`) — Task 14
+
+#### snd part 1 (Task 11, **done**): `0x800CE740–0x800D5DB0`, 17/17 Matching
+
+Lib `nw4r_snd`, GC/3.0a5.2, `cflags_nw4r` (plain NW4R flags; no math/Color defines needed). Sources in `src/nw4r/snd/`, ported from ogws and changed to the older revision.
+
+| File | Text | Data | Notes |
+| --- | --- | --- | --- |
+| `snd_AxManager.cpp` | `0x800CE740–0x800CFBC4` | `.bss 0x802D5800–0x802D5A00`, `.sbss 0x80357C50`, `.sdata2 0x80359920–0x80359938` | ogws + older `Update` |
+| `snd_AxVoice.cpp` | `0x800CFBC4–0x800D17FC` | `.sdata2 0x80359938–0x80359958` | **older AxVoice**, written from the DOL |
+| `snd_AxVoiceManager.cpp` | `0x800D17FC–0x800D19F0` | `.bss 0x802D5A00–0x802D5A10`, `.sbss 0x80357C58` | older, written from the DOL |
+| `snd_AxfxImpl.cpp` | `0x800D19F0–0x800D1B60` | `.sbss 0x80357C60` | ogws |
+| `snd_Bank.cpp` | `0x800D1B60–0x800D1D84` | `.sdata2 0x80359958–0x80359978` | ogws (`Channel::Start` has no offset) |
+| `snd_BankFile.cpp` | `0x800D1D84–0x800D218C` | `.sdata2 0x80359978` | ogws, `version == VERSION` |
+| `snd_BasicPlayer.cpp` | `0x800D218C–0x800D22D4` | `.data 0x801CDF60–0x801CDF88`, `.sdata2 0x80359980` | older layout |
+| `snd_BasicSound.cpp` | `0x800D22D4–0x800D335C` | `.ctors 0x80191F80`, `.data 0x801CDF88–0x801CDFF0`, `.sbss 0x80357C68`, `.sdata2 0x80359988–0x80359998` | older vtable |
+| `snd_Channel.cpp` | `0x800D335C–0x800D40E4` | `.bss 0x802D5A10–0x802D5A40`, `.sbss 0x80357C70`, `.sdata2 0x80359998–0x803599C0` | older layout (ChannelManager + Channel) |
+| `snd_DisposeCallbackManager.cpp` | `0x800D40E4–0x800D44EC` | `.bss 0x802D5A40–0x802D5A58`, `.sbss 0x80357C78` | locks added, `Dispose` static |
+| `snd_DvdSoundArchive.cpp` | `0x800D44EC–0x800D4B84` | `.data 0x801CDFF0–0x801CE078`, `.sbss 0x80357C80`, `.sbss2 0x8035A6A8` | ogws unchanged |
+| `snd_EnvGenerator.cpp` | `0x800D4B84–0x800D4EBC` | `.rodata 0x801AC9C8–0x801ACCC8`, `.sdata2 0x803599C0–0x803599F0` | older `Init`/`Reset`/`GetValue` |
+| `snd_ExternalSoundPlayer.cpp` | `0x800D4EBC–0x800D4F9C` | — | ogws |
+| `snd_FrameHeap.cpp` | `0x800D4F9C–0x800D5570` | — | ogws |
+| `snd_FxReverbHi.cpp` | `0x800D5570–0x800D5958` | `.data 0x801CE078–0x801CE098`, `.rodata 0x801ACCC8`, `.sdata2 0x803599F0–0x80359A00` | ogws, no active check in `Shutdown` |
+| `snd_InstancePool.cpp` | `0x800D5958–0x800D5BC0` | — | ogws |
+| `snd_Lfo.cpp` | `0x800D5BC0–0x800D5DB0` | `.rodata 0x801ACCE0–0x801ACD08`, `.sdata2 0x80359A00–0x80359A30` | `GetSinIdx` inline |
+
+Findings (this snd is between TP's `nw4hbm` snd and Wii Sports'):
+
+- **`0x800D5DB0–0x800D5DC8` is not Lfo.** It is three weak `li r3, 1; blr` functions: `IOStream::GetOffsetAlign`/`GetSizeAlign`/`GetBufferAlign` (the IOStream defaults, slots 13–15 of the `MemoryFileStream` vtable at `0x801CE098`). They are emitted by `snd_MemorySoundArchive.o`, which therefore starts at `0x800D5DB0`; left unsplit for the part 2 task.
+- **Voices.** There is a `Voice`/`VoiceManager` layer (part 3, `0x800E3xxx`/`0x800E5xxx`) on top of an older `AxVoice`. `AxVoice` (0x38 bytes) holds a raw `AXVPB*` (no `AxVoiceParamBlock`): `mVpb` 0x0, `mWaveData` 0x4, `mFormat` 0x8, `mSampleRate` 0xC, `mActiveFlag` 0x10, `mFirstVeUpdateFlag` 0x11, `mFirstMixUpdateFlag` 0x12, `mVolumePrev` (u16) 0x14, `mMixPrev` 0x16, `mCallback` 0x30, `mCallbackData` 0x34. Every method takes `ut::AutoInterruptLock` and calls the AX setters directly; `IsRun`, `GetCurrentPlayingDspAddress`, `GetLoopEndDspAddress` and `GetDspRatio` are inlines with their own lock (the address getters NULL-check `&mVpb->pb`). The loop/end-address and loop-flag setters, which this AX library does not have, are local inlines that set `pb.addr` and `sync |= LOOP_ADDR/END_ADDR/LOOP_FLAG` unless `sync & AX_PBSYNC_ADDR`. `SetVe` returns `bool` and does the volume-envelope delta rounding itself (the logic of ogws's `AxVoiceParamBlock::Sync`; `int deltaAdj;` must be declared before `deltaIn` for the register allocation). `SetMix`'s `AXSetVoiceMix` and `SetLpf`'s "LPF off" `AXSetVoiceLpf` sit in their own nested lock. `SetAddr(loop, wave, loopStart, loopEnd)` has no start offset. Remote on/off are two functions (`EnableRemote()`/`DisableRemote()`, names guessed), `SetRmtMix` takes an `AXPBRMTMIX`.
+- **AxVoiceManager** (0xC bytes, no destructor): `mInitialized`, `mVoiceCount`, `mVoices` (`new (buffer) AxVoice[n]`). Voices are found by `AXVPB::index`; `AcquireAxVoice` calls `AXAcquireVoice(prio, AxVoice::VoiceCallback, 0)`. `GetRequiredMemSize` is the constant `96 * 0x38 + 32`.
+- **Voice sync flags** use TP's values (`SRC 1<<3`, `VE 1<<4`, `MIX 1<<5`, `LPF 1<<6`; bit 2 unused): `AxManager` passes `0x10`/`0x20` to `VoiceManager::UpdateAllVoicesSync`. Changed in `snd_Voice.h`.
+- **AxManager::Update**: `if (status == DVD_STATE_END) {…} else if (status != DVD_STATE_BUSY) {…}` (the switch form gives a different tree), and the master volume is only clamped above (`if (ratio > 1.0f)`; `ut::Min` swaps the compare registers).
+- **BasicPlayer** (0x70): `mPan2` 0x18, `mSurroundPan2` 0x1C, `mLpfFreq` 0x20, 4 unknown bytes, `mOutputLine` 0x28 …; no remote filter, pan mode or pan curve. Vtable has `IsPrepared` (0x1C) between `IsActive` and `IsStarted` (as tp `nw4hbm`); `SeqPlayer`/`WsdPlayer`/`StrmPlayer` got an `IsPrepared` declaration in their headers.
+- **BasicSound** vtable (0x68): `IsPrepared` is not pure (`return GetBasicPlayer().IsPrepared();`), no `SetRemoteFilter`/`SetPanMode`/`SetPanCurve` virtuals, so `IsAttachedTempSpecialHandle` 0x50, `DetachTempSpecialHandle` 0x54, `InitParam` 0x58, `GetBasicPlayer` 0x5C/0x60. `SetPan` stays at 0x40 (game code). `mPauseFlag` is a `u8` (`IsPause` returns `mPauseFlag != 0`; `Pause` compares `static_cast<bool>(mPauseFlag) != flag`). `Update` does not check `IsPrepared`, and passes the ambient pan/surround pan to the player as pan2/surround pan2. `SetInitialVolume`/`SetVolume` do not clamp.
+- **Channel** (0xE8): pan2/surround pan2 (0x48/0x4C), no remote filter, pan mode, pan curve or release-priority flag; `mVoice` 0xD8, `mNextLink` 0xDC, node 0xE0. `Start(data, length)` calls `Voice::Setup(data)` (no offset). `Update` uses `EnvGenerator::GetValue()` (which already returns a ratio) and updates the voice inside an interrupt lock, including `SetPan2`/`SetSurroundPan2`. `Stop` and `AllocChannel` take the lock; `AllocChannel` pushes the pooled channel on the list before its NULL check and does not free it when `AllocVoice` fails. `ChannelManager::Setup` has no lock and `GetRequiredMemSize` is the constant `97 * sizeof(Channel)`.
+- **EnvGenerator**: `Init()`/`Reset()` take no argument; `VOLUME_INIT` (-90.4) is a plain constant folded into `Reset` (`-904`); `GetValue` returns `Util::CalcVolumeRatio(mValue / 10)` (or of 0 during attack with `mAttack == 0`).
+- Smaller ones: `Lfo::GetSinIdx` is inlined (declared `inline`); `AxfxImpl::GetHeapTotalSize` has no NULL check; `FxReverbHi::Shutdown` has no `mIsActive` check (its vtable is used by game code at `0x8004F178`, a weak `~FxReverbHi`); `DisposeCallbackManager::Register/Unregister/Dispose/DisposeWave` take an interrupt lock, `Dispose*` are static and call `InvalidateData` once per node (no ogws double increment); `BankFileReader::ReadInstInfo` checks `version == VERSION`; `BasicPlayer::InitParam` needs ogws's `mPan = 1.0f;` fakematch for the constant registers.
+- **Headers.** `include/nw4r/snd/*` is ogws's tree adapted: `snd.h` (umbrella; leaves out FxChorus/FxDelay/FxReverbHiDpl2, whose AXFX parts are not in this SDK, and `#undef`s the `RoundUp`/`RoundDown` macros of `mem/heapCommon.h`), `snd_ut.h`/`snd_math.h` (the ut/math headers ogws gets from `<nw4r/ut.h>`/`<nw4r/math.h>`). `snd_SoundHandle.h` is ogws's (game code unchanged). Older-revision edits: `snd_AxVoice.h`, `snd_AxVoiceManager.h`, `snd_BasicPlayer.h`, `snd_BasicSound.h`, `snd_Channel.h`, `snd_EnvGenerator.h`, `snd_AxfxImpl.h`, `snd_DisposeCallbackManager.h`, `snd_Voice.h` (sync flags; `Setup(const WaveData&)`, `SetPan2`, `SetSurroundPan2` added), `snd_SeqPlayer.h`/`snd_WsdPlayer.h`/`snd_StrmPlayer.h` (`IsPrepared`). Parts 2/3 still have to adapt the rest (ogws layouts are unverified there).
+- **Shared headers (additive):** `ut_LinkList.h` (`NW4R_UT_LINKLIST_*` macros, `DECLTYPE`), `ut_RuntimeTypeInfo.h` (`NW4R_UT_RTTI_DECL/DEF_*`), new ogws `ut_IOStream.h`, `ut_FileStream.h`, `ut_DvdFileStream.h`, `ut_DvdLockedFileStream.h`, `ut_NandFileStream.h`, `ut_lock.h`, `nw4r/types_nw4r.h`, `limits.h` + `climits`, and `std::strncpy`/`strcpy`/`strcat` in `cstring`.
+- **Names given outside the range** (rename only): SoundArchive/SoundArchiveFileReader (`0x800DA150`…), SoundPlayer `detail_*` (`0x800DEC74`…), Voice setters/`Setup`/`Start`/`Stop`/`Free`/`SetPriority` (`0x800E3568`–`0x800E4214`), `VoiceManager::GetInstance`/`AllocVoice`/`UpdateAllVoicesSync`, `Util::CalcPitchRatio`/`CalcVolumeRatio`/`GetDataRefAddressImpl`, `WaveFileReader` ctor/`ReadWaveParam`, ut `IOStream::Write/WriteAsync`, `DvdFileStream::Close/Seek/Cancel/CancelAsync`, `DvdLockedFileStream` ctors/dtor/`Read`/`Peek`/`typeInfo`, `DVDConvertPathToEntrynum`, `DVDFastOpen`, `DVDGetDriveStatus`, and the game's weak `~FxReverbHi` (`0x8004F178`).
+
+### nw4r::ut / math (`0x800E84D8–0x800F0F50`)
 
 The NW4R revision here has out-of-line `CharWriter`/`TextWriterBase` accessors, like TP's `nw4hbm` fork.
 Sources are in `src/nw4r/ut/` and `src/nw4r/math/` (libs `nw4r_ut` and `nw4r_math`), built with GC/3.0a5.2.
@@ -575,7 +617,7 @@ Difficulty: E = mostly drop-in, M = drop-in plus version fixes, H = little or no
 | 8 | ef part 1: draworder … resource | `0x8009C720–0x800ABAE0` | 62 KB | ogws | M |
 | 9 | ef part 2: util, emform, drawstrategy | `0x800ABAE0–0x800BA03C` | 58 KB | ogws | M |
 | 10 | g3d (**done**, 36/36 Matching; g3d starts at ≈`0x800B9690`) | `0x800BA03C–0x800CE740` | 84 KB | ogws | E–M |
-| 11 | snd part 1: AxManager … Lfo | `0x800CE740–0x800D5DC8` | 30 KB | ogws | M |
+| 11 | snd part 1: AxManager … Lfo (**done**, 17/17 Matching; ends `0x800D5DB0`) | `0x800CE740–0x800D5DC8` | 30 KB | ogws | M |
 | 12 | snd part 2: MemorySoundArchive … SoundArchiveLoader | `0x800D5DC8–0x800DC00C` | 25 KB | ogws | M |
 | 13 | snd part 3: SoundArchivePlayer … end | `0x800DC00C–0x800E84D8` | 50 KB | ogws | M |
 | 14 | ut + math (rest) (**done**, 18/19 Matching) | `0x800E88E0–0x800F0B58` | 33 KB | tp `nw4hbm`, ogws | M |
