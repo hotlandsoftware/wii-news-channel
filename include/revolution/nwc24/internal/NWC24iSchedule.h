@@ -54,6 +54,14 @@ typedef struct NWC24ScdStat {
 } NWC24ScdStat;
 
 NWC24Err NWC24iGetSchedulerStat(NWC24ScdStat* pStat, u32 size);
+NWC24Err NWC24iSetScriptMode(s32 mode);
+NWC24Err NWC24ExecDownloadTask(u32 arg0, u32 arg1, u32 arg2);
+NWC24Err NWC24iStartupSocket(NWC24Err* pExResult);
+NWC24Err NWC24iCleanupSocket(NWC24Err* pExResult);
+NWC24Err NWC24iLockSocket(void);
+NWC24Err NWC24iUnlockSocket(void);
+NWC24Err NWC24iSaveMailNow(void) NO_INLINE;
+NWC24Err NWC24iDownloadNowEx(BOOL* pSaveMail, u32 arg0, u32 arg1, u32 arg2);
 
 NWC24Err NWC24iRequestGenerateUserId(NWC24UserId* pUserId, u32* arg1);
 NWC24Err NWC24iTrySuspendForOpenLib(void);
