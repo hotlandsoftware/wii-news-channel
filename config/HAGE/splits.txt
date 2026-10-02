@@ -152,6 +152,17 @@ news/PaneButton.cpp:
 	.sdata      start:0x80356C60 end:0x80356C90
 	.sdata2     start:0x80358EE0 end:0x80358F18
 
+revolution/RSO/RSOLink.c:
+	.text       start:0x80051D4C end:0x80052D5C
+	.data       start:0x801CABC0 end:0x801CACD8
+
+revolution/CNT/cnt.c:
+	.text       start:0x80052D5C end:0x80053274
+	.rodata     start:0x801A66B8 end:0x801A6930
+	.data       start:0x801CACD8 end:0x801CADD8
+	.sdata      start:0x80356CC8 end:0x80356CD0
+	.sbss       start:0x803577F8 end:0x80357800
+
 revolution/VF/pf_clib.c:
 	.text       start:0x80053274 end:0x80053574
 
@@ -341,6 +352,11 @@ revolution/VF/ram_drv.c:
 
 revolution/VF/sd_drv.c:
 	.text       start:0x80074ADC end:0x80074AE0
+
+revolution/ARC/arc.c:
+	.text       start:0x8008A0A4 end:0x8008AA44
+	.data       start:0x801CB600 end:0x801CB670
+	.sdata      start:0x80356DD8 end:0x80356DE0
 
 nw4r/g3d/res/g3d_resmdl.cpp:
 	.text       start:0x800BA03C end:0x800BA96C

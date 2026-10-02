@@ -894,6 +894,33 @@ config.libs = [
         ],
     },
     {
+        "lib": "rso",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_rvl,
+        "progress_category": "sdk",
+        "objects": [
+            Object(Matching, "revolution/RSO/RSOLink.c"),
+        ],
+    },
+    {
+        "lib": "cnt",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_rvl,
+        "progress_category": "sdk",
+        "objects": [
+            Object(Matching, "revolution/CNT/cnt.c"),
+        ],
+    },
+    {
+        "lib": "arc",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_rvl,
+        "progress_category": "sdk",
+        "objects": [
+            Object(Matching, "revolution/ARC/arc.c"),
+        ],
+    },
+    {
         "lib": "vf_drv",
         "mw_version": "GC/3.0a5.2",
         "cflags": cflags_rvl,
