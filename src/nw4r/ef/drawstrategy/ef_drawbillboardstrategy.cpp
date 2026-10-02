@@ -6,24 +6,6 @@ namespace ef {
 static u8 billboard_tex0_u8[] ATTRIBUTE_ALIGN(32) = {0x00, 0x01, 0x00, 0x00,
                                                      0x01, 0x00, 0x01, 0x01};
 
-// Squared length with the YZ pair first. This NW4R math inline is not in our
-// math headers (math::VEC3LenSq squares the XY pair first).
-static inline f32 VEC3LenSqYZ(register const math::VEC3* pVec) {
-    register f32 work0, work1, work2;
-
-    ASM {
-        psq_l   work0, 4(pVec), 0, 0
-        ps_mul  work0, work0, work0
-
-        psq_l   work1, 0(pVec), 1, 0
-        ps_madd work1, work1, work1, work0
-
-        ps_sum0 work2, work1, work0, work0
-    }
-
-    return work2;
-}
-
 DrawBillboardStrategy::DrawBillboardStrategy() {}
 
 void DrawBillboardStrategy::Draw(const DrawInfo& rInfo,
@@ -393,16 +375,16 @@ void DrawBillboardStrategy::DrawDirectionalBillboard(
         } else {
             f32 mag = math::FSqrt(axis.x * axis.x + axis.y * axis.y);
             f32 denom = 1.0f / mag;
-            rc = axis.y * denom;
             rs = -axis.x * denom;
+            rc = axis.y * denom;
         }
 
         f32 stretch = 1.0f;
 
         if (pDesc->typeOption0 != 0) {
             math::VEC3 dir;
-            dir = pIt->mParameter.mPosition - pIt->mParameter.mPrevPosition;
-            stretch += 0.5f * math::FSqrt(VEC3LenSqYZ(&dir)) / sy;
+            pIt->GetMoveDir(&dir);
+            stretch += 0.5f * math::FSqrt(math::VEC3Dot(&dir, &dir)) / sy;
         }
 
         DispParticle_Directional(pIt, viewMtx, vx, vy, stretch, rc, rs, sx,
@@ -425,10 +407,10 @@ inline void DrawBillboardStrategy::DispParticle_Directional(
     f32 px = rPivot.x;
     f32 py = rPivot.y;
 
-    f32 vx_rc = vx * rc;
-    f32 vx_rs = vx * rs;
-    f32 vy_rc = vy * rc;
     f32 vy_rs = vy * rs;
+    f32 vy_rc = vy * rc;
+    f32 vx_rs = vx * rs;
+    f32 vx_rc = vx * rc;
 
     f32 expX = px - sx * px;
     f32 expY = sy * ((stretch + py) - 1.0f) - py;
@@ -438,11 +420,10 @@ inline void DrawBillboardStrategy::DispParticle_Directional(
     p0.z = pos.z;
 
     d0.x = vx_rc * sx - stretch * (vy_rs * sy);
-    d0.y = vx_rs * sx + stretch * (vy_rc * sy);
-    d0.z = 0.0f;
-
     d1.x = vx_rc * sx + stretch * (vy_rs * sy);
+    d0.y = vx_rs * sx + stretch * (vy_rc * sy);
     d1.y = vx_rs * sx - stretch * (vy_rc * sy);
+    d0.z = 0.0f;
     d1.z = 0.0f;
 
     DispPolygon(p0, d0, d1, flags);
