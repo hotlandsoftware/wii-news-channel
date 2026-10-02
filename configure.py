@@ -1068,7 +1068,7 @@ config.libs = [
             Object(NonMatching, "nw4r/ef/emform/ef_cylinder.cpp"),
             Object(Matching, "nw4r/ef/emform/ef_torus.cpp"),
             Object(Matching, "nw4r/ef/emform/ef_cube.cpp"),
-            Object(NonMatching, "nw4r/ef/drawstrategy/ef_drawstrategybuilder.cpp"),
+            Object(Matching, "nw4r/ef/drawstrategy/ef_drawstrategybuilder.cpp"),
             Object(NonMatching, "nw4r/ef/drawstrategy/ef_drawstrategyimpl.cpp"),
             Object(NonMatching, "nw4r/ef/drawstrategy/ef_drawbillboardstrategy.cpp"),
             Object(NonMatching, "nw4r/ef/drawstrategy/ef_drawdirectionalstrategy.cpp"),
