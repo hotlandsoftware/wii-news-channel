@@ -95,6 +95,18 @@ typedef void (*JPEGIdctFunc)(s32* coef, u8* out, u16 stride, s32 extent);
 typedef s32 (*JPEGBlockFunc)(s32* coef, s32* quant, s32* dcPred, struct JPEGDecContext* ctx);
 typedef void (*JPEGOutputFunc)(struct JPEGDecContext* ctx, u32 x, u32 y);
 
+typedef struct JPEGScan {
+    u8 comp[4];         // 0x00
+    s32 dcPred[4];      // 0x04
+    u8 compId[4];       // 0x14
+    u8 quantSel[4];     // 0x18
+    u8 dcSel[4];        // 0x1C
+    u8 acSel[4];        // 0x20
+    u16 restartCount;   // 0x24
+    u16 nextRestart;    // 0x26
+    u32 mcuPos;         // 0x28
+} JPEGScan;
+
 typedef struct JPEGPixelBuffer {
     u32 unk0;       // 0x00
     u8 y[0x100];    // 0x04
@@ -104,15 +116,7 @@ typedef struct JPEGPixelBuffer {
 
 typedef struct JPEGDecContext {
     JPEGStream stream;        // 0x0000
-    u8 scanComp[4];           // 0x002C
-    s32 dcPred[4];            // 0x0030
-    u8 compId[4];             // 0x0040
-    u8 quantSel[4];           // 0x0044
-    u8 dcSel[4];              // 0x0048
-    u8 acSel[4];              // 0x004C
-    u16 restartCount;         // 0x0050
-    u16 nextRestart;          // 0x0052
-    u32 mcuPos;               // 0x0054
+    JPEGScan scan;            // 0x002C
     JPEGTables tables;        // 0x0058
     JPEGFrame frame;          // 0x17F0
     JPEGIdctFunc idctY;       // 0x1820
@@ -193,7 +197,7 @@ void fn_80080C30(s32* in, u8* out, u16 stride, s32 extent);
 // jpgd_dec.c
 s32 fn_80081348(JPEGDecHandle* h, JPEGDecParam* p);
 s32 fn_80081554(JPEGDecHandle* h, s32 count, void* out);
-s32 fn_800816B4(JPEGDecHandle* h, u8 scale);
+s32 fn_800816B4(JPEGDecHandle* h, s32 scale);
 s32 fn_80081794(JPEGDecContext* ctx);
 s32 fn_80081AA8(u32 x, u32 y, JPEGDecContext* ctx, s32* work);
 s32 fn_80081C6C(JPEGDecContext* ctx);
