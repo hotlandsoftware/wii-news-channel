@@ -13,3 +13,21 @@ inline float ldexpf(float value, int exp) {
 } // namespace std
 #endif
 #endif
+
+// Added for nw4r::ef: as in MSL (std::sinf/cosf/sqrtf call the double versions)
+#ifdef __cplusplus
+#ifndef CMATH_STD_SINF
+#define CMATH_STD_SINF
+namespace std {
+inline float sinf(float x) {
+    return sin(x);
+}
+inline float cosf(float x) {
+    return cos(x);
+}
+inline float sqrtf(float x) {
+    return sqrt(x);
+}
+} // namespace std
+#endif
+#endif

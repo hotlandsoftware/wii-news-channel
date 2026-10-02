@@ -3,6 +3,12 @@
 
 #include <types.h>
 #include <nw4r/ef/ef_effectsystem.h>
+#include <nw4r/ef/ef_effect.h>
+#include <nw4r/ef/ef_emitter.h>
+#include <nw4r/ef/ef_particle.h>
+#include <nw4r/ef/ef_resource.h>
+#include <nw4r/ef/ef_drawinfo.h>
+#include <nw4r/ef/ef_memorymanagerdecl.h>
 
 // Draws the Wii Remote pointers with the nw4r::ef "defcursor" effects
 // (the same breff/breft the HOME Menu uses).

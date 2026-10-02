@@ -471,6 +471,47 @@ revolution/ARC/arc.c:
 	.data       start:0x801CB600 end:0x801CB670
 	.sdata      start:0x80356DD8 end:0x80356DE0
 
+nw4r/ef/ef_draworder.cpp:
+	.text       start:0x8009D694 end:0x8009D794
+	.data       start:0x801CD8B0 end:0x801CD8C8
+
+nw4r/ef/ef_effect.cpp:
+	.text       start:0x8009D794 end:0x8009E0D8
+	.ctors      start:0x80191F64 end:0x80191F68
+	.data       start:0x801CD8C8 end:0x801CD8D8
+	.sbss       start:0x80357C00 end:0x80357C08
+
+nw4r/ef/ef_effectsystem.cpp:
+	.text       start:0x8009E0D8 end:0x8009E6B8
+	.ctors      start:0x80191F68 end:0x80191F6C
+	.bss        start:0x802B2C78 end:0x802B7CE0
+
+nw4r/ef/ef_emitter.cpp:
+	.text       start:0x8009E6B8 end:0x800A053C
+	.data       start:0x801CD8D8 end:0x801CD8E8
+	.sdata2     start:0x803593C8 end:0x80359400
+
+nw4r/ef/ef_animcurve.cpp:
+	.text       start:0x800A053C end:0x800A8498
+	.sdata2     start:0x80359400 end:0x80359430
+
+nw4r/ef/ef_particle.cpp:
+	.text       start:0x800A8498 end:0x800A8F68
+	.data       start:0x801CD8E8 end:0x801CD8F8
+	.sdata2     start:0x80359430 end:0x80359460
+
+nw4r/ef/ef_particlemanager.cpp:
+	.text       start:0x800A8F68 end:0x800AB0F8
+	.ctors      start:0x80191F6C end:0x80191F70
+	.data       start:0x801CD8F8 end:0x801CD9E8
+	.bss        start:0x802B7CE0 end:0x802B7D10
+	.sdata2     start:0x80359460 end:0x80359498
+
+nw4r/ef/ef_resource.cpp:
+	.text       start:0x800AB0F8 end:0x800ABAE0
+	.ctors      start:0x80191F70 end:0x80191F74
+	.bss        start:0x802B7D10 end:0x802B7D30
+
 nw4r/g3d/res/g3d_resmdl.cpp:
 	.text       start:0x800BA03C end:0x800BA96C
 

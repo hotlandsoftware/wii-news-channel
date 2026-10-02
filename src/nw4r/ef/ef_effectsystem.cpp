@@ -1,0 +1,138 @@
+#include <nw4r/ef.h>
+#include <nw4r/ut.h>
+
+#include <new>
+
+namespace nw4r {
+namespace ef {
+
+EffectSystem EffectSystem::instance;
+
+EffectSystem::EffectSystem() {
+    mMemoryManager = NULL;
+    mMaxGroupID = 0;
+    mXFFlushSafe = false;
+}
+
+EffectSystem::~EffectSystem() {
+    for (u32 i = 0; i < mMaxGroupID; i++) {
+        RetireEffectAll(i);
+    }
+}
+
+EffectSystem* EffectSystem::GetInstance() {
+    return &instance;
+}
+
+void EffectSystem::Initialize(u32 maxGroupID) {
+    mMaxGroupID = maxGroupID;
+
+    mActivityList =
+        new (mMemoryManager->AllocHeap(mMaxGroupID * sizeof(ActivityList) + 32))
+            ActivityList[mMaxGroupID];
+
+    for (int i = 0; i < mMaxGroupID; i++) {
+        mActivityList[i].SetOffset(offsetof(Effect, mActivityLink));
+        mActivityList[i].Initialize();
+    }
+
+    mRandom.Srand(0);
+}
+
+bool EffectSystem::Closing(Effect* pEffect) {
+    mActivityList[pEffect->mGroupID].ToClosing(pEffect);
+    pEffect->mLifeStatus = ReferencedObject::NW4R_EF_LS_CLOSING;
+
+    return true;
+}
+
+Effect* EffectSystem::CreateEffect(const char* pName, u32 groupID,
+                                   u16 calcRemain) {
+
+    EmitterResource* pResource =
+        Resource::GetInstance()->_FindEmitter(pName, NULL);
+
+    if (pResource == NULL) {
+        return NULL;
+    }
+
+    Effect* pEffect = GetMemoryManager()->AllocEffect();
+    if (pEffect == NULL) {
+        return NULL;
+    }
+
+    if (!pEffect->Initialize(this, pResource, calcRemain)) {
+        GetMemoryManager()->FreeEffect(pEffect);
+        return NULL;
+    }
+
+    pEffect->mGroupID = groupID;
+
+    mActivityList[groupID].ToActive(pEffect);
+    pEffect->mLifeStatus = ReferencedObject::NW4R_EF_LS_WAIT;
+
+    return pEffect;
+}
+
+u32 EffectSystem::RetireEffect(Effect* pEffect) {
+    if (pEffect->mLifeStatus != ReferencedObject::NW4R_EF_LS_ACTIVE) {
+        return 0;
+    }
+
+    mActivityList[pEffect->mGroupID].ToWait(pEffect);
+    pEffect->Destroy();
+    return 1;
+}
+
+u32 EffectSystem::RetireEffectAll(u32 groupID) {
+    u32 num = 0;
+    void* pArray[NW4R_EF_MAX_EFFECT];
+
+    u16 size = UtlistToArray(&mActivityList[groupID].mActiveList, pArray,
+                             UtlistSize(&mActivityList[groupID].mActiveList));
+
+    for (u16 i = 0; i < size; i++) {
+        Effect* pEffect = static_cast<Effect*>(pArray[i]);
+
+        if (pEffect->mLifeStatus == ReferencedObject::NW4R_EF_LS_ACTIVE) {
+            num += RetireEffect(pEffect);
+        }
+    }
+
+    return num;
+}
+
+void EffectSystem::Calc(u32 groupID, bool onlyBillboard) {
+    void* pArray[NW4R_EF_MAX_EFFECT];
+
+    u16 size = UtlistToArray(&mActivityList[groupID].mActiveList, pArray,
+                             UtlistSize(&mActivityList[groupID].mActiveList));
+
+    for (u16 i = 0; i < size; i++) {
+        Effect* pEffect = static_cast<Effect*>(pArray[i]);
+        pEffect->Calc(onlyBillboard);
+    }
+
+    mMemoryManager->GarbageCollection();
+}
+
+void EffectSystem::Draw(const DrawInfo& rInfo, u32 groupID) {
+    Effect* pIt = NULL;
+
+    while ((pIt = static_cast<Effect*>(
+                ut::List_GetNext(&mActivityList[groupID].mActiveList, pIt)))) {
+        pIt->Draw(rInfo);
+    }
+}
+
+void EffectSystem::SetProcessCamera(const math::VEC3& rPos,
+                                    const math::MTX34& rMtx, f32 cameraNear,
+                                    f32 cameraFar) {
+    mProcessCameraPos = rPos;
+    math::MTX34Copy(&mProcessCameraMtx, &rMtx);
+    mProcessCameraNear = cameraNear;
+    mProcessCameraFar = cameraFar;
+}
+
+} // namespace ef
+} // namespace nw4r
