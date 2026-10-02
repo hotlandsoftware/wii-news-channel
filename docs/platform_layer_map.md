@@ -586,6 +586,45 @@ All of `0x8012B540–0x80134C38` is split and `Matching` (libs `nand`, `sc`, `we
 
 **TPL** `0x80179290`, **NdevExi2AD** `DebuggerDriver 0x801794A4`, `exi2 0x801797D8–0x80179F64`.
 
+### MSL / Runtime leftovers (`0x80179F64–0x8018C7C0`) — Task 27
+
+All of `.text` in the runtime/MSL range is now split. Forecast's `src/MSL_C` is matching source for the same MSL build. Its `extab`/`extabindex` addresses are the same as ours, and the other sections are at constant offsets (`.rodata` +0x171A0, `.data` +0x16F40, `.sdata` +0x26AE0, `.sdata2` +0x26F20).
+
+| File | `.text` | Status | Source |
+| --- | --- | --- | --- |
+| `Runtime.PPCEABI.H/__mem.c` | `0x80179F64–0x80179F80` (+ `.init 0x80004338–0x8000446C`) | Matching | ogws `runtime/__mem.c` |
+| `qsort.c` | `0x801808BC–0x80180A2C` | Matching | written (MSL heapsort) |
+| `rand.c` | `0x80180A2C–0x80180A54` | Matching | written |
+| `scanf.c` | `0x80180A54–0x80181FC0` | Matching | Forecast |
+| `signal.c` | `0x80181FC0–0x80182070` | Matching | Forecast |
+| `strtold.c` | `0x8018261C–0x80183A10` | Matching | Forecast |
+| `time.c` | `0x80184620–0x80185F48` | NonMatching (98.94%) | written |
+| `wctype.c` (data only) | — | Matching | Forecast |
+| `wmem.c` | `0x80185F48–0x80185F78` | Matching | Forecast |
+| `wprintf.c` | `0x80185F78–0x801881BC` | Matching | Forecast |
+| `wchar_io.c` | `0x801882C4–0x80188348` | Matching | Forecast |
+
+- **Flags.** The new MSL files use `-Cpp_exceptions on -ipa file` with GC/3.0a5.2. Forecast builds `scanf`/`strtold` with GC/3.0a3, but 3.0a5.2 matches here too. `time.c` also needs `-fp_contract off`, for the `%z` offset in `strftime`.
+- **Weak `strlen`.** It lives at the end of `__mem.c`, right before `__va_arg.c`, as in ogws. It is not part of TPL or NdevExi2AD.
+- **No shared header changes.** `ctype.h` can't gain `isspace`/`tolower`, because `dvdfs.c` includes it and defines its own `tolower`. So each new file defines the ctype/wctype inlines it uses locally, as `strtoul.c` already did.
+- **`qsort`.** The swap macro's temporary is `unsigned long`. A `char` temporary drops the `extsb` after each `lbz`.
+- **`round_decimal`.** `wprintf.c` defines a global `round_decimal` (`0x80186DE0`). `printf.c`'s copy is `static`, so the name is in `symbols.txt` twice (scope local and global), as in Forecast. `ren.py` refuses duplicates, so that line was edited by hand.
+- **`time.c`.** No public decomp has it. It is reconstructed from the DOL: `leap_days`, `__time2tm`, `__tm2time`, `clock`, `mktime`, `localtime`, `emit`, `ISO8601NewYear`, `ISO8601Week`, `strftime`. `asctime`/`ctime`/`gmtime`/`time`/`difftime` are dead-stripped, but their strings still sit at the start of the string pool, so the file keeps dead versions of them.
+  - `time_t` is relative to 1970. `struct tm` is relative to 1900 (2208988800 s).
+  - Locale strings come from `_current_locale.time_cmpt_ptr`, as `|`-separated name lists. A static 60-byte buffer is followed in `.bss` by the gmtime and localtime `struct tm` buffers.
+  - `.bss` objects are ordered by **first use**, not by declaration. The dead `asctime` touching a buffer moves it forward.
+  - Several matches depended on statement form:
+    - `ISO8601NewYear` needs its field stores in the order sec, min, hour, mon, isdst, mday, wday, year.
+    - `__tm2time` needs one `div_t` per division (stack slots), and calls `__time2tm(seconds - 2208988800, tm)` rather than `__time2tm(*time, tm)`.
+    - `%U`/`%W` need `n = tm.tm_yday; n -= __msl_mod(...)`.
+    - `strftime` hoists `&_current_locale` into a local.
+  - Still different:
+    - `ISO8601Week` (92.9%): the original loads `p->year`, stores `*WYear` and then loads `p->NewYear` through the same `r0`. Ours hoists the `NewYear` load above the store.
+    - `strftime` (99.05%):
+      - The register numbering of the inlined name-list loop varies from case to case.
+      - The original keeps a dead `space_remaining -= n` store in the "no `%` left" path.
+      - The `'%'` case sign-extends the reused format byte a second time.
+
 ### MetroTRK (`0x8018C7C0–0x80191F00`, ogws, sizes identical)
 
 `mainloop 0x8018C7C0`, `nubevent 0x8018C8B8`, `nubinit 0x8018CAE0`, `msg 0x8018CC64`, `msgbuf 0x8018CC90`, `serpoll 0x8018D4CC`, `usr_put 0x8018D678`, `dispatch 0x8018D704`, `msghndlr 0x8018D84C`, `support 0x8018E928`, `mutex_TRK 0x8018EFDC`, `notify 0x8018EFF4`, `flush_cache 0x8018F08C`, `mem_TRK 0x8018F0C4`, `string_TRK 0x8018F17C`, `targimpl 0x8018F198`, `targsupp 0x80190BB0`, `mpc_7xx_603e 0x80190BD0`, `mslsupp 0x80190F40`, `dolphin_trk 0x801910B8`, `main_TRK 0x801913D4`, `dolphin_trk_glue 0x80191418`, `targcont 0x801918D8`, `target_options 0x8019190C`, `UDP_Stubs 0x80191928`, `main (gdev exi2) 0x80191970`, `CircleBuffer 0x80191C30`, `MWCriticalSection_gc 0x80191E98–0x80191F00`.
@@ -746,5 +785,6 @@ Difficulty: E = mostly drop-in, M = drop-in plus version fixes, H = little or no
 | 25 | BTE part 2: btm, btu, gap, hci | `0x8015526C–0x80164534` | 61 KB | smg | E–M |
 | 26 | BTE part 3: hid, l2c, port/rfc, sdp (**done**, 23/23 Matching) | `0x80164534–0x80179290` | 85 KB | smg | E–M |
 | — | MetroTRK | `0x8018C7C0–0x80191F00` | 22 KB | ogws | E (other agent) |
+| 27 | MSL/Runtime leftovers: `__mem`, qsort, rand, scanf, signal, strtold, time, wctype, wmem, wprintf, wchar_io (**done**, 10/11 Matching; `time.c` 98.94%) | `0x80179F64–0x8018C7C0` | 18 KB | Forecast `src/MSL_C` | E–M (time.c: H) |
 
 Suggested order: 0, then the easy, high-yield tasks 1, 2, 18, 20, 16, 15, 10, 21 and 24–26, then the M tasks, and 5–7 last.
