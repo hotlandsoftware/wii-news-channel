@@ -588,6 +588,11 @@ revolution/NWC24/NWC24System.c:
 	.sdata      start:0x80356DD0 end:0x80356DD8
 	.sbss       start:0x803578C0 end:0x803578D0
 
+revolution/TMCC_JPEG/jpegdec.c:
+	.text       start:0x8007FE28 end:0x8008A0A4
+	.rodata     start:0x801AACF0 end:0x801AAF58
+	.sdata2     start:0x80359068 end:0x80359070
+
 revolution/ARC/arc.c:
 	.text       start:0x8008A0A4 end:0x8008AA44
 	.data       start:0x801CB600 end:0x801CB670

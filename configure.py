@@ -1113,6 +1113,15 @@ config.libs = [
         ],
     },
     {
+        "lib": "tmcc_jpeg",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": [*cflags_rvl, "-use_lmw_stmw on"],
+        "progress_category": "sdk",
+        "objects": [
+            Object(NonMatching, "revolution/TMCC_JPEG/jpegdec.c"),
+        ],
+    },
+    {
         "lib": "base",
         "mw_version": "GC/3.0a5.2",
         "cflags": cflags_rvl,
