@@ -7,6 +7,7 @@
 class SmoothValue {
 public:
     SmoothValue();
+    ~SmoothValue() {}
     void Update();
 
     f32 mValue;  // at 0x0
