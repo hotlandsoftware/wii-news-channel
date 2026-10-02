@@ -20,6 +20,7 @@ class StrmBufferPool;
 
 namespace detail {
 
+// This NW4R revision's StrmSound (cf. TP's nw4hbm)
 class StrmSound : public BasicSound {
     friend class nw4r::snd::StrmSoundHandle;
 
@@ -29,41 +30,27 @@ public:
 public:
     explicit StrmSound(SoundInstanceManager<StrmSound>* pManager);
 
-    virtual void Shutdown(); // at 0x28
-    virtual bool IsPrepared() const {
-        return mStrmPlayer.IsPrepared();
-    } // at 0x2C
-
+    virtual void Shutdown();                      // at 0x28
     virtual void SetPlayerPriority(int priority); // at 0x4C
-    virtual bool IsAttachedTempSpecialHandle();   // at 0x5C
-    virtual void DetachTempSpecialHandle();       // at 0x60
+    virtual bool IsAttachedTempSpecialHandle();   // at 0x50
+    virtual void DetachTempSpecialHandle();       // at 0x54
 
     virtual BasicPlayer& GetBasicPlayer() {
         return mStrmPlayer;
-    } // at 0x68
+    } // at 0x5C
     virtual const BasicPlayer& GetBasicPlayer() const {
         return mStrmPlayer;
-    } // at 0x6C
+    } // at 0x60
 
-    bool Prepare(StrmBufferPool* pPool, StrmPlayer::StartOffsetType offsetType,
-                 s32 offset, int voices, ut::FileStream* pStream);
-
-    void* GetFileStreamBuffer() {
-        return mFileStreamBuffer;
-    }
-    s32 GetFileStreamBufferSize() {
-        return sizeof(mFileStreamBuffer);
-    }
-
-private:
-    static const int FILE_STREAM_BUFFER_SIZE = 512;
+    bool Prepare(StrmBufferPool* pBufferPool,
+                 StrmPlayer::StartOffsetType offsetType, s32 offset,
+                 int voices, StrmPlayer::StrmCallback* pCallback,
+                 u32 callbackData);
 
 private:
     StrmPlayer mStrmPlayer;                    // at 0xD8
-    StrmSoundHandle* mTempSpecialHandle;       // at 0x920
-    SoundInstanceManager<StrmSound>* mManager; // at 0x924
-    char UNK_0x928[0x93C - 0x928];
-    char mFileStreamBuffer[FILE_STREAM_BUFFER_SIZE]; // at 0x93C
+    StrmSoundHandle* mTempSpecialHandle;       // at 0x5F8
+    SoundInstanceManager<StrmSound>* mManager; // at 0x5FC
 };
 
 } // namespace detail
