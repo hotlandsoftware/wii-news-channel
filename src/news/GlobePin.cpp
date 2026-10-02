@@ -169,10 +169,10 @@ void GlobePin::Draw(u8 alpha) {
 BOOL GlobePin::DrawCards(u8 alpha) {
     BOOL drawn = FALSE;
     Camera* camera = lbl_8035775C->mCamera;
-    camera->mCamera.GXSetViewport();
-    camera->mCamera.GXSetProjection();
+    camera->GetG3dCamera().GXSetViewport();
+    camera->GetG3dCamera().GXSetProjection();
     math::MTX34 viewMtx;
-    camera->mCamera.GetCameraMtx(&viewMtx);
+    camera->GetG3dCamera().GetCameraMtx(&viewMtx);
     Draw2D_SetupGX();
     s32 i = 0;
     GXSetZScaleOffset(1.0f, mCardAlpha < 160 ? -0.1f : -0.01f);
@@ -189,10 +189,10 @@ BOOL GlobePin::DrawCards(u8 alpha) {
         GXLoadPosMtxImm(mtx, GX_PNMTX0);
         GXSetCurrentMtx(GX_PNMTX0);
         if (i == mCount - 1) {
-            ut::Color shadow(0);
+            GXColor shadow = ut::Color(0);
             shadow.a = mCardAlpha;
             GXSetTevColor(GX_TEVREG0, shadow);
-            GXSetTevColor(GX_TEVREG1, ut::Color(0));
+            GXSetTevColor(GX_TEVREG1, (GXColor)ut::Color(0));
             GXSetZMode(GX_TRUE, GX_LEQUAL, GX_FALSE);
             GXTexObj texObj;
             TPL_GetTexObj(gCommonTpl, 0x53, &texObj);
@@ -216,14 +216,14 @@ BOOL GlobePin::DrawCards(u8 alpha) {
             GXLoadTexObj(&texObj, GX_TEXMAP0);
             GXColor color = {255, 255, 255, alpha};
             GXSetTevColor(GX_TEVREG0, color);
-            GXSetTevColor(GX_TEVREG1, ut::Color(0));
+            GXSetTevColor(GX_TEVREG1, (GXColor)ut::Color(0));
         } else {
             GXTexObj texObj;
             TPL_GetTexObj(gCommonTpl, sNoPictureTex[gLanguage], &texObj);
             GXLoadTexObj(&texObj, GX_TEXMAP0);
             const GXColor white = {255, 255, 255, 0};
             GXSetTevColor(GX_TEVREG0, white);
-            ut::Color color(0);
+            GXColor color = ut::Color(0);
             color.a = alpha;
             GXSetTevColor(GX_TEVREG1, color);
         }
@@ -365,31 +365,38 @@ void GlobePin::DrawName() {
 
 void GlobePin::DrawHeadline(ut::CharWriter* writer) {
     const ut::Font* font = writer->GetFont();
-    s32 width = GetScreenWidth();
+    f32 right = GetScreenWidth();
     f32 scaleH = writer->GetScaleH();
-    f32 height = scaleH * font->GetHeight();
+    f32 ascent = scaleH * font->GetAscent();
     f32 space = ((ut::TextWriterBase<wchar_t>*)writer)->GetCharSpace();
     f32 y = writer->GetCursorY();
     u32 n = 0;
     const wchar_t* str = mArticle->unk3C;
     f32 x = writer->GetCursorX();
-    y = y - 0.5f * (scaleH * font->GetBaselinePos());
+    y = y - 0.5f * (scaleH * font->GetHeight());
     writer->SetCursorY(y);
-    while (*str != 0 && !(x > width)) {
+    f32 offset = ascent - ascent;
+    while (*str != 0) {
+        if (x > right) {
+            break;
+        }
         if (n >= mHeadlineLen) {
             ((ut::TextWriterBase<wchar_t>*)writer)->SetCharSpace(space);
             writer->SetScale(scaleH);
-            writer->SetCursorY(y + (height - height));
-            s32 width2 = GetScreenWidth();
-            x = writer->GetCursorX();
-            while (*str != 0 && !(x > width2)) {
+            writer->SetCursorY(y + offset);
+            f32 right2 = GetScreenWidth();
+            f32 x2 = writer->GetCursorX();
+            while (*str != 0) {
+                if (x2 > right2) {
+                    break;
+                }
                 if (*str == 0xA0) {
                     writer->Print(L' ');
                 } else {
                     writer->Print(*str);
                 }
-                x = space + writer->GetCursorX();
-                writer->SetCursorX(x);
+                x2 = space + writer->GetCursorX();
+                writer->SetCursorX(x2);
                 str++;
             }
             return;
@@ -469,7 +476,7 @@ void GlobePin::UpdateCards(f32 alpha) {
     f32 t = 0.5f * (1.0f - math::CosFIdx(NW4R_MATH_DEG_TO_FIDX(15.0f * mHoverTime)));
     f32 size = 50.0f * (1.0f + 1.3f * t) * zoom;
     math::MTX34 camMtx;
-    camera->mCamera.GetCameraMtx(&camMtx);
+    camera->GetG3dCamera().GetCameraMtx(&camMtx);
     PSMTXTranspose(camMtx.mtx, camMtx.mtx);
     Quaternion camQuat;
     C_QUATMtx(&camQuat, camMtx.mtx);
