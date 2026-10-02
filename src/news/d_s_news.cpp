@@ -536,6 +536,10 @@ inline BOOL IsOutOfMemory() {
 
 void SetDPDAll(s32 value);
 
+static inline bool IsFadedOut() {
+    return 1.0f == lbl_8035772C->mAlpha;
+}
+
 static inline bool IsArrowVisible() {
     return lbl_803575BA || lbl_803575BB;
 }
@@ -1348,6 +1352,21 @@ static inline f32 Abs(f32 x) {
     return __fabsf(x);
 }
 
+static inline void SetBgmTarget(SmoothValue& v, f32 target, f32 frames) {
+    v.mTarget = target;
+    v.mStep = Abs(target - v.mValue) / frames;
+}
+
+static inline void SetBgmTargetStep(SmoothValue& v, f32 target, f32 step) {
+    v.mTarget = target;
+    v.mStep = step;
+}
+
+static inline void SetBgmTargetP(SmoothValue* v, f32 target, f32 frames) {
+    v->mTarget = target;
+    v->mStep = Abs(target - v->mValue) / frames;
+}
+
 void Bgm_MuteMain() {
     if (!IsSoundPlaying(&lbl_8021E8CC[0])) {
         PlaySound(&lbl_8021E8CC[0], 0x1C);
@@ -1356,11 +1375,11 @@ void Bgm_MuteMain() {
         PlaySound(&lbl_8021E8CC[1], 0x1D);
     }
     sBgmVolume[0].mTarget = 0.0f;
-    sBgmVolume[0].mStep = Abs(0.0f - sBgmVolume[0].mValue) / 120.0f;
     sBgmVolume[1].mTarget = 0.0f;
-    sBgmVolume[1].mStep = Abs(0.0f - sBgmVolume[1].mValue) / 120.0f;
     sBgmVolume[2].mTarget = 0.0f;
     sBgmVolume[3].mTarget = 0.0f;
+    sBgmVolume[0].mStep = Abs(sBgmVolume[0].mTarget - sBgmVolume[0].mValue) / 120.0f;
+    sBgmVolume[1].mStep = Abs(sBgmVolume[1].mTarget - sBgmVolume[1].mValue) / 120.0f;
     if (IsSoundPlaying(&lbl_8021E8CC[2])) {
         fn_8004FAB0(&lbl_8021E8CC[2], 120);
     }
@@ -1411,12 +1430,12 @@ void Bgm_PlayMain(BOOL restart) {
         fn_8004FAB0(&lbl_8021E8CC[3], 60);
     }
     sBgmVolume[0].mTarget = 1.0f;
-    sBgmVolume[0].mStep = Abs(1.0f - sBgmVolume[0].mValue) / 60.0f;
     sBgmVolume[1].mTarget = 1.0f;
-    sBgmVolume[1].mStep = Abs(1.0f - sBgmVolume[1].mValue) / 60.0f;
     sBgmVolume[2].mTarget = 0.0f;
-    sBgmVolume[2].mStep = 1.0f / 60.0f;
     sBgmVolume[3].mTarget = 0.0f;
+    sBgmVolume[0].mStep = Abs(1.0f - sBgmVolume[0].mValue) / 60.0f;
+    sBgmVolume[1].mStep = Abs(1.0f - sBgmVolume[1].mValue) / 60.0f;
+    sBgmVolume[2].mStep = 1.0f / 60.0f;
     sBgmVolume[3].mStep = 1.0f / 60.0f;
 }
 
@@ -1441,8 +1460,7 @@ void Bgm_PlaySlideshow() {
     sBgmVolume[1].mStep = 1.0f / 60.0f;
     sBgmVolume[2].mTarget = 0.0f;
     sBgmVolume[2].mStep = 1.0f / 60.0f;
-    sBgmVolume[3].mTarget = 1.0f;
-    sBgmVolume[3].mStep = Abs(1.0f - sBgmVolume[3].mValue) / 60.0f;
+    SetBgmTarget(sBgmVolume[3], 1.0f, 60.0f);
 }
 
 void Bgm_SetSlideshowVolume(f64 volume) {
@@ -1771,7 +1789,7 @@ BOOL NewsScene::StateNoNews() {
     case -1:
         break;
     case 0:
-        if (1.0f == lbl_8035772C->mAlpha) {
+        if (IsFadedOut()) {
             mStep = 2;
         } else {
             fn_80048D20(lbl_8035772C, 25);
@@ -1802,6 +1820,8 @@ BOOL NewsScene::StateNoNews() {
 
 BOOL NewsScene::StateSaveSettings() {
     switch (mStep) {
+    case -1:
+        break;
     case 0:
         mSaveResult = fn_8000A2FC();
         if (mSaveResult == 0) {
