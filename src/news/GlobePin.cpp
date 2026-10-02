@@ -152,10 +152,13 @@ void GlobePin::Draw(u8 alpha) {
         GXSetZMode(GX_TRUE, GX_LEQUAL, GX_FALSE);
         for (s32 i = 0; i < 2; i++, ripple++) {
             if (ripple->mScale > 0.0f && ripple->mAlpha != 0) {
-                f32 scale = ripple->mScale * 1.5f;
+                f32 scale = ripple->mScale;
+                scale *= 1.5f;
+                f32 w = halfW * scale;
+                f32 h = halfH * scale;
                 color.a = ripple->mAlpha;
-                pos.x = GetScreenPos().x - halfW * scale;
-                pos.y = GetScreenPos().y - halfH * scale;
+                pos.x = GetScreenPos().x - w;
+                pos.y = GetScreenPos().y - h;
                 GXSetTevColor(GX_TEVREG0, color);
                 GXSetTevColor(GX_TEVREG1, sRippleColor);
                 Draw2D_Tex(gCommonTpl, 0x52, &pos, scale, scale);

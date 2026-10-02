@@ -704,7 +704,7 @@ void Connect::ShowErrorCode(s32 errorCode, s32 code) {
         return;
     }
 
-    value = abs(value);
+    value = __abs(value);
     const wchar_t* label;
     switch (gLanguage) {
     case 0:
@@ -766,8 +766,8 @@ s32 ConnectTips::GetNumTips() {
 
 void ConnectTips::SetTip(s32 index) {
     s32 i = 0;
-    for (lyt::PaneList::Iterator it = mRoot->GetChildList().GetBeginIter();
-         it != mRoot->GetChildList().GetEndIter(); it++, i++) {
+    lyt::PaneList& tips = mRoot->GetChildList();
+    for (lyt::PaneList::Iterator it = tips.GetBeginIter(); it != tips.GetEndIter(); it++, i++) {
         if (i == index) {
             it->SetVisible(true);
             mTip = &*it;
@@ -776,8 +776,8 @@ void ConnectTips::SetTip(s32 index) {
         }
     }
     mNumPages = 0;
-    for (lyt::PaneList::Iterator it = mTip->GetChildList().GetBeginIter();
-         it != mTip->GetChildList().GetEndIter(); it++) {
+    lyt::PaneList& pages = mTip->GetChildList();
+    for (lyt::PaneList::Iterator it = pages.GetBeginIter(); it != pages.GetEndIter(); it++) {
         mNumPages++;
     }
     mPage = 0;
@@ -790,7 +790,8 @@ BOOL ConnectTips::TypeText() {
         return FALSE;
     }
     while (mPos < mLength) {
-        wchar_t c = mText[mPos++];
+        wchar_t c = mText[mPos];
+        mPos++;
         switch (c) {
         case L'!':
         case L'.':
@@ -799,8 +800,10 @@ BOOL ConnectTips::TypeText() {
         case 0x3002:
         case 0xFF01:
         case 0xFF1F:
-            if (mText[mPos] == L'\n') {
+            switch (mText[mPos]) {
+            case L'\n':
                 pause = TRUE;
+                break;
             }
             break;
         }
@@ -835,8 +838,8 @@ BOOL ConnectTips::IsLastPage() {
 
 void ConnectTips::ShowPage() {
     s32 i = 0;
-    for (lyt::PaneList::Iterator it = mTip->GetChildList().GetBeginIter();
-         it != mTip->GetChildList().GetEndIter(); it++, i++) {
+    lyt::PaneList& pages = mTip->GetChildList();
+    for (lyt::PaneList::Iterator it = pages.GetBeginIter(); it != pages.GetEndIter(); it++, i++) {
         if (i == mPage) {
             lyt::Pane* pane = &*it;
             it->SetVisible(true);
