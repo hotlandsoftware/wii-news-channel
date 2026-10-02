@@ -1450,7 +1450,7 @@ BOOL SlideShow::StateMessage(const s32* arg) {
         }
         if (gTrigAll & 0x800) {
             PlaySE(0x41);
-            u8 flag = 1;
+            bool flag = true;
             if (gUpdateMsgType != 1) {
                 flag = mMessageFlag;
             }
@@ -2012,7 +2012,7 @@ void SlideShow::CheckPointer() {
         mFooterFade++;
     }
 
-    u8 flag = 1;
+    bool flag = true;
     if (gUpdateMsgType != 1) {
         flag = outside;
     }
