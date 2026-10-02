@@ -38,29 +38,32 @@ inline u32 CalcRandomSeed(u16 seed, u16 headerSeed, u32 loop, u16 idx) {
            (loop * 0x7B929 + idx * 0x371097E7 + 0x4BF53);
 }
 
-inline int CalcRandomU8(const AnimCurveKeyU8* pKey, u8* pRandom,
-                        u8* pRandomTable, u16 seed, u16 headerSeed,
-                        u32 loop) {
+inline const AnimCurveRandomU8*
+GetRandomU8(u8 type, u16 idx, u8* pRandom, u8* pRandomTable, u16 seed,
+            u16 headerSeed, u32 loop, u32& rRandom) {
     AnimCurveRandomSeed rnd;
-    rnd.value = CalcRandomSeed(seed, headerSeed, loop, pKey->randomIdx);
+    rnd.value = CalcRandomSeed(seed, headerSeed, loop, idx);
     rnd.bytes[2] ^= rnd.bytes[3];
     rnd.bytes[1] ^= rnd.bytes[2];
     rnd.bytes[0] ^= rnd.bytes[1];
 
-    u32 r = rnd.value;
-    const AnimCurveRandomU8* pEntry;
+    rRandom = rnd.value;
 
-    if (!(pKey->random & AC_KEY_RANDOM_TABLE)) {
-        pEntry = reinterpret_cast<AnimCurveRandomU8*>(pRandom + 4) +
-                 pKey->randomIdx;
-    } else {
-        u16 num = *reinterpret_cast<u16*>(pRandomTable);
-        pEntry = reinterpret_cast<AnimCurveRandomU8*>(pRandomTable + 4) +
-                 (r >> 16) % num;
-        r = r * 0x343FD + 0x269EC3;
+    if (!(type & AC_KEY_RANDOM_TABLE)) {
+        return reinterpret_cast<AnimCurveRandomU8*>(pRandom + 4) + idx;
     }
 
-    int value = pEntry->base + pEntry->range * static_cast<s16>(r >> 16) / 32768;
+    u16 num = *reinterpret_cast<u16*>(pRandomTable);
+    const AnimCurveRandomU8* pEntry =
+        reinterpret_cast<AnimCurveRandomU8*>(pRandomTable + 4) +
+        (rRandom >> 16) % num;
+    rRandom = rRandom * 0x343FD + 0x269EC3;
+    return pEntry;
+}
+
+inline int CalcRandomU8(const AnimCurveRandomU8* pEntry, u32 random) {
+    int value =
+        pEntry->base + pEntry->range * static_cast<s16>(random >> 16) / 32768;
 
     if (value < 0) {
         value = 0;
@@ -236,15 +239,70 @@ void AnimCurveExecuteAlpha(u8* pCmdList, u8* pTarget, u32 tick, u16 seed,
         }
     }
 
+    int f = frame;
     AnimCurveKey* pKeyTable = reinterpret_cast<AnimCurveKey*>(pKey);
+
+    int idx = pKeyTable->count - 1;
+    int mid = idx / 2;
     AnimCurveKeyU8* pKeys = reinterpret_cast<AnimCurveKeyU8*>(pKeyTable->datas);
+    int lo = 0;
+    bool exact = static_cast<f32>(__fabs(f - time)) < NW4R_MATH_FLT_EPSILON;
 
-    bool exact;
-    int frame0;
+    int frame0 = pKeys[0].frame;
     int frame1;
-    int idx = SearchKeyF(pKeyTable, pKeys, frame, time, exact, frame0, frame1);
 
-    if (!exact) {
+    if (f < frame0) {
+        idx = 0;
+        exact = true;
+    } else if (f == frame0) {
+        if (idx == 0) {
+            exact = true;
+        } else if (!exact) {
+            frame1 = pKeys[1].frame;
+        }
+
+        idx = 0;
+    } else {
+        frame1 = pKeys[idx].frame;
+
+        if (frame1 <= f) {
+            exact = true;
+        } else {
+            int val = pKeys[mid].frame;
+
+            while (lo < mid) {
+                if (f == val) {
+                    idx = mid;
+
+                    if (!exact) {
+                        frame0 = val;
+                        frame1 = pKeys[mid + 1].frame;
+                    }
+                    goto found;
+                }
+
+                if (val < f) {
+                    lo = mid;
+                    frame0 = val;
+                } else {
+                    idx = mid;
+                    frame1 = val;
+                }
+
+                mid = (lo + idx) / 2;
+                val = pKeys[mid].frame;
+            }
+
+            idx = lo;
+            exact = false;
+        }
+    }
+found:
+    AnimCurveKeyU8* pTheKey;
+
+    if (exact) {
+        pTheKey = &pKeys[idx];
+    } else {
     u32 nextLoop = loop;
     u8 flag = pHeader->processFlag;
 
@@ -269,10 +327,12 @@ void AnimCurveExecuteAlpha(u8* pCmdList, u8* pTarget, u32 tick, u16 seed,
     AnimCurveKeyU8* pKey0 = &pKeys[idx];
     AnimCurveKeyU8* pKey1 = &pKeys[idx + 1];
     u16 interp = pKey0->interp;
-    bool random0 = pKey0->random != 0;
-    bool random1 = pKey1->random != 0;
+    u8 random0 = pKey0->random;
+    u8 random1 = pKey1->random;
+    bool isRandom0 = random0 != 0;
+    bool isRandom1 = random1 != 0;
 
-    if (!random0 && !random1) {
+    if (!isRandom0 && !isRandom1) {
         u8 v0 = pKey0->value;
         u8 v1 = pKey1->value;
 
@@ -281,30 +341,44 @@ void AnimCurveExecuteAlpha(u8* pCmdList, u8* pTarget, u32 tick, u16 seed,
         } else {
             *pTarget = InterpolateU8(v0, v1, t, interp);
         }
-    } else if (random0 && !random1) {
-        u8 v0 = CalcRandomU8(pKey0, pRandom, pRandomTable, seed,
-                             pHeader->randomSeed, loop);
+    } else if (isRandom0 && !isRandom1) {
+        u32 r0;
+        const AnimCurveRandomU8* pEntry0 =
+            GetRandomU8(random0, pKey0->randomIdx, pRandom, pRandomTable, seed,
+                        pHeader->randomSeed, loop, r0);
+        int v0 = CalcRandomU8(pEntry0, r0);
         *pTarget = InterpolateU8(v0, pKey1->value, t, interp);
-    } else if (!random0 && random1) {
-        u8 v1 = CalcRandomU8(pKey1, pRandom, pRandomTable, seed,
-                             pHeader->randomSeed, nextLoop);
+    } else if (!isRandom0 && isRandom1) {
+        u32 r1;
+        const AnimCurveRandomU8* pEntry1 =
+            GetRandomU8(random1, pKey1->randomIdx, pRandom, pRandomTable, seed,
+                        pHeader->randomSeed, nextLoop, r1);
+        int v1 = CalcRandomU8(pEntry1, r1);
         *pTarget = InterpolateU8(pKey0->value, v1, t, interp);
     } else {
-        u8 v0 = CalcRandomU8(pKey0, pRandom, pRandomTable, seed,
-                             pHeader->randomSeed, loop);
-        u8 v1 = CalcRandomU8(pKey1, pRandom, pRandomTable, seed,
-                             pHeader->randomSeed, nextLoop);
+        u32 r0;
+        const AnimCurveRandomU8* pEntry0 =
+            GetRandomU8(random0, pKey0->randomIdx, pRandom, pRandomTable, seed,
+                        pHeader->randomSeed, loop, r0);
+        u32 r1;
+        const AnimCurveRandomU8* pEntry1 =
+            GetRandomU8(random1, pKey1->randomIdx, pRandom, pRandomTable, seed,
+                        pHeader->randomSeed, nextLoop, r1);
+        int v0 = CalcRandomU8(pEntry0, r0);
+        int v1 = CalcRandomU8(pEntry1, r1);
         *pTarget = InterpolateU8(v0, v1, t, interp);
     }
-    } else {
-        AnimCurveKeyU8* pTheKey = &pKeys[idx];
+        return;
+    }
 
-        if (pTheKey->random == 0) {
-            *pTarget = pTheKey->value;
-        } else {
-            *pTarget = CalcRandomU8(pTheKey, pRandom, pRandomTable, seed,
-                                    pHeader->randomSeed, loop);
-        }
+    if (pTheKey->random == 0) {
+        *pTarget = pTheKey->value;
+    } else {
+        u32 r;
+        const AnimCurveRandomU8* pEntry =
+            GetRandomU8(pTheKey->random, pTheKey->randomIdx, pRandom,
+                        pRandomTable, seed, pHeader->randomSeed, loop, r);
+        *pTarget = CalcRandomU8(pEntry, r);
     }
 }
 
