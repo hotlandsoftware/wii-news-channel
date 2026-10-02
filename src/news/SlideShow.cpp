@@ -588,7 +588,7 @@ void SlideShow::Calc() {
         return;
     }
 
-    if (mState == &SlideShow::StateShow || mState == &SlideShow::StateMove) {
+    if (IsState(&SlideShow::StateShow) || IsState(&SlideShow::StateMove)) {
         if (lbl_80357694 & 0x200) {
             if (mSpeed < 10) {
                 mSpeed++;
@@ -701,9 +701,9 @@ void SlideShow::Calc() {
     }
 
     bool active = true;
-    bool moving = mState == &SlideShow::StateShow || mState == &SlideShow::StateMove;
+    bool moving = IsState(&SlideShow::StateShow) || IsState(&SlideShow::StateMove);
     if (!moving) {
-        if (mState != &SlideShow::StateEnd) {
+        if (!IsState(&SlideShow::StateEnd)) {
             active = false;
         }
     }
@@ -761,7 +761,7 @@ void SlideShow::Draw() {
 
     DrawPictures();
 
-    if (mState == &SlideShow::StateShow || mState == &SlideShow::StateMove) {
+    if (IsState(&SlideShow::StateShow) || IsState(&SlideShow::StateMove)) {
         fn_80048154(mMainLayout);
     }
 
@@ -846,7 +846,7 @@ void SlideShow::Draw() {
         }
     }
 
-    if (mState == &SlideShow::StateMessage) {
+    if (IsState(&SlideShow::StateMessage)) {
         DrawSelection();
     }
 }
@@ -928,7 +928,7 @@ void SlideShow::CalcTextPos() {
 
 BOOL SlideShow::CheckInput() {
     bool dragging = false;
-    if (!(mState == &SlideShow::StateShow || mState == &SlideShow::StateMove)) {
+    if (!(IsState(&SlideShow::StateShow) || IsState(&SlideShow::StateMove))) {
         if (lbl_80357698 & 0x1000) {
             mZoomOutPressed = true;
         }
@@ -949,7 +949,7 @@ BOOL SlideShow::CheckInput() {
         return TRUE;
     }
 
-    if (mState != &SlideShow::StateMessage) {
+    if (!IsState(&SlideShow::StateMessage)) {
         fn_8004BD60(mCurLayout, 0x23);
         if (lbl_801F0908[0] & 0x400) {
             mDragging[0] = true;

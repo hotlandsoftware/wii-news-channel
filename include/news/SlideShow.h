@@ -60,6 +60,10 @@ public:
     s32 UpdateGrab(s32 chan, const nw4r::ut::Rect* rect);
     void LayoutTitle();
 
+    bool IsState(StateFunc state) {
+        return mState == state;
+    }
+
     void ChangeState(StateFunc state, const s32* arg = NULL) {
         if (mState) {
             mStateFrame = -1;
