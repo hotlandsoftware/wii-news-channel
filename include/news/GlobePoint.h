@@ -16,6 +16,9 @@ public:
 
     void CalcScreenPos(Camera* camera);
 
+    nw4r::math::VEC3 GetPos() const { return mPos; }
+    nw4r::math::VEC2 GetScreenPos() const { return mScreenPos; }
+
     NewsLocationRec* mLocation;    // at 0x04
     nw4r::math::VEC2 mLatLon;      // at 0x08 (degrees)
     nw4r::math::VEC2 mScreenPos;   // at 0x10

@@ -56,6 +56,7 @@ void C_MTXPerspective(Mtx44, f32, f32, f32, f32);
 void PSMTXIdentity(Mtx);
 void PSMTXCopy(const Mtx, Mtx);
 void PSMTXConcat(const Mtx, const Mtx, Mtx);
+void PSMTXTranspose(const Mtx src, Mtx xPose);
 void PSMTXMultVecSR(const Mtx, const Vec*, Vec*);
 void PSMTXMultVecArraySR(const Mtx, const Vec*, Vec*, u32);
 
