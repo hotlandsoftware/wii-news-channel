@@ -1119,6 +1119,31 @@ config.libs = [
             Object(Matching, "nw4r/snd/snd_Lfo.cpp"),
         ],
     },
+    {
+        # nw4r::snd part 2 (MemorySoundArchive ... SoundArchiveLoader), ogws sources
+        "lib": "nw4r_snd2",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_nw4r,
+        "progress_category": "sdk",
+        "objects": [
+            Object(Matching, "nw4r/snd/snd_MemorySoundArchive.cpp"),
+            Object(Matching, "nw4r/snd/snd_MidiSeqPlayer.cpp"),
+            Object(Matching, "nw4r/snd/snd_MmlParser.cpp"),
+            Object(Matching, "nw4r/snd/snd_MmlSeqTrack.cpp"),
+            Object(Matching, "nw4r/snd/snd_MmlSeqTrackAllocator.cpp"),
+            Object(Matching, "nw4r/snd/snd_NandSoundArchive.cpp"),
+            Object(NonMatching, "nw4r/snd/snd_RemoteSpeaker.cpp"),
+            Object(Matching, "nw4r/snd/snd_RemoteSpeakerManager.cpp"),
+            Object(Matching, "nw4r/snd/snd_SeqFile.cpp"),
+            Object(Matching, "nw4r/snd/snd_SeqPlayer.cpp"),
+            Object(Matching, "nw4r/snd/snd_SeqSound.cpp"),
+            Object(Matching, "nw4r/snd/snd_SeqSoundHandle.cpp"),
+            Object(Matching, "nw4r/snd/snd_SeqTrack.cpp"),
+            Object(Matching, "nw4r/snd/snd_SoundArchive.cpp"),
+            Object(Matching, "nw4r/snd/snd_SoundArchiveFile.cpp"),
+            Object(Matching, "nw4r/snd/snd_SoundArchiveLoader.cpp"),
+        ],
+    },
 ]
 
 

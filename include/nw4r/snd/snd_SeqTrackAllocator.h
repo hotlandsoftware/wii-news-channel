@@ -16,7 +16,7 @@ public:
 
     virtual SeqTrack* AllocTrack(SeqPlayer* pPlayer) = 0; // at 0xC
     virtual void FreeTrack(SeqTrack* pTrack) = 0;         // at 0x10
-    virtual int GetAllocatableTrackCount() const = 0;     // at 0x14
+    // (no GetAllocatableTrackCount in this older revision)
 };
 
 } // namespace detail

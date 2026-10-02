@@ -579,6 +579,75 @@ nw4r/snd/snd_Lfo.cpp:
 	.rodata     start:0x801ACCE0 end:0x801ACD08
 	.sdata2     start:0x80359A00 end:0x80359A30
 
+nw4r/snd/snd_MemorySoundArchive.cpp:
+	.text       start:0x800D5DC8 end:0x800D61FC
+	.data       start:0x801CE098 end:0x801CE118
+
+nw4r/snd/snd_MidiSeqPlayer.cpp:
+	.text       start:0x800D61FC end:0x800D6260
+
+nw4r/snd/snd_MmlParser.cpp:
+	.text       start:0x800D6260 end:0x800D710C
+	.data       start:0x801CE118 end:0x801CE348
+	.sdata      start:0x80356F98 end:0x80356FA8
+	.sbss       start:0x80357C88 end:0x80357C90
+	.sdata2     start:0x80359A30 end:0x80359A50
+
+nw4r/snd/snd_MmlSeqTrack.cpp:
+	.text       start:0x800D710C end:0x800D71CC
+	.data       start:0x801CE348 end:0x801CE358
+
+nw4r/snd/snd_MmlSeqTrackAllocator.cpp:
+	.text       start:0x800D71CC end:0x800D72F0
+	.data       start:0x801CE358 end:0x801CE370
+
+nw4r/snd/snd_NandSoundArchive.cpp:
+	.text       start:0x800D72F0 end:0x800D733C
+
+nw4r/snd/snd_RemoteSpeaker.cpp:
+	.text       start:0x800D733C end:0x800D7B50
+
+nw4r/snd/snd_RemoteSpeakerManager.cpp:
+	.text       start:0x800D7B50 end:0x800D7D8C
+	.bss        start:0x802D5A58 end:0x802D5D30
+	.sbss       start:0x80357C90 end:0x80357C98
+
+nw4r/snd/snd_SeqFile.cpp:
+	.text       start:0x800D7D8C end:0x800D7E08
+
+nw4r/snd/snd_SeqPlayer.cpp:
+	.text       start:0x800D7E08 end:0x800D8C28
+	.ctors      start:0x80191F84 end:0x80191F88
+	.data       start:0x801CE370 end:0x801CE3C8
+	.bss        start:0x802D5D30 end:0x802D5D68
+	.sdata2     start:0x80359A50 end:0x80359A60
+
+nw4r/snd/snd_SeqSound.cpp:
+	.text       start:0x800D8C28 end:0x800D902C
+	.ctors      start:0x80191F88 end:0x80191F8C
+	.data       start:0x801CE3C8 end:0x801CE430
+	.sbss       start:0x80357C98 end:0x80357CA0
+
+nw4r/snd/snd_SeqSoundHandle.cpp:
+	.text       start:0x800D902C end:0x800D916C
+
+nw4r/snd/snd_SeqTrack.cpp:
+	.text       start:0x800D916C end:0x800DA150
+	.rodata     start:0x801ACD08 end:0x801ACD30
+	.data       start:0x801CE430 end:0x801CE440
+	.sdata2     start:0x80359A60 end:0x80359A90
+
+nw4r/snd/snd_SoundArchive.cpp:
+	.text       start:0x800DA150 end:0x800DA738
+	.data       start:0x801CE440 end:0x801CE460
+
+nw4r/snd/snd_SoundArchiveFile.cpp:
+	.text       start:0x800DA738 end:0x800DB4E8
+	.sbss       start:0x80357CA0 end:0x80357CA8
+
+nw4r/snd/snd_SoundArchiveLoader.cpp:
+	.text       start:0x800DB4E8 end:0x800DBE40
+
 nw4r/ut/ut_list.cpp:
 	.text       start:0x800E84D8 end:0x800E8774
 

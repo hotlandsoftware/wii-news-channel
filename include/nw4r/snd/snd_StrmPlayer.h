@@ -69,7 +69,7 @@ public:
     // Older NW4R: virtual (BasicPlayer::IsPrepared at 0x1C)
     virtual bool IsPrepared() const {
         return mPreparedFlag;
-    }
+    } // (virtual in this older revision)
 
     void SetTaskErrorFlag() {
         mTaskErrorFlag = true;
