@@ -675,7 +675,7 @@ void ArticleText::HideAll() {
     }
 }
 
-static inline bool NeedsLineBreak(TextChar* last, const f32* x, f32 right, f32 scale) {
+static inline bool NeedsLineBreak(TextChar* last, const f32* x, f32 right, const f32& scale) {
     switch (last->mChar) {
     case '\n':
         return true;
@@ -818,8 +818,9 @@ void ArticleText::Layout(const math::VEC2* pos, f32 scale) {
 
     if (mIsCaption) {
         mIndent = mFont->GetWidth();
-        mCursor.x = mLeft = pos->x;
-        mRight = pos->x + mSize.x;
+        f32 x = pos->x;
+        mCursor.x = mLeft = x;
+        mRight = x + mSize.x;
         mCursor.y = pos->y;
     } else {
         if (mIndentFirst) {
