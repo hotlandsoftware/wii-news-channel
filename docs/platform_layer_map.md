@@ -72,13 +72,13 @@ Anything matched there can be reused directly.
 | `0x80133608–0x80134BDC` | 0x15D4 | FS | — | smg | 89% |
 | `0x80134BDC–0x80134C38` | 0x5C | PAD | — | ogws/smg | 100% |
 | `0x80134C38–0x80142930` | 0xDCF8 | WPAD (**done**, task 22) | Jun 28 2007 | smg | 100% |
-| `0x80142930–0x8014590C` | 0x2FDC | KPAD | Jun 28 2007 | smg (Jun 2008) | 49% (hard) |
-| `0x8014590C–0x80145C7C` | 0x370 | EUART | — | ogws/smg | 100% |
-| `0x80145C7C–0x80146DA8` | 0x112C | USB | — | smg | 35% |
-| `0x80146DA8–0x8014BCF0` | 0x4F48 | WUD | — | smg | 72% |
+| `0x80142930–0x8014590C` | 0x2FDC | KPAD (**done**, task 23) | Jun 28 2007 | smg (Jun 2008) | 100% |
+| `0x8014590C–0x80145C7C` | 0x370 | EUART (**done**, task 23) | — | smg | 100% |
+| `0x80145C7C–0x80146DA8` | 0x112C | USB (**done**, task 23) | — | smg | 100% |
+| `0x80146DA8–0x8014BCF0` | 0x4F48 | WUD (**done**, task 23) | — | smg | 100% |
 | `0x8014BCF0–0x80179290` | 0x2D5A0 | BTE (Broadcom stack) | — | smg (also tp, ss, mkw) | spot checks 77–100% |
-| `0x80179290–0x801794A4` | 0x214 | TPL | — | ogws/smg | 100% |
-| `0x801794A4–0x80179F64` | 0xAC0 | NdevExi2AD (`DebuggerDriver.c`, `exi2.c`) | — | ogws | 99.9% |
+| `0x80179290–0x801794A4` | 0x214 | TPL (**done**, task 23) | — | smg | 100% |
+| `0x801794A4–0x80179F64` | 0xAC0 | NdevExi2AD (`DebuggerDriver.c`, `exi2.c`) (**done**, task 23) | — | ogws/forecast | 100% |
 | `0x80179F64–0x80179F80` | 0x1C | `strlen` (Runtime `__mem.c`) | — | — | — |
 | `0x8018C7C0–0x80191F00` | 0x5740 | MetroTRK | — | ogws | 28 files, all size-identical (another agent) |
 
@@ -586,6 +586,41 @@ All of `0x8012B540–0x80134C38` is split and `Matching` (libs `nand`, `sc`, `we
 
 **TPL** `0x80179290`, **NdevExi2AD** `DebuggerDriver 0x801794A4`, `exi2 0x801797D8–0x80179F64`.
 
+#### KPAD, EUART, USB, WUD, TPL, NdevExi2AD (task 23, **done**)
+
+All 10 files are Matching. Sources are Petari's (`src/RVL_SDK/{kpad,euart,usb,wud,tpl}`) except NdevExi2AD (forecast's `DebuggerDriver.c`/`exi2.c`, which equal ogws's). One `configure.py` lib per library (`kpad`, `euart`, `usb`, `wud`, `tpl`, `ndevexi2ad`), all GC/3.0a5.2 with `cflags_rvl`, except `DebuggerDriver.c`, which needs **GC/3.0a3** (3.0a5.2 schedules `DBInitInterrupts` differently; ogws and forecast have it NonMatching for that reason).
+
+| File | `.text` | Data | Status |
+| --- | --- | --- | --- |
+| `KPAD/KPAD.c` | `0x80142930–0x8014590C` | `.data 0x801E5EF0–0x801E5F48`, `.bss 0x8031BE40–0x8031D320`, `.sdata 0x803572F0–0x80357360`, `.sbss 0x80358368–0x80358388`, `.sdata2 0x80359F98–0x8035A008` | Matching |
+| `EUART/euart.c` | `0x8014590C–0x80145C7C` | `.sbss 0x80358388–0x80358398` | Matching (Petari unchanged) |
+| `USB/usb.c` | `0x80145C7C–0x80146DA8` | `.data 0x801E5F48–0x801E65D8`, `.sdata 0x80357360–0x80357370`, `.sbss 0x80358398–0x803583A8` | Matching (Petari unchanged) |
+| `WUD/WUD.c` | `0x80146DA8–0x8014B6A4` | `.data 0x801E65D8–0x801E74D8`, `.bss 0x8031D320–0x8031F2C8`, `.sdata 0x80357370–0x80357378`, `.sbss 0x803583A8–0x803583C8`, `.sdata2 0x8035A008–0x8035A010` | Matching |
+| `WUD/WUDHidHost.c` | `0x8014B6A4–0x8014BCA0` | `.data 0x801E74D8–0x801E7758` | Matching (Petari unchanged) |
+| `WUD/debug_msg.c` | `0x8014BCA0–0x8014BCF0` | — | Matching |
+| `TPL/TPL.c` | `0x80179290–0x801794A4` | `.data 0x801ECF20–0x801ECF50`, `.sdata 0x80357418–0x80357420`, `.sdata2 0x8035A068–0x8035A070` | Matching |
+| `NdevExi2AD/DebuggerDriver.c` | `0x801794A4–0x801797D8` | `.sdata 0x80357420–0x80357428`, `.sbss 0x80358400–0x80358418` | Matching (GC/3.0a3) |
+| `NdevExi2AD/exi2.c` | `0x801797D8–0x80179F64` | — | Matching |
+
+Findings:
+
+- **KPAD (Jun 28 2007) is Petari's Jun 2008 code minus later features.** The function bodies are Petari's once these are removed:
+  - `KPADInsideStatus` is 0x528 bytes: the ring buffer has **16** entries (`KPAD_RING_BUFFER_SIZE`, Petari 120), and there are no `pos/hori/dist/acc_play_mode` fields. Only the "loose" play-radius branch exists in `calc_acc` and `calc_dpd_variable`. `kpad.h` was changed accordingly (game code only uses `KPADStatus`, which is unchanged).
+  - `KPADSetBtnRepeat` has no `* 200.0f` (as tp's), and `KPADInit` has no `GXColor` locals. Both only show up in the `.sdata2` pool. `get_kobj` is `static`, and its `dpd_scale`/`dpd_cx`/`dpd_cy` are macros, because `const` locals in an emitted function become extra `.sdata2` statics.
+  - New functions, written from the DOL: `KPADGetProjectionPos(Vec2*, const Vec2*, const KPADRect*, f32)` (it takes an SDK `Rect`, here `KPADRect`), and `KPADDisableDPD`/`KPADEnableDPD`, which only clear or set `dpdEnabled`. `KPADEnableAimingMode` comes after `reset_kpad`. `KPADGetProjectionPos` matches only with its constants in locals declared in this order: `f32 k = 1.2f; f32 half = 0.5f; f32 h = bottom - top; f32 scale = h * half;`. Other orders allocate registers differently.
+  - The game calls `KPADSetPosParam`, `KPADSetDistParam` (offset 0x94; it is not `KPADSetHoriParam`), `KPADEnableAimingMode`, `KPADGetProjectionPos`, `KPADDisable/EnableDPD`, `KPADInit` and `KPADRead`.
+  - `.sbss`: `icenter_org`, `kp_stick_clamp_cross`, `Vec2_0`, `kp_dist_vv1`, `kp_err_dist_min`. `.bss` ends at `0x8031D310` (`kp_fs_rot`); the 0x10 bytes up to WUD's 32-byte-aligned `.bss` are padding.
+- **WUD is older than Petari's.** Changes to Petari's `WUD.c`:
+  - There is no `_abortSync` or `_readNand`. `WUDiSyncDone` always calls `WUDSetVisibility(FALSE, TRUE)`, and the shutdown flush starts with `result = TRUE`.
+  - `WUDStartSyncDevice` and `WUDStartFastSyncSimple` still call the sync callback with `WUD_RESULT_SYNC_BUSY` on failure. `WUDiAutoSync` reads the callback and `WUDIsBusy()` together under one interrupt lock and passes `busy ? -1 : 0`; it does not return early.
+  - `WUDiGetRegisteredDevice` has no name check or compaction of the SC device list, does not count `scNum`, applies the "RVL-CNT-01" check to normal devices too, and does not call `SCSetBtDeviceInfoArray` at the end.
+  - The debug string is `"hci_status = %d"` (no newline). The `OSPanic` lines are 4199 and 4351 (`#line`). `WUDiGetRemoveWbcDevice` (Balance Board) does not exist yet.
+  - The two `.sdata2` byte arrays in `WUDiInitSub` are 4 and 3 bytes (the symbols were merged).
+- **USB, EUART and WUDHidHost are Petari's unchanged.** In EUART, `kUART*` became the `UART_*` names from `MetroTRK/trk.h` (MSL's `uart_console_io_gcn.c` has its own `kUART*` enum).
+- **TPL** has `TPLGetGXTexObjFromPalette` (0xE0, written; `TPLGet` is inlined into it).
+- **NdevExi2AD.** `exi2_hw.h` (private to the library) maps ogws's `PI_HW_REGS`/`EXI_READ`/`OS_INTR_*` names to ours. `EXI_CHAN_PARAMS` is already in `exi.h`.
+- **Symbols renamed outside the range:** none. Inside the range, all KPAD/WUD/USB/TPL/NdevExi2AD functions got Petari/ogws names. KPAD's `.sbss`/`.sdata2`/`.bss` symbols were merged and renamed (`icenter_org`, `Vec2_0`, `kp_stick_clamp_cross`, `kp_dist_vv1`, `kp_err_dist_min`, `core1GInit`, `fs1GInit`, `inside_kpads`, `kp_fs_rot`).
+
 ### MetroTRK (`0x8018C7C0–0x80191F00`, ogws, sizes identical)
 
 `mainloop 0x8018C7C0`, `nubevent 0x8018C8B8`, `nubinit 0x8018CAE0`, `msg 0x8018CC64`, `msgbuf 0x8018CC90`, `serpoll 0x8018D4CC`, `usr_put 0x8018D678`, `dispatch 0x8018D704`, `msghndlr 0x8018D84C`, `support 0x8018E928`, `mutex_TRK 0x8018EFDC`, `notify 0x8018EFF4`, `flush_cache 0x8018F08C`, `mem_TRK 0x8018F0C4`, `string_TRK 0x8018F17C`, `targimpl 0x8018F198`, `targsupp 0x80190BB0`, `mpc_7xx_603e 0x80190BD0`, `mslsupp 0x80190F40`, `dolphin_trk 0x801910B8`, `main_TRK 0x801913D4`, `dolphin_trk_glue 0x80191418`, `targcont 0x801918D8`, `target_options 0x8019190C`, `UDP_Stubs 0x80191928`, `main (gdev exi2) 0x80191970`, `CircleBuffer 0x80191C30`, `MWCriticalSection_gc 0x80191E98–0x80191F00`.
@@ -741,7 +776,7 @@ Difficulty: E = mostly drop-in, M = drop-in plus version fixes, H = little or no
 | 20 | AX, AXFX, MEM, DSP | `0x80123F2C–0x8012B540` | 30 KB | ogws (AX/DSP), smg (MEM/AXFX) | E |
 | 21 | NAND, SC, WENC, ESP, IPC, FS, PAD (**done**, 15/15 Matching) | `0x8012B540–0x80134C38` | 38 KB | smg | E–M |
 | 22 | WPAD (**done**, 5/5 Matching; ends `0x80142930`) | `0x80134C38–0x80142930` | 55 KB | smg (GC/3.0a5.2) | M |
-| 23 | KPAD, EUART, USB, WUD, TPL, NdevExi2AD | `0x80142930–0x8014BCF0`, `0x80179290–0x80179F64` | 38 KB | smg, ogws | M–H (KPAD, USB) |
+| 23 | KPAD, EUART, USB, WUD, TPL, NdevExi2AD (**done**, 10/10 Matching) | `0x80142930–0x8014BCF0`, `0x80179290–0x80179F64` | 38 KB | smg, ogws | M–H (KPAD, USB) |
 | 24 | BTE part 1: gki, hcisu, bte, bta (**done**, all Matching) | `0x8014BCF0–0x8015526C` | 38 KB | smg | E–M |
 | 25 | BTE part 2: btm, btu, gap, hci | `0x8015526C–0x80164534` | 61 KB | smg | E–M |
 | 26 | BTE part 3: hid, l2c, port/rfc, sdp (**done**, 23/23 Matching) | `0x80164534–0x80179290` | 85 KB | smg | E–M |
