@@ -173,6 +173,33 @@ struct FieldVortex {
 
 enum FieldTarget { FIELD_TARGET_VELOCITY, FIELD_TARGET_POSITION };
 
+// ogws-style VEC3::operator+= (VEC3Add one inline level down). Our shared
+// math::VEC3::operator+= has its own asm, which allocates differently.
+inline math::VEC3& AddVec(math::VEC3& rLhs, const math::VEC3& rRhs) {
+    math::VEC3Add(&rLhs, &rLhs, &rRhs);
+    return rLhs;
+}
+
+// VEC3Add as in ogws math_types.h (unscheduled order)
+inline math::VEC3* VEC3AddRaw(register math::VEC3* pOut,
+                              register const math::VEC3* pA,
+                              register const math::VEC3* pB) {
+    register f32 work0, work1, work2;
+
+    asm {
+        psq_l  work0, 0(pA),   0, 0
+        psq_l  work1, 0(pB),   0, 0
+        ps_add work2, work0, work1
+        psq_st work2, 0(pOut), 0, 0
+        psq_l  work0, 8(pA),   1, 0
+        psq_l  work1, 8(pB),   1, 0
+        ps_add work2, work0, work1
+        psq_st work2, 8(pOut), 1, 0
+    }
+
+    return pOut;
+}
+
 static inline u8* GetFieldInfo(u8* pTrack) {
     AnimCurveHeader* pHeader = reinterpret_cast<AnimCurveHeader*>(pTrack);
     return pTrack + sizeof(AnimCurveHeader) + pHeader->keyTable +
@@ -252,6 +279,10 @@ void ParticleManager::Calc() {
 
         math::VEC3 addVel(0.0f, 0.0f, 0.0f);
         math::VEC3 addPos(0.0f, 0.0f, 0.0f);
+
+        // Shared float temporaries (one register each across the field
+        // cases, as in the original)
+        f32 work0, work1, work2;
 
         for (u16 i = pIt->mTick == 0 ? 0 : mResource->NumPtclInitTrack();
              i < mResource->NumPtclTrack(); i++) {
@@ -404,8 +435,9 @@ void ParticleManager::Calc() {
                     AnimCurveExecuteF32x1(pPtclTrack, NULL, &speed, tick, seed,
                                           life);
 
-                    math::VEC3 vel = prevVel * (speed - 1.0f);
-                    math::VEC3Add(&addVel, &addVel, &vel);
+                    math::VEC3 vel;
+                    math::VEC3Scale(&vel, &prevVel, speed - 1.0f);
+                    AddVec(addVel, vel);
                     break;
                 }
 
@@ -430,11 +462,11 @@ void ParticleManager::Calc() {
 
                     switch (pInfo->target) {
                     case FIELD_TARGET_VELOCITY: {
-                        math::VEC3Add(&addVel, &addVel, &vel);
+                        AddVec(addVel, vel);
                         break;
                     }
                     case FIELD_TARGET_POSITION: {
-                        math::VEC3Add(&addPos, &addPos, &vel);
+                        AddVec(addPos, vel);
                         break;
                     }
                     }
@@ -481,8 +513,8 @@ void ParticleManager::Calc() {
                         vel.x = static_cast<s16>(r >> 16) / 32768.0f * power;
                         r = r * 0x343FD + 0x269EC3;
                         vel.y = static_cast<s16>(r >> 16) / 32768.0f * power;
-                        r = r * 0x343FD + 0x269EC3;
-                        vel.z = static_cast<s16>(r >> 16) / 32768.0f * power;
+                        u32 r2 = r * 0x343FD + 0x269EC3;
+                        vel.z = static_cast<s16>(r2 >> 16) / 32768.0f * power;
                     } else {
                         math::VEC3 dir;
 
@@ -506,16 +538,16 @@ void ParticleManager::Calc() {
                         if (pInfo->diffusion != 0.0f) {
                             u32 r = rnd.value;
 
-                            f32 theta = (r >> 16) / 65535.0f * pInfo->diffusion;
+                            work0 = (r >> 16) / 65535.0f * pInfo->diffusion;
                             r = r * 0x343FD + 0x269EC3;
-                            f32 phi = 2.0f * (NW4R_MATH_PI * ((r >> 16) / 65535.0f));
+                            work2 = 2.0f * (NW4R_MATH_PI * ((r >> 16) / 65535.0f));
 
-                            vel.x = std::sinf(theta) * std::sinf(phi);
-                            vel.y = std::cosf(theta);
-                            vel.z = std::sinf(theta) * std::cosf(phi);
+                            vel.x = std::sinf(work0) * std::sinf(work2);
+                            vel.y = std::cosf(work0);
+                            vel.z = std::sinf(work0) * std::cosf(work2);
 
-                            r = r * 0x343FD + 0x269EC3;
-                            vel *= (r >> 16) / 65535.0f * power;
+                            u32 r3 = r * 0x343FD + 0x269EC3;
+                            vel *= (r3 >> 16) / 65535.0f * power;
                             math::VEC3Transform(&vel, &dirMtx, &vel);
                         } else {
                             vel.x = 0.0f;
@@ -529,11 +561,11 @@ void ParticleManager::Calc() {
 
                     switch (pInfo->target) {
                     case FIELD_TARGET_VELOCITY: {
-                        math::VEC3Add(&addVel, &addVel, &vel);
+                        AddVec(addVel, vel);
                         break;
                     }
                     case FIELD_TARGET_POSITION: {
-                        math::VEC3Add(&addPos, &addPos, &vel);
+                        AddVec(addPos, vel);
                         break;
                     }
                     }
@@ -618,12 +650,12 @@ void ParticleManager::Calc() {
 
                         math::VEC3 origin(0.0f, 0.0f, 0.0f);
                         math::VEC3Transform(&origin, &mtxEmToGlb, &origin);
-                        pos -= origin;
+                        math::VEC3Sub(&pos, &pos, &origin);
                     }
 
                     math::VEC3 vel;
                     math::VEC3Transform(&vel, &rotMtx, &pos);
-                    vel -= pos;
+                    math::VEC3Sub(&vel, &vel, &pos);
 
                     if (info.coord) {
                         math::VEC3Transform(&vel, &mtxEmToLocNoTrans, &vel);
@@ -633,11 +665,11 @@ void ParticleManager::Calc() {
 
                     switch (info.target) {
                     case FIELD_TARGET_VELOCITY: {
-                        math::VEC3Add(&addVel, &addVel, &vel);
+                        AddVec(addVel, vel);
                         break;
                     }
                     case FIELD_TARGET_POSITION: {
-                        math::VEC3Add(&addPos, &addPos, &vel);
+                        AddVec(addPos, vel);
                         break;
                     }
                     }
@@ -659,15 +691,16 @@ void ParticleManager::Calc() {
 
                         math::VEC3 origin(0.0f, 0.0f, 0.0f);
                         math::VEC3Transform(&origin, &mtxEmToGlb, &origin);
-                        pos -= origin;
+                        math::VEC3Sub(&pos, &pos, &origin);
                     }
 
-                    math::VEC3 vel = info.pos - pos;
+                    math::VEC3 vel;
+                    math::VEC3Sub(&vel, &info.pos, &pos);
                     if (vel.x != 0.0f || vel.y != 0.0f || vel.z != 0.0f) {
                         math::VEC3Normalize(&vel, &vel);
                     }
 
-                    vel *= info.power;
+                    math::VEC3Scale(&vel, &vel, info.power);
 
                     if (info.coord) {
                         math::VEC3Transform(&vel, &mtxEmToLocNoTrans, &vel);
@@ -677,11 +710,11 @@ void ParticleManager::Calc() {
 
                     switch (info.target) {
                     case FIELD_TARGET_VELOCITY: {
-                        math::VEC3Add(&addVel, &addVel, &vel);
+                        AddVec(addVel, vel);
                         break;
                     }
                     case FIELD_TARGET_POSITION: {
-                        math::VEC3Add(&addPos, &addPos, &vel);
+                        AddVec(addPos, vel);
                         break;
                     }
                     }
@@ -708,20 +741,21 @@ void ParticleManager::Calc() {
 
                         math::VEC3 origin(0.0f, 0.0f, 0.0f);
                         math::VEC3Transform(&origin, &mtxEmToGlb, &origin);
-                        pos -= origin;
+                        math::VEC3Sub(&pos, &pos, &origin);
                     }
 
-                    math::VEC3 vel = info.pos - pos;
-                    f32 distSq = math::VEC3LenSq(&vel);
+                    math::VEC3 vel;
+                    math::VEC3Sub(&vel, &info.pos, &pos);
+                    work0 = math::VEC3LenSq(&vel);
                     if (vel.x != 0.0f || vel.y != 0.0f || vel.z != 0.0f) {
                         math::VEC3Normalize(&vel, &vel);
                     }
 
-                    vel *= info.power;
+                    math::VEC3Scale(&vel, &vel, info.power);
 
                     f32 rangeSq = info.range * info.range;
-                    if (distSq > rangeSq) {
-                        vel *= rangeSq / distSq;
+                    if (work0 > rangeSq) {
+                        math::VEC3Scale(&vel, &vel, rangeSq / work0);
                     }
 
                     if (info.coord) {
@@ -732,11 +766,11 @@ void ParticleManager::Calc() {
 
                     switch (info.target) {
                     case FIELD_TARGET_VELOCITY: {
-                        math::VEC3Add(&addVel, &addVel, &vel);
+                        AddVec(addVel, vel);
                         break;
                     }
                     case FIELD_TARGET_POSITION: {
-                        math::VEC3Add(&addPos, &addPos, &vel);
+                        AddVec(addPos, vel);
                         break;
                     }
                     }
@@ -766,7 +800,7 @@ void ParticleManager::Calc() {
 
                         math::VEC3 origin(0.0f, 0.0f, 0.0f);
                         math::VEC3Transform(&origin, &mtxEmToGlb, &origin);
-                        pos -= origin;
+                        math::VEC3Sub(&pos, &pos, &origin);
                     }
 
                     math::VEC3 radial;
@@ -781,19 +815,18 @@ void ParticleManager::Calc() {
                         break;
                     }
 
-                    f32 speed;
                     if (distSq >= info.distance) {
-                        speed = info.outerSpeed;
+                        work1 = info.outerSpeed;
                     } else {
                         f32 t = distSq * invDistSq;
-                        speed = (1.0f - t) * info.innerSpeed + t * info.outerSpeed;
+                        work1 = (1.0f - t) * info.innerSpeed + t * info.outerSpeed;
                     }
 
                     math::VEC3Normalize(&radial, &radial);
 
                     math::VEC3 vel;
                     math::VEC3Cross(&vel, &radial, &axis);
-                    vel *= speed;
+                    math::VEC3Scale(&vel, &vel, work1);
 
                     if (info.coord) {
                         math::VEC3Transform(&vel, &mtxEmToLocNoTrans, &vel);
@@ -803,11 +836,11 @@ void ParticleManager::Calc() {
 
                     switch (info.target) {
                     case FIELD_TARGET_VELOCITY: {
-                        math::VEC3Add(&addVel, &addVel, &vel);
+                        AddVec(addVel, vel);
                         break;
                     }
                     case FIELD_TARGET_POSITION: {
-                        math::VEC3Add(&addPos, &addPos, &vel);
+                        AddVec(addPos, vel);
                         break;
                     }
                     }
@@ -846,8 +879,7 @@ void ParticleManager::Calc() {
 
         pIt->mTick++;
 
-        math::VEC3Add(&pIt->mParameter.mVelocity, &pIt->mParameter.mVelocity,
-                      &addVel);
+        VEC3AddRaw(&pIt->mParameter.mVelocity, &pIt->mParameter.mVelocity, &addVel);
 
         pIt->AddPosition(&addPos);
         pIt->AddPosition(&pIt->mParameter.mVelocity);
