@@ -146,6 +146,19 @@ void fn_80040778(s32 chan, s32 arg1, s32 arg2);
 f32 fn_800449A0(u16 angle);
 }
 
+// OSu16tof32: u16 to f32 through the paired-single unit (GQR3 = u16).
+static inline f32 U16ToF32(register u16* in) {
+    register f32 ret;
+    asm {
+        psq_l ret, 0(in), 1, 3
+    }
+    return ret;
+}
+
+static inline f32 SinIdx(u16 idx) {
+    return math::SinFIdx(0.00390625f * U16ToF32(&idx));
+}
+
 static inline f32 FIdxRad(f32 rad) {
     return 40.743664f * rad;
 }
@@ -1680,19 +1693,19 @@ void SlideShow::DrawPictures() {
     }
     Draw2D_SetScissor(0, 0, GetScreenWidth(), 456);
 
-    GXColor shadow = {0, 0, 0, 0};
-    f32 slide = math::SinFIdx(0.00390625f * (u16)mSlideAngle);
+    ut::Color shadow(0, 0, 0, 0);
+    f32 slide = SinIdx(mSlideAngle);
     ut::Rect rect(0.0f, 0.0f, 0.0f, 0.0f);
 
     NewsTexture* prev = mPrevPicture;
     if (prev != NULL) {
-        u8 alpha = mPrevPicAlpha * fade;
+        s32 alpha = mPrevPicAlpha * fade;
         if (alpha != 0) {
             f32 width = mPrevPicScale * prev->width;
             f32 height = mPrevPicScale * prev->height;
             f32 border = 0.05f * height;
-            math::VEC3 pos2((mPrevPicCenter[0] + mSlideDist * slide) - 0.5f * width,
-                            mPrevPicCenter[1] - 0.5f * height, 0.0f);
+            Vec pos2 = {(mPrevPicCenter[0] + mSlideDist * slide) - 0.5f * width,
+                        mPrevPicCenter[1] - 0.5f * height, 0.0f};
             rect.left = 10.0f + pos2.x;
             rect.top = 10.0f + pos2.y;
             rect.right = border + (rect.left + width);
@@ -1703,9 +1716,9 @@ void SlideShow::DrawPictures() {
             GXSetTevColor(GX_TEVREG0, shadow);
             Draw2D_TexRect(gCommonTpl, 0x53, &rect, 0.0f, 0);
             Draw2D_SetupGX();
-            GXColor white = {255, 255, 255, alpha};
+            ut::Color white(255, 255, 255, alpha);
             GXSetTevColor(GX_TEVREG0, white);
-            Draw2D_Texture(mPrevPicture, &pos2, mPrevPicScale);
+            Draw2D_Texture(mPrevPicture, (math::VEC3*)&pos2, mPrevPicScale);
             if (mPrevCaption != NULL) {
                 DrawCaption(mPrevCaption, alpha, pos2.x, pos2.y, width, height);
             }
@@ -1714,13 +1727,13 @@ void SlideShow::DrawPictures() {
 
     NewsPicture* picture = mArticle->mPicture;
     if ((picture != NULL ? picture->texture : NULL) != NULL) {
-        u8 alpha = mPicAlpha * fade;
+        s32 alpha = mPicAlpha * fade;
         if (alpha != 0) {
             f32 width = mPicScale * (picture != NULL ? picture->texture : NULL)->width;
             f32 height = mPicScale * (picture != NULL ? picture->texture : NULL)->height;
             f32 border = 0.05f * height;
-            math::VEC3 pos2((mPicCenter[0] - mSlideDist * (1.0f - slide)) - 0.5f * width,
-                            mPicCenter[1] - 0.5f * height, 0.0f);
+            Vec pos2 = {(mPicCenter[0] - mSlideDist * (1.0f - slide)) - 0.5f * width,
+                        mPicCenter[1] - 0.5f * height, 0.0f};
             rect.left = 10.0f + pos2.x;
             rect.top = 10.0f + pos2.y;
             rect.right = border + (rect.left + width);
@@ -1731,9 +1744,9 @@ void SlideShow::DrawPictures() {
             GXSetTevColor(GX_TEVREG0, shadow);
             Draw2D_TexRect(gCommonTpl, 0x53, &rect, 0.0f, 0);
             Draw2D_SetupGX();
-            GXColor white = {255, 255, 255, alpha};
+            ut::Color white(255, 255, 255, alpha);
             GXSetTevColor(GX_TEVREG0, white);
-            Draw2D_Texture(GetPictureTexture(mArticle), &pos2, mPicScale);
+            Draw2D_Texture(GetPictureTexture(mArticle), (math::VEC3*)&pos2, mPicScale);
             if (GetPictureCaption(mArticle) != NULL) {
                 DrawCaption(GetPictureCaption(mArticle), alpha, pos2.x, pos2.y, width, height);
             }
