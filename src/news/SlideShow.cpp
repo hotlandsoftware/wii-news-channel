@@ -1704,6 +1704,7 @@ void SlideShow::DrawPictures() {
 
     ut::Color shadow(0, 0, 0, 0);
     f32 slide = SinIdx(mSlideAngle);
+    Vec pos2;
     ut::Rect rect(0.0f, 0.0f, 0.0f, 0.0f);
 
     NewsTexture* prev = mPrevPicture;
@@ -1713,7 +1714,6 @@ void SlideShow::DrawPictures() {
             f32 width = mPrevPicScale * prev->width;
             f32 height = mPrevPicScale * prev->height;
             f32 border = 0.05f * height;
-            Vec pos2;
             pos2.x = (mPrevPicCenter[0] + mSlideDist * slide) - 0.5f * width;
             pos2.y = mPrevPicCenter[1] - 0.5f * height;
             pos2.z = sPrevPicZ;
@@ -1743,7 +1743,6 @@ void SlideShow::DrawPictures() {
             f32 width = mPicScale * (picture != NULL ? picture->texture : NULL)->width;
             f32 height = mPicScale * (picture != NULL ? picture->texture : NULL)->height;
             f32 border = 0.05f * height;
-            Vec pos2;
             pos2.x = (mPicCenter[0] - mSlideDist * (1.0f - slide)) - 0.5f * width;
             pos2.y = mPicCenter[1] - 0.5f * height;
             pos2.z = sPicZ;
