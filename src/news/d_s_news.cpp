@@ -506,14 +506,6 @@ static const u32 sFadeParam[4] = {0x005C1000, 0x00280000, 0, 0x00280000};
 static const GXColor sBarColors[3] = {{0x00, 0xFF, 0x88, 0x4B}, {0x00, 0x40, 0xB4, 0x20}, {0, 0, 0, 0}};
 static const u32 sLogoIndex[8] = {0x58, 0x5A, 0x56, 0x55, 0x59, 0x57, 0x54, 0};
 
-static f32 sMarkPosX = 0.0f;
-static f32 sMarkPosY = 0.0f;
-static f32 sMarkPosZ = 0.0f;
-static f32 sIconPosX = 0.0f;
-static f32 sIconPosY = 0.0f;
-static f32 sIconPosZ = 0.0f;
-static f32 sArticleW = 0.0f;
-static f32 sArticleH = 0.0f;
 
 void Bgm_PlayMain(BOOL restart);
 void Bgm_PlaySlideshow();
@@ -607,6 +599,17 @@ NewsScene::NewsScene()
     lbl_80357574 = NULL;
     sPins = NULL;
     sSortedPins = NULL;
+#pragma push
+#pragma explicit_zero_data on
+    static f32 sMarkPosX = 0.0f;
+    static f32 sMarkPosY = 0.0f;
+    static f32 sMarkPosZ = 0.0f;
+    static f32 sIconPosX = 0.0f;
+    static f32 sIconPosY = 0.0f;
+    static f32 sIconPosZ = 0.0f;
+    static f32 sArticleW = 0.0f;
+    static f32 sArticleH = 0.0f;
+#pragma pop
     lbl_801EDF70.x = sMarkPosX;
     lbl_801EDF70.y = sMarkPosY;
     lbl_801EDF70.z = sMarkPosZ;
@@ -1224,12 +1227,21 @@ BOOL NewsScene::InitNews() {
         }
     }
 
-    lbl_801EDF70.x = 32.0f;
-    lbl_801EDF70.y = 67.0f;
-    lbl_801EDF70.z = 0.0f;
-    lbl_801EDF88.x = 32.0f;
-    lbl_801EDF88.y = 67.0f;
-    lbl_801EDF88.z = 0.0f;
+#pragma push
+#pragma explicit_zero_data on
+    static f32 sMarkX = 32.0f;
+    static f32 sMarkY = 67.0f;
+    static f32 sMarkZ = 0.0f;
+    static f32 sIconX = 32.0f;
+    static f32 sIconY = 67.0f;
+    static f32 sIconZ = 0.0f;
+#pragma pop
+    lbl_801EDF70.x = sMarkX;
+    lbl_801EDF70.y = sMarkY;
+    lbl_801EDF70.z = sMarkZ;
+    lbl_801EDF88.x = sIconX;
+    lbl_801EDF88.y = sIconY;
+    lbl_801EDF88.z = sIconZ;
     lbl_8035697C = true;
 
     mem = operator new(0x35C);
@@ -1440,7 +1452,11 @@ BOOL NewsScene::StateMain() {
         fn_80048C80(lbl_8035772C, 25);
         f32 h = TPL_GetHeight(gCursorTpl, 6);
         f32 w = TPL_GetWidth(gCursorTpl, 6);
-        lbl_801EDF70.z = 0.0f;
+#pragma push
+#pragma explicit_zero_data on
+        static f32 sMarkZ = 0.0f;
+#pragma pop
+        lbl_801EDF70.z = sMarkZ;
         lbl_801EDF70.y = 456.0f - (63.0f + h);
         lbl_801EDF70.x = (GetScreenWidth() - GetSideMargin()) - w;
         f32 w2 = TPL_GetWidth(gCommonTpl, 0x3E);
@@ -1531,13 +1547,17 @@ BOOL NewsScene::StateSlideshow() {
         fn_80021B6C(mSlideshow);
         f32 h = TPL_GetHeight(gCursorTpl, 6);
         f32 y = 273.6f - h;
+#pragma push
+#pragma explicit_zero_data on
+        static f32 sMarkZ = 0.0f;
+#pragma pop
         lbl_801EDF70.y = y;
-        lbl_801EDF70.z = 0.0f;
+        lbl_801EDF70.z = sMarkZ;
         f32 x = 4.0f + GetSideMargin();
         lbl_801EDF88.y = y - h;
         lbl_801EDF70.x = x;
         lbl_801EDF88.x = x;
-        lbl_801EDF88.z = 0.0f;
+        lbl_801EDF88.z = sMarkZ;
         break;
     }
     case 1:
@@ -2024,7 +2044,10 @@ bool HeadlineList_IsLanguagePressed() {
 }
 
 s32* HeadlineList_GetIndexPtr() {
+#pragma push
+#pragma explicit_zero_data on
     static s32 sDummy = 0;
+#pragma pop
     if (lbl_8035755C) {
         return &lbl_8035755C->mIndex;
     }
