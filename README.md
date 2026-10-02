@@ -1,15 +1,15 @@
 # wii-news-channel
 
 ## STATUS
-- **49.56%** decompiled (48.50% byte-matching)
-- **45.85%** fully linked (381 / 632 files)
+- **63.83%** decompiled (62.63% byte-matching)
+- **58.95%** fully linked (466 / 680 files)
 
 Percentages are of the DOL's code bytes (1,626,960, including `.init`), as reported by `ninja`.
 
 | Area (code size) | Decompiled | Matching | Linked |
 | --- | --- | --- | --- |
 | News Channel game code (`0x80006FC0`–`0x80051D4C`, ~307 KB) | 24.7% | 22.9% | 20.4% |
-| HOME Menu, NW4R, RVL SDK (`0x80051D4C`–`0x80179F64`, ~1.21 MB) | 53.7% | 52.7% | 49.8% |
+| HOME Menu, NW4R, RVL SDK (`0x80051D4C`–`0x80179F64`, ~1.21 MB) | 72.8% | 71.7% | 67.4% |
 | Runtime / MSL (`0x80179F64`–`0x8018C7C0`, ~76 KB) | 64.9% | 64.9% | 64.9% |
 | MetroTRK (`0x8018C7C0`–`0x80191F00`, plus `.init`) | 100% | 100% | 100% |
 
@@ -20,9 +20,9 @@ Each row is a share of that whole address range. `ninja`'s per-category summary 
 - Not yet matching: PointerEffect (99.98%), Mascot (99.96%), NewsArticle (99.54%), Model (94.23%).
 
 **Platform layer**
-- RVL SDK, linked: OS and BASE, EXI, SI, DB, VI, MTX, GX, AX, AXFX, MEM, DSP, CX, NAND, SC, WENC, ESP, IPC, FS, PAD, the Bluetooth stack (BTE), and the VF filesystem (except 4 files at 99.9%).
-- NW4R, linked: `g3d`, `lyt` (except `lyt_window.cpp`, 99.7%), `ut` (lists).
-- Not started: NW4R ef, snd and the rest of ut/math; DVD/AI, WPAD/KPAD/USB/WUD, NWC24, RSO/CNT/ARC/SO; the HOME Menu; one unidentified 41 KB library.
+- RVL SDK, linked: OS and BASE, EXI, SI, DB, VI, MTX, GX, DVD, AI, AX, AXFX, MEM, DSP, CX, NAND, SC, WENC, ESP, IPC, FS, PAD, WPAD, the Bluetooth stack (BTE), and the VF filesystem (except 4 files at 99.9%).
+- NW4R, linked: `g3d`, `lyt` (except `lyt_window.cpp`, 99.7%), `snd` (except 3 files at 98.7–99.99%), `ut` and `math` (except `ut_ArchiveFontBase.cpp`, 99.87%).
+- Not started: NW4R ef; KPAD/EUART/USB/WUD/TPL, NWC24, RSO/CNT/ARC/SO; the HOME Menu; one unidentified 41 KB library.
 - [docs/platform_layer_map.md](docs/platform_layer_map.md) has the full address map and plan.
 
 **Runtime, MSL and MetroTRK, linked:** C++ runtime and exceptions, `string`, `mem`, `printf`, `strtoul`, stdio/file I/O, `ansi_fp`, locale/ctype, the allocator, the fdlibm math library, and all of MetroTRK. Not started: MSL scanf/wide printf.
