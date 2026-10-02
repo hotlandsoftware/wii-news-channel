@@ -987,9 +987,10 @@ void ArticleText::StartScroll(const math::VEC2* pos, const math::VEC2* from,
 }
 
 static inline void GetSelection(TextChar* c, s32 count, s32& first, s32& last) {
+    s32 i;
     last = -1;
     first = -1;
-    for (s32 i = 0; i < count; i++, c++) {
+    for (i = 0; i < count; i++, c++) {
         if (first < 0 && c->mSelected) {
             first = i;
         }
@@ -1001,13 +1002,16 @@ static inline void GetSelection(TextChar* c, s32 count, s32& first, s32& last) {
 
 bool ArticleText::Select(const ut::Rect* rect) {
     f32 minX;
-    f32 maxX = rect->right;
+    f32 maxX;
+    f32 left = rect->left;
+    f32 right = rect->right;
     TextChar* c = mChars;
-    if (rect->left < maxX) {
-        minX = rect->left;
+    if (left < right) {
+        minX = left;
+        maxX = right;
     } else {
-        minX = maxX;
-        maxX = rect->left;
+        minX = right;
+        maxX = left;
     }
 
     s32 first0, last0;
@@ -1034,11 +1038,8 @@ bool ArticleText::Select(const ut::Rect* rect) {
     s32 first1, last1;
     GetSelection(mChars, mCount, first1, last1);
 
-    if ((first0 >= 0 || last0 >= 0 || first1 >= 0 || last1 >= 0) &&
-        (first0 != first1 || last0 != last1)) {
-        return true;
-    }
-    return false;
+    return (first0 >= 0 || last0 >= 0 || first1 >= 0 || last1 >= 0) &&
+           (first0 != first1 || last0 != last1);
 }
 
 void ArticleText::ClearSelection() {
