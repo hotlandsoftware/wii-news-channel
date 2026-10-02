@@ -23,14 +23,14 @@ enum SoundType {
 
 class SoundArchive {
 public:
+    // NOTE (snd part 3): this NW4R revision's info structs (cf. TP's nw4hbm)
+    // have no remote filter / pan mode / release priority fields
     struct SoundInfo {
         u32 fileId;                // at 0x0
         u32 playerId;              // at 0x4
         int playerPriority;        // at 0x8
         int volume;                // at 0xC
-        int remoteFilter;          // at 0x10
-        detail::PanMode panMode;   // at 0x14
-        detail::PanCurve panCurve; // at 0x18
+        // (this older revision has no remoteFilter/panMode/panCurve)
     };
 
     struct SeqSoundInfo {
@@ -38,7 +38,7 @@ public:
         u32 bankId;                  // at 0x4
         u32 allocTrack;              // at 0x8
         int channelPriority;         // at 0xC
-        bool releasePriorityFixFlag; // at 0x10
+        // (no releasePriorityFixFlag in this revision)
     };
 
     struct StrmSoundInfo {};
@@ -46,7 +46,7 @@ public:
     struct WaveSoundInfo {
         int subNo;                   // at 0x0
         int channelPriority;         // at 0x4
-        bool releasePriorityFixFlag; // at 0x8
+        // (no releasePriorityFixFlag in this revision)
     };
 
     struct Sound3DParam {

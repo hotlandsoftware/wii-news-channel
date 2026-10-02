@@ -29,8 +29,10 @@ inline void Unlock(OSMutex& rMutex) {
  ******************************************************************************/
 template <typename T> class AutoLock : private NonCopyable {
 public:
+    // Locks through the parameter, not the member (as in TP's nw4hbm, the
+    // same NW4R revision); this affects register allocation
     explicit AutoLock(T& rLockObj) : mLockObj(rLockObj) {
-        Lock(mLockObj);
+        Lock(rLockObj);
     }
     ~AutoLock() {
         Unlock(mLockObj);

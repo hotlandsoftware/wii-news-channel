@@ -16,6 +16,7 @@ using ::strncmp;
 using ::strncpy; // added for snd (Task 11)
 using ::strcpy;
 using ::strcat;
+using ::strncat; // added for snd (Task 12)
 } // namespace std
 #endif
 #endif

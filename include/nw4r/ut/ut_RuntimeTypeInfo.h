@@ -10,7 +10,19 @@
     }                                                                                              \
     static const nw4r::ut::detail::RuntimeTypeInfo typeInfo
 
-#define NW4R_UT_GET_RUNTIME_TYPEINFO(T) const nw4r::ut::detail::RuntimeTypeInfo T::typeInfo(NULL);
+// ogws-style RTTI macros (non-const typeInfo, initialised by __sinit)
+#define NW4R_UT_RTTI_DECL(T)                                                                       \
+    virtual const nw4r::ut::detail::RuntimeTypeInfo* GetRuntimeTypeInfo() const {                 \
+        return &typeInfo;                                                                          \
+    }                                                                                              \
+                                                                                                   \
+    static nw4r::ut::detail::RuntimeTypeInfo typeInfo;
+
+#define NW4R_UT_RTTI_DEF_BASE(T) nw4r::ut::detail::RuntimeTypeInfo T::typeInfo(NULL)
+
+#define NW4R_UT_RTTI_DEF_DERIVED(T, BASE) nw4r::ut::detail::RuntimeTypeInfo T::typeInfo(&BASE::typeInfo)
+
+#define NW4R_UT_GET_RUNTIME_TYPEINFO(T)const nw4r::ut::detail::RuntimeTypeInfo T::typeInfo(NULL);
 
 #define NW4R_UT_GET_DERIVED_RUNTIME_TYPEINFO(T, D)                                                 \
     const nw4r::ut::detail::RuntimeTypeInfo T::typeInfo(&D::typeInfo);

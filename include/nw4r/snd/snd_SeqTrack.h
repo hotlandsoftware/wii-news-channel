@@ -24,6 +24,8 @@ public:
     static const int VARIABLE_NUM = 16;
     static const int PRGNO_MAX = 0xFFFF;
 
+    // NOTE (snd part 3): no damper flag in this NW4R revision (cf. TP's
+    // nw4hbm), so that sizeof(MmlSeqTrack) == 0xD4
     struct ParserTrackParam {
         const u8* baseAddr;    // at 0x0
         const u8* currentAddr; // at 0x4
@@ -33,40 +35,40 @@ public:
         bool silenceFlag;    // at 0xD
         bool noteFinishWait; // at 0xE
         bool portaFlag;      // at 0xF
-        bool damperFlag;     // at 0x10
+        // (no damperFlag in this older revision)
 
-        int bankNo; // at 0x14
-        int prgNo;  // at 0x18
+        int bankNo; // at 0x10
+        int prgNo;  // at 0x14
 
-        LfoParam lfoParam; // at 0x1C
+        LfoParam lfoParam; // at 0x18
 
-        u8 lfoTarget;   // at 0x2C
-        f32 sweepPitch; // at 0x30
+        u8 lfoTarget;   // at 0x28
+        f32 sweepPitch; // at 0x2C
 
-        u8 volume;  // at 0x34
-        u8 volume2; // at 0x35
+        u8 volume;  // at 0x30
+        u8 volume2; // at 0x31
 
-        s8 pitchBend; // at 0x36
-        u8 bendRange; // at 0x37
+        s8 pitchBend; // at 0x32
+        u8 bendRange; // at 0x33
 
-        s8 pan;         // at 0x38
-        s8 initPan;     // at 0x39
-        s8 surroundPan; // at 0x3A
+        s8 pan;         // at 0x34
+        s8 initPan;     // at 0x35
+        s8 surroundPan; // at 0x36
 
-        s8 transpose; // at 0x3B
-        u8 priority;  // at 0x3C
+        s8 transpose; // at 0x37
+        u8 priority;  // at 0x38
 
-        u8 portaKey;  // at 0x3D
-        u8 portaTime; // at 0x3E
+        u8 portaKey;  // at 0x39
+        u8 portaTime; // at 0x3A
 
-        u8 attack;  // at 0x3F
-        u8 decay;   // at 0x40
-        u8 sustain; // at 0x41
-        u8 release; // at 0x42
+        u8 attack;  // at 0x3B
+        u8 decay;   // at 0x3C
+        u8 sustain; // at 0x3D
+        u8 release; // at 0x3E
 
-        u8 mainSend;            // at 0x43
-        u8 fxSend[AUX_BUS_NUM]; // at 0x44
-        u8 lpfFreq;             // at 0x47
+        u8 mainSend;            // at 0x3F
+        u8 fxSend[AUX_BUS_NUM]; // at 0x40
+        u8 lpfFreq;             // at 0x43
     };
 
 public:
@@ -96,7 +98,7 @@ public:
     int ParseNextTick(bool doNoteOn);
 
     void StopAllChannel();
-    void ReleaseAllChannel(int release);
+    void ReleaseAllChannel(int release) DECOMP_DONT_INLINE;
     void PauseAllChannel(bool flag);
     void AddChannel(Channel* pChannel);
     void UpdateChannelParam();
@@ -152,9 +154,9 @@ private:
     f32 mExtRemoteFxSend[WPAD_MAX_CONTROLLERS]; // at 0x40
 
     ParserTrackParam mParserTrackParam;        // at 0x50
-    volatile s16 mTrackVariable[VARIABLE_NUM]; // at 0x98
-    SeqPlayer* mPlayer;                        // at 0xB8
-    Channel* mChannelList;                     // at 0xBC
+    volatile s16 mTrackVariable[VARIABLE_NUM]; // at 0x94
+    SeqPlayer* mPlayer;                        // at 0xB4
+    Channel* mChannelList;                     // at 0xB8
 };
 
 } // namespace detail

@@ -28,8 +28,11 @@ public:
 
     ~LinkListImpl();
 
+    class ConstIterator;
+
     class Iterator {
         friend class LinkListImpl;
+        friend class ConstIterator;
 
     public:
         Iterator() : mPointer(NULL) {}
@@ -48,6 +51,31 @@ public:
         LinkListNode* operator->() const { return mPointer; }
 
         friend bool operator==(Iterator lhs, Iterator rhs) { return lhs.mPointer == rhs.mPointer; }
+
+    private:
+        LinkListNode* mPointer; // at 0x0
+    };
+
+    // Added for snd (ogws): const-view iterator
+    class ConstIterator {
+        friend class LinkListImpl;
+
+    public:
+        explicit ConstIterator(Iterator it) : mPointer(it.mPointer) {}
+
+        ConstIterator& operator++() {
+            mPointer = mPointer->mNext;
+            return *this;
+        }
+
+        ConstIterator& operator--() {
+            mPointer = mPointer->mPrev;
+            return *this;
+        }
+
+        const LinkListNode* operator->() const { return mPointer; }
+
+        friend bool operator==(ConstIterator lhs, ConstIterator rhs) { return lhs.mPointer == rhs.mPointer; }
 
     private:
         LinkListNode* mPointer; // at 0x0
@@ -81,12 +109,46 @@ protected:
     LinkListNode mNode; // at 0x4
 };
 
+// Added for snd (ogws)
+template <typename TIter> class ReverseIterator {
+public:
+    explicit ReverseIterator(TIter it) : mCurrent(it) {}
+
+    TIter GetBase() const { return mCurrent; }
+
+    ReverseIterator& operator++() {
+        --mCurrent;
+        return *this;
+    }
+
+    const typename TIter::TElem* operator->() const { return &this->operator*(); }
+
+    typename TIter::TElem& operator*() const {
+        TIter it = mCurrent;
+        return *--it;
+    }
+
+    friend bool operator==(const ReverseIterator& rLhs, const ReverseIterator& rRhs) {
+        return rLhs.mCurrent == rRhs.mCurrent;
+    }
+
+    friend bool operator!=(const ReverseIterator& rLhs, const ReverseIterator& rRhs) {
+        return !(rLhs.mCurrent == rRhs.mCurrent);
+    }
+
+private:
+    TIter mCurrent; // at 0x0
+};
+
 } // namespace detail
 
 template <typename T, int Ofs> class LinkList : public detail::LinkListImpl {
 public:
+    class ConstIterator;
+
     class Iterator {
         friend class LinkList;
+        friend class ConstIterator;
 
     public:
         typedef T TElem;
@@ -120,7 +182,61 @@ public:
         detail::LinkListImpl::Iterator mIterator; // at 0x0
     };
 
+    // Added for snd (ogws): const-view iterator
+    class ConstIterator {
+        friend class LinkList;
+
+    public:
+        typedef T TElem;
+
+        explicit ConstIterator(detail::LinkListImpl::Iterator it) : mIterator(it) {}
+        explicit ConstIterator(Iterator it) : mIterator(it.mIterator) {}
+
+        ConstIterator& operator++() {
+            ++mIterator;
+            return *this;
+        }
+
+        ConstIterator& operator--() {
+            --mIterator;
+            return *this;
+        }
+
+        ConstIterator operator++(int) {
+            ConstIterator ret = *this;
+            ++*this;
+            return ret;
+        }
+
+        const T* operator->() const { return GetPointerFromNode(mIterator.operator->()); }
+        const T& operator*() const { return *this->operator->(); }
+
+        friend bool operator==(ConstIterator lhs, ConstIterator rhs) { return lhs.mIterator == rhs.mIterator; }
+        friend bool operator!=(ConstIterator lhs, ConstIterator rhs) { return !(lhs == rhs); }
+
+    private:
+        detail::LinkListImpl::ConstIterator mIterator; // at 0x0
+    };
+
+    typedef detail::ReverseIterator<Iterator> RevIterator;
+    typedef detail::ReverseIterator<ConstIterator> ConstRevIterator;
+
     LinkList() {}
+
+    ConstIterator GetBeginIter() const { return ConstIterator(const_cast<LinkList*>(this)->GetBeginIter()); }
+    ConstIterator GetEndIter() const { return ConstIterator(const_cast<LinkList*>(this)->GetEndIter()); }
+    RevIterator GetBeginReverseIter() { return RevIterator(GetBeginIter()); }
+    RevIterator GetEndReverseIter() { return RevIterator(GetEndIter()); }
+    ConstRevIterator GetBeginReverseIter() const { return ConstRevIterator(GetBeginIter()); }
+    ConstRevIterator GetEndReverseIter() const { return ConstRevIterator(GetEndIter()); }
+
+    static Iterator GetIteratorFromPointer(LinkListNode* node) {
+        return Iterator(detail::LinkListImpl::GetIteratorFromPointer(node));
+    }
+
+    static const T* GetPointerFromNode(const LinkListNode* node) {
+        return reinterpret_cast<const T*>(reinterpret_cast<const u8*>(node) - Ofs);
+    }
 
     Iterator GetBeginIter() { return Iterator(detail::LinkListImpl::GetBeginIter()); }
     Iterator GetEndIter() { return Iterator(detail::LinkListImpl::GetEndIter()); }
