@@ -8,8 +8,8 @@
 
 const char* __NCDVersion = "<< RVL_SDK - NCD \trelease build: Jun 28 2007 18:29:29 (0x4199_60831) >>";
 
-static u32 ncdInitFlags;
 static NCDiConfig* ncdConfig;
+static u32 ncdInitFlags;
 
 static OSMutex ncdMutex ATTRIBUTE_ALIGN(32);
 static s32 ncdResult[8] ATTRIBUTE_ALIGN(32);
@@ -18,9 +18,10 @@ static IOSIoVector ncdVec[4] ATTRIBUTE_ALIGN(32);
 static s32 ExecConfigCommand(const char* funcName, void* buf, s32 cmd);
 static void LockRight(void);
 
-// Unreferenced (dead-stripped). The first function to use the .bss work
-// variables fixes their order (mutex, result, vectors); LockRight comes last
-// in .text, so something before it touched them first.
+// Unreferenced (dead-stripped). MWCC lays out .sbss/.bss statics in order of
+// first use; the original order (flags, config; mutex, result, vectors) is
+// LockRight's, but LockRight is the last function in .text, so something
+// before it must have touched them first.
 void NCDiClearWork(void) {
     memset(&ncdMutex, 0, sizeof(ncdMutex));
     memset(&ncdResult, 0, sizeof(ncdResult));

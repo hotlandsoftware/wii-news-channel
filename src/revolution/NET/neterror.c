@@ -8,9 +8,9 @@
 
 static inline int GetFirstBitIndex(u32 list) {
     int i;
-    u32 mask = 1;
+    u32 mask;
 
-    for (i = 0; i < 32; i++) {
+    for (i = 0, mask = 1; i < 32; i++) {
         if (list & mask) {
             return i;
         }
@@ -41,9 +41,9 @@ int NETiGetConnectionTypeFromConfigList(u32 enabled, u32 wireless, u32 wired) {
 static int GetStartupErrorCode(int err, int type);
 
 int NETGetStartupErrorCode(int err) {
-    u32 enabled;
-    u32 wireless;
     u32 wired;
+    u32 wireless;
+    u32 enabled;
     int type = NET_CONNECTION_TYPE_NONE;
 
     if (NCDiGetEnabledConfigList(&enabled, &wireless, &wired) >= 0) {

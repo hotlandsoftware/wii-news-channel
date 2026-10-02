@@ -917,8 +917,8 @@ config.libs = [
         "cflags": cflags_rvl,
         "progress_category": "sdk",
         "objects": [
-            Object(NonMatching, "revolution/SO/soCommon.c"),
-            Object(NonMatching, "revolution/SO/soBasic.c"),
+            Object(Matching, "revolution/SO/soCommon.c"),
+            Object(Matching, "revolution/SO/soBasic.c"),
         ],
     },
     {
@@ -936,10 +936,10 @@ config.libs = [
         "cflags": cflags_rvl,
         "progress_category": "sdk",
         "objects": [
-            Object(NonMatching, "revolution/NET/nettime.c"),
+            Object(Matching, "revolution/NET/nettime.c"),
             Object(NonMatching, "revolution/NET/netcrc.c"),
-            Object(NonMatching, "revolution/NET/neterror.c"),
-            Object(NonMatching, "revolution/NET/NETVersion.c"),
+            Object(Matching, "revolution/NET/neterror.c", extra_cflags=["-inline noauto"]),
+            Object(Matching, "revolution/NET/NETVersion.c"),
         ],
     },
     {
