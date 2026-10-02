@@ -314,8 +314,10 @@ void SaveErrorDialog::Draw() {
         fn_80048154(mQuestion);
         PaneButton* button = fn_80048364(mQuestion, "message");
         s32 w = GetScreenWidth();
-        f32 x = (button->mRect.right + button->mRect.left) / 2.0f + 0.5f * w;
-        f32 y = -((button->mRect.top + button->mRect.bottom) / 2.0f) + GetScreenCenterY();
+        f32 cy = (button->mRect.top + button->mRect.bottom) / 2.0f;
+        f32 cx = (button->mRect.right + button->mRect.left) / 2.0f;
+        f32 x = cx + 0.5f * w;
+        f32 y = -cy + GetScreenCenterY();
         ut::TextWriterBase<wchar_t> writer;
         Draw2D_SetupGX();
         Draw2D_SetOrtho();
@@ -369,8 +371,10 @@ void SaveErrorDialog::Draw() {
         fn_80048154(mNotice2);
         PaneButton* button = fn_80048364(mQuestion, "message");
         s32 w = GetScreenWidth();
-        f32 x = (button->mRect.right + button->mRect.left) / 2.0f + 0.5f * w;
-        f32 y = -((button->mRect.top + button->mRect.bottom) / 2.0f) + GetScreenCenterY();
+        f32 cy = (button->mRect.top + button->mRect.bottom) / 2.0f;
+        f32 cx = (button->mRect.right + button->mRect.left) / 2.0f;
+        f32 x = cx + 0.5f * w;
+        f32 y = -cy + GetScreenCenterY();
         ut::TextWriterBase<wchar_t> writer;
         Draw2D_SetupGX();
         Draw2D_SetOrtho();
