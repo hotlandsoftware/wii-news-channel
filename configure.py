@@ -898,9 +898,9 @@ config.libs = [
         "cflags": cflags_rvl,
         "progress_category": "sdk",
         "objects": [
-            Object(NonMatching, "revolution/WUD/WUD.c"),
-            Object(NonMatching, "revolution/WUD/WUDHidHost.c"),
-            Object(NonMatching, "revolution/WUD/debug_msg.c"),
+            Object(Matching, "revolution/WUD/WUD.c"),
+            Object(Matching, "revolution/WUD/WUDHidHost.c"),
+            Object(Matching, "revolution/WUD/debug_msg.c"),
         ],
     },
     {

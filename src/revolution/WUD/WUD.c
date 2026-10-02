@@ -49,8 +49,6 @@ static s8 _discRssi;
 static BOOL _initialized = FALSE;
 static u8 __bte_trace_level = 0;
 static u8 _normalTarget;
-static BOOL _readNand = FALSE;
-static volatile BOOL _abortSync = FALSE;
 
 // clang-format off
 static u8 descriptor[] = {
@@ -718,9 +716,7 @@ static u8 WUDiSyncDone(void) {
 
     OSCancelAlarm(&p->alarm);
 
-    if (!_abortSync) {
-        WUDSetVisibility(FALSE, TRUE);
-    }
+    WUDSetVisibility(FALSE, TRUE);
 
     pSyncCallback = p->syncType == WUD_SYNC_TYPE_STANDARD ? p->syncStdCB : p->syncSmpCB;
 
@@ -1113,7 +1109,6 @@ static u8 WUDiGetRegisteredDevice() {
     int i;
     int j;
     int num;
-    u8 scNum;
     WUDDevInfo* p_info;
     u8 zero[6];
 
@@ -1129,27 +1124,14 @@ static u8 WUDiGetRegisteredDevice() {
 
     _wcb.syncType = 0;
 
-    for (i = 0, num = _scArray.num, scNum = 0; i < 10; i++) {
+    // HAGE: no name check or compaction of the SC list yet (Petari's is newer)
+    for (i = 0, num = _scArray.num; i < 10; i++) {
         if (num == 0) {
             break;
         }
-        if (memcmp(_scArray.info[i].bd_name, "Nintendo RVL-CNT", 16)) {
-            memset(&_scArray.info[i], 0, sizeof(SCBtDeviceInfoSingle));
-        }
         if (!memcmp(_scArray.info[i].bd_addr, zero, BD_ADDR_LEN)) {
-            if (i < 10 - 1) {
-                for (j = i + 1; j < 10; j++) {
-                    if (!memcmp(_scArray.info[j].bd_name, "Nintendo RVL-CNT", 16)) {
-                        memcpy(&_scArray.info[i], &_scArray.info[j], sizeof(SCBtDeviceInfoSingle));
-                        memset(&_scArray.info[j], 0, sizeof(SCBtDeviceInfoSingle));
-                        goto setting;
-                    }
-                }
-            }
             continue;
         }
-
-    setting:
 
         p_info = WUDiGetNewDevInfo();
         if (p_info == NULL) {
@@ -1161,19 +1143,19 @@ static u8 WUDiGetRegisteredDevice() {
         p_info->status = 1;
         p_info->sync_type = 0;
         p_info->UNK_0x5C = 2;
-        p_info->subclass = 2;
-        p_info->hhAttrMask = (BTA_HH_BATTERY_POWER | BTA_HH_REMOTE_WAKE | BTA_HH_SUP_TOUT_AVLBL | BTA_HH_SEC_REQUIRED | BTA_HH_RECONN_INIT);
-        p_info->appID = 3;
+
+        if (!memcmp(p_info->conf.devName, "Nintendo RVL-CNT-01", 19)) {
+            p_info->subclass = 2;
+            p_info->hhAttrMask = (BTA_HH_BATTERY_POWER | BTA_HH_REMOTE_WAKE | BTA_HH_SUP_TOUT_AVLBL | BTA_HH_SEC_REQUIRED | BTA_HH_RECONN_INIT);
+            p_info->appID = 3;
+        }
 
         WUD_DEBUGPrint("addr : %02x:%02x:%02x:%02x:%02x:%02x\n", p_info->devAddr[0], p_info->devAddr[1], p_info->devAddr[2], p_info->devAddr[3],
                        p_info->devAddr[4], p_info->devAddr[5]);
         WUD_DEBUGPrint("name : %s\n", p_info->conf.devName);
 
-        scNum++;
         num--;
     }
-
-    _scArray.num = scNum;
 
     _wcb.syncType = 1;
 
@@ -1218,7 +1200,6 @@ static u8 WUDiGetRegisteredDevice() {
     _wcb.initState = 3;
 
     memset(&_spArray, 0, sizeof(_spArray));
-    SCSetBtDeviceInfoArray(&_scArray);
     SCSetBtCmpDevInfoArray(&_spArray);
     SCFlushAsync(InitFlushCallback);
 
@@ -1261,7 +1242,7 @@ static void InitHandler0(OSAlarm* pAlarm, OSContext* pContext) {
 }
 
 static void WUDiContMapTableFlush() {
-    BOOL result = _readNand;
+    BOOL result = TRUE;
 
     if (SCCheckStatus() != SC_STATUS_BUSY) {
         result &= SCSetBtDeviceInfoArray(&_scArray);
@@ -1574,7 +1555,23 @@ static BOOL StartSyncStandard(BOOL fast) {
 }
 
 BOOL WUDStartSyncDevice() {
-    return StartSyncStandard(FALSE);
+    WUDCB* p = &_wcb;
+    BOOL success;
+    BOOL enabled;
+    WUDSyncDeviceCallback pSyncCallback;
+
+    success = StartSyncStandard(FALSE);
+
+    // HAGE: the callback is still called here (Petari's version drops it)
+    enabled = OSDisableInterrupts();
+    pSyncCallback = p->syncStdCB;
+    OSRestoreInterrupts(enabled);
+
+    if (!success && pSyncCallback != NULL) {
+        pSyncCallback(WUD_RESULT_SYNC_BUSY, 0);
+    }
+
+    return success;
 }
 
 static BOOL StartSyncSimple(BOOL syncSkipChecks) {
@@ -1589,6 +1586,16 @@ BOOL WUDStartFastSyncSimple(void) {
 
     DEBUGPrint("WUDStartSyncSimple()\n");
     success = StartSyncSimple(FALSE);
+
+    // HAGE: the callback is still called here (Petari's version drops it)
+    enabled = OSDisableInterrupts();
+    pSyncCallback = p->syncSmpCB;
+    OSRestoreInterrupts(enabled);
+
+    if (!success && pSyncCallback != NULL) {
+        pSyncCallback(WUD_RESULT_SYNC_BUSY, 0);
+    }
+
     return success;
 }
 
@@ -1659,8 +1666,6 @@ static BOOL StopSync(void) {
 
 BOOL WUDCancelSyncDevice() {
     WUD_DEBUGPrint("WUDCancelSyncDevice()\n");
-
-    _abortSync = TRUE;
 
     return StopSync();
 }
@@ -2038,7 +2043,6 @@ void WUDiInitSub() {
 
     enable = OSDisableInterrupts();
     p_wcb->libStatus = 3;
-    _readNand = TRUE;
     OSRestoreInterrupts(enable);
 
     WUDSetVisibility(FALSE, TRUE);
@@ -2059,19 +2063,20 @@ void WUDiAutoSync() {
     WUDCB* p_wcb = &_wcb;
     WUDSyncDeviceCallback callback;
     BOOL enable;
+    s32 result;
 
     WUD_DEBUGPrint("WUDiAutoSync()\n");
 
-    if (!WUDIsBusy()) {
-        enable = OSDisableInterrupts();
-        callback = p_wcb->syncStdCB;
-        OSRestoreInterrupts(enable);
+    // HAGE: the busy state is passed to the callback (Petari checks it first)
+    enable = OSDisableInterrupts();
+    callback = p_wcb->syncStdCB;
+    result = WUDIsBusy() ? WUD_RESULT_SYNC_BUSY : 0;
+    OSRestoreInterrupts(enable);
 
-        if (callback) {
-            callback(0, 0);
-        } else {
-            WUDStartSyncDevice();
-        }
+    if (callback) {
+        callback(result, 0);
+    } else {
+        WUDStartSyncDevice();
     }
 }
 
@@ -2886,7 +2891,7 @@ void WUDVendorSpecificCallback(UINT8 len, UINT8* pData) {
         DEBUGPrint("VSE:- WATCH_DOG_RESET  HW error = %d\n", pData[1]);
 
         // clang-format off
-#line 4346
+#line 4199
         OS_ERROR("MODULE FATAL ERROR\n");
         // clang-format on
         break;
@@ -3014,7 +3019,7 @@ void WUDStoredLinkKeyCallback(void* p1) {
 
     default: {
         // clang-format off
-#line 4498
+#line 4351
         OS_ERROR("Unknown event\n");
         // clang-format on
     }
@@ -3026,7 +3031,7 @@ void WUDPowerManagerCallback(BD_ADDR bd_addr, tBTM_PM_STATUS status, u16 value, 
     WUDDevInfo* p_info;
 
     WUD_DEBUGPrint("WUDPowerManagerCallback\n");
-    WUD_DEBUGPrint("hci_status = %d\n", hci_status);
+    WUD_DEBUGPrint("hci_status = %d", hci_status);
 
     p_info = WUDiGetDevInfo(bd_addr);
     if (p_info == NULL) {
@@ -3175,23 +3180,4 @@ static u8 write_ram_params[] = {
 
 void WUDiResetAuthFailCount(void) {
     BTM_VendorSpecificCommand(0xFC4C, sizeof(write_ram_params), (u8*)write_ram_params, NULL);
-}
-
-WUDDevInfo* WUDiGetRemoveWbcDevice() {
-    WUDCB* p_wcb = &_wcb;
-    WUDDevInfo* p_info = NULL;
-    WUDDevInfoList* ptr;
-    BOOL enable;
-
-    enable = OSDisableInterrupts();
-    ptr = p_wcb->stdListHead;
-    while (ptr != NULL) {
-        if (!memcmp(ptr->devInfo->conf.devName, "Nintendo RVL-WBC", 16)) {
-            p_info = ptr->devInfo;
-        }
-        ptr = ptr->next;
-    }
-    OSRestoreInterrupts(enable);
-
-    return p_info;
 }
