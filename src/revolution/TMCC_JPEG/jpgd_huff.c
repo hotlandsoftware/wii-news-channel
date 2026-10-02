@@ -164,28 +164,27 @@ s32 fn_800898F4(s32* coef, s32* quant, s32* dcPred, JPEGDecContext* ctx) {
 }
 
 s32 fn_80089D2C(s32* coef, s32* quant, s32* dcPred, JPEGDecContext* ctx) {
-    u32 n;
     s32 one;
-    u32 idx;
-    s32 rs;
-    u32 v;
     s32 sz;
+    s32 rs;
     s32 k;
-    u8* vals;
-    s32 pos;
     s32 limit;
-    const u8* zz;
-    JPEGStream* s = &ctx->stream;
-    JPEGHuffCode* codes;
-    JPEGHuffLookup* lk;
     s32 ret;
+    u32 n;
+    s32 pos;
+    JPEGHuffCode* codes;
+    u32 idx;
+    u8* vals;
+    u32 v;
+    JPEGHuffLookup* lk;
+    const u8* zz;
 
     lk = ctx->tables.dc.lookup;
-    FILL_BITS(s, 8);
-    idx = (s->bits >> (s->numBits - 8)) & 0xFF;
+    FILL_BITS(&ctx->stream, 8);
+    idx = (ctx->stream.bits >> (ctx->stream.numBits - 8)) & 0xFF;
     if (lk[idx].len != 0) {
-        s->numBits -= lk[idx].len;
         rs = lk[idx].val;
+        ctx->stream.numBits -= lk[idx].len;
     } else {
         rs = fn_80089FB8(ctx->tables.dc.codes, ctx->tables.dc.vals, ctx);
         if (rs < 0) {
@@ -193,10 +192,10 @@ s32 fn_80089D2C(s32* coef, s32* quant, s32* dcPred, JPEGDecContext* ctx) {
         }
     }
     if (rs != 0) {
-        FILL_BITS(s, rs);
+        FILL_BITS(&ctx->stream, rs);
         n = 1 << rs;
-        s->numBits -= rs;
-        v = (n - 1) & (s->bits >> s->numBits);
+        ctx->stream.numBits -= rs;
+        v = (n - 1) & (ctx->stream.bits >> ctx->stream.numBits);
         if ((n >> 1) > v) {
             v -= n - 1;
         }
@@ -213,11 +212,11 @@ s32 fn_80089D2C(s32* coef, s32* quant, s32* dcPred, JPEGDecContext* ctx) {
     k = 1;
     one = 1;
     do {
-        FILL_BITS(s, 8);
-        idx = (s->bits >> (s->numBits - 8)) & 0xFF;
+        FILL_BITS(&ctx->stream, 8);
+        idx = (ctx->stream.bits >> (ctx->stream.numBits - 8)) & 0xFF;
         if (lk[idx].len != 0) {
             rs = lk[idx].val;
-            s->numBits -= lk[idx].len;
+            ctx->stream.numBits -= lk[idx].len;
         } else {
             rs = fn_80089FB8(codes, vals, ctx);
             if (rs < 0) {
@@ -227,14 +226,14 @@ s32 fn_80089D2C(s32* coef, s32* quant, s32* dcPred, JPEGDecContext* ctx) {
         sz = rs & 0xF;
         if (sz != 0) {
             k += rs >> 4;
-            FILL_BITS(s, sz);
+            FILL_BITS(&ctx->stream, sz);
             if (k > limit) {
                 k++;
-                s->numBits -= sz;
+                ctx->stream.numBits -= sz;
             } else {
                 n = one << sz;
-                s->numBits -= sz;
-                v = (n - 1) & (s->bits >> s->numBits);
+                ctx->stream.numBits -= sz;
+                v = (n - 1) & (ctx->stream.bits >> ctx->stream.numBits);
                 if ((n >> 1) > v) {
                     v -= n - 1;
                 }
