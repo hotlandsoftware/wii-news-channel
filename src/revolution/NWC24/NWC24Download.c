@@ -133,33 +133,37 @@ static NWC24Err CheckDlUrl(const char* pUrl) {
 
 static NWC24Err SetDlNextTime(const NWC24iDlTask* pTask, s64 time) {
     NWC24Err result;
+    u16 id;
 
     result = CheckDlTask(pTask, FALSE);
     if (result != NWC24_OK) {
         return result;
     }
 
-    if (pTask->id == 0xFFFF) {
+    id = pTask->id;
+    if (id == 0xFFFF) {
         return NWC24_ERR_FAILED;
     }
 
-    GetDlTaskEntryHeader(pTask->id)->nextTime = time / 60;
+    GetDlTaskEntryHeader(id)->nextTime = time / 60;
     return NWC24_OK;
 }
 
 static NWC24Err SetDlLastAccess(const NWC24iDlTask* pTask, s64 time) {
     NWC24Err result;
+    u16 id;
 
     result = CheckDlTask(pTask, FALSE);
     if (result != NWC24_OK) {
         return result;
     }
 
-    if (pTask->id == 0xFFFF) {
+    id = pTask->id;
+    if (id == 0xFFFF) {
         return NWC24_ERR_FAILED;
     }
 
-    GetDlTaskEntryHeader(pTask->id)->lastAccess = time / 60;
+    GetDlTaskEntryHeader(id)->lastAccess = time / 60;
     return NWC24_OK;
 }
 
@@ -728,7 +732,7 @@ static inline NWC24Err UpdateDlTask(NWC24iDlTask* pTaskImpl) {
 
     if (pTaskImpl->subTaskType == NWC24_DL_STTYPE_INCREMENT) {
         while ((result = CheckSubTaskEnabled(pTaskImpl, pTaskImpl->subTaskCounter)) == NWC24_ERR_DISABLED) {
-            pTaskImpl->subTaskCounter = (pTaskImpl->subTaskCounter + 1) % 32;
+            pTaskImpl->subTaskCounter = (u32)(pTaskImpl->subTaskCounter + 1) % NWC24i_DL_SUBTASK_MAX;
         }
 
         if (result < 0) {
@@ -759,7 +763,6 @@ NWC24Err NWC24DeleteDlTask(NWC24DlTask* pTask) {
 
 NWC24Err NWC24AddDlTask(NWC24DlTask* pTask) {
     NWC24iDlTask* pTaskImpl = (NWC24iDlTask*)pTask;
-    NWC24iDlHeader* pHeader;
     NWC24Err result;
     s64 now;
 
@@ -768,19 +771,18 @@ NWC24Err NWC24AddDlTask(NWC24DlTask* pTask) {
         return result;
     }
 
-    pHeader = NWC24iGetCachedDlHeader();
-    result = AddDlTask(pTaskImpl, pHeader->privateTasks, NWC24iGetCachedDlHeader()->maxTasks);
-    if (result < 0) {
-        return result;
+    result = AddDlTask(pTaskImpl, NWC24iGetCachedDlHeader()->privateTasks, NWC24iGetCachedDlHeader()->maxTasks);
+    if (result >= 0) {
+        now = 0;
+        result = NWC24iGetUniversalTime(&now);
+        if (result < 0) {
+            return result;
+        }
+
+        result = SetDlNextTime(pTaskImpl, now + pTaskImpl->interval * 60);
     }
 
-    now = 0;
-    result = NWC24iGetUniversalTime(&now);
-    if (result < 0) {
-        return result;
-    }
-
-    return SetDlNextTime(pTaskImpl, now + pTaskImpl->interval * 60);
+    return result;
 }
 
 NWC24Err NWC24GetDlNextTime(const NWC24DlTask* pTask, s64* pTime) {
