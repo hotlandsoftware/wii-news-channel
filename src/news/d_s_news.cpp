@@ -131,7 +131,7 @@ void fn_8003D128(void* obj, s32 flag);
 void fn_8003D168(void* obj);
 void fn_8003D178(void* obj, f32 x, f32 y);
 void fn_8003D21C(void* obj);
-void fn_8003FB54(const math::VEC3* pos, const math::VEC3* size, const GXColor* color);
+void fn_8003FB54(const math::VEC3& pos, const math::VEC3& size, const GXColor& color);
 s32 fn_80044F08(void);
 
 // Faders (0x80048C80..)
@@ -1832,11 +1832,16 @@ void AdvanceLoadingFrame() {
     }
 }
 
+static inline f32 GetScreenScaleX() {
+    return gWidescreen ? 1.368421f : 1.0f;
+}
+
 void DrawLoadingScreen() {
     Draw2D_SetupGX();
     Draw2D_SetOrtho();
+    f32 sx = GetScreenScaleX();
     math::VEC3 pos(0.0f, 0.0f, 0.0f);
-    Draw2D_Tex(gCommonTpl, 0, &pos, gWidescreen ? 1.368421f : 1.0f, 1.0f);
+    Draw2D_Tex(gCommonTpl, 0, &pos, sx, 1.0f);
 
     u32 index;
     switch (gLanguage) {
@@ -1864,17 +1869,15 @@ void DrawLoadingScreen() {
         break;
     }
 
-    f32 sx = gWidescreen ? 1.368421f : 1.0f;
-    f32 x = 0.5f * GetScreenWidth() - 196.0f * sx;
+    f32 x = 0.5f * GetScreenWidth() - 196.0f * GetScreenScaleX();
     f32 t = (30 - sLoadFrame) / 30.0f;
+    f32 y = 414.0f;
     f32 scale = 0.75f + 0.25f * t;
     f32 w = scale * TPL_GetWidth(gCommonTpl, index);
-    u32 h = TPL_GetHeight(gCommonTpl, index);
-    GXColor color = {255, 255, 255, 0};
-    color.a = 128.0f * t;
-    f32 hh = scale * h;
+    f32 h = scale * TPL_GetHeight(gCommonTpl, index);
+    GXColor color = {48, 48, 48, 128.0f * t};
     GXSetTevColor(GX_TEVREG0, color);
-    math::VEC3 p(x - 0.5f * w, 414.0f - 0.5f * hh, 0.0f);
+    math::VEC3 p(x - 0.5f * w, y - 0.5f * h, 0.0f);
     Draw2D_Tex(gCommonTpl, index, &p, scale, scale);
 }
 
@@ -1906,15 +1909,14 @@ BOOL LoadCommonResources() {
         GXInvalidateTexAll();
         DrawLoadingScreen();
         s32 n = 6 - (i + 1);
-        if ((u8)(255.0f * (n / 6.0f)) != 0) {
+        if ((s32)(255.0f * (n / 6.0f)) != 0) {
             Draw2D_SetupGX();
             Draw2D_SetOrtho();
             GXSetZMode(GX_FALSE, GX_NEVER, GX_FALSE);
-            GXColor color = {0, 0, 0, 0};
-            color.a = 255.0f * (n / 6.0f);
-            math::VEC3 pos(0.0f, 0.0f, 0.0f);
+            ut::Color color(0, 0, 0, 255.0f * (n / 6.0f));
             math::VEC3 size(GetScreenWidth(), 456.0f, 0.0f);
-            fn_8003FB54(&pos, &size, &color);
+            math::VEC3 pos(0.0f, 0.0f, 0.0f);
+            fn_8003FB54(pos, size, color);
         }
         GXSetZMode(GX_TRUE, GX_LEQUAL, GX_TRUE);
         GXSetColorUpdate(GX_TRUE);
@@ -3070,11 +3072,13 @@ void DrawScreenFade(u8 alpha) {
         Draw2D_SetupGX();
         Draw2D_SetOrtho();
         GXSetZMode(GX_FALSE, GX_NEVER, GX_FALSE);
-        GXColor color = {0, 0, 0, 0};
-        color.a = alpha;
+        ut::Color color(0, 0, 0, alpha);
+        math::VEC3 pos;
         math::VEC3 size(GetScreenWidth(), 456.0f, 0.0f);
-        math::VEC3 pos(0.0f, 0.0f, 0.0f);
-        fn_8003FB54(&pos, &size, &color);
+        pos.x = 0.0f;
+        pos.y = 0.0f;
+        pos.z = 0.0f;
+        fn_8003FB54(pos, size, color);
     }
 }
 
