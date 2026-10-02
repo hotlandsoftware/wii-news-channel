@@ -907,8 +907,8 @@ void ArticleText::Layout(const math::VEC2* pos, f32 scale) {
 TextChar* ArticleText::PlaceWord(TextChar* c, const f32& scale, const f32& scaleX,
                                  math::VEC2& cursor, s32& count) {
     f32 s = scale * scaleX;
-    c->mScaleX = scaleX;
     f32 space = s * gCharSpaceScale;
+    c->mScaleX = scaleX;
     fn_8000CE30(c, cursor.x, cursor.y);
     fn_8000CD74(c, mNumLines);
     cursor.x += c->mScaledWidth * s;
@@ -919,8 +919,9 @@ TextChar* ArticleText::PlaceWord(TextChar* c, const f32& scale, const f32& scale
     while (c->mNext != NULL) {
         TextChar* n = c->mNext;
         c = n;
+        f32 sx = scaleX;
         cursor.x += space;
-        n->mScaleX = scaleX;
+        n->mScaleX = sx;
         fn_8000CE30(n, cursor.x, cursor.y);
         fn_8000CD74(n, mNumLines);
         cursor.x += n->mScaledWidth * s;
