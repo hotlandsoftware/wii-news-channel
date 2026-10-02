@@ -521,8 +521,10 @@ void ArticleText::Draw(const math::VEC2* pos, bool clip, f32 alpha, f32 zoom) {
 
     if (mPicture != NULL) {
         f32 grow = zoom - 1.0f;
-        math::VEC3 picPos(pos->x + mPicPos.x - 0.5f * (grow * mPicScale * mPicture->width),
-                          pos->y + mPicPos.y - 0.5f * (grow * mPicScale * mPicture->height), 0.0f);
+        math::VEC3 picPos;
+        picPos.x = pos->x + mPicPos.x - 0.5f * (grow * mPicScale * mPicture->width);
+        picPos.y = pos->y + mPicPos.y - 0.5f * (grow * mPicScale * mPicture->height);
+        picPos.z = 0.0f;
         f32 picScale = zoom * mPicScale;
         fn_80036358();
         GXColor white = {255, 255, 255, a};
