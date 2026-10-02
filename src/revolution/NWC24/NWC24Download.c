@@ -711,7 +711,10 @@ NWC24Err NWC24iIterateDlTaskSorted(NWC24iDlSortIter* pIter, u16* pId) {
     return NWC24_ERR_DONE;
 }
 
-static inline NWC24Err UpdateDlTask(NWC24iDlTask* pTaskImpl) {
+#pragma push
+#pragma inline_max_auto_size(1000)
+NWC24Err NWC24UpdateDlTask(NWC24DlTask* pTask) {
+    NWC24iDlTask* pTaskImpl = (NWC24iDlTask*)pTask;
     NWC24Err result;
 
     result = CheckDlTask(pTaskImpl, TRUE);
@@ -742,10 +745,7 @@ static inline NWC24Err UpdateDlTask(NWC24iDlTask* pTaskImpl) {
 
     return WriteDlTask(pTaskImpl);
 }
-
-NWC24Err NWC24UpdateDlTask(NWC24DlTask* pTask) {
-    return UpdateDlTask((NWC24iDlTask*)pTask);
-}
+#pragma pop
 
 NWC24Err NWC24DeleteDlTask(NWC24DlTask* pTask) {
     NWC24iDlTask* pTaskImpl = (NWC24iDlTask*)pTask;
@@ -1170,7 +1170,7 @@ static NWC24Err AddDlTask(NWC24iDlTask* pTask, u16 minId, u16 maxId) {
 
     while (TRUE) {
         if (pTask->id != 0xFFFF) {
-            return UpdateDlTask(pTask);
+            return NWC24UpdateDlTask((NWC24DlTask*)pTask);
         }
 
         result = AssignDlTaskId(pTask, minId, maxId);
