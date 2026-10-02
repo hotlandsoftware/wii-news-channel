@@ -73,7 +73,7 @@ public:
 
     virtual void Update();                      // at 0x10
     virtual void StartPrepared();               // at 0x14
-    virtual void Stop(int frames);              // at 0x18
+    virtual void Stop(int frames = 0);          // at 0x18
     virtual void Pause(bool flag, int frames);  // at 0x1C
     virtual void SetAutoStopCounter(int count); // at 0x20
     virtual void FadeIn(int frames);            // at 0x24

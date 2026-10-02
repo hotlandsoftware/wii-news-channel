@@ -19,9 +19,9 @@ class NoteOnCallback;
 class SeqTrack;
 class SeqTrackAllocator;
 
-class SeqPlayer : public BasicPlayer,
-                  public DisposeCallback,
-                  public SoundThread::PlayerCallback {
+// NOTE (snd part 3): layout adjusted to this NW4R revision's size (0x10C)
+// so that SeqSound matches; the members are owned by snd part 2.
+class SeqPlayer : public BasicPlayer, public DisposeCallback {
 public:
     struct ParserPlayerParam {
         u8 volume;                // at 0x0
@@ -59,11 +59,15 @@ public:
 
     virtual bool IsStarted() const {
         return mStartedFlag;
+    } // at 0x20
+
+    virtual bool IsPrepared() const {
+        return mPreparedFlag;
     } // at 0x1C
 
     virtual bool IsPause() const {
         return mPauseFlag;
-    } // at 0x20
+    } // at 0x24
 
     virtual void InvalidateData(const void* pStart,
                                 const void* pEnd); // at 0x50
@@ -71,15 +75,6 @@ public:
     virtual void InvalidateWaveData(const void* /* pStart */,
                                     const void* /* pEnd */) {} // at 0x54
 
-    virtual void ChannelCallback(Channel* /* pChannel */) {} // at 0x58
-
-    virtual void OnUpdateFrameSoundThread() {
-        Update();
-    } // at 0x5C
-
-    virtual void OnShutdownSoundThread() {
-        Stop();
-    } // at 0x60
 
     void InitParam(int voices, NoteOnCallback* pCallback);
 
@@ -126,17 +121,8 @@ public:
         }
     }
 
-    bool IsReleasePriorityFix() const {
-        return mReleasePriorityFixFlag;
-    }
-
     f32 GetPanRange() const {
         return mPanRange;
-    }
-
-    f32 GetBaseTempo() const {
-        return mTempoRatio * (mParserParam.timebase * mParserParam.tempo) /
-               60000.0f;
     }
 
     int GetVoiceOutCount() const {
@@ -169,23 +155,25 @@ private:
     static void InitGlobalVariable();
 
 private:
-    bool mActiveFlag;             // at 0x8C
-    bool mStartedFlag;            // at 0x8D
-    bool mPauseFlag;              // at 0x8E
-    bool mReleasePriorityFixFlag; // at 0x8F
+    u8 mActiveFlag;   // at 0x7C
+    u8 mPreparedFlag; // at 0x7D
+    u8 mStartedFlag;  // at 0x7E
+    u8 mPauseFlag;    // at 0x7F
+    u8 mSkipFlag;     // at 0x80
 
-    f32 mPanRange;                                   // at 0x90
-    f32 mTempoRatio;                                 // at 0x94
-    f32 mTickFraction;                               // at 0x98
-    u32 mSkipTickCounter;                            // at 0x9C
-    f32 mSkipTimeCounter;                            // at 0xA0
-    int mVoiceOutCount;                              // at 0xA4
-    ParserPlayerParam mParserParam;                  // at 0xA8
-    SeqTrackAllocator* mSeqTrackAllocator;           // at 0xB4
-    SeqTrack* mTracks[TRACK_NUM];                    // at 0xB8
-    volatile s16 mLocalVariable[LOCAL_VARIABLE_NUM]; // at 0xF8
-    u32 mTickCounter;                                // at 0x118
+    f32 mPanRange;                                   // at 0x84
+    f32 mTempoRatio;                                 // at 0x88
+    u16 mTempoCounter;                               // at 0x8C
+    int mVoiceOutCount;                              // at 0x90
+    ParserPlayerParam mParserParam;                  // at 0x94
+    SeqTrackAllocator* mSeqTrackAllocator;           // at 0xA0
+    SeqTrack* mTracks[TRACK_NUM];                    // at 0xA4
+    volatile s16 mLocalVariable[LOCAL_VARIABLE_NUM]; // at 0xE4
 
+public:
+    NW4R_UT_LINKLIST_NODE_DECL_EX(Player); // at 0x104
+
+private:
     static volatile s16 mGlobalVariable[LOCAL_VARIABLE_NUM];
     static bool mGobalVariableInitialized; // @typo
 };

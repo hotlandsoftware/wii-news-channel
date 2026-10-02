@@ -38,7 +38,7 @@ public:
 
     f32 detail_GetRemoteOutVolume(int idx) const;
 
-    void detail_InsertSoundList(detail::BasicSound* pSound);
+    inline void detail_InsertSoundList(detail::BasicSound* pSound);
     void detail_RemoveSoundList(detail::BasicSound* pSound);
 
     void detail_InsertPriorityList(detail::BasicSound* pSound);
@@ -77,7 +77,8 @@ public:
                                  detail::ExternalSoundPlayer* pExtPlayer);
 
     void detail_AppendPlayerHeap(detail::PlayerHeap* pHeap);
-    detail::PlayerHeap* detail_AllocPlayerHeap(detail::BasicSound* pSound);
+    inline detail::PlayerHeap*
+    detail_AllocPlayerHeap(detail::BasicSound* pSound);
     void detail_FreePlayerHeap(detail::BasicSound* pSound);
 
     int GetPlayingSoundCount() const {
