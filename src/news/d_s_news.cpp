@@ -499,12 +499,22 @@ f32 gTextScale = 1.0f;
 f32 gDefaultFontScale = 0.9f;
 u8 gSelectedNewsLanguage = 0xFF;               // selected news language
 
-const f32 lbl_801922D0[10] = {0.6f, 0.7f, 0.8f, 0.9f, 1.0f, 1.1f, 1.2f, 1.3f, 1.4f, 1.5f};
-
 static const s32 sLinesPerPage[10] = {7, 6, 6, 5, 4, 4, 3, 3, 2, 2};
 static const u32 sFadeParam[4] = {0x005C1000, 0x00280000, 0, 0x00280000};
-static const GXColor sBarColors[3] = {{0x00, 0xFF, 0x88, 0x4B}, {0x00, 0x40, 0xB4, 0x20}, {0, 0, 0, 0}};
-static const u32 sLogoIndex[8] = {0x58, 0x5A, 0x56, 0x55, 0x59, 0x57, 0x54, 0};
+
+// Per text size (lbl_80356970) tables, also read by the article screens.
+extern const f32 lbl_801922D0[10] = {0.6f, 0.7f, 0.8f, 0.9f, 1.0f, 1.2f, 1.4f, 1.6f, 1.8f, 2.0f};
+extern const f32 lbl_801922F8[10] = {190.0f, 203.75f, 217.5f, 231.25f, 245.0f,
+                                     256.0f, 267.0f,  278.0f, 289.0f,  300.0f};
+extern const f32 lbl_80192320[10] = {140.0f, 146.6f, 153.2f, 159.8f, 166.4f,
+                                     173.0f, 179.6f, 186.2f, 192.8f, 200.0f};
+extern const f32 lbl_80192348[10] = {190.0f, 203.75f, 217.5f, 231.25f, 245.0f,
+                                     256.0f, 267.0f,  278.0f, 289.0f,  300.0f};
+extern const s32 lbl_80192370[10] = {2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+extern const s32 lbl_80192398[11] = {17, 16, 15, 14, 13, 12, 13, 14, 15, 16, 17};
+
+static const GXColor sBarColors[3] = {{0x00, 0x00, 0x00, 0x00}, {0xFF, 0x88, 0x4B, 0x00}, {0x40, 0xB4, 0x20, 0x00}};
+extern const u32 sLogoIndex[8];
 
 
 void Bgm_PlayMain(BOOL restart);
@@ -1833,7 +1843,7 @@ void AdvanceLoadingFrame() {
 }
 
 static inline f32 GetScreenScaleX() {
-    return gWidescreen ? 1.368421f : 1.0f;
+    return gWidescreen ? 1.3684211f : 1.0f;
 }
 
 void DrawLoadingScreen() {
@@ -1870,8 +1880,8 @@ void DrawLoadingScreen() {
     }
 
     f32 x = 0.5f * GetScreenWidth() - 196.0f * GetScreenScaleX();
-    f32 t = (30 - sLoadFrame) / 30.0f;
     f32 y = 414.0f;
+    f32 t = (30 - sLoadFrame) / 30.0f;
     f32 scale = 0.75f + 0.25f * t;
     f32 w = scale * TPL_GetWidth(gCommonTpl, index);
     f32 h = scale * TPL_GetHeight(gCommonTpl, index);
@@ -2500,7 +2510,7 @@ void Article_DrawFrame(const math::VEC2& pos, s32 type, f32 alpha) {
     f32 width = GetScreenWidth() - GetSideMargin() * 2;
     ut::Color color = sBarColors[type];
     ut::Color black(0, 0, 0, a);
-    ut::Rect rect(14.0f + pos.x, pos.y - 20.0f, (pos.x + sArticleSize.x) - 14.0f, 0.0f);
+    ut::Rect rect(10.0f + pos.x, pos.y - 20.0f, (pos.x + sArticleSize.x) - 10.0f, 0.0f);
     color.a = a;
     SetupTexGX();
     if (type) {
@@ -2531,7 +2541,7 @@ void Article_DrawFrame(const math::VEC2& pos, s32 type, f32 alpha) {
 
 void Article_DrawDate(const math::VEC2& pos, s32 alpha) {
     f32 maxWidth = sArticleSize.x - 20.0f;
-    math::VEC2 p(14.0f + pos.x, pos.y - 20.0f);
+    math::VEC2 p(10.0f + pos.x, pos.y - 20.0f);
     lbl_8020E4C0.SetFont(*gSysFont);
     lbl_8020E4C0.SetTextColor(ut::Color(70, 70, 70, alpha));
     if (lbl_80357560) {
@@ -2541,7 +2551,7 @@ void Article_DrawDate(const math::VEC2& pos, s32 alpha) {
         } else {
             scale = 0.6f;
         }
-        p.x = (pos.x + sArticleSize.x) - 14.0f;
+        p.x = (pos.x + sArticleSize.x) - 10.0f;
         lbl_8020E4C0.SetDrawFlag(0x222);
         lbl_8020E4C0.SetupGX();
         lbl_8020E4C0.SetCursor(p.x, p.y);
@@ -2554,7 +2564,7 @@ void Article_DrawDate(const math::VEC2& pos, s32 alpha) {
 void Article_DrawSourceAndDate(const math::VEC2& pos, s32 alpha) {
     f32 maxWidth = sArticleSize.x - 20.0f;
     ut::Color white(255, 255, 255, alpha);
-    math::VEC2 p(14.0f + pos.x, pos.y - 20.0f);
+    math::VEC2 p(10.0f + pos.x, pos.y - 20.0f);
     if (sSourceIconType == 0) {
         NewsTexture* logo = sSourceLogo;
         if (logo) {
@@ -2563,7 +2573,7 @@ void Article_DrawSourceAndDate(const math::VEC2& pos, s32 alpha) {
             SetupTexGX();
             GXSetTevColor(GX_TEVREG0, white);
             Draw2D_Texture(logo, &lp, 1.0f);
-            maxWidth = ((pos.x + sArticleSize.x) - 14.0f) - (lp.x + w);
+            maxWidth = ((pos.x + sArticleSize.x) - 10.0f) - (lp.x + w);
         }
     } else {
         u32 index = GetSourceIconIndex();
@@ -2574,14 +2584,14 @@ void Article_DrawSourceAndDate(const math::VEC2& pos, s32 alpha) {
             SetupTexGX();
             GXSetTevColor(GX_TEVREG0, white);
             Draw2D_Tex(gCommonTpl, index, &lp, 1.0f, 1.0f);
-            p.x = (pos.x + sArticleSize.x) - 14.0f;
+            p.x = (pos.x + sArticleSize.x) - 10.0f;
             maxWidth = p.x - (lp.x + w);
         }
     }
     lbl_8020E4C0.SetFont(*gSysFont);
     lbl_8020E4C0.SetTextColor(ut::Color(70, 70, 70, alpha));
     if (lbl_80357560) {
-        p.x = (pos.x + sArticleSize.x) - 14.0f;
+        p.x = (pos.x + sArticleSize.x) - 10.0f;
         f32 scale;
         if (sDateWidth > maxWidth) {
             scale = 0.6f * (maxWidth / sDateWidth);
@@ -2606,7 +2616,7 @@ void Article_DrawSourceIcon(const math::VEC2& pos, BOOL right, f32 alpha) {
         f32 y = (pos.y - scale * TPL_GetHeight(gCommonTpl, index)) - 5.0f;
         f32 x;
         if (right) {
-            x = (sArticleSize.x - 14.0f) - w;
+            x = (sArticleSize.x - 10.0f) - w;
         } else {
             x = 0.5f * (sBodyView->mFont->GetWidth() * gTextScale);
         }
@@ -2626,7 +2636,7 @@ void Article_DrawSourceLogo(const math::VEC2& pos, BOOL right, f32 alpha) {
         f32 w = scale * logo->width;
         f32 x;
         if (right) {
-            x = (sArticleSize.x - 14.0f) - w;
+            x = (sArticleSize.x - 10.0f) - w;
         } else {
             x = 0.5f * (sBodyView->mFont->GetWidth() * gTextScale);
         }
@@ -2894,6 +2904,9 @@ BOOL UpdateTextSize(BOOL up, BOOL down) {
     Ease(&gTextScale, lbl_801922D0[lbl_80356970], 0.12f, 1.0f, 0.01f);
     return changed;
 }
+
+// TPL index of the "News Channel" logo for each language.
+extern const u32 sLogoIndex[8] = {0x58, 0x5A, 0x56, 0x55, 0x59, 0x57, 0x54, 0};
 
 s32 GetSectionRowCount() {
     if (gLanguage == 0) {
