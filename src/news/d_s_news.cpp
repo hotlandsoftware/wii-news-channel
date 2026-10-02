@@ -1271,7 +1271,12 @@ BOOL NewsScene::InitNews() {
     fn_80021B6C(mSlideshow);
     fn_8004B960();
     sSettingsReady = true;
-    ChangeState(&NewsScene::StateMain);
+    BOOL selectLanguage = FALSE;
+    if (!selectLanguage) {
+        ChangeState(&NewsScene::StateMain);
+    } else {
+        ChangeState(&NewsScene::StateLanguageSelect);
+    }
     mInitialized = true;
     return TRUE;
 }
@@ -1456,9 +1461,11 @@ BOOL NewsScene::StateMain() {
 #pragma explicit_zero_data on
         static f32 sMarkZ = 0.0f;
 #pragma pop
+        f32 y = 456.0f - (63.0f + h);
+        f32 x = (GetScreenWidth() - GetSideMargin()) - w;
         lbl_801EDF70.z = sMarkZ;
-        lbl_801EDF70.y = 456.0f - (63.0f + h);
-        lbl_801EDF70.x = (GetScreenWidth() - GetSideMargin()) - w;
+        lbl_801EDF70.y = y;
+        lbl_801EDF70.x = x;
         f32 w2 = TPL_GetWidth(gCommonTpl, 0x3E);
         lbl_801EDF88.z = lbl_801EDF70.z;
         lbl_801EDF88.y = lbl_801EDF70.y - h;
@@ -1472,50 +1479,54 @@ BOOL NewsScene::StateMain() {
         }
         break;
     }
-    case 1:
-        if (!lbl_8035772C->mBusy) {
-            mStep++;
-        }
-        break;
-    case 2:
-        fn_80015054(mMainView);
-        switch (lbl_80357598) {
+    default:
+        switch (mStep) {
         case 1:
-            Bgm_PlaySlideshow();
-            mStep++;
-            mTimer = 40;
-            mLogoTargetAlpha = 255;
-            lbl_80357730->mColor.r = 0;
-            lbl_80357730->mColor.g = 0;
-            lbl_80357730->mColor.b = 0;
-            lbl_80357730->mColor.a = 255;
-            fn_80049168(lbl_80357730, sFadeParam, 255);
-            fn_80048D20(lbl_80357730, 20);
-            fn_8000C89C(sPointerEffect, 0.6f * GetScreenWidth(), 228.0f);
-            return TRUE;
+            if (!lbl_8035772C->mBusy) {
+                mStep++;
+            }
+            break;
         case 2:
-            mStep = 4;
-            fn_80048D20(lbl_8035772C, 25);
-            return TRUE;
-        }
-        break;
-    case 3:
-        if (!lbl_80357730->mBusy) {
-            if (mTimer) {
-                mTimer--;
-            } else if (lbl_80357760) {
-                mLogoTargetAlpha = 0;
-                fn_80048C80(lbl_80357730, 40);
-                ChangeState(&NewsScene::StateMain);
+            fn_80015054(mMainView);
+            switch (lbl_80357598) {
+            case 1:
+                mStep++;
+                Bgm_PlaySlideshow();
+                mTimer = 40;
+                mLogoTargetAlpha = 255;
+                lbl_80357730->mColor.r = 0;
+                lbl_80357730->mColor.g = 0;
+                lbl_80357730->mColor.b = 0;
+                lbl_80357730->mColor.a = 255;
+                fn_80049168(lbl_80357730, sFadeParam, 255);
+                fn_80048D20(lbl_80357730, 20);
+                fn_8000C89C(sPointerEffect, 0.6f * GetScreenWidth(), 228.0f);
+                return TRUE;
+            case 2:
+                mStep = 4;
+                fn_80048D20(lbl_8035772C, 25);
                 return TRUE;
             }
-        }
-        break;
-    default:
-        if (!lbl_8035772C->mBusy) {
-            mLanguageSelect->SetBackEnabled(TRUE);
-            ChangeState(&NewsScene::StateLanguageSelect);
-            return TRUE;
+            break;
+        case 3:
+            if (!lbl_80357730->mBusy) {
+                if (mTimer) {
+                    mTimer--;
+                } else if (lbl_80357760) {
+                    mLogoTargetAlpha = 0;
+                    fn_80048C80(lbl_80357730, 40);
+                    ChangeState(&NewsScene::StateSlideshow);
+                    return TRUE;
+                }
+            }
+            break;
+        default:
+            if (!lbl_8035772C->mBusy) {
+                mLanguageSelect->SetBackEnabled(TRUE);
+                ChangeState(&NewsScene::StateLanguageSelect);
+                return TRUE;
+            }
+            break;
         }
         break;
     }
