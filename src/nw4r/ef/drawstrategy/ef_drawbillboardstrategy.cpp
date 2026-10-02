@@ -6,6 +6,24 @@ namespace ef {
 static u8 billboard_tex0_u8[] ATTRIBUTE_ALIGN(32) = {0x00, 0x01, 0x00, 0x00,
                                                      0x01, 0x00, 0x01, 0x01};
 
+// Squared length with the YZ pair first. This NW4R math inline is not in our
+// math headers (math::VEC3LenSq squares the XY pair first).
+static inline f32 VEC3LenSqYZ(register const math::VEC3* pVec) {
+    register f32 work0, work1, work2;
+
+    ASM {
+        psq_l   work0, 4(pVec), 0, 0
+        ps_mul  work0, work0, work0
+
+        psq_l   work1, 0(pVec), 1, 0
+        ps_madd work1, work1, work1, work0
+
+        ps_sum0 work2, work1, work0, work0
+    }
+
+    return work2;
+}
+
 DrawBillboardStrategy::DrawBillboardStrategy() {}
 
 void DrawBillboardStrategy::Draw(const DrawInfo& rInfo,
@@ -188,9 +206,7 @@ void DrawBillboardStrategy::DrawYBillboard(const DrawInfo& rInfo,
 
     const math::MTX34& rInfoMtx = *rInfo.GetViewMtx();
 
-    math::VEC2 pivot;
-    pivot.y = pDesc->pivotY / 100.0f;
-    pivot.x = pDesc->pivotX / 100.0f;
+    math::VEC2 pivot(pDesc->pivotX / 100.0f, pDesc->pivotY / 100.0f);
 
     math::MTX34 viewMtx;
     pManager->CalcGlobalMtx(&viewMtx);
@@ -204,7 +220,7 @@ void DrawBillboardStrategy::DrawYBillboard(const DrawInfo& rInfo,
 
     f32 vz = 0.0f;
 
-    f32 rc, rs;
+    f32 rs, rc;
 
     if (rInfoMtx._11 == 0.0f) {
         rs = 0.0f;
@@ -281,8 +297,8 @@ inline void DrawBillboardStrategy::DispParticle_YBillboard(
         f32 cr_sy = cr * sy;
         f32 sr_sy = sr * sy;
 
-        f32 expX = (px - cr_sx * px) - sr_sy * py;
         f32 expY = (-py - sr_sx * px) + cr_sy * py;
+        f32 expX = (px - cr_sx * px) - sr_sy * py;
 
         p0.x = pos.x + vx * expX;
         p0.y = pos.y + vy_rs * expY;
@@ -296,12 +312,9 @@ inline void DrawBillboardStrategy::DispParticle_YBillboard(
         d1.y = vy_rs * (sr_sx - cr_sy);
         d1.z = vy_rc * (sr_sx - cr_sy);
     } else {
-        f32 expX = px - px * sx;
-        f32 expY = py * sy - py;
-
-        p0.x = pos.x + vx * expX;
-        p0.y = pos.y + vy_rs * expY;
-        p0.z = pos.z + vy_rc * expY;
+        p0.x = pos.x + vx * (px - px * sx);
+        p0.y = pos.y + vy_rs * (py * sy - py);
+        p0.z = pos.z + vy_rc * (py * sy - py);
 
         d0.x = vx * sx;
         d0.y = vy_rs * sy;
@@ -388,8 +401,8 @@ void DrawBillboardStrategy::DrawDirectionalBillboard(
 
         if (pDesc->typeOption0 != 0) {
             math::VEC3 dir;
-            pIt->GetMoveDir(&dir);
-            stretch += 0.5f * math::VEC3Len(&dir) / sy;
+            dir = pIt->mParameter.mPosition - pIt->mParameter.mPrevPosition;
+            stretch += 0.5f * math::FSqrt(VEC3LenSqYZ(&dir)) / sy;
         }
 
         DispParticle_Directional(pIt, viewMtx, vx, vy, stretch, rc, rs, sx,
@@ -412,10 +425,10 @@ inline void DrawBillboardStrategy::DispParticle_Directional(
     f32 px = rPivot.x;
     f32 py = rPivot.y;
 
+    f32 vx_rc = vx * rc;
     f32 vx_rs = vx * rs;
     f32 vy_rc = vy * rc;
     f32 vy_rs = vy * rs;
-    f32 vx_rc = vx * rc;
 
     f32 expX = px - sx * px;
     f32 expY = sy * ((stretch + py) - 1.0f) - py;
@@ -424,17 +437,12 @@ inline void DrawBillboardStrategy::DispParticle_Directional(
     p0.y = pos.y + (vx_rs * expX - vy_rc * expY);
     p0.z = pos.z;
 
-    f32 vx_rc_sx = vx_rc * sx;
-    f32 vy_rs_sy = vy_rs * sy;
-    f32 vx_rs_sx = vx_rs * sx;
-    f32 vy_rc_sy = vy_rc * sy;
-
-    d0.x = vx_rc_sx - stretch * vy_rs_sy;
-    d0.y = vx_rs_sx + stretch * vy_rc_sy;
+    d0.x = vx_rc * sx - stretch * (vy_rs * sy);
+    d0.y = vx_rs * sx + stretch * (vy_rc * sy);
     d0.z = 0.0f;
 
-    d1.x = vx_rc_sx + stretch * vy_rs_sy;
-    d1.y = vx_rs_sx - stretch * vy_rc_sy;
+    d1.x = vx_rc * sx + stretch * (vy_rs * sy);
+    d1.y = vx_rs * sx - stretch * (vy_rc * sy);
     d1.z = 0.0f;
 
     DispPolygon(p0, d0, d1, flags);
