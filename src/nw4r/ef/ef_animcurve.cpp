@@ -5,6 +5,13 @@ namespace ef {
 
 // Older revision (News Channel). Written from the DOL: no reference
 // decompilation has ef_animcurve.cpp.
+//
+// Work in progress (NonMatching): only AnimCurveExecuteAlpha (~94%) and
+// AnimCurveExecuteTexture (~99%) are written. The other executors
+// (Color, F32x1/x2/x3, F32 (count from the curve flags), Rotate, Child and
+// createChild) follow the same scheme: frame/loop calculation, key search,
+// per-key random values (seed hash, then the XOR-folded bytes), and
+// linear/smooth/step interpolation.
 
 struct AnimCurveKeyU8 {
     u16 frame;  // at 0x0
@@ -38,19 +45,26 @@ inline u32 CalcRandomSeed(u16 seed, u16 headerSeed, u32 loop, u16 idx) {
            (loop * 0x7B929 + idx * 0x371097E7 + 0x4BF53);
 }
 
+inline u32 CalcRandomBase(u16 seed, u16 headerSeed) {
+    return seed * 0x3F81F635 + headerSeed * 0x30A74193;
+}
+
 inline const AnimCurveRandomU8*
-GetRandomU8(u8 type, u16 idx, u8* pRandom, u8* pRandomTable, u16 seed,
-            u16 headerSeed, u32 loop, u32& rRandom) {
+GetRandomU8(const AnimCurveKeyU8* pKey, u8* pRandom, u8* pRandomTable,
+            u32 base, u32 loop, u32& rRandom) {
+    bool useTable = pKey->random & AC_KEY_RANDOM_TABLE;
+
     AnimCurveRandomSeed rnd;
-    rnd.value = CalcRandomSeed(seed, headerSeed, loop, idx);
+    rnd.value = base + loop * 0x7B929 + pKey->randomIdx * 0x371097E7 + 0x4BF53;
     rnd.bytes[2] ^= rnd.bytes[3];
     rnd.bytes[1] ^= rnd.bytes[2];
     rnd.bytes[0] ^= rnd.bytes[1];
 
     rRandom = rnd.value;
 
-    if (!(type & AC_KEY_RANDOM_TABLE)) {
-        return reinterpret_cast<AnimCurveRandomU8*>(pRandom + 4) + idx;
+    if (!useTable) {
+        return reinterpret_cast<AnimCurveRandomU8*>(pRandom + 4) +
+               pKey->randomIdx;
     }
 
     u16 num = *reinterpret_cast<u16*>(pRandomTable);
@@ -91,66 +105,6 @@ inline u8 InterpolateU8(u8 v0, u8 v1, u32 t, u16 interp) {
         return 0;
     }
     }
-}
-
-template <typename T>
-inline int SearchKeyF(AnimCurveKey* pKeyTable, T* pKeys, int frame, f32 time,
-                      bool& exact, int& frame0, int& frame1) {
-    int idx = pKeyTable->count - 1;
-    int mid = idx / 2;
-    int lo = 0;
-    exact = static_cast<f32>(__fabs(frame - time)) < NW4R_MATH_FLT_EPSILON;
-
-    frame0 = pKeys[0].frame;
-
-    if (frame < frame0) {
-        idx = 0;
-        exact = true;
-    } else if (frame == frame0) {
-        if (idx == 0) {
-            exact = true;
-        } else if (!exact) {
-            frame1 = pKeys[1].frame;
-        }
-
-        idx = 0;
-    } else {
-        frame1 = pKeys[idx].frame;
-
-        if (frame1 <= frame) {
-            exact = true;
-        } else {
-            int val = pKeys[mid].frame;
-
-            while (lo < mid) {
-                if (frame == val) {
-                    idx = mid;
-
-                    if (!exact) {
-                        frame0 = val;
-                        frame1 = pKeys[mid + 1].frame;
-                    }
-                    return idx;
-                }
-
-                if (val < frame) {
-                    lo = mid;
-                    frame0 = val;
-                } else {
-                    idx = mid;
-                    frame1 = val;
-                }
-
-                mid = (lo + idx) / 2;
-                val = pKeys[mid].frame;
-            }
-
-            idx = lo;
-            exact = false;
-        }
-    }
-
-    return idx;
 }
 
 void AnimCurveExecuteAlpha(u8* pCmdList, u8* pTarget, u32 tick, u16 seed,
@@ -329,10 +283,8 @@ found:
     AnimCurveKeyU8* pKey0 = &pKeys[idx];
     AnimCurveKeyU8* pKey1 = &pKeys[idx + 1];
     u16 interp = pKey0->interp;
-    u8 random0 = pKey0->random;
-    u8 random1 = pKey1->random;
-    bool isRandom0 = random0 != 0;
-    bool isRandom1 = random1 != 0;
+    bool isRandom0 = pKey0->random != 0;
+    bool isRandom1 = pKey1->random != 0;
 
     if (!isRandom0 && !isRandom1) {
         u8 v0 = pKey0->value;
@@ -346,26 +298,26 @@ found:
     } else if (isRandom0 && !isRandom1) {
         u32 r0;
         const AnimCurveRandomU8* pEntry0 =
-            GetRandomU8(random0, pKey0->randomIdx, pRandom, pRandomTable, seed,
-                        pHeader->randomSeed, loop, r0);
+            GetRandomU8(pKey0, pRandom, pRandomTable,
+                        CalcRandomBase(seed, pHeader->randomSeed), loop, r0);
         int v0 = CalcRandomU8(pEntry0, r0);
         *pTarget = InterpolateU8(v0, pKey1->value, t, interp);
     } else if (!isRandom0 && isRandom1) {
         u32 r1;
         const AnimCurveRandomU8* pEntry1 =
-            GetRandomU8(random1, pKey1->randomIdx, pRandom, pRandomTable, seed,
-                        pHeader->randomSeed, nextLoop, r1);
+            GetRandomU8(pKey1, pRandom, pRandomTable,
+                        CalcRandomBase(seed, pHeader->randomSeed), nextLoop, r1);
         int v1 = CalcRandomU8(pEntry1, r1);
         *pTarget = InterpolateU8(pKey0->value, v1, t, interp);
     } else {
         u32 r0;
         const AnimCurveRandomU8* pEntry0 =
-            GetRandomU8(random0, pKey0->randomIdx, pRandom, pRandomTable, seed,
-                        pHeader->randomSeed, loop, r0);
+            GetRandomU8(pKey0, pRandom, pRandomTable,
+                        CalcRandomBase(seed, pHeader->randomSeed), loop, r0);
         u32 r1;
         const AnimCurveRandomU8* pEntry1 =
-            GetRandomU8(random1, pKey1->randomIdx, pRandom, pRandomTable, seed,
-                        pHeader->randomSeed, nextLoop, r1);
+            GetRandomU8(pKey1, pRandom, pRandomTable,
+                        CalcRandomBase(seed, pHeader->randomSeed), nextLoop, r1);
         int v0 = CalcRandomU8(pEntry0, r0);
         int v1 = CalcRandomU8(pEntry1, r1);
         *pTarget = InterpolateU8(v0, v1, t, interp);
@@ -378,8 +330,9 @@ found:
     } else {
         u32 r;
         const AnimCurveRandomU8* pEntry =
-            GetRandomU8(pTheKey->random, pTheKey->randomIdx, pRandom,
-                        pRandomTable, seed, pHeader->randomSeed, loop, r);
+            GetRandomU8(pTheKey, pRandom,
+                        pRandomTable, CalcRandomBase(seed, pHeader->randomSeed),
+                        loop, r);
         *pTarget = CalcRandomU8(pEntry, r);
     }
 }
