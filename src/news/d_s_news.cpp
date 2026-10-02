@@ -3136,6 +3136,10 @@ void FormatElapsedB_NL(s32 minutes, wchar_t* buf, u32 size) {
              minutes % 60);
 }
 
+static inline void SetTevColorWhite(u8 alpha) {
+    GXSetTevColor(GX_TEVREG0, ut::Color(255, 255, 255, alpha));
+}
+
 void DrawTabRect(const ut::Rect& rect, u8 alpha, f32 z) {
     u32 w = TPL_GetWidth(gCommonTpl, 5);
     f32 left = rect.left;
@@ -3143,7 +3147,6 @@ void DrawTabRect(const ut::Rect& rect, u8 alpha, f32 z) {
     f32 top = rect.top;
     f32 x0 = left - w;
     f32 bottom = rect.bottom;
-    ut::Color unused(255, 255, 255, alpha);
     ut::Color color(255, 255, 255, alpha);
     GXSetTevColor(GX_TEVREG0, color);
 
