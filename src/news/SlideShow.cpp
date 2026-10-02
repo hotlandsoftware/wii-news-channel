@@ -190,31 +190,11 @@ SlideShow::SlideShow(u32 arc)
     : mCurLayout(NULL), mMainLayout(NULL), mSlideLayout(NULL), mBeltLayout(NULL), mUpButton(NULL),
       mDownButton(NULL), mBackButton(NULL), mZoomInButton(NULL), mZoomOutButton(NULL),
       mEndButton(NULL), mArticle(NULL), mPrevPicture(NULL), mPrevCaption(NULL), mState(NULL),
-      mSubState(NULL), mDrawFooter(NULL) {
-    mView = ut::Rect(0.0f, 0.0f, 0.0f, 0.0f);
-    mText = ut::Rect(0.0f, 0.0f, 0.0f, 0.0f);
-    mPicArea = ut::Rect(0.0f, 0.0f, 0.0f, 0.0f);
-    mTitleX = 0.0f;
-    mUnk138 = 30.0f;
-    mUnk13C = 0.0f;
-    mUnk140 = 66.0f;
-    mUnk204[0] = 0.0f;
-    mUnk204[1] = 0.0f;
-    mUnk204[2] = 0.0f;
-    mUnk204[3] = 0.0f;
-    mUnk204[4] = 0.0f;
-    mUnk204[5] = 0.0f;
-    mViewWidth = 0.0f;
-    mViewHeight = 0.0f;
-    mGlobeFrom[0] = 0.0f;
-    mGlobeFrom[1] = 0.0f;
-    mGlobeTo[0] = 0.0f;
-    mGlobeTo[1] = 0.0f;
-    mUnk288 = 30.0f;
-    mUnk28C = 30.0f;
-    mTitleRight = 0.0f;
-    mTitleY = 0.0f;
-    mSelect = ut::Rect(0.0f, 0.0f, 0.0f, 0.0f);
+      mSubState(NULL), mDrawFooter(NULL), mView(0.0f, 0.0f, 0.0f, 0.0f),
+      mText(0.0f, 0.0f, 0.0f, 0.0f), mPicArea(0.0f, 0.0f, 0.0f, 0.0f), 
+      mTitleRect(0.0f, 30.0f, 0.0f, 66.0f), mUnk204(0.0f, 0.0f, 0.0f, 0.0f),
+      mUnk214(0.0f, 0.0f), mViewWidth(0.0f), mViewHeight(0.0f), mGlobeFrom(0.0f, 0.0f),
+      mGlobeTo(0.0f, 0.0f), mUnk288(30.0f, 30.0f), mSelect(0.0f, 0.0f, 0.0f, 0.0f) {
     mZoomOutPressed = false;
     mPrevPressed = false;
     mNextPressed = false;
@@ -261,7 +241,6 @@ SlideShow::SlideShow(u32 arc)
     mScrollTarget = 0.0f;
     mScrollSpeed = 0.0f;
     mPicScale = 1.0f;
-    mSlideDist = 0.0f;
     mGlobeZoomFrom = 0.0f;
     mGlobeZoomTo = 0.0f;
     mGlobeZoom = 0.0f;
@@ -397,8 +376,9 @@ SlideShow::SlideShow(u32 arc)
     mText.right = GetContentRight();
     fn_80034CB8(mText.bottom - mText.top);
 
+    s32 numCategories = lbl_803575E0;
     while (GetCategory(mCategory)->mArticles == NULL) {
-        if (++mCategory >= lbl_803575E0) {
+        if (++mCategory >= numCategories) {
             mCategory = 0;
             break;
         }
@@ -409,15 +389,12 @@ SlideShow::SlideShow(u32 arc)
     mPointerIn[2] = false;
     mPointerIn[3] = false;
 
-    if (gLanguage == 0) {
-        mDrawFooter = &SlideShow::DrawFooterA;
-    } else {
-        mDrawFooter = &SlideShow::DrawFooterB;
-    }
+    mDrawFooter = gLanguage == 0 ? &SlideShow::DrawFooterA : &SlideShow::DrawFooterB;
 
-    mTitleRight = GetScreenWidth();
-    mTitleMaxWidth = GetContentRight() - 2 - 160.0f;
+    mTitleRect.right = GetScreenWidth();
+    mTitleRight = GetContentRight() - 2;
     mTitleY = 45.0f;
+    mTitleMaxWidth = mTitleRight - 160.0f;
 }
 
 SlideShow::~SlideShow() {
@@ -682,9 +659,9 @@ void SlideShow::Calc() {
             GlobeCamera* camera = g->mCamera;
             if (camera != NULL) {
                 f32 s = fn_800449A0(mGlobeAngle);
-                f32 lon = mGlobeFrom[0] + (mGlobeTo[0] - mGlobeFrom[0]) * s;
+                f32 lon = mGlobeFrom.x + (mGlobeTo.x - mGlobeFrom.x) * s;
                 camera->mLon = lon;
-                camera->mLat = mGlobeFrom[1] + (mGlobeTo[1] - mGlobeFrom[1]) * s;
+                camera->mLat = mGlobeFrom.y + (mGlobeTo.y - mGlobeFrom.y) * s;
                 g->mLon = lon;
                 g->mLat = camera->mLat;
             }
@@ -801,7 +778,7 @@ void SlideShow::Draw() {
         if (mHasTitle) {
             Draw2D_SetupGX();
             Draw2D_SetOrtho();
-            fn_800360EC((ut::Rect*)&mTitleX, alpha, 0.0f);
+            fn_800360EC(&mTitleRect, alpha, 0.0f);
             ut::TextWriterBase<wchar_t> writer;
             writer.SetFont(*gSysFont);
             writer.SetDrawFlag(0x122);
@@ -1900,19 +1877,19 @@ void SlideShow::LayoutArticle() {
             mGlobeZoomFrom = mGlobeZoomTo;
         }
         mGlobeAngle = 0;
-        fn_8003256C(mGlobeTo, mArticle);
-        mUnk288 = 30.0f;
-        mUnk28C = 30.0f;
+        fn_8003256C(&mGlobeTo.x, mArticle);
+        mUnk288.x = 30.0f;
+        mUnk288.y = 30.0f;
         if (lbl_8035775C != NULL) {
             GlobeCamera* camera = lbl_8035775C->mCamera;
             if (camera != NULL) {
-                mGlobeFrom[0] = camera->mLon;
-                mGlobeFrom[1] = camera->mLat;
-                if (__fabs(mGlobeTo[0] - mGlobeFrom[0]) > 180.0f) {
-                    mGlobeTo[0] -= 360.0f;
+                mGlobeFrom.x = camera->mLon;
+                mGlobeFrom.y = camera->mLat;
+                if (__fabs(mGlobeTo.x - mGlobeFrom.x) > 180.0f) {
+                    mGlobeTo.x -= 360.0f;
                 }
-                if (__fabs(mGlobeTo[1] - mGlobeFrom[1]) > 180.0f) {
-                    mGlobeTo[1] -= 360.0f;
+                if (__fabs(mGlobeTo.y - mGlobeFrom.y) > 180.0f) {
+                    mGlobeTo.y -= 360.0f;
                 }
             }
         }
@@ -2115,6 +2092,6 @@ void SlideShow::LayoutTitle() {
             mTitleScale *= mTitleMaxWidth / width;
             width = mTitleMaxWidth;
         }
-        mTitleX = mTitleRight - width;
+        mTitleRect.left = mTitleRight - width;
     }
 }

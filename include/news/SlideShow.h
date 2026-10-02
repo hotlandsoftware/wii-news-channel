@@ -101,25 +101,23 @@ public:
     SubStateFunc mSubState;               // at 0x040
     DrawFunc mDrawFooter;                 // at 0x04C
     nw4r::ut::TextWriterBase<wchar_t> mWriter; // at 0x058
+    u8 mUnkB8[0xF8 - 0xB8];               // at 0x0B8
     nw4r::ut::Color mArrowColors[3];      // at 0x0F8
     nw4r::ut::Rect mView;                 // at 0x104
     nw4r::ut::Rect mText;                 // at 0x114
     nw4r::ut::Rect mPicArea;              // at 0x124
-    f32 mTitleX;                          // at 0x134
-    f32 mUnk138;                          // at 0x138
-    f32 mUnk13C;                          // at 0x13C
-    f32 mUnk140;                          // at 0x140
+    nw4r::ut::Rect mTitleRect;            // at 0x134
     u8 mUnk144[0x204 - 0x144];            // at 0x144
-    f32 mUnk204[6];                       // at 0x204
+    nw4r::ut::Rect mUnk204;               // at 0x204
+    nw4r::math::VEC2 mUnk214;             // at 0x214
     u8 mUnk21C[0x228 - 0x21C];            // at 0x21C
     nw4r::math::VEC3 mUpArrow[3];         // at 0x228
     nw4r::math::VEC3 mDownArrow[3];       // at 0x24C
     f32 mViewWidth;                       // at 0x270
     f32 mViewHeight;                      // at 0x274
-    f32 mGlobeFrom[2];                    // at 0x278
-    f32 mGlobeTo[2];                      // at 0x280
-    f32 mUnk288;                          // at 0x288
-    f32 mUnk28C;                          // at 0x28C
+    nw4r::math::VEC2 mGlobeFrom;          // at 0x278
+    nw4r::math::VEC2 mGlobeTo;            // at 0x280
+    nw4r::math::VEC2 mUnk288;             // at 0x288
     f32 mViewTarget[2];                   // at 0x290
     f32 mTextTarget[2];                   // at 0x298
     f32 mPicCenter[2];                    // at 0x2A0
