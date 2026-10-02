@@ -9,8 +9,8 @@ namespace nw4r {
 namespace snd {
 namespace detail {
 
-u8 StrmPlayer::LoadCommand::mMramBuf[LOAD_BUFFER_SIZE] ALIGN(32);
 StrmPlayer::StrmPlayerList StrmPlayer::sPlayerList;
+u8 StrmPlayer::LoadCommand::mMramBuf[LOAD_BUFFER_SIZE] ALIGN(32);
 
 StrmPlayer::StrmPlayer() : mActiveFlag(false), mVoice(NULL) {
     for (u32 i = 0; i < LOAD_COMMAND_NUM; i++) {
@@ -45,10 +45,6 @@ bool StrmPlayer::Prepare(StrmBufferPool* pBufferPool,
 
     case StrmCallback::RESULT_FAILED: {
         ForceStop();
-        break;
-    }
-
-    case StrmCallback::RESULT_CANCELED: {
         break;
     }
 
@@ -354,17 +350,13 @@ void StrmPlayer::UpdateLoadingBlockIndex(LoadCommand::Status status) {
         reinterpret_cast<u32>(this), mCallbackData);
 
     switch (result) {
-    case StrmCallback::RESULT_SUCCESS: {
-        pCommand->NotifyAsyncEnd(true);
-        break;
-    }
-
     case StrmCallback::RESULT_FAILED: {
         ForceStop();
         break;
     }
 
-    case StrmCallback::RESULT_CANCELED: {
+    case StrmCallback::RESULT_SUCCESS: {
+        pCommand->NotifyAsyncEnd(true);
         break;
     }
 
@@ -464,9 +456,9 @@ bool StrmPlayer::SetupPlayer(const StrmHeader* pHeader) {
         }
     }
 
-    mDataBlockSize = mStrmInfo.blockSize;
-    mLastBlockIndex = mStrmInfo.numBlocks - 1;
     mLoopStartBlockIndex = mStrmInfo.loopStart / mStrmInfo.blockSamples;
+    mLastBlockIndex = mStrmInfo.numBlocks - 1;
+    mDataBlockSize = mStrmInfo.blockSize;
 
     if (mDataBlockSize > DATA_BLOCK_SIZE_MAX) {
         return false;
@@ -490,7 +482,7 @@ bool StrmPlayer::SetupPlayer(const StrmHeader* pHeader) {
         if (mStartOffsetType == START_OFFSET_TYPE_SAMPLE) {
             startBlock = mStartOffset / static_cast<s32>(mStrmInfo.blockSamples);
         } else if (mStartOffsetType == START_OFFSET_TYPE_MILLISEC) {
-            startBlock = mStartOffset * mStrmInfo.sampleRate / 1000 /
+            startBlock = mStrmInfo.sampleRate * mStartOffset / 1000 /
                          static_cast<s32>(mStrmInfo.blockSamples);
         }
     }
@@ -532,8 +524,9 @@ bool StrmPlayer::SetupPlayer(const StrmHeader* pHeader) {
             WaveFormatToAxFormat(mStrmInfo.format));
 
         for (int i = 0; i < mChannelCount; i++) {
-            waveData.channelParam[i].dataAddr = mChannels[i].bufferAddress;
-            waveData.channelParam[i].adpcmInfo = mChannels[i].adpcmInfo;
+            ChannelParam& rParam = waveData.channelParam[i];
+            rParam.dataAddr = mChannels[i].bufferAddress;
+            rParam.adpcmInfo = mChannels[i].adpcmInfo;
         }
 
         mVoice->Setup(waveData);

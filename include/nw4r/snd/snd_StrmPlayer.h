@@ -106,12 +106,12 @@ public:
     virtual bool IsActive() const {
         return mActiveFlag;
     } // at 0x18
-    virtual bool IsStarted() const {
-        return mStartedFlag;
-    } // at 0x20
     virtual bool IsPrepared() const {
         return mPreparedFlag;
     } // at 0x1C
+    virtual bool IsStarted() const {
+        return mStartedFlag;
+    } // at 0x20
     virtual bool IsPause() const {
         return mPauseFlag;
     } // at 0x24
@@ -198,10 +198,9 @@ private:
     int CalcLoadingBufferBlockCount() const {
         int restBlocks = mLastBlockIndex - mLoadingDataBlockIndex + 1;
         int loopBlocks = mLastBlockIndex - mLoopStartBlockIndex + 1;
-        int count = mBufferBlockCountBase + 1;
 
-        if ((count - restBlocks) % loopBlocks == 0) {
-            return count;
+        if ((mBufferBlockCountBase + 1 - restBlocks) % loopBlocks == 0) {
+            return mBufferBlockCountBase + 1;
         }
 
         return mBufferBlockCountBase;
