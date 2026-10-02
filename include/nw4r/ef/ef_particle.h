@@ -107,22 +107,23 @@ public:
     f32 Draw_GetSizeY() {
         f32 sy;
 
-        switch (mParticleManager->mResource->GetEmitterDrawSetting()->mFlags &
-                (EmitterDrawSetting::FLAG_XY_SAME_SIZE |
-                 EmitterDrawSetting::FLAG_XY_SAME_SCALE)) {
+        // Older revision (News Channel): XY flags are common flags
+        switch (mParticleManager->mResource->GetEmitterDesc()->commonFlag &
+                (EmitterDesc::CMN_FLAG_XY_SAME_SIZE |
+                 EmitterDesc::CMN_FLAG_XY_SAME_SCALE)) {
 
-        case EmitterDrawSetting::FLAG_XY_SAME_SCALE: {
+        case EmitterDesc::CMN_FLAG_XY_SAME_SCALE: {
             sy = mParameter.mSize.y * mParameter.mScale.x;
             break;
         }
 
-        case EmitterDrawSetting::FLAG_XY_SAME_SIZE: {
+        case EmitterDesc::CMN_FLAG_XY_SAME_SIZE: {
             sy = mParameter.mSize.x * mParameter.mScale.y;
             break;
         }
 
-        case (EmitterDrawSetting::FLAG_XY_SAME_SIZE |
-              EmitterDrawSetting::FLAG_XY_SAME_SCALE): {
+        case (EmitterDesc::CMN_FLAG_XY_SAME_SIZE |
+              EmitterDesc::CMN_FLAG_XY_SAME_SCALE): {
             sy = mParameter.mSize.x * mParameter.mScale.x;
             break;
         }

@@ -20,7 +20,8 @@ enum DrawStrategyType {
 
 class DrawStrategyBuilder {
 public:
-    virtual DrawStrategy* Create(u32 type); // at 0x8
+    // Older revision (News Channel): static, no builder object
+    static DrawStrategy* Create(u32 type);
 };
 
 } // namespace ef
