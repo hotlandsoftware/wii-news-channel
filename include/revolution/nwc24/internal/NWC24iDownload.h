@@ -13,11 +13,12 @@ extern "C" {
 #define NWC24i_DL_TASK_MAX 120
 #define NWC24i_DL_SUBTASK_MAX 32
 
+// Times are in minutes (signed in this SDK revision)
 typedef struct NWC24iDlEntry {
-    u32 app;
-    u32 nextTime;
-    u32 lastAccess;
-    u8 flags;
+    u32 app;        // at 0x0
+    s32 nextTime;   // at 0x4
+    s32 lastAccess; // at 0x8
+    u8 flags;       // at 0xC (task priority)
     char UNK_0xD[0x10 - 0xD];
 } NWC24iDlEntry;
 
@@ -49,12 +50,11 @@ typedef struct NWC24iDlTask {
     u32 lastError;
     u8 subTaskCounter;
     u8 subTaskType;
-    u8 subTaskFlags;
-    char UNK_0x27[0x1];
+    u16 subTaskFlags; // CONFLICT (Petari): u8 + pad; this SDK reads/writes a u16
     u32 subTaskMask;
     u32 serverInterval;
     u32 lastUpdate;
-    u32 lastUpdateSubTask[NWC24i_DL_SUBTASK_MAX];
+    s32 lastUpdateSubTask[NWC24i_DL_SUBTASK_MAX];
     char url[236];
     char fileName[NAND_MAX_PATH];
     char UNK_0x1E0[0x1F8 - 0x1E0];
