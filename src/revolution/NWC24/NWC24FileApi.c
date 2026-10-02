@@ -408,6 +408,50 @@ NWC24Err NWC24CheckSizeVF(const char* pDrive, u32* pSize) {
     return NWC24_OK;
 }
 
+// Not in Petari/ogws (dead-stripped there); declared locally since vf.h lacks them
+s32 VFCreateSystemFileNANDFlash(const char* pFileName, u32 size);
+s32 VFFormatDrive(const char* pDrive);
+s32 VFCreateDir(const char* pPath);
+
+NWC24Err NWC24CreateVF(const char* pFileName, u32 size) {
+    s32 result;
+    NANDStatus stat;
+
+    result = VFCreateSystemFileNANDFlash(pFileName, size);
+    if (result != VF_OK) {
+        return ConvertVfError(result, NWC24_ERR_INTERNAL_VF);
+    }
+
+    if (NANDPrivateGetStatus(pFileName, &stat) != NAND_RESULT_OK) {
+        return NWC24_ERR_FATAL;
+    }
+
+    stat.permission = NAND_PERM_RWALL;
+    if (NANDPrivateSetStatus(pFileName, &stat) != NAND_RESULT_OK) {
+        return NWC24_ERR_FATAL;
+    }
+
+    if (NWC24MountVF(NWC24i_VF_DRIVE, pFileName) != NWC24_OK) {
+        return ConvertVfError(result, NWC24_ERR_INTERNAL_VF);
+    }
+
+    result = VFFormatDrive(NWC24i_VF_DRIVE);
+    if (result != VF_OK) {
+        return ConvertVfError(result, NWC24_ERR_INTERNAL_VF);
+    }
+
+    result = VFCreateDir(NWC24i_VF_DRIVE ":/mb");
+    if (result != VF_OK) {
+        return ConvertVfError(result, NWC24_ERR_INTERNAL_VF);
+    }
+
+    if (NWC24UnmountVF(NWC24i_VF_DRIVE) != NWC24_OK) {
+        return ConvertVfError(result, NWC24_ERR_INTERNAL_VF);
+    }
+
+    return NWC24_OK;
+}
+
 static NWC24Err BufferedWrite(const void* pSrc, s32 size, NWC24File* pFile) {
     u32 now;
     u32 left;

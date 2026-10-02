@@ -916,9 +916,9 @@ config.libs = [
         "progress_category": "sdk",
         "objects": [
             Object(Matching, "revolution/NWC24/NWC24StdApi.c"),
-            Object(NonMatching, "revolution/NWC24/NWC24FileApi.c"),
+            Object(Matching, "revolution/NWC24/NWC24FileApi.c"),
             Object(Matching, "revolution/NWC24/NWC24Config.c"),
-            Object(NonMatching, "revolution/NWC24/NWC24Utils.c"),
+            Object(Matching, "revolution/NWC24/NWC24Utils.c"),
             Object(Matching, "revolution/NWC24/NWC24Manage.c"),
             Object(Matching, "revolution/NWC24/NWC24MBoxCtrl.c"),
             Object(Matching, "revolution/NWC24/NWC24Mime.c"),
