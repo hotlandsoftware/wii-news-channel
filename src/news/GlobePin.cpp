@@ -674,11 +674,11 @@ void GlobePin::TruncateHeadline(ut::CharWriter* writer) {
                 }
                 *++dst = 0;
                 if (width > maxWidth) {
-                    f32 dots = scale * (3.0f * font->GetCharWidth(L'.'));
+                    f32 limit = 2.0f * space + scale * (3.0f * font->GetCharWidth(L'.'));
                     dst[-1] = 0;
                     dst -= 2;
                     f32 cut = scale * font->GetCharWidth(*dst);
-                    while (cut < 2.0f * space + dots) {
+                    while (cut < limit) {
                         cut += space + scale * font->GetCharWidth(*--dst);
                     }
                     dst[0] = 0;
@@ -728,11 +728,11 @@ void GlobePin::TruncateLocation(ut::CharWriter* writer) {
                 width += scale * font->GetCharWidth(*dst);
                 *++dst = 0;
                 if (width > maxWidth) {
-                    f32 dots = scale * (3.0f * font->GetCharWidth(L'.'));
+                    f32 limit = 2.0f * space + scale * (3.0f * font->GetCharWidth(L'.'));
                     dst[-1] = 0;
                     dst -= 2;
                     f32 cut = scale * font->GetCharWidth(*dst);
-                    while (cut < 2.0f * space + dots) {
+                    while (cut < limit) {
                         cut += space + scale * font->GetCharWidth(*--dst);
                     }
                     dst[0] = 0;
