@@ -47,8 +47,8 @@ Anything matched there can be reused directly.
 | `0x8009C720–0x800BA03C` | 0x1D91C | nw4r::ef | — | ogws | ~50% |
 | `0x800BA03C–0x800CE740` | 0x14704 | nw4r::g3d | — | **ogws** | **done** (36/36 Matching) |
 | `0x800CE740–0x800E84D8` | 0x19D98 | nw4r::snd (old, `Channel`-based) | — | ogws | ~40–60% per file |
-| `0x800E84D8–0x800F02A8` | 0x7DD0 | nw4r::ut | — | **tp `nw4hbm/ut`** + ogws | 46% (tp), many files 100% |
-| `0x800F02A8–0x800F0B58` | 0x8B0 | nw4r::math | — | tp `nw4hbm/math` / smg / ogws | triangular 100% |
+| `0x800E84D8–0x800F02A8` | 0x7DD0 | nw4r::ut | — | **tp `nw4hbm/ut`** + ogws | **done** (17/18 Matching; ArchiveFontBase 99.87%) |
+| `0x800F02A8–0x800F0B58` | 0x8B0 | nw4r::math | — | tp `nw4hbm/math` / smg / ogws | **done** (3/3 Matching) |
 | `0x800F0B58–0x800FB9EC` | 0xAE94 | nw4r::lyt | — | **tp `nw4hbm/lyt`** | 13/14 files matching (Task 15) |
 | `0x800FB9EC–0x800FBB58` | 0x16C | BASE (`PPCArch.c`) | — | ogws/smg | 97% |
 | `0x800FBB58–0x80109434` | 0xD8DC | OS (+ `__ppc_eabi_init` at `0x80109380`) | Jun 28 2007 | smg / ogws | 90% / 88% |
@@ -163,29 +163,51 @@ Animation-resource files (`res/g3d_resanm*`, `g3d_anm*`) are mostly dead-strippe
 This is an older snd than Wii Sports' (no `AxVoice`, `Channel`-based voices).
 Anchors (ogws order): `snd_AxManager 0x800CE740`, `snd_AxfxImpl 0x800D19F0` (100%), `snd_Bank 0x800D1B60`, `snd_BankFile 0x800D1D84` (94%), `snd_BasicPlayer 0x800D218C`, `snd_BasicSound 0x800D22D4–0x800D335C`†, `snd_Channel 0x800D335C`, `snd_DvdSoundArchive 0x800D44EC` (82%), `snd_EnvGenerator 0x800D4C38`, `snd_ExternalSoundPlayer 0x800D4EBC`, `snd_FrameHeap 0x800D4F9C`, `snd_InstancePool 0x800D5B1C`, `snd_Lfo 0x800D5BC0` (85%), `snd_MemorySoundArchive 0x800D5DC8` (92%), `snd_MidiSeqPlayer ≈0x800D61FC`, `snd_MmlParser ≈0x800D6F88`, `snd_MmlSeqTrack 0x800D710C`, `snd_MmlSeqTrackAllocator 0x800D71CC`, `snd_RemoteSpeaker 0x800D7494`, `snd_RemoteSpeakerManager 0x800D7B50`, `snd_SeqFile ≈0x800D7D8C`, `snd_SeqPlayer` ends `0x800D8BC8`†, `snd_SeqSound` ends `0x800D902C`†, `snd_SeqSoundHandle 0x800D902C`, `snd_SeqTrack 0x800D916C`, `snd_SoundArchive 0x800DA150` (89%), `snd_SoundArchiveFile 0x800DA738`, `snd_SoundArchiveLoader 0x800DB4E8` (94%), `snd_SoundArchivePlayer 0x800DC00C`, `snd_SoundHandle 0x800DE7B0`, `snd_SoundHeap 0x800DE84C`, `snd_StrmChannel 0x800E0198` (99%), `snd_StrmFile 0x800E03B8`, `snd_StrmPlayer` ends `0x800E23E0`†, `snd_StrmSound` ends `0x800E274C`†, then `StrmSoundHandle`/`Task*`/`Util`/`WaveFile`, a file ending `0x800E6E7C`† (`WavePlayer`?), `snd_WaveSound` ends `0x800E71C8`†, `snd_WaveSoundHandle 0x800E71C8`, `snd_WsdFile 0x800E7200` (93%), a file ending `0x800E7BD4`† (`WsdPlayer`?), and the rest to `0x800E84D8`.
 
-### nw4r::ut / math (`0x800E84D8–0x800F0F50`)
+### nw4r::ut / math (`0x800E84D8–0x800F0B58`) — Task 14
 
-The NW4R revision here has out-of-line `CharWriter`/`TextWriterBase` accessors, like TP's `nw4hbm` fork. For `ut`, `lyt` and `math` use `tp libs/revolution/src/homebuttonLib/nw4hbm/*` (rename `nw4hbm` → `nw4r`) as the first reference and ogws as the second.
+The NW4R revision here has out-of-line `CharWriter`/`TextWriterBase` accessors, like TP's `nw4hbm` fork.
+Sources are in `src/nw4r/ut/` and `src/nw4r/math/` (libs `nw4r_ut` and `nw4r_math`), built with GC/3.0a5.2.
+`nw4r_ut` uses `cflags_nw4r_ut` (= `cflags_nw4r` + the same five defines as lyt/g3d); `nw4r_math` uses plain `cflags_nw4r`.
 
-| File | Range | Status / best ref |
-| --- | --- | --- |
-| `ut_list.cpp` | `0x800E84D8–0x800E8774` | **done** (ogws) |
-| `ut_LinkList.cpp` | `0x800E8774–0x800E88E0` | **done** (ogws) |
-| `ut_binaryFileFormat.cpp` | `0x800E88E0–0x800E8954` | tp/ogws 100% |
-| `ut_CharStrmReader.cpp` | `0x800E8954–0x800E8A64` | tp/ogws 100% |
-| `ut_TagProcessorBase.cpp` | `0x800E8A64–≈0x800E9224` | tp 77% |
-| `ut_IOStream.cpp` | `≈0x800E9224–0x800E924C`† | ogws 100% |
-| `ut_FileStream.cpp` | `0x800E924C–0x800E9360`† | ogws |
-| `ut_DvdFileStream.cpp` | `0x800E9360–0x800E9930`† | ogws |
-| `ut_DvdLockedFileStream.cpp` | `0x800E9930–0x800E9B58` | ogws 100% |
-| `ut_NandFileStream.cpp` | `0x800E9B58–0x800E9B64`† | ogws (one function linked) |
-| `ut_LockedCache.cpp` | `0x800E9B64–0x800E9D10`† | ogws 100% |
-| `ut_Font.cpp`, `ut_RomFont.cpp`?, `ut_ResFontBase.cpp`, `ut_ResFont.cpp` | `0x800E9D10–≈0x800ED3xx` | tp: Font 100%, ResFontBase 81%; ogws ResFont 100% |
-| `ut_CharWriter.cpp` | `≈0x800ED3xx–≈0x800EDA28` | tp 77% (ogws 31%) |
-| `ut_TextWriterBase.cpp` | `≈0x800EDA28–0x800F02A8`† | tp 30% (template instantiations differ) |
-| `math_arithmetic.cpp`? | `0x800F02A8–0x800F0324` | — |
-| `math_triangular.cpp` | `0x800F0324–0x800F0618` | tp/smg 100% |
-| `math_types.cpp` | `0x800F0618–0x800F0B58` | ogws (MTX34 helpers); lyt starts at `0x800F0B58` |
+| File | Range | Status | Source |
+| --- | --- | --- | --- |
+| `ut_list.cpp` | `0x800E84D8–0x800E8774` | Matching | ogws |
+| `ut_LinkList.cpp` | `0x800E8774–0x800E88E0` | Matching | ogws |
+| `ut_binaryFileFormat.cpp` | `0x800E88E0–0x800E8954` | Matching | ogws |
+| `ut_CharStrmReader.cpp` | `0x800E8954–0x800E8A64` | Matching | ogws |
+| `ut_TagProcessorBase.cpp` | `0x800E8A64–0x800E9224` | Matching | tp |
+| `ut_IOStream.cpp` | `0x800E9224–0x800E924C` | Matching | ogws |
+| `ut_FileStream.cpp` | `0x800E924C–0x800E9360` | Matching | ogws |
+| `ut_DvdFileStream.cpp` | `0x800E9360–0x800E9930` | Matching | ogws (rev-0 `Read`) |
+| `ut_DvdLockedFileStream.cpp` | `0x800E9930–0x800E9B64` | Matching | ogws |
+| `ut_LockedCache.cpp` | `0x800E9B64–0x800E9D10` | Matching | ogws |
+| `ut_Font.cpp` | `0x800E9D10–0x800E9DB8` | Matching | ogws |
+| `ut_RomFont.cpp` | `0x800E9DB8–0x800E9DF8` | Matching | ogws (only the weak `Font` dtor/vtable survive) |
+| `ut_ResFontBase.cpp` | `0x800E9DF8–0x800EA4BC` | Matching | ogws + `RemoveResourceBuffer` |
+| `ut_ResFont.cpp` | `0x800EA4BC–0x800EA7C0` | Matching | ogws |
+| `ut_ArchiveFontBase.cpp` | `0x800EA7C0–0x800EBBCC` | NonMatching 99.87% | written from the DOL |
+| `ut_ArchiveFont.cpp` | `0x800EBBCC–0x800EC4D8` | Matching | written from the DOL |
+| `ut_CharWriter.cpp` | `0x800EC4D8–0x800EDFF8` | Matching | tp + `GetTextColor`, `SetScale(f32)`, `GetFontDescent` |
+| `ut_TextWriterBase.cpp` | `0x800EDFF8–0x800F02A8` | Matching | tp bodies in source order |
+| `math_arithmetic.cpp` | `0x800F02A8–0x800F0324` | Matching | ogws `FrSqrt` + `CntBit1` |
+| `math_triangular.cpp` | `0x800F0324–0x800F0618` | Matching | ogws |
+| `math_types.cpp` | `0x800F0618–0x800F0B58` | Matching | ogws + `VEC3Transform(VEC4*, MTX44*, VEC3*)` |
+
+Findings:
+
+- **There is no `ut_NandFileStream.cpp`.** The `.ctors` entry at `0x80191FAC` (`0x800E9B58`) is `DvdLockedFileStream`'s `__sinit`; it stores `&DvdFileStream::typeInfo` into `DvdLockedFileStream::typeInfo`.
+- **`ut_RomFont.cpp` is linked but dead.** The weak `Font::~Font` (`0x800E9DB8`) and `Font` vtable (`0x801CE7D0`) come from RomFont.o, which is linked between Font.o and ResFontBase.o (as in ogws). Everything else in it is dead-stripped. It needs `OSInitFont`/`OSGetFontEncode`/`OSGetFontWidth`/`OSGetFontTexture` declarations (added to `os/OSFont.h`); they are not in the DOL.
+- **Archive fonts (`ut_ArchiveFontBase`/`ut_ArchiveFont`, 7.4 KB) have no public reference.** They load `.brfna` files ('RFNA' 1.4 with a 'GLGR' glyph-group block and optionally Huffman-compressed sheets via CX) in a streaming state machine. The game uses `ArchiveFont::GetRequireBufferSize`, the constructor, `Construct` and `Destroy` for `gSysFont`/`gArticleFont` (`fn_8004A074`). Names (`ConstructContext`, `CachedStreamReader`, `ConstructOp*`, `FontGlyphGroupsAcs`, `IncludeName`, `IsValidResource`, `AdjustIndex`) follow what later NW4R revisions are known to use; the rest are ours. `ConstructResult` is `MORE_DATA, FINISH, ERROR, CONTINUE`; the 13 operations are dispatched through the jump table at `0x801CE940`.
+- **ArchiveFont matching tricks.** `GetRequireBufferSize` only matched with an accessor object (`FontGlyphGroupsAcs`) that computes the per-set flag sizes *before* the section offsets, with `ut::AddOffsetToPtr` for the set names, and with `sizeAdjustTable` declared first. In the ops, the buffer checks go through an inline `GetRemain()` method but the buffer pointer is read directly (`target.pCurrent`); an inline accessor for the pointer lets MWCC CSE the load and the code no longer matches. The "task finished" tails are written `if (opSize == 0) { op = opNext; } else { return RequestData(...); } return CONSTRUCT_CONTINUE;`.
+- **ArchiveFontBase leftovers.** Only `ConstructOpAnalyzeGLGR` (99.29%) differs, in callee-saved register numbering of several locals. The local types move the allocation around (`int glyphsPerSheet`, `u32 numBlocks`, `int sizeAdjustTable` is the best found); declaration order, the buffer check form and the copy code did not help. `ConstructOpAnalyzeTGLP` only matched with a `CachedStreamReader::CopyTo(ConstructContext*, u32)` overload (copy to the buffer position, then advance); the extra inline level changes the register order of the inlined copy temporaries.
+- **ut needs the lyt/g3d NW4R basics.** `CharWriter`'s `ColorMapping`/`VertexColor`/`TextColor` members are default-constructed white (`li r8,-1; stw` x8 in the ctor), so `nw4r_ut` is built with `NW4R_UT_COLOR_DEFAULT_WHITE` and the other lyt/g3d defines (`cflags_nw4r_ut`).
+- **Weak stream inlines live in snd.** `DvdFileStream`'s `GetBufferAlign`…`IsBusy` and `DvdLockedFileStream`'s `CanAsync`/`PeekAsync`/`ReadAsync`/`GetRuntimeTypeInfo` are emitted first by snd (`0x800D4AA4–0x800D4B04`, `DvdSoundArchive`); they were named so the linker drops ut's copies. Only `CanAsync`/`GetSize`/`Tell`/`GetRuntimeTypeInfo` of `DvdFileStream` (`0x800E9904–0x800E9924`) are ut's.
+- **`CharStrmReader::StepStrm` must be ogws's cast-lvalue form** (`static_cast<const T*>(mCharStrm) += offset`); assigning `mCharStrm = ... + offset` makes every reader 4 bytes longer.
+- **TextWriterBase**: only `<wchar_t>` is used, except `GetLineHeight<char>`/`GetTabWidth<char>` (called by `TagProcessorBase<char>`). `Printf` calls MSL `vswprintf` (`0x80188134`, named). `TextWriterBase<wchar_t>::mFormatBufferSize` is in `.sdata`, the default tag processors and `mFormatBuffer<wchar_t>` in `.sbss`.
+- **DvdFileStream::Read** has Wii Sports rev-0's unconditional `mFilePosition.Skip(result)`.
+- `math::CntBit1(u32)` (`0x800F02CC`) is a plain popcount used by `ArchiveFont::GetRequireBufferSize`. `math::FExp`/`FLog` and their tables are dead-stripped.
+- **DVD names.** `fn_8011B478=DVDFastOpen`, `fn_8011B970=DVDReadAsyncPrio`, `fn_8012019C=DVDCancelAsync`, `fn_80120500=DVDCancel` (from DvdFileStream's calls). `DVDCancelAsync` and `DVD_PRIO_MEDIUM`/`DVD_RESULT_GOOD` are declared locally in `ut_DvdFileStream.cpp` because `dvd.h` belongs to the DVD task.
+- **Headers.** ut owns `include/nw4r/ut/` and `include/nw4r/math/`. Changed: `ut_Font.h` (real virtual signatures from ogws, `CharWidths`, `Glyph`), `ut_ResFont.h` (full ogws version), `ut_CharWriter.h`/`ut_TextWriterBase.h` (tp declarations, inline `VSNPrintf`/`StrLen`), `ut_TagProcessorBase.h` (`ProcessLinefeed`/`ProcessTab`), `ut_Rect.h` (`Normalize`), `ut_CharStrmReader.h` (`GetChar`/`StepStrm`), `ut_binaryFileFormat.h` (`NW4R_VERSION`, byte-order macros), `ut_RuntimeTypeInfo.h` (ogws `NW4R_UT_RTTI_*` macros), `math_arithmetic.h` (`CntBit1`). New: `ut_ResFontBase.h`, `ut_RomFont.h`, `ut_IOStream.h`, `ut_FileStream.h`, `ut_DvdFileStream.h`, `ut_DvdLockedFileStream.h`, `ut_ArchiveFontBase.h`, `ut_ArchiveFont.h`. Shared headers (additive): `os/OSFont.h` (RomFont's OS font API), `os/OSCache.h` (`LCLoadBlocks`), `wchar.h` (`vswprintf`). Game, lyt and g3d objects are unchanged.
 
 ### nw4r::lyt (`0x800F0B58–0x800FB9EC`, tp `nw4hbm/lyt`) — Task 15
 
@@ -556,7 +578,7 @@ Difficulty: E = mostly drop-in, M = drop-in plus version fixes, H = little or no
 | 11 | snd part 1: AxManager … Lfo | `0x800CE740–0x800D5DC8` | 30 KB | ogws | M |
 | 12 | snd part 2: MemorySoundArchive … SoundArchiveLoader | `0x800D5DC8–0x800DC00C` | 25 KB | ogws | M |
 | 13 | snd part 3: SoundArchivePlayer … end | `0x800DC00C–0x800E84D8` | 50 KB | ogws | M |
-| 14 | ut + math (rest) | `0x800E88E0–0x800F0F50` | 34 KB | tp `nw4hbm`, ogws | M |
+| 14 | ut + math (rest) (**done**, 18/19 Matching) | `0x800E88E0–0x800F0B58` | 33 KB | tp `nw4hbm`, ogws | M |
 | 15 | lyt | `0x800F0F50–0x800FB9EC` | 43 KB | tp `nw4hbm/lyt` | E–M |
 | 16 | BASE + OS (rest) + `__ppc_eabi_init` | `0x800FB9EC–0x80109434` | 55 KB | ogws/smg | E–M |
 | 17 | EXI, SI, DB, VI, MTX | `0x80109434–0x80112208` | 36 KB | ogws/smg | M |

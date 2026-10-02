@@ -302,6 +302,16 @@ cflags_nw4r_lyt = [
     "-DNW4R_UT_RECT_DEFAULT_ZERO",
 ]
 
+# nw4r::ut: same NW4R basics as lyt/g3d (CharWriter's colours default to white)
+cflags_nw4r_ut = [
+    *cflags_nw4r,
+    "-DNW4R_MATH_VEC2_NO_DTOR",
+    "-DNW4R_MATH_VEC3_NO_DTOR",
+    "-DNW4R_MATH_MTX34_NO_DTOR",
+    "-DNW4R_UT_COLOR_DEFAULT_WHITE",
+    "-DNW4R_UT_RECT_DEFAULT_ZERO",
+]
+
 # nw4r::g3d (ogws sources): same NW4R basics as lyt (no math destructors,
 # white default ut::Color)
 cflags_nw4r_g3d = [
@@ -520,11 +530,38 @@ config.libs = [
     {
         "lib": "nw4r_ut",
         "mw_version": "GC/3.0a5.2",
-        "cflags": cflags_nw4r,
+        "cflags": cflags_nw4r_ut,
         "progress_category": "sdk",
         "objects": [
             Object(Matching, "nw4r/ut/ut_list.cpp"),
             Object(Matching, "nw4r/ut/ut_LinkList.cpp"),
+            Object(Matching, "nw4r/ut/ut_binaryFileFormat.cpp"),
+            Object(Matching, "nw4r/ut/ut_CharStrmReader.cpp"),
+            Object(Matching, "nw4r/ut/ut_TagProcessorBase.cpp"),
+            Object(Matching, "nw4r/ut/ut_IOStream.cpp"),
+            Object(Matching, "nw4r/ut/ut_FileStream.cpp"),
+            Object(Matching, "nw4r/ut/ut_DvdFileStream.cpp"),
+            Object(Matching, "nw4r/ut/ut_DvdLockedFileStream.cpp"),
+            Object(Matching, "nw4r/ut/ut_LockedCache.cpp"),
+            Object(Matching, "nw4r/ut/ut_Font.cpp"),
+            Object(Matching, "nw4r/ut/ut_RomFont.cpp"),
+            Object(Matching, "nw4r/ut/ut_ResFontBase.cpp"),
+            Object(Matching, "nw4r/ut/ut_ResFont.cpp"),
+            Object(NonMatching, "nw4r/ut/ut_ArchiveFontBase.cpp"),
+            Object(Matching, "nw4r/ut/ut_ArchiveFont.cpp"),
+            Object(Matching, "nw4r/ut/ut_CharWriter.cpp"),
+            Object(Matching, "nw4r/ut/ut_TextWriterBase.cpp"),
+        ],
+    },
+    {
+        "lib": "nw4r_math",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_nw4r,
+        "progress_category": "sdk",
+        "objects": [
+            Object(Matching, "nw4r/math/math_arithmetic.cpp"),
+            Object(Matching, "nw4r/math/math_triangular.cpp"),
+            Object(Matching, "nw4r/math/math_types.cpp"),
         ],
     },
     {

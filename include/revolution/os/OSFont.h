@@ -30,6 +30,22 @@ typedef struct OSFontHeader {
     u8 c3;
 } OSFontHeader;
 
+// Added for nw4r::ut::RomFont (Task 14), from ogws OSFont.h
+typedef enum {
+    OS_FONT_ENCODE_ANSI,
+    OS_FONT_ENCODE_SJIS,
+    OS_FONT_ENCODE_2,
+    OS_FONT_ENCODE_UTF8,
+    OS_FONT_ENCODE_UTF16,
+    OS_FONT_ENCODE_UTF32,
+    OS_FONT_ENCODE_MAX
+} OSFontEncode;
+
+u16 OSGetFontEncode(void);
+BOOL OSInitFont(OSFontHeader* font);
+const char* OSGetFontTexture(const char* str, void** texOut, u32* xOut, u32* yOut, u32* widthOut);
+const char* OSGetFontWidth(const char* str, u32* widthOut);
+
 u32 OSLoadFont(OSFontHeader *, void *);
 char *OSGetFontTexel(const char *, void *, s32, s32, s32 *);
 

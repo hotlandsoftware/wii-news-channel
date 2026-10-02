@@ -1,51 +1,32 @@
 #ifndef NW4R_UT_RES_FONT_H
 #define NW4R_UT_RES_FONT_H
 
+// From ogws include/nw4r/ut/ut_ResFont.h
 #include <types.h>
-#include <nw4r/ut/ut_Font.h>
+#include <nw4r/ut/ut_ResFontBase.h>
 
 namespace nw4r {
 namespace ut {
 
-struct FontInformation;
-
-namespace detail {
-
-// Minimal declaration for lyt (Task 15); the full class belongs to ut.
-class ResFontBase : public Font {
-public:
-    ResFontBase();
-    virtual ~ResFontBase();
-    virtual int GetWidth() const;
-    virtual int GetHeight() const;
-    virtual int GetAscent() const;
-    virtual int GetDescent() const;
-    virtual int GetBaselinePos() const;
-    virtual int GetCellHeight() const;
-    virtual int GetCellWidth() const;
-    virtual int GetMaxCharWidth() const;
-    virtual int GetType() const;
-    virtual int GetTextureFormat() const;
-    virtual int GetLineFeed() const;
-    virtual void GetDefaultCharWidths() const;
-    virtual void SetDefaultCharWidths();
-    virtual bool SetAlternateChar(u16 c);
-    virtual void SetLineFeed(int lf);
-    virtual int GetCharWidth(u16 c) const;
-
-protected:
-    void* mResource;             // at 0x10
-    FontInformation* mFontInfo;  // at 0x14
-};
-
-} // namespace detail
+struct BinaryFileHeader;
 
 class ResFont : public detail::ResFontBase {
 public:
     ResFont();
-    virtual ~ResFont();
+    virtual ~ResFont(); // at 0x08
 
     bool SetResource(void* brfnt);
+
+private:
+    static FontInformation* Rebuild(BinaryFileHeader* pHeader);
+
+    static const u32 SIGNATURE = 'RFNT';
+    static const u32 SIGNATURE_UNPACKED = 'RFNU';
+    static const u32 SIGNATURE_FONTINFO = 'FINF';
+    static const u32 SIGNATURE_TEXGLYPH = 'TGLP';
+    static const u32 SIGNATURE_CHARWIDTH = 'CWDH';
+    static const u32 SIGNATURE_CHARMAP = 'CMAP';
+    static const u32 SIGNATURE_GLGR = 'GLGR';
 };
 
 } // namespace ut
