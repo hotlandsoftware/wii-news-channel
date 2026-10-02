@@ -533,6 +533,11 @@ inline BOOL IsOutOfMemory() {
 }
 
 void SetDPDAll(s32 value);
+
+static inline bool IsArrowVisible() {
+    return lbl_803575BA || lbl_803575BB;
+}
+
 BOOL Article_IsShort();
 
 static inline bool IsArticleShort() {
@@ -655,9 +660,11 @@ NewsScene::NewsScene()
     sBgmVolume[3].mTarget = 0.0f;
     sBgmVolume[3].mStep = 0.0f;
 
-    mLogoPos.x = 0.5f * GetScreenWidth() - 0.5f * TPL_GetWidth(gCommonTpl, sLogoIndex[gLanguage]);
+    u32 logoWidth = TPL_GetWidth(gCommonTpl, sLogoIndex[gLanguage]);
+    mLogoPos.x = 0.5f * GetScreenWidth() - 0.5f * logoWidth;
+    u32 logoHeight = TPL_GetHeight(gCommonTpl, sLogoIndex[gLanguage]);
     mLogoPos.z = 0.0f;
-    mLogoPos.y = 228.0f - 0.5f * TPL_GetHeight(gCommonTpl, sLogoIndex[gLanguage]);
+    mLogoPos.y = 228.0f - 0.5f * logoHeight;
 
     lbl_803575D0 = TPL_GetHeight(gCursorTpl, 0);
     f32 x = 0.5f * (GetScreenWidth() - TPL_GetWidth(gCursorTpl, 0));
@@ -665,7 +672,7 @@ NewsScene::NewsScene()
     lbl_803575D4 = 68.0f;
     lbl_801EDFB8.x = x;
     lbl_801EDFA0.x = x;
-    lbl_801EDFB8.y = lbl_803575D8 = 388.0f - lbl_803575D0;
+    lbl_803575D8 = lbl_801EDFB8.y = 388.0f - lbl_803575D0;
 
     mLayoutArc = LoadArcFile(gArchive, "news_layout.arc.LZ", 32, &size, gSubHeap);
     if (mLayoutArc == NULL) {
@@ -788,7 +795,9 @@ NewsScene::~NewsScene() {
             }
         }
     }
-    delete mLanguageSelect;
+    if (mLanguageSelect) {
+        delete mLanguageSelect;
+    }
     if (gNewsData) {
         gNewsData->~NewsData();
     }
@@ -862,8 +871,10 @@ void NewsScene::OnHomeMenuClose() {
 
 void NewsScene::RestoreDPD() {
     fn_8004A3A0();
-    for (s32 i = 0; i < 4; i++) {
-        if (lbl_801EDFD0[i] == 0) {
+    s32 i = 0;
+    s32* dpd = lbl_801EDFD0;
+    for (; i < 4; i++, dpd++) {
+        if (*dpd == 0) {
             KPADDisableDPD(i);
         } else {
             KPADEnableDPD(i);
@@ -922,8 +933,7 @@ void NewsScene::Draw() {
                     Draw2D_SetOrtho();
                     Draw2D_FillRect(&rect, &lbl_803575FC);
                 }
-                math::VEC3 pos = lbl_801EDF70;
-                pos.y += lbl_803575C8;
+                math::VEC3 pos(lbl_801EDF70.x, lbl_801EDF70.y + lbl_803575C8, lbl_801EDF70.z);
                 fn_8004CAE4(lbl_8035775C, &pos, 0, 1.0f);
                 if (gNewsData->mHeader->unk2C[1] && lbl_803575B9) {
                     pos.x = lbl_801EDF88.x;
@@ -934,7 +944,7 @@ void NewsScene::Draw() {
             if (mDraw) {
                 (this->*mDraw)();
             }
-            if (lbl_803575BA || lbl_803575BB) {
+            if (IsArrowVisible()) {
                 Draw2D_SetupGX();
                 Draw2D_SetOrtho();
                 GXSetTevColor(GX_TEVREG0, lbl_80357600);
@@ -994,6 +1004,28 @@ void NewsScene::DrawOverlay() {
     }
 }
 
+static inline void PlayPinHoverSE() {
+    GlobePin** pin = sSortedPins;
+    if (pin) {
+        for (u32 i = 0; i < sNumPins; i++, pin++) {
+            if (*pin && (*pin)->mJustHovered) {
+                PlaySE(1);
+            }
+        }
+    }
+}
+
+static inline void UpdateBgmVolume() {
+    snd::SoundHandle* handle = lbl_8021E8CC;
+    SmoothValue* volume = sBgmVolume;
+    for (s32 i = 0; i < 4; i++, volume++, handle++) {
+        if (IsSoundPlaying(handle)) {
+            volume->Update();
+            fn_8004FB44(handle, volume->mValue);
+        }
+    }
+}
+
 void NewsScene::Calc() {
     if (gAllocFailed) {
         if (mState != &NewsScene::StateFatal) {
@@ -1022,17 +1054,13 @@ void NewsScene::Calc() {
         if (!lbl_803575BF) {
             Pins_Sort();
         }
-        if (!lbl_803575BC && !lbl_803575BD && sSortedPins) {
-            GlobePin** pin = sSortedPins;
-            for (u32 i = 0; i < sNumPins; i++, pin++) {
-                if (*pin && (*pin)->mJustHovered) {
-                    PlaySE(1);
-                }
-            }
+        if (!lbl_803575BC && !lbl_803575BD) {
+            PlayPinHoverSE();
         }
-        snd::SoundHandle* handle = lbl_8021E8CC;
         SmoothValue* volume = sBgmVolume;
-        for (s32 i = 0; i < 4; i++, volume++, handle++) {
+        snd::SoundHandle* handle = lbl_8021E8CC;
+        s32 i = 0;
+        for (; i < 4; i++, handle++, volume++) {
             if (IsSoundPlaying(handle)) {
                 volume->Update();
                 fn_8004FB44(handle, volume->mValue);
@@ -1046,19 +1074,21 @@ void NewsScene::Calc() {
 }
 
 void NewsScene::OnHomeMenuOpen() {
+    s32 i = 0;
     snd::SoundHandle* handle = lbl_8021E8CC;
-    for (s32 i = 0; i < 4; i++, handle++) {
+    for (; i < 4; i++, handle++) {
         fn_8004FB44(handle, 0.0f);
     }
     if (mIntro) {
         fn_800096B0(mIntro, 1);
     }
     SetDPDAll(1);
-    for (s32 i = 0; i < 4; i++) {
-        if (lbl_801EDFD0[i] == 0) {
-            KPADDisableDPD(i);
+    s32* dpd = lbl_801EDFD0;
+    for (s32 j = 0; j < 4; j++, dpd++) {
+        if (*dpd == 0) {
+            KPADDisableDPD(j);
         } else {
-            KPADEnableDPD(i);
+            KPADEnableDPD(j);
         }
     }
 }
@@ -1659,7 +1689,9 @@ BOOL NewsScene::StateStartup() {
             mDraw = &NewsScene::DrawDialog;
             mStep = 9;
         } else if (file->unk2C[2]) {
-            delete mLanguageSelect;
+            if (mLanguageSelect) {
+                delete mLanguageSelect;
+            }
             mLanguageSelect = new LanguageSelect((u32)mLayoutArc);
             ChangeState(&NewsScene::StateLanguageSelect);
         } else {
