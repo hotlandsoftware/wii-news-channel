@@ -684,14 +684,15 @@ void Connect::DrawProgress(f32 alpha) {
         GXSetTevColor(GX_TEVREG0, color);
         if (mDotsActive) {
             u32 tex = mDotWait[i] >= 4 ? sDotTexHover[i] : sDotTex[i];
-            math::VEC3 pos(x + 0.5f * TPL_GetWidth(gCommonTpl, tex),
-                           280.0f - 0.5f * TPL_GetHeight(gCommonTpl, tex), 0.0f);
+            f32 px = x + 0.5f * TPL_GetWidth(gCommonTpl, tex);
+            f32 py = 280.0f - 0.5f * TPL_GetHeight(gCommonTpl, tex);
+            math::VEC3 pos(px, py, 0.0f);
             Draw2D_Tex(gCommonTpl, tex, &pos, -1.0f, 1.0f);
         } else {
             f32 jump = (8.0f * a * a) / 65025.0f;
-            math::VEC3 pos(x - (0.5f * jump + 0.5f * (0.75f * TPL_GetWidth(gCommonTpl, 0x4D))),
-                           (280.0f - 0.5f * (0.75f * TPL_GetHeight(gCommonTpl, 0x4D))) - jump,
-                           0.0f);
+            f32 px = x - (0.5f * jump + 0.5f * (0.75f * TPL_GetWidth(gCommonTpl, 0x4D)));
+            f32 py = (280.0f - 0.5f * (0.75f * TPL_GetHeight(gCommonTpl, 0x4D))) - jump;
+            math::VEC3 pos(px, py, 0.0f);
             Draw2D_Tex(gCommonTpl, 0x4D, &pos, 0.75f, 0.75f);
         }
     }
