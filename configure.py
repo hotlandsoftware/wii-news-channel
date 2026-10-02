@@ -912,6 +912,37 @@ config.libs = [
         ],
     },
     {
+        "lib": "so",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_rvl,
+        "progress_category": "sdk",
+        "objects": [
+            Object(NonMatching, "revolution/SO/soCommon.c"),
+            Object(NonMatching, "revolution/SO/soBasic.c"),
+        ],
+    },
+    {
+        "lib": "ncd",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_rvl,
+        "progress_category": "sdk",
+        "objects": [
+            Object(NonMatching, "revolution/NCD/ncdsystem.c"),
+        ],
+    },
+    {
+        "lib": "net",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_rvl,
+        "progress_category": "sdk",
+        "objects": [
+            Object(NonMatching, "revolution/NET/nettime.c"),
+            Object(NonMatching, "revolution/NET/netcrc.c"),
+            Object(NonMatching, "revolution/NET/neterror.c"),
+            Object(NonMatching, "revolution/NET/NETVersion.c"),
+        ],
+    },
+    {
         "lib": "arc",
         "mw_version": "GC/3.0a5.2",
         "cflags": cflags_rvl,

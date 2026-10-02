@@ -353,6 +353,40 @@ revolution/VF/ram_drv.c:
 revolution/VF/sd_drv.c:
 	.text       start:0x80074ADC end:0x80074AE0
 
+revolution/SO/soCommon.c:
+	.text       start:0x80074AE0 end:0x800759E0
+	.data       start:0x801CAE98 end:0x801CB078
+	.bss        start:0x802AFBA0 end:0x802AFBC0
+	.sdata      start:0x80356D40 end:0x80356D48
+	.sbss       start:0x80357830 end:0x80357840
+
+revolution/SO/soBasic.c:
+	.text       start:0x800759E0 end:0x80075C34
+
+revolution/NCD/ncdsystem.c:
+	.text       start:0x80075C34 end:0x80076138
+	.data       start:0x801CB078 end:0x801CB138
+	.bss        start:0x802AFBC0 end:0x802AFC20
+	.sdata      start:0x80356D48 end:0x80356D50
+	.sbss       start:0x80357840 end:0x80357848
+
+revolution/NET/nettime.c:
+	.text       start:0x80076138 end:0x8007621C
+	.sbss       start:0x80357848 end:0x80357850
+
+revolution/NET/netcrc.c:
+	.text       start:0x8007621C end:0x80076350
+	.rodata     start:0x801AAC88 end:0x801AACC8
+
+revolution/NET/neterror.c:
+	.text       start:0x80076350 end:0x800767C0
+	.data       start:0x801CB138 end:0x801CB158
+
+revolution/NET/NETVersion.c:
+	.text       start:0x800767C0 end:0x800767C8
+	.data       start:0x801CB158 end:0x801CB190
+	.sdata      start:0x80356D50 end:0x80356D58
+
 revolution/ARC/arc.c:
 	.text       start:0x8008A0A4 end:0x8008AA44
 	.data       start:0x801CB600 end:0x801CB670
