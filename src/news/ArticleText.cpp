@@ -1,3 +1,5 @@
+#define NW4R_UT_COLOR_DEFAULT_WHITE
+#define NW4R_UT_COLOR_WORD_COPY
 #include <news/ArticleText.h>
 #include <news/Common.h>
 #include <news/Draw2D.h>
@@ -458,7 +460,7 @@ void ArticleText::Draw(const math::VEC2* pos, bool clip, f32 alpha, f32 zoom) {
 
     TextChar* c;
     s32 i = mFirstVisible;
-    ut::Color color = ut::Color::WHITE;
+    ut::Color color;
     c = &mChars[i];
 
     if (gNewsData->mHeader->unk2C[0] == 0) {
