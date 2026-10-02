@@ -111,7 +111,7 @@ TextView* fn_80027674(void* mem, MEMAllocator* allocator, ut::TextWriterBase<wch
 void fn_8002780C(TextView* view, s32 flag);
 void fn_80027F94(TextView* view, const wchar_t* text, NewsPicture* picture, s32 arg3, s32 arg4,
                  s32 arg5, math::VEC2* size, s32 arg7, f32 x, f32 scale, u8 latest, s32 arg9);
-void fn_800284C0(TextView* view, math::VEC2* pos, s32 arg, f32 alpha, f32 arg2);
+void fn_800284C0(TextView* view, const math::VEC2* pos, s32 arg, f32 alpha, f32 arg2);
 void fn_80028DC8(TextView* view, s32 arg0, s32 arg1, f32 arg2);
 void fn_80029178(TextView* view);
 void fn_8002963C(TextView* view);
@@ -515,8 +515,8 @@ void PostRetraceCallback(u32 retraceCount);
 void Pins_ResetStacks();
 void Pins_Sort();
 void FormatElapsedTime(s32 time);
-void Article_DrawDate(math::VEC2* pos, s32 alpha);
-void Article_DrawSourceAndDate(math::VEC2* pos, s32 alpha);
+void Article_DrawDate(const math::VEC2& pos, s32 alpha);
+void Article_DrawSourceAndDate(const math::VEC2& pos, s32 alpha);
 void SetupTexGX();
 u32 GetSourceIconIndex();
 
@@ -2495,12 +2495,12 @@ void Article_DrawHeadline(math::VEC2* pos, s32 arg, f32 alpha) {
     fn_800284C0(lbl_80357568, pos, arg, alpha, 1.0f);
 }
 
-void Article_DrawFrame(math::VEC2* pos, s32 type, f32 alpha) {
+void Article_DrawFrame(const math::VEC2& pos, s32 type, f32 alpha) {
     s32 a = 255.0f * alpha;
     f32 width = GetScreenWidth() - GetSideMargin() * 2;
     ut::Color color = sBarColors[type];
     ut::Color black(0, 0, 0, a);
-    ut::Rect rect(14.0f + pos->x, pos->y - 20.0f, (pos->x + sArticleSize.x) - 14.0f, 0.0f);
+    ut::Rect rect(14.0f + pos.x, pos.y - 20.0f, (pos.x + sArticleSize.x) - 14.0f, 0.0f);
     color.a = a;
     SetupTexGX();
     if (type) {
@@ -2511,7 +2511,7 @@ void Article_DrawFrame(math::VEC2* pos, s32 type, f32 alpha) {
         rect.bottom = 1.0f + rect.top;
         Draw2D_FillRect(&rect, &color);
     }
-    rect.top = (pos->y + fn_8002A234(sCreditView)) - 6.0f;
+    rect.top = (pos.y + fn_8002A234(sCreditView)) - 6.0f;
     rect.bottom = 1.0f + rect.top;
     Draw2D_FillRect(&rect, &black);
 
@@ -2529,9 +2529,9 @@ void Article_DrawFrame(math::VEC2* pos, s32 type, f32 alpha) {
     }
 }
 
-void Article_DrawDate(math::VEC2* pos, s32 alpha) {
+void Article_DrawDate(const math::VEC2& pos, s32 alpha) {
     f32 maxWidth = sArticleSize.x - 20.0f;
-    math::VEC2 p(14.0f + pos->x, pos->y - 20.0f);
+    math::VEC2 p(14.0f + pos.x, pos.y - 20.0f);
     lbl_8020E4C0.SetFont(*gSysFont);
     lbl_8020E4C0.SetTextColor(ut::Color(70, 70, 70, alpha));
     if (lbl_80357560) {
@@ -2541,7 +2541,7 @@ void Article_DrawDate(math::VEC2* pos, s32 alpha) {
         } else {
             scale = 0.6f;
         }
-        p.x = (pos->x + sArticleSize.x) - 14.0f;
+        p.x = (pos.x + sArticleSize.x) - 14.0f;
         lbl_8020E4C0.SetDrawFlag(0x222);
         lbl_8020E4C0.SetupGX();
         lbl_8020E4C0.SetCursor(p.x, p.y);
@@ -2551,10 +2551,10 @@ void Article_DrawDate(math::VEC2* pos, s32 alpha) {
     }
 }
 
-void Article_DrawSourceAndDate(math::VEC2* pos, s32 alpha) {
+void Article_DrawSourceAndDate(const math::VEC2& pos, s32 alpha) {
     f32 maxWidth = sArticleSize.x - 20.0f;
     ut::Color white(255, 255, 255, alpha);
-    math::VEC2 p(14.0f + pos->x, pos->y - 20.0f);
+    math::VEC2 p(14.0f + pos.x, pos.y - 20.0f);
     if (sSourceIconType == 0) {
         NewsTexture* logo = sSourceLogo;
         if (logo) {
@@ -2563,7 +2563,7 @@ void Article_DrawSourceAndDate(math::VEC2* pos, s32 alpha) {
             SetupTexGX();
             GXSetTevColor(GX_TEVREG0, white);
             Draw2D_Texture(logo, &lp, 1.0f);
-            maxWidth = ((pos->x + sArticleSize.x) - 14.0f) - (lp.x + w);
+            maxWidth = ((pos.x + sArticleSize.x) - 14.0f) - (lp.x + w);
         }
     } else {
         u32 index = GetSourceIconIndex();
@@ -2574,14 +2574,14 @@ void Article_DrawSourceAndDate(math::VEC2* pos, s32 alpha) {
             SetupTexGX();
             GXSetTevColor(GX_TEVREG0, white);
             Draw2D_Tex(gCommonTpl, index, &lp, 1.0f, 1.0f);
-            p.x = (pos->x + sArticleSize.x) - 14.0f;
+            p.x = (pos.x + sArticleSize.x) - 14.0f;
             maxWidth = p.x - (lp.x + w);
         }
     }
     lbl_8020E4C0.SetFont(*gSysFont);
     lbl_8020E4C0.SetTextColor(ut::Color(70, 70, 70, alpha));
     if (lbl_80357560) {
-        p.x = (pos->x + sArticleSize.x) - 14.0f;
+        p.x = (pos.x + sArticleSize.x) - 14.0f;
         f32 scale;
         if (sDateWidth > maxWidth) {
             scale = 0.6f * (maxWidth / sDateWidth);
@@ -2597,32 +2597,32 @@ void Article_DrawSourceAndDate(math::VEC2* pos, s32 alpha) {
     }
 }
 
-void Article_DrawSourceIcon(math::VEC2* pos, BOOL right, f32 alpha) {
+void Article_DrawSourceIcon(const math::VEC2& pos, BOOL right, f32 alpha) {
     u32 index = GetSourceIconIndex();
     f32 scale = gTextScale * GetIconScale();
     if (index != -1) {
         ut::Color color(255, 255, 255, 255.0f * alpha);
         f32 w = scale * TPL_GetWidth(gCommonTpl, index);
-        f32 y = (pos->y - scale * TPL_GetHeight(gCommonTpl, index)) - 5.0f;
+        f32 y = (pos.y - scale * TPL_GetHeight(gCommonTpl, index)) - 5.0f;
         f32 x;
         if (right) {
             x = (sArticleSize.x - 14.0f) - w;
         } else {
             x = 0.5f * (sBodyView->mFont->GetWidth() * gTextScale);
         }
-        math::VEC3 p(pos->x + x, y, 0.0f);
+        math::VEC3 p(pos.x + x, y, 0.0f);
         SetupTexGX();
         GXSetTevColor(GX_TEVREG0, color);
         Draw2D_Tex(gCommonTpl, index, &p, scale, scale);
     }
 }
 
-void Article_DrawSourceLogo(math::VEC2* pos, BOOL right, f32 alpha) {
+void Article_DrawSourceLogo(const math::VEC2& pos, BOOL right, f32 alpha) {
     NewsTexture* logo = sSourceLogo;
     f32 scale = gTextScale * GetIconScale();
     if (logo) {
         ut::Color color(255, 255, 255, 255.0f * alpha);
-        f32 y = (pos->y - scale * logo->height) - 5.0f;
+        f32 y = (pos.y - scale * logo->height) - 5.0f;
         f32 w = scale * logo->width;
         f32 x;
         if (right) {
@@ -2630,30 +2630,30 @@ void Article_DrawSourceLogo(math::VEC2* pos, BOOL right, f32 alpha) {
         } else {
             x = 0.5f * (sBodyView->mFont->GetWidth() * gTextScale);
         }
-        math::VEC3 p(pos->x + x, y, 0.0f);
+        math::VEC3 p(pos.x + x, y, 0.0f);
         SetupTexGX();
         GXSetTevColor(GX_TEVREG0, color);
         Draw2D_Texture(logo, &p, scale);
     }
 }
 
-void Article_Draw(math::VEC2* pos, s32 type, BOOL drawHeadline, f32 alpha, f32 bodyAlpha) {
+void Article_Draw(const math::VEC2& pos, s32 type, BOOL drawHeadline, f32 alpha, f32 bodyAlpha) {
     Draw2D_SetOrtho();
     Article_DrawFrame(pos, type, alpha);
     if (drawHeadline) {
-        fn_800284C0(lbl_80357568, pos, 0, alpha, 1.0f);
+        fn_800284C0(lbl_80357568, &pos, 0, alpha, 1.0f);
     }
-    f32 y = pos->y + fn_8002A234(sBodyView);
-    math::VEC2 p(pos->x, y - 8.0f * gTextScale);
+    f32 y = pos.y + fn_8002A234(sBodyView);
+    math::VEC2 p(pos.x, y - 8.0f * gTextScale);
     if ((u32)(sSourceLayout - 3) <= 3) {
         if (sSourceIconType == 0) {
-            Article_DrawSourceLogo(&p, sSourceLayout != 6, alpha);
+            Article_DrawSourceLogo(p, sSourceLayout != 6, alpha);
         } else {
-            Article_DrawSourceIcon(&p, sSourceLayout != 6, alpha);
+            Article_DrawSourceIcon(p, sSourceLayout != 6, alpha);
         }
     }
-    fn_800284C0(sBodyView, pos, 0, alpha, bodyAlpha);
-    fn_800284C0(sCreditView, pos, 0, alpha, 1.0f);
+    fn_800284C0(sBodyView, &pos, 0, alpha, bodyAlpha);
+    fn_800284C0(sCreditView, &pos, 0, alpha, 1.0f);
 }
 
 f32 Article_GetHeadlineY() {
