@@ -93,6 +93,30 @@ static NWC24Err CheckDlTask(const NWC24iDlTask* pTask, BOOL wantWrite) {
     return NWC24_OK;
 }
 
+static NWC24Err CheckDlTaskLoop(const NWC24iDlTask* pTask, BOOL wantWrite) {
+    NWC24iDlHeader* pHeader = NWC24WorkP == NULL ? NULL : (NWC24iDlHeader*)NWC24WorkP->dlHeader;
+
+    if (pTask == NULL) {
+        return NWC24_ERR_INVALID_VALUE;
+    }
+
+    if (pHeader == NULL) {
+        return NWC24_ERR_LIB_NOT_OPENED;
+    }
+
+    if (wantWrite && !NWC24IsMsgLibOpenedByTool() && !IsMyApp(pTask->appId)) {
+        if (!IsGroupWritable(pTask->groupId, pTask->flags)) {
+            return NWC24_ERR_PROTECTED;
+        }
+    }
+
+    if (pTask->id != 0xFFFF && pTask->id >= pHeader->maxTasks) {
+        return NWC24_ERR_INVALID_VALUE;
+    }
+
+    return NWC24_OK;
+}
+
 static u16 GetMaxTasks(void) {
     return NWC24iGetCachedDlHeader()->maxTasks;
 }
@@ -198,7 +222,7 @@ static NWC24Err ClearDlTaskError(NWC24iDlTask* pTask) {
 static NWC24Err CheckSubTaskEnabled(const NWC24iDlTask* pTask, u8 index) {
     NWC24Err result;
 
-    result = CheckDlTask(pTask, FALSE);
+    result = CheckDlTaskLoop(pTask, FALSE);
     if (result != NWC24_OK) {
         return result;
     }
@@ -215,11 +239,7 @@ static NWC24Err CheckSubTaskEnabled(const NWC24iDlTask* pTask, u8 index) {
         return NWC24_ERR_INVALID_VALUE;
     }
 
-    if (!((1 << index) & pTask->subTaskMask)) {
-        return NWC24_ERR_DISABLED;
-    }
-
-    return NWC24_OK;
+    return ((1 << index) & pTask->subTaskMask) == 0 ? NWC24_ERR_DISABLED : NWC24_OK;
 }
 
 NWC24Err NWC24InitDlTask(NWC24DlTask* pTask, NWC24DlType type) {
@@ -1137,7 +1157,7 @@ static NWC24Err CheckDlTaskParams(const NWC24iDlTask* pTask) {
     return NWC24_OK;
 }
 
-static NWC24Err AssignDlTaskId(NWC24iDlTask* pTask, u16 minId, u16 maxId) {
+static NWC24Err AssignDlTaskId(NWC24iDlTask* pTask, u32 minId, u32 maxId) {
     NWC24iDlHeader* pHeader = NWC24iGetCachedDlHeader();
     u16 id;
 
