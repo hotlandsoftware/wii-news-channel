@@ -2024,9 +2024,8 @@ void SlideShow::CheckPointer() {
     lbl_80356CA0 = flag;
 
     s32 lo = 32;
-    s32 hi = 255;
     fn_80048470(mCurLayout,
-                lo + (f32)(s32)(hi - lo) *
+                lo + (s32)(255.0f - lo) *
                          math::SinFIdx(FIdxRad((1.5708f * (15 - mFooterFade)) / 15.0f)));
 }
 
