@@ -584,43 +584,46 @@ void GlobePin::StateRipple() {
         break;
     case -1:
         break;
-    case 1: {
-        Ripple* ripple = mRipples;
-        for (s32 i = 0; i < 2; i++, ripple++) {
-            ripple->mAngle += 0x100;
-            if (ripple->mAngle >= 0x4000) {
-                ripple->mAngle = 0;
-            }
-            u16 angle = ripple->mAngle < 0 ? 0 : ripple->mAngle;
-            ripple->mScale = SinIdx(angle);
-            ripple->mAlpha = 255.0f * CosIdx(angle);
-        }
-        if (!mActive) {
-            mPhase++;
-        }
-        break;
-    }
-    case 2:
     default: {
-        BOOL done = TRUE;
         Ripple* ripple = mRipples;
-        for (s32 i = 0; i < 2; i++, ripple++) {
-            ripple->mAngle += 0x100;
-            u16 angle;
-            if (ripple->mAngle < 0 || ripple->mAngle >= 0x4000) {
-                angle = 0;
-            } else {
-                done = FALSE;
-                angle = ripple->mAngle;
+        switch (mPhase) {
+        case 1:
+            for (s32 i = 0; i < 2; i++, ripple++) {
+                ripple->mAngle += 0x100;
+                if (ripple->mAngle >= 0x4000) {
+                    ripple->mAngle = 0;
+                }
+                u16 angle = ripple->mAngle < 0 ? 0 : ripple->mAngle;
+                ripple->mScale = SinIdx(angle);
+                ripple->mAlpha = 255.0f * CosIdx(angle);
             }
-            ripple->mScale = SinIdx(angle);
-            ripple->mAlpha = 255.0f * CosIdx(angle);
+            if (!mActive) {
+                mPhase++;
+            }
+            break;
+        case 2:
+        default: {
+            BOOL done = TRUE;
+            for (s32 i = 0; i < 2; i++, ripple++) {
+                ripple->mAngle += 0x100;
+                u16 angle;
+                if (ripple->mAngle < 0 || ripple->mAngle >= 0x4000) {
+                    angle = 0;
+                } else {
+                    done = FALSE;
+                    angle = ripple->mAngle;
+                }
+                ripple->mScale = SinIdx(angle);
+                ripple->mAlpha = 255.0f * CosIdx(angle);
+            }
+            if (done) {
+                ChangeState(&GlobePin::StateHidden);
+            } else if (mActive) {
+                ResetRipples();
+                mPhase = 1;
+            }
+            break;
         }
-        if (done) {
-            ChangeState(&GlobePin::StateHidden);
-        } else if (mActive) {
-            ResetRipples();
-            mPhase = 1;
         }
         break;
     }
@@ -768,15 +771,9 @@ void GlobePin::LayoutPicture(f32 size) {
     if (tex != NULL) {
         f32 w = tex->width;
         f32 h = tex->height;
-        f32 s;
-        if (h / w > 1.0f) {
-            s = size / h;
-        } else {
-            s = size / w;
-        }
-        mPicScale = s;
-        mPicY = -(0.5f * (h * s));
-        mPicX = 0.5f * (size - w * s);
+        mPicScale = h / w > 1.0f ? size / h : size / w;
+        mPicY = -(0.5f * (h * mPicScale));
+        mPicX = 0.5f * (size - w * mPicScale);
     }
 }
 
