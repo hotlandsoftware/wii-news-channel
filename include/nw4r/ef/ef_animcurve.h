@@ -8,11 +8,22 @@ namespace ef {
 // Forward declarations
 class Particle;
 
-void AnimCurveExecuteU8(u8* pCmdList, u8* pTarget, u32 tick, u16 seed,
-                        u32 life);
+// Older revision (News Channel): one function per component count.
+// The names are guesses.
+void AnimCurveExecuteColor(u8* pCmdList, u8* pTarget, u32 tick, u16 seed,
+                           u32 life);
+void AnimCurveExecuteAlpha(u8* pCmdList, u8* pTarget, u32 tick, u16 seed,
+                           u32 life);
+
+void AnimCurveExecuteF32x1(u8* pCmdList, Particle* pParticle, f32* pTarget,
+                           u32 tick, u16 seed, u32 life);
+void AnimCurveExecuteF32x2(u8* pCmdList, Particle* pParticle, f32* pTarget,
+                           u32 tick, u16 seed, u32 life);
+void AnimCurveExecuteF32x3(u8* pCmdList, f32* pTarget, u32 tick, u16 seed,
+                           u32 life);
 
 void AnimCurveExecuteF32(u8* pCmdList, f32* pTarget, u32 tick, u16 seed,
-                         u32 life);
+                         u32 life, u8 ctrl);
 
 void AnimCurveExecuteRotate(u8* pCmdList, f32* pTarget, u32 tick, u16 seed,
                             u32 life);
