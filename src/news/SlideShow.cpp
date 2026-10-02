@@ -172,6 +172,11 @@ static f32 sUnused[3] = {5.0f, 25.0f, 50.0f};
 #pragma explicit_zero_data reset
 
 static ut::Color sWhite(0xFFFFFFFF);
+
+#pragma explicit_zero_data on
+static f32 sGlobeOfsX = 0.0f;
+static f32 sGlobeOfsY = 0.0f;
+#pragma explicit_zero_data reset
 static math::VEC2 sArrowSize(20.0f, 20.0f);
 
 static inline Category* GetCategory(s32 idx) {
@@ -1857,17 +1862,18 @@ void SlideShow::PrevArticle() {
 }
 
 void SlideShow::LayoutArticle() {
+    f32 y = 273.6f;
     if (mArticle->mLocation != NULL) {
-        mViewTarget[1] = 273.6f;
+        mViewTarget[1] = y;
         mViewTarget[0] = 0.0f;
-        mTextTarget[1] = 273.6f;
+        mTextTarget[1] = y;
         mTextTarget[0] = GetSideMargin();
         if (GetPictureTexture(mArticle) != NULL) {
             mPicArea.top = 73.0f;
-            mPicArea.left = 0.5f * GetScreenWidth();
-            mPicArea.bottom = 273.6f - 20.0f;
-            mPicArea.right = GetContentRight();
+            mPicArea.left = 0.5f * (u32)GetScreenWidth();
+            mPicArea.bottom = y - 20.0f;
             mGlobeZoomTo = 0.6f;
+            mPicArea.right = (u32)GetContentRight();
         } else {
             mGlobeZoomTo = 0.0f;
         }
@@ -1878,17 +1884,17 @@ void SlideShow::LayoutArticle() {
         }
         mGlobeAngle = 0;
         fn_8003256C(&mGlobeTo.x, mArticle);
-        mUnk288.x = 30.0f;
-        mUnk288.y = 30.0f;
+        mUnk288.x = sGlobeOfsX;
+        mUnk288.y = sGlobeOfsY;
         if (lbl_8035775C != NULL) {
             GlobeCamera* camera = lbl_8035775C->mCamera;
             if (camera != NULL) {
                 mGlobeFrom.x = camera->mLon;
                 mGlobeFrom.y = camera->mLat;
-                if (__fabs(mGlobeTo.x - mGlobeFrom.x) > 180.0f) {
+                if (__fabsf(mGlobeTo.x - mGlobeFrom.x) > 180.0f) {
                     mGlobeTo.x -= 360.0f;
                 }
-                if (__fabs(mGlobeTo.y - mGlobeFrom.y) > 180.0f) {
+                if (__fabsf(mGlobeTo.y - mGlobeFrom.y) > 180.0f) {
                     mGlobeTo.y -= 360.0f;
                 }
             }
@@ -1900,18 +1906,18 @@ void SlideShow::LayoutArticle() {
             fn_80032580(mArticle, 7, mGlobeZoomTo, -0.3f);
             lbl_8035697C = 0;
         } else {
-            fn_8004E0B8(lbl_8035775C, ((u32*)mArticle->mLocation)[3]);
+            fn_8004E0B8(lbl_8035775C, ((u8*)mArticle->mLocation)[0xC]);
         }
         mShowPicture = false;
     } else {
-        mViewTarget[1] = 273.6f;
+        mViewTarget[1] = y;
         mViewTarget[0] = 0.0f;
-        mTextTarget[1] = 273.6f;
+        mTextTarget[1] = y;
         mTextTarget[0] = GetSideMargin();
         mPicArea.top = 73.0f;
         mPicArea.left = GetSideMargin();
-        mPicArea.bottom = 273.6f - 20.0f;
-        mPicArea.right = GetContentRight();
+        mPicArea.bottom = y - 20.0f;
+        mPicArea.right = (u32)GetContentRight();
     }
 
     f32 w = mPicArea.right - mPicArea.left;
