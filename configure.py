@@ -1050,7 +1050,7 @@ config.libs = [
             Object(Matching, "revolution/HBM/HBMAnmController.cpp"),
             Object(Matching, "revolution/HBM/HBMFrameController.cpp"),
             Object(Matching, "revolution/HBM/HBMGUIManager.cpp"),
-            Object(NonMatching, "revolution/HBM/HBMController.cpp"),
+            Object(Matching, "revolution/HBM/HBMController.cpp"),
             Object(Matching, "revolution/HBM/HBMRemoteSpk.cpp"),
         ],
     },

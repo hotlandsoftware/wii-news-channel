@@ -83,8 +83,6 @@ Controller::Controller(int chan, RemoteSpk* pSpk) {
 Controller::~Controller() {
     OSCancelAlarm(&sAlarm[mHBController.chan]);
     OSCancelAlarm(&sAlarmSoundOff[mHBController.chan]);
-
-    sThis[mHBController.chan] = NULL;
 }
 
 void Controller::initCallback() {
@@ -231,6 +229,39 @@ bool Controller::isPlayingSoundId(int id) const {
 void Controller::initSound() {
     mCheckSoundTimeFlag = false;
     mCheckSoundIntervalFlag = false;
+}
+
+void Controller::updateSound() {
+    int chan = getChan();
+
+    if (!isPlayingSound()) {
+        if (mCheckSoundTimeFlag) {
+            if (!mCheckSoundIntervalFlag) {
+                mStopSoundTime = OSGetTime();
+                mCheckSoundIntervalFlag = true;
+            } else if (OSTicksToMilliseconds(
+                           (u32)OSGetTime() - (u32)mStopSoundTime) >= 1000) {
+                mCheckSoundTimeFlag = false;
+                mCheckSoundIntervalFlag = false;
+            }
+        }
+    } else {
+        if (mCheckSoundTimeFlag) {
+            mCheckSoundIntervalFlag = false;
+
+            if (OSTicksToMilliseconds((u32)OSGetTime() - (u32)mPlaySoundTime) >=
+                480000) {
+                mCheckSoundTimeFlag = false;
+                mCheckSoundIntervalFlag = false;
+                soundOff(1000);
+                return;
+            }
+        }
+
+        if (!mSoundOffFlag && WPADGetRadioSensitivity(chan) <= 85) {
+            soundOff(1000);
+        }
+    }
 }
 
 void Controller::soundOff(int msec) {
