@@ -1363,18 +1363,22 @@ BOOL SlideShow::StateMove(const s32* arg) {
         u16 prevWidth;
         u16 prevHeight;
         NewsLocationRec* location = mArticle->mLocation;
+        bool hadLocation = location != NULL;
         if (location != NULL) {
             prevWidth = ((u16*)location)[2];
             prevHeight = ((u16*)location)[3];
         }
 
         if (arg != NULL) {
-            if (*arg != 0) {
-                mSlideDist = -50.0f;
-                NextArticle();
-            } else {
+            switch (*arg) {
+            case 0:
                 mSlideDist = 50.0f;
                 PrevArticle();
+                break;
+            default:
+                mSlideDist = -50.0f;
+                NextArticle();
+                break;
             }
         } else {
             mSlideDist = -50.0f;
@@ -1412,7 +1416,7 @@ BOOL SlideShow::StateMove(const s32* arg) {
             mPicAlpha = 0;
         }
 
-        if (mPlaySound && location != NULL) {
+        if (mPlaySound && hadLocation) {
             NewsLocationRec* loc = mArticle->mLocation;
             if (loc != NULL && (prevWidth != ((u16*)loc)[2] || prevHeight != ((u16*)loc)[3])) {
                 PlaySE(0x24);
