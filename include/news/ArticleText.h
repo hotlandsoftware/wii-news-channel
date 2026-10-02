@@ -27,7 +27,7 @@ public:
     TextChar();
     ~TextChar();
 
-    wchar_t mChar;               // at 0x00
+    u16 mChar;                   // at 0x00
     nw4r::math::VEC2 mPos;       // at 0x04
     nw4r::math::VEC2 mTarget;    // at 0x0C
     f32 mScale;                  // at 0x14
@@ -49,7 +49,7 @@ public:
     f32 mUnk5C;                  // at 0x5C
     bool mHidden;                // at 0x60
     bool mSelected;              // at 0x61
-    wchar_t mWordChar;           // at 0x62
+    u16 mWordChar;               // at 0x62
     s32 mStateFrame;             // at 0x64
     s32 mLine;                   // at 0x68
     s32 mWordIndex;              // at 0x6C

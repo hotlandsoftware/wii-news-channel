@@ -85,17 +85,17 @@ static inline bool IsAlpha(wchar_t c) {
     if (c >= 0xFF41 && c <= 0xFF5A) {
         return true;
     }
-    if (c >= 'A' && c <= 'Z') {
+    if (c >= L'A' && c <= L'Z') {
         return true;
     }
-    if (c >= 'a' && c <= 'z') {
+    if (c >= L'a' && c <= L'z') {
         return true;
     }
     return false;
 }
 
 static inline bool IsDigit(wchar_t c) {
-    if (c >= '0' && c <= '9') {
+    if (c >= L'0' && c <= L'9') {
         return true;
     }
     if (c >= 0xFF10 && c <= 0xFF19) {
@@ -207,7 +207,7 @@ bool ArticleText::IsNoBreak(const wchar_t* p, const wchar_t* start) {
         return false;
     }
 
-    if (next == '\n') {
+    if (next == L'\n') {
         return true;
     }
 
@@ -352,10 +352,10 @@ bool ArticleText::Set(const wchar_t* text, NewsPicture* picture, const math::VEC
         }
 
         if (c->mChar == 0xA0) {
-            c->mChar = ' ';
+            c->mChar = L' ';
         }
 
-        if (c->mChar == '\n') {
+        if (c->mChar == L'\n') {
             c->mWidth = 0.0f;
         } else {
             c->mWidth = mFont->GetCharWidth(c->mChar);
@@ -424,43 +424,48 @@ bool ArticleText::Set(const wchar_t* text, NewsPicture* picture, const math::VEC
     return true;
 }
 
-static inline void DrawChar(ut::CharWriter* writer, TextChar* c, const math::VEC2* pos, f32 scale,
-                            f32 yOfs, ut::Color& color, u8 alpha) {
-    f32 sy = c->mScale * scale;
-    writer->SetScale(scale * (c->mScale * c->mScaleX), sy);
-    writer->SetCursor(pos->x + c->mPos.x, yOfs * sy + (pos->y + c->mPos.y));
-    color.r = c->mColor.r;
-    color.g = c->mColor.g;
-    color.b = c->mColor.b;
-    color.a = alpha;
-    writer->SetTextColor(color);
-}
+#define DRAW_CHAR(c, yOfs)                                                                         \
+    {                                                                                              \
+        f32 sy = c->mScale * mScale;                                                               \
+        mWriter->SetScale(mScale * (c->mScale * c->mScaleX), sy);                                  \
+        mWriter->SetCursor(pos->x + c->mPos.x, yOfs * sy + (pos->y + c->mPos.y));                  \
+        color.r = c->mColor.r;                                                                     \
+        color.g = c->mColor.g;                                                                     \
+        color.b = c->mColor.b;                                                                     \
+        color.a = a;                                                                               \
+        mWriter->SetTextColor(color);                                                              \
+    }
 
 void ArticleText::Draw(const math::VEC2* pos, bool clip, f32 alpha, f32 zoom) {
     if (mCount == 0) {
         return;
     }
 
-    GXColor black = {0, 0, 0, 255.0f * alpha};
-    u8 a = black.a;
+    GXColor black;
+    black.r = 0;
+    black.g = 0;
+    black.b = 0;
+    u8 a = 255.0f * alpha;
+    black.a = a;
     mWriter->SetTextColor(black);
     mWriter->SetupGX();
 
+    TextChar* c;
     s32 i = mFirstVisible;
     ut::Color color = ut::Color::WHITE;
-    TextChar* c = &mChars[i];
+    c = &mChars[i];
 
     if (gNewsData->mHeader->unk2C[0] == 0) {
         f32 yOfs = 0.0f;
         if (clip) {
             for (; i < mLastFull; i++, c++) {
-                if (!c->mHidden && c->mChar != '\n') {
-                    DrawChar(mWriter, c, pos, mScale, yOfs, color, a);
+                if (!c->mHidden && c->mChar != L'\n') {
+                    DRAW_CHAR(c, yOfs);
                     mWriter->Print(c->mChar);
                 }
             }
             if (!c->mHidden) {
-                DrawChar(mWriter, c, pos, mScale, yOfs, color, a);
+                DRAW_CHAR(c, yOfs);
                 if (mTruncated) {
                     f32 h = 2.0f * mWriter->GetScaleH();
                     mWriter->MoveCursorY(mWriter->GetFontDescent() + h);
@@ -471,8 +476,8 @@ void ArticleText::Draw(const math::VEC2* pos, bool clip, f32 alpha, f32 zoom) {
             }
         } else {
             for (; i <= mLastVisible; i++, c++) {
-                if (!c->mHidden && c->mChar != '\n') {
-                    DrawChar(mWriter, c, pos, mScale, yOfs, color, a);
+                if (!c->mHidden && c->mChar != L'\n') {
+                    DRAW_CHAR(c, yOfs);
                     mWriter->Print(c->mChar);
                 }
             }
@@ -481,13 +486,13 @@ void ArticleText::Draw(const math::VEC2* pos, bool clip, f32 alpha, f32 zoom) {
         f32 yOfs = -(f32)mFont->GetDescent();
         if (clip) {
             for (i = mFirstVisible; i < mLastFull; i++, c++) {
-                if (!c->mHidden && c->mChar != '\n') {
-                    DrawChar(mWriter, c, pos, mScale, yOfs, color, a);
+                if (!c->mHidden && c->mChar != L'\n') {
+                    DRAW_CHAR(c, yOfs);
                     mWriter->Print(c->mChar);
                 }
             }
             if (!c->mHidden) {
-                DrawChar(mWriter, c, pos, mScale, yOfs, color, a);
+                DRAW_CHAR(c, yOfs);
                 if (mTruncated) {
                     f32 h = 2.0f * mWriter->GetScaleH();
                     mWriter->MoveCursorY(mWriter->GetFontDescent() + h);
@@ -498,8 +503,8 @@ void ArticleText::Draw(const math::VEC2* pos, bool clip, f32 alpha, f32 zoom) {
             }
         } else {
             for (i = mFirstVisible; i <= mLastVisible; i++, c++) {
-                if (!c->mHidden && c->mChar != '\n') {
-                    DrawChar(mWriter, c, pos, mScale, yOfs, color, a);
+                if (!c->mHidden && c->mChar != L'\n') {
+                    DRAW_CHAR(c, yOfs);
                     mWriter->Print(c->mChar);
                 }
             }
@@ -544,7 +549,7 @@ void ArticleText::Draw(const math::VEC2* pos, bool clip, f32 alpha, f32 zoom) {
     }
     fn_80036358();
     for (s32 j = mFirstVisible; j <= mLastVisible; j++, u++) {
-        if (!u->mHidden && u->mSelected && u->mChar != '\n') {
+        if (!u->mHidden && u->mSelected && u->mChar != L'\n') {
             color.r = u->mColor.r;
             from.x = u->mLeft;
             color.g = u->mColor.g;
@@ -640,7 +645,7 @@ void ArticleText::Update(const math::VEC2* pos, bool clip, f32 scroll) {
             if (mLastFull < mCount - 2) {
                 mTruncated = true;
                 TextChar* t = &mChars[mLastFull];
-                while (t->mChar == ' ' || t->mChar == 0x3000) {
+                while (t->mChar == L' ' || t->mChar == 0x3000) {
                     t--;
                     mLastFull--;
                 }
@@ -665,7 +670,7 @@ void ArticleText::HideAll() {
 }
 
 static inline bool NeedsLineBreak(TextChar* last, f32 x, f32 right, f32 scale) {
-    if (last->mChar == '\n') {
+    if (last->mChar == L'\n') {
         return true;
     }
     wchar_t next = last[1].mChar;
@@ -911,7 +916,7 @@ TextChar* ArticleText::PlaceWord(TextChar* c, const f32& scale, const f32& scale
     return c;
 }
 
-void ArticleText::Snap() {
+inline void ArticleText::Snap() {
     if (mCount == 0) {
         return;
     }
@@ -950,10 +955,13 @@ void ArticleText::SetScale(f32 scale) {
 
 void ArticleText::StartScroll(const math::VEC2* pos, const math::VEC2* from,
                               const math::VEC2* picPos, const f32* picScale) {
+    f32 margin = 228.0f;
+    f32 top = -margin;
     TextChar* c = mChars;
+    f32 bottom = margin + GetScreenHeight();
     for (u32 i = 0; i < mCount; i++, c++) {
         f32 y = pos->y + c->mPos.y;
-        if (y < -228.0f || y > 228.0f + 456.0f) {
+        if (y < top || y > bottom) {
             c->mTarget.x = c->mPos.x;
             c->mTarget.y = c->mPos.y;
         } else {
@@ -1039,11 +1047,15 @@ f32 ArticleText::GetTop() {
 }
 
 bool ArticleText::GetPictureRect(ut::Rect* rect) {
-    if (mPicture != NULL) {
-        rect->top = mPicPos.y;
-        rect->left = mPicPos.x;
-        rect->bottom = mPicPos.y + mPicScale * mPicture->height;
-        rect->right = mPicPos.x + mPicScale * mPicture->width;
+    NewsTexture* pic = mPicture;
+    if (pic != NULL) {
+        f32 top = mPicPos.y;
+        rect->top = top;
+        f32 scale = mPicScale;
+        f32 left = mPicPos.x;
+        rect->left = left;
+        rect->bottom = top + scale * pic->height;
+        rect->right = left + scale * pic->width;
         return true;
     }
     return false;
