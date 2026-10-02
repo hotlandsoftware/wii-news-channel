@@ -177,6 +177,22 @@ public:
         SRC_4TAP_AUTO,
     };
 
+    // 12 volumes (L/R/S for main and the three aux buses), cf. snd part 1
+    struct MixParam {
+        u16 vL;     // at 0x0
+        u16 vR;     // at 0x2
+        u16 vS;     // at 0x4
+        u16 vAuxAL; // at 0x6
+        u16 vAuxAR; // at 0x8
+        u16 vAuxAS; // at 0xA
+        u16 vAuxBL; // at 0xC
+        u16 vAuxBR; // at 0xE
+        u16 vAuxBS; // at 0x10
+        u16 vAuxCL; // at 0x12
+        u16 vAuxCR; // at 0x14
+        u16 vAuxCS; // at 0x16
+    };
+
 public:
     AxVoice();
     ~AxVoice();
@@ -197,7 +213,7 @@ public:
     void SetLoopEnd(const void* pBase, u32 samples);
     void SetLoopFlag(bool loop);
     void StopAtPoint(const void* pBase, u32 samples);
-    bool IsCurrentAddressCoverd(const void* pBegin, const void* pEnd) const;
+    bool IsCurrentAddressCovered(const void* pBegin, const void* pEnd) const;
     bool IsDataAddressCoverd(const void* pBegin, const void* pEnd) const;
     u32 GetCurrentPlayingSample() const;
 
@@ -215,7 +231,7 @@ public:
     void SetSrcType(SrcType type, f32 pitch);
     void SetAdpcm(const AdpcmParam* pParam);
     void SetAdpcmLoop(const AdpcmLoopParam* pParam);
-    bool SetMix(const AXPBMIX& rMix);
+    bool SetMix(const MixParam& rParam);
     void SetSrc(f32 ratio, bool initial);
     bool SetVe(f32 volume, f32 initVolume);
     void SetLpf(u16 freq);

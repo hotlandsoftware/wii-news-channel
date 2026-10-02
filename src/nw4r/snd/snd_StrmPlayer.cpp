@@ -9,8 +9,6 @@ namespace nw4r {
 namespace snd {
 namespace detail {
 
-static inline void DummyNop() {}
-
 u8 StrmPlayer::LoadCommand::mMramBuf[LOAD_BUFFER_SIZE] ALIGN(32);
 StrmPlayer::StrmPlayerList StrmPlayer::sPlayerList;
 

@@ -167,22 +167,22 @@ private:
     /******************************************************************************
      * SeqLoadCallback
      ******************************************************************************/
-    class SeqLoadCallback : public detail::SeqSound::SeqLoadCallback {
+    class SeqLoadCallback : public detail::SeqSound::SeqLoader {
     public:
         explicit SeqLoadCallback(const SoundArchivePlayer& rPlayer)
             : mSoundArchivePlayer(rPlayer) {
             OSInitMutex(&mMutex);
         }
 
-        virtual Result
-        LoadData(detail::SeqSound::NotifyAsyncEndCallback pCallback,
-                 void* pCallbackArg, u32 userData) const; // at 0xC
+        virtual int LoadData(detail::SeqSound::NotifyLoadDataCallback pCallback,
+                             void* pCallbackArg,
+                             detail::BasicSound* pSound); // at 0xC
 
-        virtual void CancelLoading(u32 userData) const; // at 0x10
+        virtual void CancelLoad(detail::BasicSound* pSound); // at 0x10
 
     private:
         const SoundArchivePlayer& mSoundArchivePlayer; // at 0x4
-        mutable OSMutex mMutex;                        // at 0x8
+        OSMutex mMutex;                                // at 0x8
     };
 
     /******************************************************************************
@@ -255,7 +255,7 @@ private:
      ******************************************************************************/
     class SeqLoadTask : public detail::Task {
     public:
-        SeqLoadTask(detail::SeqSound::NotifyAsyncEndCallback pCallback,
+        SeqLoadTask(detail::SeqSound::NotifyLoadDataCallback pCallback,
                     void* pCallbackArg, const SoundArchive& rArchive,
                     u32 fileId, u32 dataOffset,
                     SoundMemoryAllocatable* pAllocatable, u32 taskId,
@@ -278,7 +278,7 @@ private:
         u32 mFileId;                                        // at 0x18
         u32 mDataOffset;                                    // at 0x1C
         SoundMemoryAllocatable* mAllocatable;               // at 0x20
-        detail::SeqSound::NotifyAsyncEndCallback mCallback; // at 0x24
+        detail::SeqSound::NotifyLoadDataCallback mCallback; // at 0x24
         void* mCallbackArg;                                 // at 0x28
         OSMutex& mMutex;                                    // at 0x2C
     };

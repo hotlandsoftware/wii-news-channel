@@ -43,7 +43,7 @@ public:
     void InitParam(ChannelCallback pCallback, u32 callbackArg);
     void Update(bool periodic);
 
-    void Start(const WaveData& rData, s32 length);
+    void Start(const WaveData& rData, int length);
     void Release();
     void Stop();
 

@@ -538,7 +538,7 @@ bool Voice::IsCurrentAddressCoverd(int channel, const void* pBegin,
         return false;
     }
 
-    return mAxVoice[channel][0]->IsCurrentAddressCoverd(pBegin, pEnd);
+    return mAxVoice[channel][0]->IsCurrentAddressCovered(pBegin, pEnd);
 }
 
 void Voice::SetAdpcmLoop(int channel, const AdpcmLoopParam* pParam) {
@@ -693,7 +693,7 @@ bool Voice::CalcAxVe() {
 bool Voice::CalcAxMix() {
     ut::AutoInterruptLock lock;
 
-    AXPBMIX mix;
+    AxVoice::MixParam mix;
     AXPBRMTMIX rmtMix;
 
     bool nextUpdate = false;
@@ -827,7 +827,7 @@ void Voice::TransformDpl2Pan(f32* pPan, f32* pSurroundPan, f32 pan,
     *pSurroundPan += 1.0f;
 }
 
-void Voice::CalcAXPBMIX(int channel, int voice, AXPBMIX* pMix) {
+void Voice::CalcAXPBMIX(int channel, int voice, AxVoice::MixParam* pMix) {
     ut::AutoInterruptLock lock;
 
     // TODO: not matched yet

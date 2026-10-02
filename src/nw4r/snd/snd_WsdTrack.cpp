@@ -68,7 +68,7 @@ void WsdTrack::ReleaseAllChannel(int release) {
     UpdateChannel();
 
     ut::AutoInterruptLock lock;
-    VoiceManager::GetInstance().DisableUpdateVoicesPriority();
+    VoiceManager::GetInstance().LockUpdateVoicePriority();
 
     for (Channel* pChannel = mChannelList; pChannel != NULL;
          pChannel = pChannel->GetNextTrackChannel()) {
@@ -82,7 +82,7 @@ void WsdTrack::ReleaseAllChannel(int release) {
         }
     }
 
-    VoiceManager::GetInstance().EnableUpdateVoicesPriority();
+    VoiceManager::GetInstance().UnlockUpdateVoicePriority();
 }
 
 void WsdTrack::PauseAllChannel(bool flag) {

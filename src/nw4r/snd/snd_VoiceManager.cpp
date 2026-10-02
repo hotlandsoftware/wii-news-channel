@@ -72,12 +72,12 @@ void VoiceManager::UpdateAllVoices() {
     NW4R_UT_LINKLIST_FOREACH_SAFE (it, mPrioVoiceList, { it->Update(); })
 }
 
-void VoiceManager::DisableUpdateVoicesPriority() {
+void VoiceManager::LockUpdateVoicePriority() {
     ut::AutoInterruptLock lock;
     mUpdateVoicesPriorityFlag = false;
 }
 
-void VoiceManager::EnableUpdateVoicesPriority() {
+void VoiceManager::UnlockUpdateVoicePriority() {
     ut::AutoInterruptLock lock;
     mUpdateVoicesPriorityFlag = true;
     UpdateEachVoicePriority();

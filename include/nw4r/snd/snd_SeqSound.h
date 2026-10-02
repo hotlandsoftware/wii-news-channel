@@ -24,45 +24,43 @@ template <typename T> class SoundInstanceManager;
 
 namespace detail {
 
-// NOTE (snd part 3): this NW4R revision's SeqSound (cf. TP's nw4hbm), as far
-// as SoundArchivePlayer needs it; the class is owned by snd part 2.
+/******************************************************************************
+ *
+ * SeqSound (older revision than Wii Sports': sequence data is either set
+ * directly or requested through a SeqLoader; no SeqLoadTask/mutex)
+ *
+ ******************************************************************************/
 class SeqSound : public BasicSound {
     friend class nw4r::snd::SeqSoundHandle;
 
 public:
     NW4R_UT_RTTI_DECL(SeqSound);
 
-    typedef void (*NotifyAsyncEndCallback)(bool result, const void* pSeqBase,
-                                           s32 seqOffset, void* pUserData);
+    typedef void (*NotifyLoadDataCallback)(bool success, const void* pBase,
+                                           s32 offset, void* pCallbackArg);
 
-    class SeqLoadCallback {
+    // Asynchronous sequence data loader (implemented by SoundArchivePlayer)
+    class SeqLoader {
     public:
-        enum Result {
-            RESULT_SUCCESS,
-            RESULT_FAILED,
-            RESULT_CANCELED,
-            RESULT_ASYNC,
-            RESULT_RETRY
-        };
+        virtual ~SeqLoader() {} // at 0x8
 
-    public:
-        virtual ~SeqLoadCallback() {} // at 0x8
-
-        virtual Result LoadData(NotifyAsyncEndCallback pCallback,
-                                void* pCallbackArg,
-                                u32 userData) const = 0; // at 0xC
-
-        virtual void CancelLoading(u32 userData) const = 0; // at 0x10
+        virtual int LoadData(NotifyLoadDataCallback pCallback,
+                             void* pCallbackArg,
+                             BasicSound* pSound) = 0;  // at 0xC
+        virtual void CancelLoad(BasicSound* pSound) = 0; // at 0x10
     };
 
 public:
     explicit SeqSound(SoundInstanceManager<SeqSound>* pManager);
 
-    virtual void Shutdown();                      // at 0x28
+    virtual void Shutdown(); // at 0x28
+
     virtual void SetPlayerPriority(int priority); // at 0x4C
-    virtual bool IsAttachedTempSpecialHandle();   // at 0x50
-    virtual void DetachTempSpecialHandle();       // at 0x54
-    virtual void InitParam();                     // at 0x58
+
+    virtual bool IsAttachedTempSpecialHandle(); // at 0x50
+    virtual void DetachTempSpecialHandle();     // at 0x54
+
+    virtual void InitParam(); // at 0x58
 
     virtual BasicPlayer& GetBasicPlayer() {
         return mSeqPlayer;
@@ -75,22 +73,23 @@ public:
                                  u32 allocTrackFlags, int voices,
                                  NoteOnCallback* pCallback);
 
-    void Prepare(const void* pSeqBase, s32 seqOffset);
-    void Prepare(const SeqLoadCallback* pCallback, u32 callbackData);
+    void Prepare(const void* pBase, s32 seqOffset);
+    void Prepare(SeqLoader* pLoader, BasicSound* pLoadSound);
 
     void SetChannelPriority(int priority);
+    void SetTrackMute(u32 trackFlags, bool mute);
 
 private:
-    static void NotifyLoadAsyncEndSeqData(bool result, const void* pSeqBase,
-                                          s32 seqOffset, void* pUserData);
+    static void NotifyLoadAsyncEndSeqData(bool success, const void* pBase,
+                                          s32 offset, void* pCallbackArg);
 
 private:
     SeqPlayer mSeqPlayer;                     // at 0xD8
     SeqSoundHandle* mTempSpecialHandle;       // at 0x1E4
     SoundInstanceManager<SeqSound>* mManager; // at 0x1E8
     bool mLoadingFlag;                        // at 0x1EC
-    const SeqLoadCallback* mCallback;         // at 0x1F0
-    u32 mCallbackData;                        // at 0x1F4
+    SeqLoader* mSeqLoader;                    // at 0x1F0
+    BasicSound* mLoadSound;                   // at 0x1F4
 };
 
 } // namespace detail

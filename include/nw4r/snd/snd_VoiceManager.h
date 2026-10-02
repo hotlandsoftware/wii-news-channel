@@ -31,8 +31,8 @@ public:
     void UpdateAllVoices();
 
     // Names guessed: called around note-on by SeqTrack/WsdTrack
-    void DisableUpdateVoicesPriority();
-    void EnableUpdateVoicesPriority();
+    void LockUpdateVoicePriority();
+    void UnlockUpdateVoicePriority();
 
     void ChangeVoicePriority(Voice* pVoice);
     void UpdateAllVoicesSync(u32 syncFlag);

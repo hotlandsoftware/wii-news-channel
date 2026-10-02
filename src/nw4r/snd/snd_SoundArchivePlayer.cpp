@@ -655,7 +655,7 @@ SoundStartable::StartResult SoundArchivePlayer::PrepareSeqImpl(
         detail::SeqFileReader reader(pSeqBin);
         pSound->Prepare(reader.GetBaseAddress(), pSeqInfo->dataOffset);
     } else {
-        pSound->Prepare(&mSeqLoadCallback, reinterpret_cast<u32>(pSound));
+        pSound->Prepare(&mSeqLoadCallback, pSound);
     }
 
     return START_SUCCESS;
@@ -766,47 +766,48 @@ void SoundArchivePlayer::InvalidateWaveData(const void* pStart,
     }
 }
 
-detail::SeqSound::SeqLoadCallback::Result
-SoundArchivePlayer::SeqLoadCallback::LoadData(
-    detail::SeqSound::NotifyAsyncEndCallback pCallback, void* pCallbackArg,
-    u32 userData) const {
+int SoundArchivePlayer::SeqLoadCallback::LoadData(
+    detail::SeqSound::NotifyLoadDataCallback pCallback, void* pCallbackArg,
+    detail::BasicSound* pSound) {
 
     if (!mSoundArchivePlayer.IsAvailable()) {
-        return RESULT_FAILED;
+        return 1; // failed
     }
 
-    detail::SeqSound* pSound = reinterpret_cast<detail::SeqSound*>(userData);
     u32 soundId = pSound->GetId();
     const SoundArchive& rArchive = mSoundArchivePlayer.GetSoundArchive();
 
     SoundArchive::SoundInfo sndInfo;
     if (!rArchive.ReadSoundInfo(soundId, &sndInfo)) {
-        return RESULT_FAILED;
+        return 1; // failed
     }
 
     SoundArchive::SeqSoundInfo seqInfo;
     if (!rArchive.detail_ReadSeqSoundInfo(soundId, &seqInfo)) {
-        return RESULT_FAILED;
+        return 1; // failed
     }
 
     detail::PlayerHeap* pHeap = pSound->GetPlayerHeap();
     if (pHeap == NULL) {
-        return RESULT_FAILED;
+        return 1; // failed
     }
 
     SeqLoadTask* pTask = new (detail::TaskManager::GetInstance().Alloc())
         SeqLoadTask(pCallback, pCallbackArg, rArchive, sndInfo.fileId,
-                    seqInfo.dataOffset, pHeap, userData, mMutex);
+                    seqInfo.dataOffset, pHeap, reinterpret_cast<u32>(pSound),
+                    mMutex);
 
     detail::TaskManager::GetInstance().AppendTask(
         pTask, detail::TaskManager::PRIORITY_MIDDLE);
 
     detail::TaskThread::GetInstance().SendWakeupMessage();
-    return RESULT_ASYNC;
+    return 3; // async
 }
 
-void SoundArchivePlayer::SeqLoadCallback::CancelLoading(u32 userData) const {
-    detail::TaskManager::GetInstance().CancelByTaskId(userData);
+void SoundArchivePlayer::SeqLoadCallback::CancelLoad(
+    detail::BasicSound* pSound) {
+    detail::TaskManager::GetInstance().CancelByTaskId(
+        reinterpret_cast<u32>(pSound));
 }
 
 detail::Channel*

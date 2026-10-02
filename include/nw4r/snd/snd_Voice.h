@@ -136,7 +136,7 @@ private:
 
     void TransformDpl2Pan(f32* pPan, f32* pSurroundPan, f32 pan,
                           f32 surroundPan);
-    void CalcAXPBMIX(int channel, int voice, AXPBMIX* pMix);
+    void CalcAXPBMIX(int channel, int voice, AxVoice::MixParam* pMix);
     void CalcAXPBRMTMIX(int channel, int voice, AXPBRMTMIX* pMix);
 
     void RunAllAxVoice() {
