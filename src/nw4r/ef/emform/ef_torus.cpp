@@ -136,5 +136,36 @@ void EmitterFormTorus::Emission(Emitter* pEmitter, ParticleManager* pManager,
     }
 }
 
+void EmitterFormTorus::Draw(Emitter* pEmitter, const DrawInfo& rInfo) {
+    SetupDrawGX();
+
+    math::MTX34 mtx = *rInfo.GetViewMtx();
+    math::MTX34 work;
+    pEmitter->CalcGlobalMtx(&work);
+    math::MTX34Mult(&mtx, &mtx, &work);
+
+    // Edge length of GXDrawCube (unused here)
+    f32 cubeSize = 2.0f / std::sqrtf(3.0f);
+#pragma unused(cubeSize)
+
+    f32 ratio = (100.0f - pEmitter->mParameter.mParams[1]) / 100.0f;
+    if (0.0f == ratio) {
+        ratio = 0.01f;
+    }
+
+    math::VEC3 scale;
+    scale.x = pEmitter->mParameter.mParams[0];
+    scale.y = 2.0f * pEmitter->mParameter.mParams[4] / ratio;
+    scale.z = pEmitter->mParameter.mParams[5];
+    math::MTX34Scale(&mtx, &mtx, &scale);
+
+    math::MTX34RotXYZDeg(&work, 90.0f, 0.0f, 0.0f);
+    math::MTX34Mult(&mtx, &mtx, &work);
+
+    GXLoadPosMtxImm(mtx, GX_PNMTX0);
+    GXSetCurrentMtx(GX_PNMTX0);
+    GXDrawTorus(ratio / 2.0f, 16, 16);
+}
+
 } // namespace ef
 } // namespace nw4r

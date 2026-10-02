@@ -193,5 +193,24 @@ void EmitterFormSphere::Emission(Emitter* pEmitter, ParticleManager* pManager,
     }
 }
 
+void EmitterFormSphere::Draw(Emitter* pEmitter, const DrawInfo& rInfo) {
+    SetupDrawGX();
+
+    math::MTX34 mtx = *rInfo.GetViewMtx();
+    math::MTX34 work;
+    pEmitter->CalcGlobalMtx(&work);
+    math::MTX34Mult(&mtx, &mtx, &work);
+
+    math::VEC3 scale;
+    scale.x = pEmitter->mParameter.mParams[0];
+    scale.y = pEmitter->mParameter.mParams[4];
+    scale.z = pEmitter->mParameter.mParams[5];
+    math::MTX34Scale(&mtx, &mtx, &scale);
+
+    GXLoadPosMtxImm(mtx, GX_PNMTX0);
+    GXSetCurrentMtx(GX_PNMTX0);
+    GXDrawSphere(16, 16);
+}
+
 } // namespace ef
 } // namespace nw4r

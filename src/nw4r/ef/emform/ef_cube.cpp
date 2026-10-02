@@ -641,5 +641,27 @@ void EmitterFormCube::Emission(Emitter* pEmitter, ParticleManager* pManager,
     }
 }
 
+void EmitterFormCube::Draw(Emitter* pEmitter, const DrawInfo& rInfo) {
+    SetupDrawGX();
+
+    math::MTX34 mtx = *rInfo.GetViewMtx();
+    math::MTX34 work;
+    pEmitter->CalcGlobalMtx(&work);
+    math::MTX34Mult(&mtx, &mtx, &work);
+
+    // Edge length of GXDrawCube
+    f32 cubeSize = 2.0f / std::sqrtf(3.0f);
+
+    math::VEC3 scale;
+    scale.x = 2.0f * (pEmitter->mParameter.mParams[0] / cubeSize);
+    scale.y = 2.0f * (pEmitter->mParameter.mParams[1] / cubeSize);
+    scale.z = 2.0f * (pEmitter->mParameter.mParams[2] / cubeSize);
+    math::MTX34Scale(&mtx, &mtx, &scale);
+
+    GXLoadPosMtxImm(mtx, GX_PNMTX0);
+    GXSetCurrentMtx(GX_PNMTX0);
+    GXDrawCube();
+}
+
 } // namespace ef
 } // namespace nw4r
