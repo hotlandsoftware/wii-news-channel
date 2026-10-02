@@ -150,7 +150,7 @@ void fn_8004C294(void);
 
 // Globe (0x8004C240..)
 void fn_8004C240(u16 x, u16 y, math::VEC2* out);
-void fn_8004C69C(void* globe, math::VEC3* pos, u8 zoom, f32 x, f32 y);
+void fn_8004C69C(void* globe, math::VEC3* pos, u8 zoom);
 void fn_8004C890(void* globe, math::VEC3* rot);
 void fn_8004CA10(void* globe);
 void fn_8004CAE4(void* globe, math::VEC3* pos, s32 arg, f32 scale);
@@ -2119,9 +2119,11 @@ void Globe_FocusArticle(NewsArticle* article, s32 arg, f32 x, f32 y) {
         math::VEC2 loc;
         NewsLocationRec* rec = article->mLocation;
         fn_8004C240(*(u16*)&rec->unk4[0], *(u16*)&rec->unk4[2], &loc);
-        math::VEC3 pos(loc.x, loc.y, 0.0f);
+        f32 py = loc.y;
+        f32 px = loc.x;
+        math::VEC3 pos(px, py, 0.0f);
         lbl_8035775C->mOffset = ofs;
-        fn_8004C69C(lbl_8035775C, &pos, article->mLocation->unk4[8], ofs.x, ofs.y);
+        fn_8004C69C(lbl_8035775C, &pos, article->mLocation->unk4[8]);
         fn_8004DA8C(lbl_8035775C, 5, 0);
         fn_8004DB4C(lbl_8035775C, arg);
         fn_8004E0D4(lbl_8035775C, 0.0f);
