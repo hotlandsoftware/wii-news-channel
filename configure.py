@@ -323,6 +323,16 @@ cflags_nw4r_g3d = [
     "-DNW4R_UT_RECT_DEFAULT_ZERO",
 ]
 
+# nw4r::ef (ogws sources, older revision): same NW4R basics as g3d
+cflags_nw4r_ef = [
+    *cflags_nw4r,
+    "-DNW4R_MATH_VEC2_NO_DTOR",
+    "-DNW4R_MATH_VEC3_NO_DTOR",
+    "-DNW4R_MATH_MTX34_NO_DTOR",
+    "-DNW4R_UT_COLOR_DEFAULT_WHITE",
+    "-DNW4R_UT_RECT_DEFAULT_ZERO",
+]
+
 # RVL SDK libraries; flags as in doldecomp/ogws
 cflags_rvl = [
     *cflags_base,
@@ -1048,6 +1058,22 @@ config.libs = [
             Object(Matching, "revolution/MTX/mtx44.c"),
             Object(Matching, "revolution/MTX/vec.c"),
             Object(Matching, "revolution/MTX/quat.c"),
+        ],
+    },
+    {
+        "lib": "nw4r_ef",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_nw4r_ef,
+        "progress_category": "sdk",
+        "objects": [
+            Object(Matching, "nw4r/ef/ef_draworder.cpp"),
+            Object(NonMatching, "nw4r/ef/ef_effect.cpp"),
+            Object(NonMatching, "nw4r/ef/ef_effectsystem.cpp"),
+            Object(NonMatching, "nw4r/ef/ef_emitter.cpp"),
+            Object(NonMatching, "nw4r/ef/ef_animcurve.cpp"),
+            Object(NonMatching, "nw4r/ef/ef_particle.cpp"),
+            Object(NonMatching, "nw4r/ef/ef_particlemanager.cpp"),
+            Object(Matching, "nw4r/ef/ef_resource.cpp"),
         ],
     },
     {
