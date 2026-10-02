@@ -429,7 +429,7 @@ config.libs = [
             Object(Matching, "MSL_C/string.c", extra_cflags=["-Cpp_exceptions on"]),
             Object(Matching, "MSL_C/strtold.c", extra_cflags=["-Cpp_exceptions on", "-ipa file"]),
             Object(Matching, "MSL_C/strtoul.c", extra_cflags=["-Cpp_exceptions on"], mw_version="GC/3.0a3"),
-            Object(NonMatching, "MSL_C/time.c", extra_cflags=["-Cpp_exceptions on", "-ipa file"]),
+            Object(NonMatching, "MSL_C/time.c", extra_cflags=["-Cpp_exceptions on", "-ipa file", "-fp_contract off"]),
             Object(Matching, "MSL_C/wctype.c", extra_cflags=["-Cpp_exceptions on", "-ipa file"]),
             Object(Matching, "MSL_C/wmem.c", extra_cflags=["-Cpp_exceptions on", "-ipa file"]),
             Object(Matching, "MSL_C/wprintf.c", extra_cflags=["-Cpp_exceptions on", "-ipa file"]),
