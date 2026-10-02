@@ -33,6 +33,46 @@ inline u16 List_GetSize(const List* list) { return list->numObjects; }
 
 #define NW4R_UT_LIST_GET_LINK(LIST, OBJ) reinterpret_cast<nw4r::ut::Link*>((u8*)(OBJ) + (LIST).offset)
 
+// List for-each macros (as ogws ut_list.h; added for nw4r::ef)
+#ifndef NW4R_UT_LIST_FOREACH
+#define NW4R_UT_LIST_FOREACH(TYPE, NAME, LIST, ...)                            \
+    {                                                                          \
+        TYPE* NAME = NULL;                                                     \
+                                                                               \
+        while ((NAME = static_cast<TYPE*>(                                     \
+                    nw4r::ut::List_GetNext(&(LIST), NAME))) != NULL) {         \
+                                                                               \
+            __VA_ARGS__;                                                       \
+        }                                                                      \
+    }
+
+#define NW4R_UT_LIST_FOREACH_REV(TYPE, NAME, LIST, ...)                        \
+    {                                                                          \
+        TYPE* NAME = NULL;                                                     \
+                                                                               \
+        while ((NAME = static_cast<TYPE*>(                                     \
+                    nw4r::ut::List_GetPrev(&(LIST), NAME))) != NULL) {         \
+                                                                               \
+            __VA_ARGS__;                                                       \
+        }                                                                      \
+    }
+
+#define NW4R_UT_LIST_FOREACH_SAFE(TYPE, NAME, LIST, ...)                       \
+    {                                                                          \
+        TYPE* NAME;                                                            \
+        TYPE* __next__;                                                        \
+                                                                               \
+        for (NAME = static_cast<TYPE*>(nw4r::ut::List_GetFirst(&(LIST)));      \
+             NAME != NULL; NAME = __next__) {                                  \
+                                                                               \
+            __next__ =                                                         \
+                static_cast<TYPE*>(nw4r::ut::List_GetNext(&(LIST), NAME));     \
+                                                                               \
+            __VA_ARGS__;                                                       \
+        }                                                                      \
+    }
+#endif
+
 } // namespace ut
 } // namespace nw4r
 

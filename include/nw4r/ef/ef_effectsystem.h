@@ -40,7 +40,7 @@ public:
     EffectSystem();
     ~EffectSystem();
 
-    bool Initialize(u32 maxGroupID);
+    void Initialize(u32 maxGroupID);
     bool Closing(Effect* pEffect);
 
     Effect* CreateEffect(const char* pName, u32 groupID, u16 calcRemain);
