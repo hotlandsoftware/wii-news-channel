@@ -27,6 +27,11 @@ void* List_GetNext(const List* list, const void* object);
 void* List_GetPrev(const List* list, const void* object);
 void* List_GetNth(const List* list, u16 index);
 
+// Const accessors (as ogws ut_list.h; added for the HOME Menu)
+inline const void* List_GetNextConst(const List* list, const void* object) { return List_GetNext(list, object); }
+inline const void* List_GetPrevConst(const List* list, const void* object) { return List_GetPrev(list, object); }
+inline const void* List_GetNthConst(const List* list, u16 index) { return List_GetNth(list, index); }
+
 inline void* List_GetFirst(const List* list) { return List_GetNext(list, NULL); }
 inline void* List_GetLast(const List* list) { return List_GetPrev(list, NULL); }
 inline u16 List_GetSize(const List* list) { return list->numObjects; }

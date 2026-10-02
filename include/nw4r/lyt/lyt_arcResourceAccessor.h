@@ -46,6 +46,13 @@ public:
 
     bool IsAttached() const { return mArcBuf != NULL; }
 
+    // Resource types (as ogws; added for the HOME Menu)
+    static const u32 RES_TYPE_NAME = 0;
+    static const u32 RES_TYPE_ANIMATION = 'anim';
+    static const u32 RES_TYPE_LAYOUT = 'blyt';
+    static const u32 RES_TYPE_FONT = 'font';
+    static const u32 RES_TYPE_TEXTURE = 'timg';
+
 private:
     ARCHandle mArcHandle;                // at 0x04
     void* mArcBuf;                       // at 0x20
