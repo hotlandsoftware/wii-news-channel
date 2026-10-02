@@ -1,6 +1,7 @@
 // The default ut::Color constructor of this file stores white (see the
 // out-of-line copy used by __construct_array).
 #define NW4R_UT_COLOR_DEFAULT_WHITE
+#define NW4R_UT_COLOR_WORD_COPY
 
 #include <news/SlideShow.h>
 #include <news/ArticleText.h>
