@@ -394,6 +394,8 @@ static int ISO8601Week(const struct tm* tmptr, int* WYear) {
         int year;
         time_t NewYear;
     } WY[3], *p;
+    int n;
+    time_t timer2;
 
     WY[2].year = tmptr->tm_year - 1;
     WY[2].NewYear = ISO8601NewYear(WY[2].year);
@@ -413,8 +415,9 @@ static int ISO8601Week(const struct tm* tmptr, int* WYear) {
     }
 
     *WYear = p->year;
+    timer2 = p->NewYear;
 
-    return (int)(difftime(timer, p->NewYear) / 86400.0 / 7.0) + 1;
+    return (int)(difftime(timer, timer2) / 86400.0 / 7.0) + 1;
 }
 
 size_t strftime(char* str, size_t max_size, const char* format_str, const struct tm* timeptr) {
