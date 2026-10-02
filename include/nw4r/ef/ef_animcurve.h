@@ -8,6 +8,12 @@ namespace ef {
 // Forward declarations
 class Particle;
 
+// Seed of the per-key random values: big-endian bytes, XOR-folded
+union AnimCurveRandomSeed {
+    u32 value;
+    u8 bytes[4];
+};
+
 // Older revision (News Channel): one function per component count.
 // The names are guesses.
 void AnimCurveExecuteColor(u8* pCmdList, u8* pTarget, u32 tick, u16 seed,

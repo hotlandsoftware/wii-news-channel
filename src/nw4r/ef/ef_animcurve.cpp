@@ -6,11 +6,6 @@ namespace ef {
 // Older revision (News Channel). Written from the DOL: no reference
 // decompilation has ef_animcurve.cpp.
 
-union AnimCurveRandomSeed {
-    u32 value;
-    u8 bytes[4];
-};
-
 struct AnimCurveTextureKey {
     u16 frame;    // at 0x0
     u8 PADDING_0x2[4];
