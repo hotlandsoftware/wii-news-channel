@@ -1766,24 +1766,18 @@ void SlideShow::DrawSelection() {
 }
 
 void SlideShow::DrawFooterA() {
-    u32 w1 = TPL_GetWidth(gCommonTpl, 0x42);
-    f32 width = TPL_GetWidth(gCommonTpl, 0x41) + w1;
-    Vec pos;
-    pos.y = mPicCenter[1] - 0.5f * TPL_GetHeight(gCommonTpl, 0x41);
-    pos.z = 0.0f;
-    pos.x = GetScreenWidth() / 2 - 0.5f * width;
+    f32 width = TPL_GetWidth(gCommonTpl, 0x42) + TPL_GetWidth(gCommonTpl, 0x41);
+    f32 y = mPicCenter[1] - 0.5f * TPL_GetHeight(gCommonTpl, 0x41);
+    math::VEC3 pos(GetScreenWidth() / 2 - 0.5f * width, y, 0.0f);
     Draw2D_Tex(gCommonTpl, 0x42, &pos, 1.0f, 1.0f);
     pos.x += TPL_GetWidth(gCommonTpl, 0x42);
     Draw2D_Tex(gCommonTpl, 0x41, &pos, 1.0f, 1.0f);
 }
 
 void SlideShow::DrawFooterB() {
-    u32 w1 = TPL_GetWidth(gCommonTpl, 0x42);
-    f32 width = TPL_GetWidth(gCommonTpl, 0x41) + w1;
-    Vec pos;
-    pos.y = mPicCenter[1] - 0.5f * TPL_GetHeight(gCommonTpl, 0x41);
-    pos.z = 0.0f;
-    pos.x = GetScreenWidth() / 2 - 0.5f * width;
+    f32 width = TPL_GetWidth(gCommonTpl, 0x42) + TPL_GetWidth(gCommonTpl, 0x41);
+    f32 y = mPicCenter[1] - 0.5f * TPL_GetHeight(gCommonTpl, 0x41);
+    math::VEC3 pos(GetScreenWidth() / 2 - 0.5f * width, y, 0.0f);
     Draw2D_Tex(gCommonTpl, 0x41, &pos, 1.0f, 1.0f);
     pos.x += TPL_GetWidth(gCommonTpl, 0x41);
     Draw2D_Tex(gCommonTpl, 0x42, &pos, 1.0f, 1.0f);
