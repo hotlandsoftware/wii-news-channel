@@ -3,7 +3,7 @@
 #include <cmath>
 #include <cstdio>
 
-static const char* __KPADVersion = "<< RVL_SDK - KPAD \trelease build: Jun  3 2008 11:53:11 (0x4201_134) >>";
+static const char* __KPADVersion = "<< RVL_SDK - KPAD \trelease build: Jun 28 2007 02:03:26 (0x4199_60831) >>";
 
 static Vec2 icenter_org = {0.000f, 0.000f};
 static f32 idist_org = 1.000f;
@@ -56,8 +56,8 @@ static f32 kp_fs_revise_deg = 24.0f;
 void KPADSetBtnRepeat(s32 chan, f32 delay_sec, f32 pulse_sec) {
     KPADInsideStatus* kp = &inside_kpads[chan];
     if (pulse_sec) {
-        kp->btn_repeat_delay = (u16)(s32)(delay_sec * 200.0f + 0.5f);
-        kp->btn_repeat_pulse = (u16)(s32)(pulse_sec * 200.0f + 0.5f);
+        kp->btn_repeat_delay = (u16)(s32)(delay_sec + 0.5f);
+        kp->btn_repeat_pulse = (u16)(s32)(pulse_sec + 0.5f);
     } else {
         kp->btn_repeat_delay = KPAD_BTN_NO_RPT_DELAY;
         kp->btn_repeat_pulse = 0;
@@ -87,11 +87,6 @@ void KPADSetDistParam(s32 chan, f32 play_radius, f32 sensitivity) {
 void KPADSetAccParam(s32 chan, f32 play_radius, f32 sensitivity) {
     inside_kpads[chan].acc_play_radius = play_radius;
     inside_kpads[chan].acc_sensitivity = sensitivity;
-}
-
-void KPADEnableAimingMode(s32 chan) {
-    inside_kpads[chan].aimReq = TRUE;
-    inside_kpads[chan].aimEnabled = TRUE;
 }
 
 void KPADSetObjInterval(f32 interval) {
@@ -194,6 +189,21 @@ void reset_kpad(KPADInsideStatus* kp) {
     kp->exResetReq = TRUE;
 }
 
+// Not in Petari's KPAD; written from this DOL.
+void KPADGetProjectionPos(Vec2* dst, const Vec2* src, const KPADRect* projRect, f32 viewRatio) {
+    f32 scale = (projRect->bottom - projRect->top) / 2.0f;
+    f32 x = 1.2f * (src->x * scale);
+    f32 y = 1.2f * (src->y * scale);
+
+    dst->x = x * (0.908 * viewRatio);
+    dst->y = y;
+}
+
+void KPADEnableAimingMode(s32 chan) {
+    inside_kpads[chan].aimReq = TRUE;
+    inside_kpads[chan].aimEnabled = TRUE;
+}
+
 void KPADSetSensorHeight(s32 chan, f32 level) {
     KPADInsideStatus* kp = &inside_kpads[chan];
 
@@ -258,29 +268,21 @@ void calc_acc(KPADInsideStatus* kp, f32* acc, f32 acc2) {
 
     f2 = acc2 - *acc;
 
-    if (kp->acc_play_mode == KPAD_PLAY_MODE_LOOSE) {
-        if (f2 < 0.0f) {
-            f1 = -f2;
-        } else {
-            f1 = f2;
-        }
-
-        if (f1 >= kp->acc_play_radius) {
-            f1 = 1.0f;
-        } else {
-            f1 /= kp->acc_play_radius;
-            f1 *= f1;
-            f1 *= f1;
-        }
-        f1 *= kp->acc_sensitivity;
-        *acc += f1 * f2;
+    if (f2 < 0.0f) {
+        f1 = -f2;
     } else {
-        if (f2 < -kp->acc_play_radius) {
-            *acc += (f2 + kp->acc_play_radius) * kp->acc_sensitivity;
-        } else if (f2 > kp->acc_play_radius) {
-            *acc += (f2 - kp->acc_play_radius) * kp->acc_sensitivity;
-        }
+        f1 = f2;
     }
+
+    if (f1 >= kp->acc_play_radius) {
+        f1 = 1.0f;
+    } else {
+        f1 /= kp->acc_play_radius;
+        f1 *= f1;
+        f1 *= f1;
+    }
+    f1 *= kp->acc_sensitivity;
+    *acc += f1 * f2;
 }
 
 void calc_acc_horizon(KPADInsideStatus* kp) {
@@ -704,45 +706,25 @@ void calc_dpd_variable(KPADInsideStatus* kp, s8 valid_fg_next) {
         vec.y = pos.y - sp->horizon.y;
         f1 = sqrt(vec.x * vec.x + vec.y * vec.y);
 
-        if (kp->hori_play_mode == KPAD_PLAY_MODE_LOOSE) {
-            if (f1 >= kp->hori_play_radius) {
-                f2 = 1.0f;
-            } else {
-                f2 = f1 / kp->hori_play_radius;
-                f2 *= f2;
-                f2 *= f2;
-            }
-            f2 *= kp->hori_sensitivity;
-            vec.x = f2 * vec.x + sp->horizon.x;
-            vec.y = f2 * vec.y + sp->horizon.y;
-            f1 = sqrt(vec.x * vec.x + vec.y * vec.y);
-            vec.x /= f1;
-            vec.y /= f1;
-
-            sp->hori_vec.x = vec.x - sp->horizon.x;
-            sp->hori_vec.y = vec.y - sp->horizon.y;
-            sp->hori_speed = sqrt(sp->hori_vec.x * sp->hori_vec.x + sp->hori_vec.y * sp->hori_vec.y);
-
-            sp->horizon = vec;
+        if (f1 >= kp->hori_play_radius) {
+            f2 = 1.0f;
         } else {
-            if (f1 > kp->hori_play_radius) {
-                f1 = (f1 - kp->hori_play_radius) / f1 * kp->hori_sensitivity;
-                vec.x = vec.x * f1 + sp->horizon.x;
-                vec.y = vec.y * f1 + sp->horizon.y;
-                f1 = sqrt(vec.x * vec.x + vec.y * vec.y);
-                vec.x /= f1;
-                vec.y /= f1;
-
-                sp->hori_vec.x = vec.x - sp->horizon.x;
-                sp->hori_vec.y = vec.y - sp->horizon.y;
-                sp->hori_speed = sqrt(sp->hori_vec.x * sp->hori_vec.x + sp->hori_vec.y * sp->hori_vec.y);
-
-                sp->horizon = vec;
-            } else {
-                sp->hori_vec = Vec2_0;
-                sp->hori_speed = 0.0f;
-            }
+            f2 = f1 / kp->hori_play_radius;
+            f2 *= f2;
+            f2 *= f2;
         }
+        f2 *= kp->hori_sensitivity;
+        vec.x = f2 * vec.x + sp->horizon.x;
+        vec.y = f2 * vec.y + sp->horizon.y;
+        f1 = sqrt(vec.x * vec.x + vec.y * vec.y);
+        vec.x /= f1;
+        vec.y /= f1;
+
+        sp->hori_vec.x = vec.x - sp->horizon.x;
+        sp->hori_vec.y = vec.y - sp->horizon.y;
+        sp->hori_speed = sqrt(sp->hori_vec.x * sp->hori_vec.x + sp->hori_vec.y * sp->hori_vec.y);
+
+        sp->horizon = vec;
     }
 
     dist = kp->dist_vv1 / kp->sec_length;
@@ -759,40 +741,23 @@ void calc_dpd_variable(KPADInsideStatus* kp, s8 valid_fg_next) {
             f1 = f2;
         }
 
-        if (kp->dist_play_mode == KPAD_PLAY_MODE_LOOSE) {
-            if (f1 >= kp->dist_play_radius) {
-                f1 = 1.0f;
-            } else {
-                f1 /= kp->dist_play_radius;
-                f1 *= f1;
-                f1 *= f1;
-            }
-            f1 *= kp->dist_sensitivity;
-
-            sp->dist_vec = f1 * f2;
-            if (sp->dist_vec < 0.0f) {
-                sp->dist_speed = -sp->dist_vec;
-            } else {
-                sp->dist_speed = sp->dist_vec;
-            }
-
-            sp->dist += sp->dist_vec;
+        if (f1 >= kp->dist_play_radius) {
+            f1 = 1.0f;
         } else {
-            if (f1 > kp->dist_play_radius) {
-                f1 = (f1 - kp->dist_play_radius) / f1 * kp->dist_sensitivity;
-                sp->dist_vec = f1 * f2;
-                if (sp->dist_vec < 0.0f) {
-                    sp->dist_speed = -sp->dist_vec;
-                } else {
-                    sp->dist_speed = sp->dist_vec;
-                }
-
-                sp->dist += sp->dist_vec;
-            } else {
-                sp->dist_vec = 0.0f;
-                sp->dist_speed = 0.0f;
-            }
+            f1 /= kp->dist_play_radius;
+            f1 *= f1;
+            f1 *= f1;
         }
+        f1 *= kp->dist_sensitivity;
+
+        sp->dist_vec = f1 * f2;
+        if (sp->dist_vec < 0.0f) {
+            sp->dist_speed = -sp->dist_vec;
+        } else {
+            sp->dist_speed = sp->dist_vec;
+        }
+
+        sp->dist += sp->dist_vec;
     }
 
     pos.x = (kp->kobj_regular[0].center.x + kp->kobj_regular[1].center.x) * 0.5f;
@@ -817,36 +782,21 @@ void calc_dpd_variable(KPADInsideStatus* kp, s8 valid_fg_next) {
         vec.y = pos.y - sp->pos.y;
         f1 = sqrt(vec.x * vec.x + vec.y * vec.y);
 
-        if (kp->pos_play_mode == KPAD_PLAY_MODE_LOOSE) {
-            if (f1 >= kp->pos_play_radius) {
-                f2 = 1.0f;
-            } else {
-                f2 = f1 / kp->pos_play_radius;
-                f2 *= f2;
-                f2 *= f2;
-            }
-            f2 *= kp->pos_sensitivity;
-
-            sp->vec.x = f2 * vec.x;
-            sp->vec.y = f2 * vec.y;
-            sp->speed = sqrt(sp->vec.x * sp->vec.x + sp->vec.y * sp->vec.y);
-
-            sp->pos.x += sp->vec.x;
-            sp->pos.y += sp->vec.y;
+        if (f1 >= kp->pos_play_radius) {
+            f2 = 1.0f;
         } else {
-            if (f1 > kp->pos_play_radius) {
-                f1 = (f1 - kp->pos_play_radius) / f1 * kp->pos_sensitivity;
-                sp->vec.x = f1 * vec.x;
-                sp->vec.y = f1 * vec.y;
-                sp->speed = sqrt(sp->vec.x * sp->vec.x + sp->vec.y * sp->vec.y);
-
-                sp->pos.x += sp->vec.x;
-                sp->pos.y += sp->vec.y;
-            } else {
-                sp->vec = Vec2_0;
-                sp->speed = 0.0f;
-            }
+            f2 = f1 / kp->pos_play_radius;
+            f2 *= f2;
+            f2 *= f2;
         }
+        f2 *= kp->pos_sensitivity;
+
+        sp->vec.x = f2 * vec.x;
+        sp->vec.y = f2 * vec.y;
+        sp->speed = sqrt(sp->vec.x * sp->vec.x + sp->vec.y * sp->vec.y);
+
+        sp->pos.x += sp->vec.x;
+        sp->pos.y += sp->vec.y;
     }
 
     sp->dpd_valid_fg = valid_fg_next;
@@ -872,10 +822,10 @@ void calc_obj_horizon(KPADInsideStatus* kp) {
     kp->obj_horizon.y = kp->sec_nrm_hori.y * vx - kp->sec_nrm_hori.x * vy;
 }
 
-void get_kobj(KPADInsideStatus* kp, DPDObject* wobj_p) {
-    const f32 dpd_scale = 2.0f / (f32)KPAD_DPD_RESO_WX;
-    const f32 dpd_cx = (f32)(KPAD_DPD_RESO_WX - 1) / (f32)KPAD_DPD_RESO_WX;
-    const f32 dpd_cy = (f32)(KPAD_DPD_RESO_WY - 1) / (f32)KPAD_DPD_RESO_WX;
+static void get_kobj(KPADInsideStatus* kp, DPDObject* wobj_p) {
+#define dpd_scale (2.0f / (f32)KPAD_DPD_RESO_WX)
+#define dpd_cx ((f32)(KPAD_DPD_RESO_WX - 1) / (f32)KPAD_DPD_RESO_WX)
+#define dpd_cy ((f32)(KPAD_DPD_RESO_WY - 1) / (f32)KPAD_DPD_RESO_WX)
 
     KPADObject* kobj_p;
 
@@ -1206,7 +1156,7 @@ s32 KPADRead(s32 chan, KPADStatus samplingBufs[], u32 length) {
 
         idx = (s32)(kp->bufIdx - copy_ct);
         if (idx < 0) {
-            idx += 120;
+            idx += KPAD_RING_BUFFER_SIZE;
         }
 
         --tp;
@@ -1214,7 +1164,7 @@ s32 KPADRead(s32 chan, KPADStatus samplingBufs[], u32 length) {
             --tp;
             tp->w = kp->uniRingBuf[idx];
             idx++;
-            if (idx >= 120) {
+            if (idx >= KPAD_RING_BUFFER_SIZE) {
                 idx = 0;
             }
         }
@@ -1342,8 +1292,6 @@ finish:
 void KPADInit(void) {
     s32 i;
     KPADInsideStatus* kp;
-    GXColor black = {0, 0, 0, 0};
-    GXColor white = {255, 255, 255, 255};
     u32 idx;
 
     WPADInit();
@@ -1364,7 +1312,6 @@ void KPADInit(void) {
         calc_dpd2pos_scale(kp);
         kp->pos_play_radius = kp->hori_play_radius = kp->dist_play_radius = kp->acc_play_radius = 0.0f;
         kp->pos_sensitivity = kp->hori_sensitivity = kp->dist_sensitivity = kp->acc_sensitivity = 1.0f;
-        kp->pos_play_mode = kp->hori_play_mode = kp->dist_play_mode = kp->acc_play_mode = KPAD_PLAY_MODE_LOOSE;
 
         KPADSetBtnRepeat(i, 0.0f, 0.0f);
         KPADEnableAimingMode(i);
@@ -1386,7 +1333,7 @@ void KPADInit(void) {
         idx = 0;
         do {
             kp->uniRingBuf[idx].u.core.err = WPAD_ERR_NO_CONTROLLER;
-        } while (++idx < 120);
+        } while (++idx < KPAD_RING_BUFFER_SIZE);
 
     } while (++i < WPAD_MAX_CONTROLLERS);
 
@@ -1405,6 +1352,15 @@ void KPADReset(void) {
         }
         inside_kpads[chan].resetReq = TRUE;
     } while (--chan >= 0);
+}
+
+// Jun 2007: these only set a flag (later versions control the DPD directly).
+void KPADDisableDPD(s32 chan) {
+    inside_kpads[chan].dpdEnabled = FALSE;
+}
+
+void KPADEnableDPD(s32 chan) {
+    inside_kpads[chan].dpdEnabled = TRUE;
 }
 
 static void KPADiSamplingCallback(s32 chan) {
@@ -1427,7 +1383,7 @@ static void KPADiSamplingCallback(s32 chan) {
     }
 
     idx = kp->bufIdx;
-    if (idx >= 120) {
+    if (idx >= KPAD_RING_BUFFER_SIZE) {
         idx = 0;
     }
 
@@ -1436,7 +1392,7 @@ static void KPADiSamplingCallback(s32 chan) {
     uwp->fmt = (u8)WPADGetDataFormat(chan);
 
     kp->bufIdx = (u8)(idx + 1);
-    if (kp->bufCount < 120) {
+    if (kp->bufCount < KPAD_RING_BUFFER_SIZE) {
         kp->bufCount++;
     }
 
