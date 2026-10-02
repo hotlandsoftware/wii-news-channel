@@ -35,13 +35,16 @@ Anything matched there can be reused directly.
 
 | Range | Size | Library | Build date (version string) | Best reference | Drop-in % (best ref) |
 | --- | --- | --- | --- | --- | --- |
-| `0x80051D4C–0x80052D5C` | 0x1010 | RSO (`RSOLink.c`) | — | smg `RVL_SDK/rso/RSOLink.c` | 80% |
-| `0x80052D5C–0x80053274` | 0x518 | CNT (`cnt.c`) | May 10 2007 | ogws / fc | 29% (ogws), sizes 100% fc |
+| `0x80051D4C–0x80052D5C` | 0x1010 | RSO (`RSOLink.c`, **done**) | — | smg `RVL_SDK/rso/RSOLink.c` | 80% |
+| `0x80052D5C–0x80053274` | 0x518 | CNT (`cnt.c`, **done**) | May 10 2007 | ogws / fc | 29% (ogws), sizes 100% fc |
 | `0x80053274–0x800750DC` | 0x21E68 | VF (PrFILE2 + `d_*`, `nand_drv`, `sd_drv`) | — | **ogws** | 94% (42/49 files 100%) |
 | `0x800750DC–0x800767C8` | 0x16EC | SO + NCD | Jun 28 2007 (both), REX 2.0.4.0 | mkw `rvl/so/soCommon.c` | ~74% by size |
 | `0x800767C8–0x8007FE28` | 0x9660 | NWC24 | Jun 28 2007 | smg (Dec 2007) + ogws + fc | **done** (14/15 Matching) |
+
+| `0x80074AE0–0x800767C8` | 0x1CE8 | SO + NCD + NET (task 3: 5/7 files Matching) | Jun 28 2007 (both), REX 2.0.4.0 | mkw `rvl/so/soCommon.c` | 100% (SO) |
+| `0x800767C8–0x8007FE28` | 0x9660 | NWC24 | Jun 28 2007 | smg (Dec 2007) + ogws | 50% / 39% |
 | `0x8007FE28–0x8008A0A4` | 0xA27C | **Unidentified** self-contained lib (big unrolled functions, tables at `.rodata 0x801AACF0`) | — | none | — |
-| `0x8008A0A4–0x8008AA44` | 0x9A0 | ARC (`arc.c`) | — | **smg** | 100% |
+| `0x8008A0A4–0x8008AA44` | 0x9A0 | ARC (`arc.c`, **done**) | — | **smg** | 100% |
 | `0x8008AA44–0x80096D2C` | 0xC2E8 | HBM core (`homebutton::*`) | HBM May 16 2007 (0x4199_60726) | tp `homebuttonLib` | GUIManager 91%, Anm/FrameController 100%, RemoteSpk 82%, Controller 51%, Base 22% |
 | `0x80096D2C–0x8009C720` | 0x59F4 | HBM sound (HBMAxSound / `mix`/`syn*`/`seq`; contains `vcmv_main.cpp`) | (HBM) | none (ss has the file list only) | — |
 | `0x8009C720–0x800BA03C` | 0x1D91C | nw4r::ef | — | ogws | ~50% |
@@ -154,6 +157,28 @@ Exact ends from `.ctors`/`__sinit` are marked †.
   It has many large near-duplicate functions (0x590–0x76C) and `.rodata` tables `0x801AACF0` (0x100), `0x801AADF0`/`0x801AAE04` (0x14), `0x801AAE18` (0x40), `0x801AAE58` (0x100).
   This is probably a decompression or crypto library used on downloaded news data. Identify it before porting.
 - **ARC** `0x8008A0A4` (`ARCInitHandle`) to `0x8008AA44`. Petari's `arc.c` is 100%.
+- **Task 3 (RSO, CNT, ARC, SO/NCD/NET): done.** 10 files, 8 `Matching`, all `GC/3.0a5.2` + `cflags_rvl` (libs `rso`, `cnt`, `arc`, `so`, `ncd`, `net`).
+
+  | File | Range | Status |
+  | --- | --- | --- |
+  | `RSO/RSOLink.c` | `0x80051D4C–0x80052D5C` | Matching |
+  | `CNT/cnt.c` | `0x80052D5C–0x80053274` | Matching |
+  | `SO/soCommon.c` | `0x80074AE0–0x800759E0` | Matching |
+  | `SO/soBasic.c` | `0x800759E0–0x80075C34` | Matching |
+  | `NCD/ncdsystem.c` | `0x80075C34–0x80076138` | NonMatching, 99.70% |
+  | `NET/nettime.c` | `0x80076138–0x8007621C` | Matching |
+  | `NET/netcrc.c` | `0x8007621C–0x80076350` | NonMatching, 97.86% |
+  | `NET/neterror.c` | `0x80076350–0x800767C0` | Matching (`-inline noauto`) |
+  | `NET/NETVersion.c` | `0x800767C0–0x800767C8` | Matching |
+  | `ARC/arc.c` | `0x8008A0A4–0x8008AA44` | Matching |
+
+  - **RSO** is Petari's `RSOLink.c` plus two functions SMG strips: `RSOFindExportSymbol` (global here, defined *before* `RSORelocate`, unlike Petari's static one after it) and `RSOGetFixedSize(rso, level)` (0 → 0, 1 → `mInternalRelOffset`, 2 → `mExternalRelOffset`) after `RSOLinkList`. RSO's `.data` starts at `0x801CABC0` (the "Warrning!" strings and the `RSOStaticLocateObject` jump table).
+  - **ARC** is Petari's `arc.c` plus `ARCEntrynumIsDir` (after `ARCConvertPathToEntrynum`) and `ARCGetStartOffset` (after `ARCGetStartAddrInMem`). The real names come from the RSO export table at `0x801AC240`, which also names the CNT functions.
+  - **CNT** (no public source for this version) was written from the DOL: `CNTInit`, `CNTShutdown` (`b ESP_CloseLib`, name guessed), `contentInitHandleNAND` (reads the ARC header into a 32-byte-aligned local, allocates `OSRoundUp32B(fileStart)` from a `MEMAllocator`; `CNTHandle` gained `allocator` at `0x20`), `contentOpenNAND` (name guessed), `contentFastOpenNAND`, `contentConvertPathToEntrynumNAND`, `contentGetLengthNAND`, `contentSeekNAND`, `contentReadNAND`, `contentCloseNAND`, `contentReleaseHandleNAND`, `contentOpenDirNAND`, then the static `__CNTConvertErrorCode` (79-pair table copied from `.rodata`, logs some ES errors with `NANDLoggingAddMessageAsync` through 64-byte-aligned buffers). `.data` holds `"/content%d"` and a `CNTInitHandle()` warning that no linked code uses; a dead `contentInitHandleDVD` emits them. Errors return `-0x1391` here (ogws: `-0x138A`). `buffer == (void*)NULL` is needed for `li r0,0; cmplw`. `contentSeekNAND` needs a separate `pos` local for the stray `b` after the case-2 branch.
+  - **SO starts at `0x80074AE0`** with `SOInit(const SOLibraryConfig*)` (`{alloc, free}`; new in `so.h`); mkw's `soCommon.c` (Dec 2007) is otherwise byte-identical apart from the version string and `SOStartup`'s 600000 ms timeout (mkw: 60000). `SOInit`'s switch needs `case READY: case ACTIVE: … case TERMINATED: default:`. `SOGetHostID`/`SOGetInterfaceOpt` form `soBasic.c` (no version string in this build; no data boundary, so the split is from mkw's file layout).
+  - **NCD** `ncdsystem.c` (name from the `OSPanic` string): `NCDGetLinkStatus`, `NCDiGetEnabledConfigList` (inlined version, 0x17C), static `ExecConfigCommand(funcName, buf, cmd)` and `LockRight` (names from MKW's map). The config buffer is 0x1B60 bytes taken from the IPC arena (`NCDiConfig`: 8-byte header + 3 × 0x91C entries, in `ncd.h`). `.bss` is mutex, result[8], vec[4] (each 32-byte aligned, in that order); MWCC places `.bss` statics in order of first use, and `LockRight` is the last function in `.text`, so an unreferenced `NCDiClearWork` before `NCDGetLinkStatus` reproduces the order (`.sbss` follows reverse declaration order instead). `NCDiGetEnabledConfigList` is 99% (the config pointer and the flags byte swap `r4`/`r5`).
+  - **NET** (RevoEX): `nettime.c` (ogws), `netcrc.c` (`NETCalcCRC32`, nibble table at `.rodata 0x801AAC88`; 97.86%, `crc`/byte registers swapped, every loop form tried), `neterror.c` (`NETiGetConnectionTypeFromConfigList`, `NETGetStartupErrorCode`, static `GetStartupErrorCode`, "Unknown SOStartup Error"), `NETVersion.c` (`NETGetRexPPCVersionPrintable`, unreferenced but kept: `#pragma force_active on`). In MKW these sit in the same order except that `NETCalcCRC32` moved after `NETMemSet`. `neterror.c` needs `-inline noauto`: with `-inline auto` `NETiGetConnectionTypeFromConfigList` gets inlined into `NETGetStartupErrorCode`, while MKW and our DOL keep the call.
+  - Names given outside the range: `NWC24iStartupSocket`/`NWC24iCleanupSocket`/`NWC24iLockSocket`/`NWC24iUnlockSocket` (`0x8007AD18`–`0x8007AD48`), `NWC24iGetUniversalTime` (`0x8007BC58`), `NWC24iEpochSecondsToDate` (`0x8007B430`), `NWC24iDateToOSCalendarTime` (`0x8007B56C`).
 
 ### HBM (`0x8008AA44–0x8009C720`)
 
@@ -785,6 +810,9 @@ Difficulty: E = mostly drop-in, M = drop-in plus version fixes, H = little or no
 | 2 | VF part 2: `d_vf*`, `d_hash/time/common`, `nand_drv`, `sd_drv` | `0x8006C5B4–0x800750DC` | 35 KB | ogws, smg | E |
 | 3 | RSO + CNT + ARC + SO/NCD | `0x80051D4C–0x80053274`, `0x8008A0A4–0x8008AA44`, `0x800750DC–0x800767C8` | 13 KB | smg, ogws/fc, mkw | E–M |
 | 4 | NWC24 (**done**, 14/15 Matching; Download 99.89%) | `0x800767C8–0x8007FE28` | 38 KB | smg + ogws + fc | M |
+
+| 3 | RSO + CNT + ARC + SO/NCD (**done**, 8/10 Matching; SO starts `0x80074AE0`) | `0x80051D4C–0x80053274`, `0x8008A0A4–0x8008AA44`, `0x80074AE0–0x800767C8` | 15 KB | smg, ogws/fc, mkw | E–M |
+| 4 | NWC24 | `0x800767C8–0x8007FE28` | 38 KB | smg + ogws | M |
 | 5 | Identify and decompile the unknown library | `0x8007FE28–0x8008A0A4` | 41 KB | none | H |
 | 6 | HBM core | `0x8008AA44–0x80096D2C` | 49 KB | tp `homebuttonLib` | M–H |
 | 7 | HBM sound | `0x80096D2C–0x8009C720` | 23 KB | none | H |

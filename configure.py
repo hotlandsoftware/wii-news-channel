@@ -951,6 +951,64 @@ config.libs = [
         ],
     },
     {
+        "lib": "rso",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_rvl,
+        "progress_category": "sdk",
+        "objects": [
+            Object(Matching, "revolution/RSO/RSOLink.c"),
+        ],
+    },
+    {
+        "lib": "cnt",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_rvl,
+        "progress_category": "sdk",
+        "objects": [
+            Object(Matching, "revolution/CNT/cnt.c"),
+        ],
+    },
+    {
+        "lib": "so",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_rvl,
+        "progress_category": "sdk",
+        "objects": [
+            Object(Matching, "revolution/SO/soCommon.c"),
+            Object(Matching, "revolution/SO/soBasic.c"),
+        ],
+    },
+    {
+        "lib": "ncd",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_rvl,
+        "progress_category": "sdk",
+        "objects": [
+            Object(NonMatching, "revolution/NCD/ncdsystem.c"),
+        ],
+    },
+    {
+        "lib": "net",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_rvl,
+        "progress_category": "sdk",
+        "objects": [
+            Object(Matching, "revolution/NET/nettime.c"),
+            Object(NonMatching, "revolution/NET/netcrc.c"),
+            Object(Matching, "revolution/NET/neterror.c", extra_cflags=["-inline noauto"]),
+            Object(Matching, "revolution/NET/NETVersion.c"),
+        ],
+    },
+    {
+        "lib": "arc",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_rvl,
+        "progress_category": "sdk",
+        "objects": [
+            Object(Matching, "revolution/ARC/arc.c"),
+        ],
+    },
+    {
         "lib": "vf_drv",
         "mw_version": "GC/3.0a5.2",
         "cflags": cflags_rvl,

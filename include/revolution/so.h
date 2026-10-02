@@ -26,6 +26,11 @@ typedef struct SOSysWork {
   s32 allocCount;         // 0x14
 } SOSysWork;
 
+typedef struct SOLibraryConfig {
+  SO_AllocFunc alloc; // 0x00
+  SO_FreeFunc free;   // 0x04
+} SOLibraryConfig;
+
 typedef struct NETSoSocket {
   int af;       // 0x00
   int type;     // 0x04
@@ -105,6 +110,7 @@ struct SOAddrInfo {
 extern const char* __SO_VERSION;
 extern const char* __SOCKET_VERSION;
 
+int SOInit(const SOLibraryConfig* config);
 int SOFinish(void);
 int SOStartup(void);
 int SOStartupEx(int timeout);

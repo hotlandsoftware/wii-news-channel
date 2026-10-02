@@ -6,6 +6,7 @@
 #include <types.h>
 #include <macros.h>
 #include <revolution/arc.h>
+#include <revolution/mem/allocator.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -14,6 +15,7 @@ extern "C" {
 typedef struct CNTHandle {
     ARCHandle arcHandle; // at 0x0
     s32 fd;              // at 0x1C
+    MEMAllocator* allocator; // at 0x20
 } CNTHandle;
 
 typedef struct CNTFileInfo {
@@ -28,11 +30,17 @@ typedef enum {
 } CNTResult;
 
 void CNTInit(void);
+s32 CNTShutdown(void);
+s32 contentInitHandleNAND(s32 contentNum, CNTHandle* handle, MEMAllocator* allocator);
+s32 contentOpenNAND(CNTHandle* handle, const char* path, CNTFileInfo* info);
 s32 contentFastOpenNAND(CNTHandle* handle, s32 entrynum, CNTFileInfo* info);
 s32 contentConvertPathToEntrynumNAND(CNTHandle* handle, const char* path);
 u32 contentGetLengthNAND(const CNTFileInfo* info);
+s32 contentSeekNAND(CNTFileInfo* info, s32 offset, s32 origin);
 s32 contentReadNAND(CNTFileInfo* info, void* dst, u32 len, s32 offset);
 s32 contentCloseNAND(CNTFileInfo* info);
+s32 contentReleaseHandleNAND(CNTHandle* handle);
+BOOL contentOpenDirNAND(CNTHandle* handle, const char* path, ARCDir* dir);
 
 #ifdef __cplusplus
 }

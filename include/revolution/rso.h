@@ -98,6 +98,9 @@ int RSOGetJumpCodeSize(const RSOObjectHeader*);
 void RSOMakeJumpCode(const RSOObjectHeader*, void*);
 
 void* RSOFindExportSymbolAddr(const RSOObjectHeader*, const char*);
+RSOExportTable* RSOFindExportSymbol(const RSOObjectHeader*, const char*);
+u32 RSOGetFixedSize(const RSOObjectHeader*, int);
+int RSOStaticLocateObject(void*);
 int RSOLinkJump(RSOObjectHeader*, const RSOObjectHeader*, void*);
 
 #ifdef __cplusplus

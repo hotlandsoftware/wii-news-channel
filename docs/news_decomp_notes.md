@@ -24,6 +24,8 @@ So each file ends with a `__sinit` that constructs it, and the `.ctors` table (`
 - The repo never contains `.s` files.
 - **Currently NonMatching under this rule:** VF `pf_dir.c` (99.97%), `d_vf_sys.c` (99.99%), `nand_drv.c` (99.99%) and `ram_drv.c` (99.88%). All are register-allocation differences. Also nw4r `snd_RemoteSpeaker.cpp` (99.2%, block layout of `Update`) and `NWC24Download.c` (99.89%, register allocation in three functions).
 
+- **Currently NonMatching under this rule:** VF `pf_dir.c` (99.97%), `d_vf_sys.c` (99.99%), `nand_drv.c` (99.99%) and `ram_drv.c` (99.88%). All are register-allocation differences. Also nw4r `snd_RemoteSpeaker.cpp` (99.2%, block layout of `Update`). Also `NCD/ncdsystem.c` (99.70%) and `NET/netcrc.c` (97.86%), both register allocation.
+
 ## Compiler
 
 - Game code: `GC/3.0a5.2`, base flags plus `-inline noauto -fp_contract off` (see `cflags_game` in `configure.py`).
