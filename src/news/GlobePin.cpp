@@ -618,146 +618,130 @@ void GlobePin::StateRipple() {
 }
 
 void GlobePin::TruncateHeadline(ut::CharWriter* writer) {
-    if (mHeadlineScroller.mMode != Scroller::MODE_WAIT) {
-        wcscpy(mArticle->unk3C, mArticle->mHeadline);
+    if (mHeadlineScroller.mMode == Scroller::MODE_WAIT) {
+        const ut::Font* font = writer->GetFont();
+        const wchar_t* src = mArticle->mHeadline;
+        wchar_t* dst = mArticle->unk3C;
+        f32 scale = writer->GetScaleH();
+        f32 space = ((ut::TextWriterBase<wchar_t>*)writer)->GetCharSpace();
+        u32 n = 0;
+        f32 width = 0.0f;
+        f32 maxWidth = mHeadlineScroller.mViewWidth - 30.0f * scale;
+        if (gLanguage == 0) {
+            while (*src != 0) {
+                *dst = *src++;
+                if (n < mHeadlineLen) {
+                    width += scale * font->GetCharWidth(*dst);
+                } else {
+                    width = width + scale * font->GetCharWidth(*dst);
+                }
+                *++dst = 0;
+                if (width > maxWidth) {
+                    f32 ellipsis = scale * font->GetCharWidth(0x2026);
+                    dst[-1] = 0;
+                    dst -= 2;
+                    f32 cut = scale * font->GetCharWidth(*dst);
+                    while (cut < ellipsis) {
+                        cut += space + scale * font->GetCharWidth(*--dst);
+                    }
+                    dst[0] = 0x2026;
+                    dst[1] = 0;
+                    return;
+                }
+                width += space;
+                n++;
+            }
+        } else {
+            while (*src != 0) {
+                *dst = *src++;
+                if (n < mHeadlineLen) {
+                    width += scale * font->GetCharWidth(*dst);
+                } else {
+                    width = width + scale * font->GetCharWidth(*dst);
+                }
+                *++dst = 0;
+                if (width > maxWidth) {
+                    f32 dots = scale * (3.0f * font->GetCharWidth(L'.'));
+                    dst[-1] = 0;
+                    dst -= 2;
+                    f32 cut = scale * font->GetCharWidth(*dst);
+                    while (cut < 2.0f * space + dots) {
+                        cut += space + scale * font->GetCharWidth(*--dst);
+                    }
+                    dst[0] = 0;
+                    wcscat(mArticle->unk3C, L"...");
+                    return;
+                }
+                width += space;
+                n++;
+            }
+        }
         return;
     }
-    const ut::Font* font = writer->GetFont();
-    const wchar_t* src = mArticle->mHeadline;
-    wchar_t* dst = mArticle->unk3C;
-    f32 scale = writer->GetScaleH();
-    f32 space = ((ut::TextWriterBase<wchar_t>*)writer)->GetCharSpace();
-    u32 n = 0;
-    f32 width = 0.0f;
-    f32 maxWidth = mHeadlineScroller.mViewWidth - 30.0f * scale;
-    if (gLanguage == 0) {
-        while (*src != 0) {
-            *dst = *src++;
-            f32 w;
-            if (n < mHeadlineLen) {
-                w = scale * font->GetCharWidth(*dst);
-            } else {
-                w = scale * font->GetCharWidth(*dst);
-            }
-            width += w;
-            dst++;
-            *dst = 0;
-            if (width > maxWidth) {
-                f32 ellipsis = font->GetCharWidth(0x2026);
-                dst[-1] = 0;
-                dst -= 2;
-                f32 cut = scale * font->GetCharWidth(*dst);
-                while (cut < scale * ellipsis) {
-                    cut += space + scale * font->GetCharWidth(*--dst);
-                }
-                dst[0] = 0x2026;
-                dst[1] = 0;
-                return;
-            }
-            width += space;
-            n++;
-        }
-    } else {
-        while (*src != 0) {
-            *dst = *src++;
-            f32 w;
-            if (n < mHeadlineLen) {
-                w = scale * font->GetCharWidth(*dst);
-            } else {
-                w = scale * font->GetCharWidth(*dst);
-            }
-            width += w;
-            dst++;
-            *dst = 0;
-            if (width > maxWidth) {
-                f32 dot = font->GetCharWidth(L'.');
-                dst[-1] = 0;
-                dst -= 2;
-                f32 dots = scale * (3.0f * dot);
-                f32 cut = scale * font->GetCharWidth(*dst);
-                while (cut < 2.0f * space + dots) {
-                    cut += space + scale * font->GetCharWidth(*--dst);
-                }
-                dst[0] = 0;
-                wcscat(mArticle->unk3C, L"...");
-                return;
-            }
-            width += space;
-            n++;
-        }
-    }
+    wcscpy(mArticle->unk3C, mArticle->mHeadline);
 }
 
 void GlobePin::TruncateLocation(ut::CharWriter* writer) {
-    if (mLocationScroller.mMode != Scroller::MODE_WAIT) {
-        wcscpy(mArticle->unk40, mArticle->mLocationName);
+    if (mLocationScroller.mMode == Scroller::MODE_WAIT) {
+        const ut::Font* font = writer->GetFont();
+        f32 maxWidth = mLocationScroller.mViewWidth;
+        const wchar_t* src = mArticle->mLocationName;
+        wchar_t* dst = mArticle->unk40;
+        f32 scale = writer->GetScaleH();
+        f32 space = ((ut::TextWriterBase<wchar_t>*)writer)->GetCharSpace();
+        f32 width = 0.0f;
+        if (gLanguage == 0) {
+            while (*src != 0) {
+                *dst = *src++;
+                width += scale * font->GetCharWidth(*dst);
+                *++dst = 0;
+                if (width > maxWidth) {
+                    f32 ellipsis = scale * font->GetCharWidth(0x2026);
+                    dst[-1] = 0;
+                    dst -= 2;
+                    f32 cut = scale * font->GetCharWidth(*dst);
+                    while (cut < ellipsis) {
+                        cut += space + scale * font->GetCharWidth(*--dst);
+                    }
+                    dst[0] = 0x2026;
+                    dst[1] = 0;
+                    return;
+                }
+                width += space;
+            }
+        } else {
+            while (*src != 0) {
+                *dst = *src++;
+                width += scale * font->GetCharWidth(*dst);
+                *++dst = 0;
+                if (width > maxWidth) {
+                    f32 dots = scale * (3.0f * font->GetCharWidth(L'.'));
+                    dst[-1] = 0;
+                    dst -= 2;
+                    f32 cut = scale * font->GetCharWidth(*dst);
+                    while (cut < 2.0f * space + dots) {
+                        cut += space + scale * font->GetCharWidth(*--dst);
+                    }
+                    dst[0] = 0;
+                    wcscat(mArticle->unk40, L"...");
+                    return;
+                }
+                width += space;
+            }
+        }
         return;
     }
-    const ut::Font* font = writer->GetFont();
-    f32 maxWidth = mLocationScroller.mViewWidth;
-    const wchar_t* src = mArticle->mLocationName;
-    wchar_t* dst = mArticle->unk40;
-    f32 scale = writer->GetScaleH();
-    f32 space = ((ut::TextWriterBase<wchar_t>*)writer)->GetCharSpace();
-    f32 width = 0.0f;
-    if (gLanguage == 0) {
-        while (*src != 0) {
-            wchar_t c = *src;
-            *dst = c;
-            src++;
-            s32 cw = font->GetCharWidth(c);
-            dst++;
-            *dst = 0;
-            width += scale * cw;
-            if (width > maxWidth) {
-                f32 ellipsis = font->GetCharWidth(0x2026);
-                dst[-1] = 0;
-                dst -= 2;
-                f32 cut = scale * font->GetCharWidth(*dst);
-                while (cut < scale * ellipsis) {
-                    cut += space + scale * font->GetCharWidth(*--dst);
-                }
-                dst[0] = 0x2026;
-                dst[1] = 0;
-                return;
-            }
-            width += space;
-        }
-    } else {
-        while (*src != 0) {
-            wchar_t c = *src;
-            *dst = c;
-            src++;
-            s32 cw = font->GetCharWidth(c);
-            dst++;
-            *dst = 0;
-            width += scale * cw;
-            if (width > maxWidth) {
-                f32 dot = font->GetCharWidth(L'.');
-                dst[-1] = 0;
-                dst -= 2;
-                f32 dots = scale * (3.0f * dot);
-                f32 cut = scale * font->GetCharWidth(*dst);
-                while (cut < 2.0f * space + dots) {
-                    cut += space + scale * font->GetCharWidth(*--dst);
-                }
-                dst[0] = 0;
-                wcscat(mArticle->unk40, L"...");
-                return;
-            }
-            width += space;
-        }
-    }
+    wcscpy(mArticle->unk40, mArticle->mLocationName);
 }
 
 f32 GlobePin::CalcHeadlineWidth(const wchar_t* str, const ut::Font* font, f32 scale, f32 space) {
-    f32 width = 0.0f;
     u32 len = wcslen(str);
+    f32 width = 0.0f;
     for (u32 n = 0; *str != 0; str++, n++) {
         if (n >= mHeadlineLen) {
             width += scale * font->GetCharWidth(*str);
         } else {
-            width += scale * font->GetCharWidth(*str);
+            width = width + scale * font->GetCharWidth(*str);
         }
     }
     if (len >= mHeadlineLen) {
@@ -765,7 +749,8 @@ f32 GlobePin::CalcHeadlineWidth(const wchar_t* str, const ut::Font* font, f32 sc
         len -= count;
         width += space * count;
     }
-    return width + space * len;
+    width += space * len;
+    return width;
 }
 
 void GlobePin::LayoutPicture(f32 size) {
