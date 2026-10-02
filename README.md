@@ -1,16 +1,16 @@
 # wii-news-channel
 
 ## STATUS
-- **63.83%** decompiled (62.63% byte-matching)
-- **58.95%** fully linked (466 / 680 files)
+- **76.43%** decompiled (73.72% byte-matching)
+- **68.90%** fully linked (531 / 695 files)
 
 Percentages are of the DOL's code bytes (1,626,960, including `.init`), as reported by `ninja`.
 
 | Area (code size) | Decompiled | Matching | Linked |
 | --- | --- | --- | --- |
 | News Channel game code (`0x80006FC0`–`0x80051D4C`, ~307 KB) | 24.7% | 22.9% | 20.4% |
-| HOME Menu, NW4R, RVL SDK (`0x80051D4C`–`0x80179F64`, ~1.21 MB) | 72.8% | 71.7% | 67.4% |
-| Runtime / MSL (`0x80179F64`–`0x8018C7C0`, ~76 KB) | 64.9% | 64.9% | 64.9% |
+| HOME Menu, NW4R, RVL SDK (`0x80051D4C`–`0x80179F64`, ~1.21 MB) | 87.5% | 84.7% | 79.0% |
+| Runtime / MSL (`0x80179F64`–`0x8018C7C0`, ~76 KB) | 100% | 94.9% | 91.9% |
 | MetroTRK (`0x8018C7C0`–`0x80191F00`, plus `.init`) | 100% | 100% | 100% |
 
 Each row is a share of that whole address range. `ninja`'s per-category summary is different: it only counts files that have been split so far.
@@ -20,12 +20,12 @@ Each row is a share of that whole address range. `ninja`'s per-category summary 
 - Not yet matching: PointerEffect (99.98%), Mascot (99.96%), NewsArticle (99.54%), Model (94.23%).
 
 **Platform layer**
-- RVL SDK, linked: OS and BASE, EXI, SI, DB, VI, MTX, GX, DVD, AI, AX, AXFX, MEM, DSP, CX, NAND, SC, WENC, ESP, IPC, FS, PAD, WPAD, the Bluetooth stack (BTE), and the VF filesystem (except 4 files at 99.9%).
-- NW4R, linked: `g3d`, `lyt` (except `lyt_window.cpp`, 99.7%), `snd` (except 3 files at 98.7–99.99%), `ut` and `math` (except `ut_ArchiveFontBase.cpp`, 99.87%).
-- Not started: NW4R ef; KPAD/EUART/USB/WUD/TPL, NWC24, RSO/CNT/ARC/SO; the HOME Menu; one unidentified 41 KB library.
+- RVL SDK, linked: OS and BASE, EXI, SI, DB, VI, MTX, GX, DVD, AI, AX, AXFX, MEM, DSP, CX, NAND, SC, WENC, ESP, IPC, FS, PAD, WPAD, KPAD, EUART, USB, WUD, TPL, NdevExi2AD, RSO, CNT, ARC, SO, NET, NWC24 (except `NWC24Download.c`, 99.89%), the Bluetooth stack (BTE), and the VF filesystem (except 4 files at 99.9%).
+- NW4R, linked: `g3d`, `lyt` (except `lyt_window.cpp`, 99.7%), `snd` (except 3 files at 98.7–99.99%), `ut` and `math` (except `ut_ArchiveFontBase.cpp`, 99.87%), `ef` (except 7 files; `ef_animcurve` and `ef_drawstripestrategy` have no reference source and are only partly written).
+- Not started: the HOME Menu (core and sound) and one unidentified 41 KB library, probably a JPEG decoder.
 - [docs/platform_layer_map.md](docs/platform_layer_map.md) has the full address map and plan.
 
-**Runtime, MSL and MetroTRK, linked:** C++ runtime and exceptions, `string`, `mem`, `printf`, `strtoul`, stdio/file I/O, `ansi_fp`, locale/ctype, the allocator, the fdlibm math library, and all of MetroTRK. Not started: MSL scanf/wide printf.
+**Runtime, MSL and MetroTRK, linked:** C++ runtime and exceptions, `string`, `mem`, `printf`, `strtoul`, stdio/file I/O, `ansi_fp`, locale/ctype, the allocator, the fdlibm math library, `scanf`, `strtold`, `qsort`, `rand`, `signal`, wide printf, wchar I/O, and all of MetroTRK. Not linked yet: MSL `time.c` (98.94%).
 
 ## Description
 A matching decompilation of the Wii News Channel (USA, title `HAGE`, v7).
