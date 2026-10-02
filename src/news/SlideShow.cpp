@@ -1478,6 +1478,8 @@ BOOL SlideShow::StateEnd(const s32* arg) {
         break;
     case -1:
         break;
+    case 1:
+        break;
     }
     return TRUE;
 }
@@ -1500,6 +1502,8 @@ void SlideShow::SubStateIdle() {
 
 void SlideShow::SubStateWait() {
     switch (mSubStateFrame) {
+    case -1:
+        break;
     case 0:
         mBounceTimer = 0;
         mScrollTarget = 0.0f;
