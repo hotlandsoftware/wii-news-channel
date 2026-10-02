@@ -871,7 +871,7 @@ config.libs = [
         "cflags": cflags_rvl,
         "progress_category": "sdk",
         "objects": [
-            Object(NonMatching, "revolution/KPAD/KPAD.c"),
+            Object(Matching, "revolution/KPAD/KPAD.c"),
         ],
     },
     {

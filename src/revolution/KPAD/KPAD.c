@@ -191,9 +191,12 @@ void reset_kpad(KPADInsideStatus* kp) {
 
 // Not in Petari's KPAD; written from this DOL.
 void KPADGetProjectionPos(Vec2* dst, const Vec2* src, const KPADRect* projRect, f32 viewRatio) {
-    f32 scale = (projRect->bottom - projRect->top) / 2.0f;
-    f32 x = 1.2f * (src->x * scale);
-    f32 y = 1.2f * (src->y * scale);
+    f32 k = 1.2f;
+    f32 half = 0.5f;
+    f32 h = projRect->bottom - projRect->top;
+    f32 scale = h * half;
+    f32 x = k * (src->x * scale);
+    f32 y = k * (src->y * scale);
 
     dst->x = x * (0.908 * viewRatio);
     dst->y = y;
