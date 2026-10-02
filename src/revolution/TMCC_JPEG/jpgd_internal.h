@@ -33,12 +33,12 @@ typedef struct JPEGStream {
 
 typedef struct JPEGHuffLookup {
     u16 len;  // 0x0
-    s16 val;  // 0x2
+    u16 val;  // 0x2
 } JPEGHuffLookup;
 
 typedef struct JPEGHuffCode {
     u16 code;   // 0x0
-    s16 index;  // 0x2
+    u16 index;  // 0x2
 } JPEGHuffCode;
 
 typedef struct JPEGHuffTable {
@@ -233,9 +233,10 @@ extern const u8 lbl_80359068[];
 extern const u8 lbl_801AADF0[];
 extern const u8 lbl_801AAE04[];
 extern const u8 lbl_801AAE18[64];
+extern const s32 lbl_801AAE58[64];
 s32 fn_800898F4(s32* coef, s32* quant, s32* dcPred, JPEGDecContext* ctx);
 s32 fn_80089D2C(s32* coef, s32* quant, s32* dcPred, JPEGDecContext* ctx);
-s32 fn_80089FB8(JPEGDecContext* ctx);
+s32 fn_80089FB8(JPEGHuffCode* codes, u8* vals, JPEGDecContext* ctx);
 
 #ifdef __cplusplus
 }
