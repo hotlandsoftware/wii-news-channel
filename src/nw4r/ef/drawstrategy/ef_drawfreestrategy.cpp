@@ -67,8 +67,8 @@ void DrawFreeStrategy::Draw(const DrawInfo& rInfo, ParticleManager* pManager) {
     math::MTX34Mult(&posMtx, rInfo.GetViewMtx(), &glbMtx);
     GXLoadPosMtxImm(posMtx, GX_PNMTX0);
 
-    f32 px = rSetting.pivotX / 100.0f;
-    f32 py = rSetting.pivotY / 100.0f;
+    f32 px = pManager->mResource->GetEmitterDesc()->pivotX / 100.0f;
+    f32 py = pManager->mResource->GetEmitterDesc()->pivotY / 100.0f;
 
     GetFirstDrawParticleFunc pGetFirstFunc = GetGetFirstDrawParticleFunc(
         rSetting.mFlags & EmitterDrawSetting::FLAG_DRAW_ORDER);
@@ -94,7 +94,7 @@ void DrawFreeStrategy::Draw(const DrawInfo& rInfo, ParticleManager* pManager) {
         SetupGP(pParticle, rSetting, rInfo, first, false);
         first = false;
 
-        math::MTX34 rotMtx = CalcRotate(pParticle, rSetting.typeAxis);
+        math::MTX34 rotMtx = CalcRotate(pParticle, pManager->mResource->GetEmitterDesc()->typeAxis);
         math::MTX34 locMtx = CalcLocalTransform(px, py, sx, sy, rotMtx);
 
         locMtx._03 += pParticle->mParameter.mPosition.x;
@@ -112,7 +112,7 @@ void DrawFreeStrategy::Draw(const DrawInfo& rInfo, ParticleManager* pManager) {
 
         DrawQuad(locMtx, p, mNumTexmap > 0);
 
-        if (rSetting.typeOption == EmitterDrawSetting::TYPE_CMN_CROSS) {
+        if (pManager->mResource->GetEmitterDesc()->typeOption == EmitterDrawSetting::TYPE_CMN_CROSS) {
             // clang-format off
             static const math::_VEC3 px[4] = {
                 0.0f, -1.0f,  1.0f,

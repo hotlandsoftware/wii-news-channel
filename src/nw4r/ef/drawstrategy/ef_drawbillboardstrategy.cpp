@@ -14,7 +14,7 @@ void DrawBillboardStrategy::Draw(const DrawInfo& rInfo,
     const EmitterDrawSetting& rSetting =
         *pManager->mResource->GetEmitterDrawSetting();
 
-    switch (rSetting.typeOption) {
+    switch (pManager->mResource->GetEmitterDesc()->typeOption) {
     case EmitterDrawSetting::ASSIST_BB_NORMAL: {
         DrawNormalBillboard(rInfo, pManager);
         break;
@@ -44,15 +44,15 @@ void DrawBillboardStrategy::DrawNormalBillboard(const DrawInfo& rInfo,
     const math::MTX34& rInfoMtx = *rInfo.GetViewMtx();
 
     math::VEC2 pivot;
-    pivot.x = rSetting.pivotX / 100.0f;
-    pivot.y = rSetting.pivotY / 100.0f;
+    pivot.x = pManager->mResource->GetEmitterDesc()->pivotX / 100.0f;
+    pivot.y = pManager->mResource->GetEmitterDesc()->pivotY / 100.0f;
 
     math::MTX34 viewMtx;
     pManager->CalcGlobalMtx(&viewMtx);
     math::MTX34Mult(&viewMtx, &rInfoMtx, &viewMtx);
 
-    if (rSetting.zOffset != 0.0f) {
-        CalcZOffset(&viewMtx, pManager, rInfo, rSetting.zOffset);
+    if (0.0f != 0.0f) {
+        CalcZOffset(&viewMtx, pManager, rInfo, 0.0f);
     }
 
     f32 vx = math::FSqrt(viewMtx._00 * viewMtx._00 + viewMtx._10 * viewMtx._10 +
@@ -292,7 +292,7 @@ DrawBillboardStrategy::GetCalcAheadFunc(ParticleManager* pManager) {
     const EmitterDrawSetting& rSetting =
         *pManager->mResource->GetEmitterDrawSetting();
 
-    switch (rSetting.typeDir) {
+    switch (pManager->mResource->GetEmitterDesc()->typeDir) {
     case EmitterDrawSetting::AHEAD_BB_SPEED: {
         return CalcAhead_Speed;
     }

@@ -176,18 +176,9 @@ struct EmitterDrawSetting {
     Lighting mLighting;             // at 0x6A
     f32 mIndTexOffsetMtx[2][3];     // at 0x84
     s8 mIndTexScaleExp;             // at 0x9C
-    s8 pivotX;                      // at 0x9D
-    s8 pivotY;                      // at 0x9E
-    u8 PADDING_0xA3;                // at 0x9F
-    u8 ptcltype;                    // at 0xA0
-    u8 typeOption;                  // at 0xA1
-    u8 typeDir;                     // at 0xA2
-    u8 typeAxis;                    // at 0xA3
-    u8 typeOption0;                 // at 0xA4
-    u8 typeOption1;                 // at 0xA5
-    u8 typeOption2;                 // at 0xA6
-    u8 PADDING_0xAB;                // at 0xA7
-    f32 zOffset;                    // at 0xA8
+
+    // Older revision (News Channel): the pivot and particle type fields are in
+    // EmitterDesc, before the draw setting, and there is no zOffset.
 };
 
 struct EmitterDesc {
@@ -252,8 +243,22 @@ struct EmitterDesc {
     u8 lodMinEmit;                  // at 0x86
     u8 lodAlpha;                    // at 0x87
     u32 randomSeed;                 // at 0x88
-    u8 userdata[8];                 // at 0x8C
-    EmitterDrawSetting drawSetting; // at 0x94
+
+    // Older revision (News Channel): no user data; the particle type and
+    // pivot fields (in EmitterDrawSetting in Wii Sports) come before the draw
+    // setting.
+    u8 ptcltype;                    // at 0x8C
+    u8 typeOption;                  // at 0x8D
+    u8 typeDir;                     // at 0x8E
+    u8 typeAxis;                    // at 0x8F
+    u8 typeOption0;                 // at 0x90
+    u8 typeOption1;                 // at 0x91
+    u8 typeOption2;                 // at 0x92
+    u8 PADDING_0x93;                // at 0x93
+    s8 pivotX;                      // at 0x94
+    s8 pivotY;                      // at 0x95
+    u8 UNKNOWN_0x96[0xA0 - 0x96];   // at 0x96
+    EmitterDrawSetting drawSetting; // at 0xA0
 
     EmitFormType GetFormType() {
         return static_cast<EmitFormType>(emitFlag & 0xFF);

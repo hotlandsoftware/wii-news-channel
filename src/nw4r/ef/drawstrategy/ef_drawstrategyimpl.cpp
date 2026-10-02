@@ -12,12 +12,6 @@ const math::VEC3 DrawStrategyImpl::mYUnitVec(0.0f, 1.0f, 0.0f);
 const math::VEC3 DrawStrategyImpl::mZUnitVec(0.0f, 0.0f, 1.0f);
 const math::VEC3 DrawStrategyImpl::mZeroVec(0.0f, 0.0f, 0.0f);
 
-// clang-format off
-const math::MTX34 DrawStrategyImpl::mIdentityMtx(
-    1.0f, 0.0f, 0.0f, 0.0f,
-    0.0f, 1.0f, 0.0f, 0.0f,
-    0.0f, 0.0f, 1.0f, 0.0f);
-// clang-format on
 
 /******************************************************************************
  *
@@ -160,24 +154,18 @@ void DrawStrategyImpl::InitTev(const EmitterDrawSetting& rSetting,
                    static_cast<GXBlendFactor>(rSetting.mBlendMode.mDstFactor),
                    static_cast<GXLogicOp>(rSetting.mBlendMode.mOp));
 
-    GXSetZMode(
-        rSetting.mFlags & EmitterDrawSetting::FLAG_ZCOMP_ENABLE_TEST ? TRUE
-                                                                     : FALSE,
-        static_cast<GXCompare>(rSetting.mZCompareFunc),
-        rSetting.mFlags & EmitterDrawSetting::FLAG_ZCOMP_ENABLE_UPDATE ? TRUE
-                                                                       : FALSE);
+    GXSetZMode((rSetting.mFlags & EmitterDrawSetting::FLAG_ZCOMP_ENABLE_TEST) != 0,
+               static_cast<GXCompare>(rSetting.mZCompareFunc),
+               (rSetting.mFlags & EmitterDrawSetting::FLAG_ZCOMP_ENABLE_UPDATE) != 0);
 
-    if (rSetting.mFlags & EmitterDrawSetting::FLAG_FOG_ENABLE) {
-        GXFogType type;
-        f32 start, end, near, far;
-        GXColor color;
+    // Older revision (News Channel): no FLAG_FOG_ENABLE, the fog of the
+    // DrawInfo is always used.
+    GXFogType type;
+    f32 start, end, near, far;
+    GXColor color;
 
-        rInfo.GetFog(&type, &start, &end, &near, &far, &color);
-        GXSetFog(type, start, end, near, far, color);
-    } else {
-        GXColor color = {0, 0, 0, 0};
-        GXSetFog(GX_FOG_NONE, 0.0f, 100.0f, 0.0f, 100.0f, color);
-    }
+    rInfo.GetFog(&type, &start, &end, &near, &far, &color);
+    GXSetFog(type, start, end, near, far, color);
 }
 
 void DrawStrategyImpl::InitColor(ParticleManager* pManager,
@@ -978,7 +966,7 @@ DrawStrategyImpl::AheadContext::AheadContext(const math::MTX34& rViewMtx,
 
     mCommon.mEmitterCenter = center;
 
-    EmitterDrawSetting& rDesc = *pManager->mResource->GetEmitterDrawSetting();
+    EmitterDesc& rDesc = *pManager->mResource->GetEmitterDesc();
 
     switch (rDesc.typeDir) {
     case EmitterDrawSetting::DIR_NO_DESIGN: {
