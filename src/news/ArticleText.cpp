@@ -702,14 +702,13 @@ bool ArticleText::LayoutPicture(const math::VEC2* pos, f32 scale) {
         return false;
     }
 
+    math::VEC2 size;
     f32 maxHeight = lbl_80192348[lbl_80356970];
-    f32 size[2];
-    f32 maxWidth = mSmallPicture ? lbl_80192320[lbl_80356970] : lbl_801922F8[lbl_80356970];
-    f32 maxAspect = maxHeight / maxWidth;
+    size.x = mSmallPicture ? lbl_80192320[lbl_80356970] : lbl_801922F8[lbl_80356970];
+    f32 maxAspect = maxHeight / size.x;
     f32 texWidth = mPicture->width;
     f32 texHeight = mPicture->height;
-    size[0] = maxWidth;
-    size[1] = maxHeight;
+    size.y = maxHeight;
     f32 aspect = texHeight / texWidth;
 
     f32 labelHeight;
@@ -723,26 +722,26 @@ bool ArticleText::LayoutPicture(const math::VEC2* pos, f32 scale) {
         labelHeight = 10.0f;
     }
 
-    mPicTargetScale = aspect > maxAspect ? size[1] / texHeight : size[0] / texWidth;
+    mPicTargetScale = aspect > maxAspect ? size.y / texHeight : size.x / texWidth;
     texHeight *= mPicTargetScale;
-    if (size[1] > texHeight) {
-        size[1] = texHeight;
+    if (size.y > texHeight) {
+        size.y = texHeight;
     }
     texWidth *= mPicTargetScale;
 
-    f32 left = mRight - size[0];
-    mPicSize.y = size[1];
+    f32 left = mRight - size.x;
+    mPicSize.y = size.y;
     mSubTarget.x = left;
-    mPicSize.x = size[0];
+    mPicSize.x = size.x;
     mPicTarget.y = mCursor.y;
     mWrapRight = pos->x + left - mIndent;
-    size[1] = size[1] + labelHeight;
-    mPicBottom = mCursor.y + size[1];
-    mPicTarget.x = left + 0.5f * (size[0] - texWidth);
+    size.y = size.y + labelHeight;
+    mPicBottom = mCursor.y + size.y;
+    mPicTarget.x = left + 0.5f * (size.x - texWidth);
     mSubTarget.y = mPicBottom;
 
     if (mSub != NULL) {
-        mSub->mSize.x = size[0];
+        mSub->mSize.x = size.x;
         mSub->mSize.y = mPicSize.y;
         math::VEC2 origin(0.0f, 0.0f);
         mSub->Layout(&origin, 0.7f * scale);
@@ -765,7 +764,7 @@ bool ArticleText::LayoutPicture(const math::VEC2* pos, f32 scale) {
                 mTextTop = mPicBottom;
                 mPicLines = (s32)((mPicBottom - pos->y) / mLineHeight) + 1;
             } else {
-                mPicLines = (s32)(size[1] / mLineHeight) + 1;
+                mPicLines = (s32)(size.y / mLineHeight) + 1;
                 mTextTop = pos->y + mLineHeight * mPicLines;
             }
             return true;
