@@ -458,34 +458,34 @@ static inline void SetArticleText(SlideShow* s) {
 }
 
 static inline BOOL IsFirstArticle(SlideShow* s) {
-    if (s->mArticleIdx != 0) {
-        return FALSE;
-    }
-    if (!s->mLoop) {
+    if (s->mArticleIdx == 0) {
+        if (s->mLoop) {
+            for (s32 cat = s->mCategory; --cat >= 0;) {
+                if (GetCategory(cat)->mArticles != NULL) {
+                    return FALSE;
+                }
+            }
+            return TRUE;
+        }
         return TRUE;
     }
-    for (s32 cat = s->mCategory; --cat >= 0;) {
-        if (GetCategory(cat)->mArticles != NULL) {
-            return FALSE;
-        }
-    }
-    return TRUE;
+    return FALSE;
 }
 
 static inline BOOL IsLastArticle(SlideShow* s) {
     s32 cat = s->mCategory;
-    if ((u32)s->mArticleIdx < (u32)(GetCategory(cat)->mNumArticles - 1)) {
-        return FALSE;
-    }
-    if (!s->mLoop) {
+    if ((u32)s->mArticleIdx >= (u32)(GetCategory(cat)->mNumArticles - 1)) {
+        if (s->mLoop) {
+            while (++cat < (u32)lbl_803575E0) {
+                if (GetCategory(cat)->mArticles != NULL) {
+                    return FALSE;
+                }
+            }
+            return TRUE;
+        }
         return TRUE;
     }
-    while (++cat < (u32)lbl_803575E0) {
-        if (GetCategory(cat)->mArticles != NULL) {
-            return FALSE;
-        }
-    }
-    return TRUE;
+    return FALSE;
 }
 
 void SlideShow::LoadArticle() {
