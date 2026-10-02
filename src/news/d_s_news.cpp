@@ -2434,7 +2434,8 @@ void Article_LayoutHeadline(s32 arg0, s32 arg1, f32 arg2) {
 }
 
 void Article_Layout(s32 arg, f32 y) {
-    if ((s32)(60.0f + sCreditView->mY) <= (s32)sArticleSize.y) {
+    f32 bottom = sCreditView->mY;
+    if ((s32)(60.0f + bottom) <= (s32)sArticleSize.y) {
         sScrollLine = 0;
     }
     fn_80028DC8(lbl_80357568, arg, 0, y);
@@ -2750,11 +2751,13 @@ s32 Article_GetLineAt(const f32& offset) {
 
 
 BOOL Article_IsShort() {
-    return IsArticleShort();
+    f32 bottom = sCreditView->mY;
+    return (s32)(60.0f + bottom) <= (s32)sArticleSize.y;
 }
 
 void Article_PageUp(s32 size, const f32& offset) {
-    if ((s32)(60.0f + sCreditView->mY) <= (s32)sArticleSize.y) {
+    f32 bottom = sCreditView->mY;
+    if ((s32)(60.0f + bottom) <= (s32)sArticleSize.y) {
         sScrollLine = 0;
         return;
     }
@@ -2770,7 +2773,8 @@ void Article_PageUp(s32 size, const f32& offset) {
 }
 
 void Article_PageDown(s32 size, const f32& offset) {
-    if ((s32)(60.0f + sCreditView->mY) <= (s32)sArticleSize.y) {
+    f32 bottom = sCreditView->mY;
+    if ((s32)(60.0f + bottom) <= (s32)sArticleSize.y) {
         sScrollLine = 0;
         return;
     }
@@ -2786,7 +2790,8 @@ BOOL Article_IsAtTop() {
 }
 
 BOOL Article_IsAtBottom() {
-    if ((s32)(60.0f + sCreditView->mY) <= (s32)sArticleSize.y) {
+    f32 bottom = sCreditView->mY;
+    if ((s32)(60.0f + bottom) <= (s32)sArticleSize.y) {
         return TRUE;
     }
     return sScrollLine == GetMaxScrollLine();
