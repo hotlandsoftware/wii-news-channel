@@ -177,6 +177,8 @@ public:
             }
         }
 
+        inline void CopyTo(ConstructContext* pContext, u32 size);
+
         void MoveTo(void* pBuffer, u32 size) {
             const u32 tempRemain = mpTempStrmBufEnd - mpTempStrmBufPos;
             u8* pDst = static_cast<u8*>(pBuffer);
@@ -278,6 +280,7 @@ public:
     };
 
     static const u32 SIGNATURE = 'RFNA';
+
     static const u32 SIGNATURE_GLGR = 'GLGR';
     static const u32 SIGNATURE_FINF = 'FINF';
     static const u32 SIGNATURE_CMAP = 'CMAP';
@@ -335,6 +338,11 @@ protected:
 
     u16* mpGlyphIndexAdjustArray; // at 0x18
 };
+
+inline void ArchiveFontBase::CachedStreamReader::CopyTo(ConstructContext* pContext, u32 size) {
+    CopyTo(pContext->target.pCurrent, size);
+    pContext->Advance(size);
+}
 
 } // namespace detail
 } // namespace ut

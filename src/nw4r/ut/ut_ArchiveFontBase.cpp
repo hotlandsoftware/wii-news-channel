@@ -317,8 +317,7 @@ ArchiveFontBase::ConstructOpAnalyzeTGLP(ConstructContext* pContext, CachedStream
     }
 
     pContext->pFINF->pGlyph = reinterpret_cast<FontTextureGlyph*>(pContext->target.pCurrent);
-    pReader->CopyTo(pContext->target.pCurrent, sizeof(FontTextureGlyph));
-    pContext->Advance(sizeof(FontTextureGlyph));
+    pReader->CopyTo(pContext, sizeof(FontTextureGlyph));
 
     const bool bCompressed = (pContext->pFINF->pGlyph->sheetFormat & FONT_SHEET_FORMAT_COMPRESSED_FLAG) != 0;
     pContext->pFINF->pGlyph->sheetFormat &= FONT_SHEET_FORMAT_MASK;
