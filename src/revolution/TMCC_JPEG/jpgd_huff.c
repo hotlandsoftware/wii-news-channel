@@ -52,6 +52,7 @@ static inline s32 jpgdHuffDecodeSlow(JPEGHuffCode* codes, u8* vals, JPEGStream* 
     JPEGHuffCode hc;
     JPEGHuffCode hc2;
     u32 l;
+    u32 idx;
 
     FILL_BITS(s, 17);
     s->numBits -= 9;
@@ -68,8 +69,9 @@ static inline s32 jpgdHuffDecodeSlow(JPEGHuffCode* codes, u8* vals, JPEGStream* 
         code <<= 1;
         code |= (s->bits >> s->numBits) & 1;
     }
-    code = code - hc.code + hc.index;
-    return vals[code];
+    idx = code - hc.code;
+    idx += hc.index;
+    return vals[idx];
 }
 
 s32 fn_800898F4(s32* coef, s32* quant, s32* dcPred, JPEGDecContext* ctx) {
@@ -260,6 +262,7 @@ s32 fn_80089FB8(JPEGHuffCode* codes, u8* vals, JPEGDecContext* ctx) {
     JPEGHuffCode hc;
     JPEGHuffCode hc2;
     u32 l;
+    u32 idx;
 
     FILL_BITS(s, 17);
     s->numBits -= 9;
@@ -276,6 +279,7 @@ s32 fn_80089FB8(JPEGHuffCode* codes, u8* vals, JPEGDecContext* ctx) {
         code <<= 1;
         code |= (s->bits >> s->numBits) & 1;
     }
-    code = code - hc.code + hc.index;
-    return vals[code];
+    idx = code - hc.code;
+    idx += hc.index;
+    return vals[idx];
 }

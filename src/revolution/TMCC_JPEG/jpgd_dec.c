@@ -484,6 +484,8 @@ s32 fn_8008218C(JPEGDecContext* ctx, u32 x, u32 y) {
     u16 marker;
     u16 n;
     u16 mcusX;
+    u16 row;
+    u16 col;
     s32 ret;
 
     ctx->scan.restartCount++;
@@ -508,7 +510,9 @@ s32 fn_8008218C(JPEGDecContext* ctx, u32 x, u32 y) {
         }
         ctx->scan.nextRestart = (ctx->scan.nextRestart + 1) & 7;
         mcusX = h->mcusX;
-        n = (u16)(x / h->mcuWidth) + (u16)(y / h->mcuHeight) * mcusX + 1;
+        row = y / h->mcuHeight;
+        col = x / h->mcuWidth;
+        n = col + row * mcusX + 1;
         ctx->scan.dcPred[0] = 0;
         ctx->scan.dcPred[1] = 0;
         ctx->scan.dcPred[2] = 0;

@@ -12,15 +12,23 @@ void fn_80083554(s32* in, u8* out, u16 stride, s32 extent) {
     s32 t;
     s32 e0;
     s32 e1;
+    s32 d0;
+    s32 d1;
+    s32 d2;
+    s32 d3;
     s32 e13;
 
     ip = in + 24;
     wp = ws + 24;
     for (i = 0; i < 4; i++) {
-        t = ((ip[1] - ip[3]) * 181) >> 8;
-        e13 = t + (ip[3] + ip[1]);
-        e0 = ip[0] + ip[2];
-        e1 = ip[0] - ip[2];
+        d1 = ip[1];
+        d3 = ip[3];
+        d0 = ip[0];
+        d2 = ip[2];
+        t = ((d1 - d3) * 181) >> 8;
+        e13 = t + (d3 + d1);
+        e0 = d0 + d2;
+        e1 = d0 - d2;
         wp[0] = e0 + e13;
         wp[1] = e1 + t;
         wp[2] = e1 - t;
@@ -32,10 +40,14 @@ void fn_80083554(s32* in, u8* out, u16 stride, s32 extent) {
     wp = &ws[3];
     for (i = 3; i >= 0; i--) {
         u8* o = out + i;
-        t = ((wp[8] - wp[24]) * 181) >> 8;
-        e13 = t + (wp[24] + wp[8]);
-        e0 = (wp[0] + 0x40000) + wp[16];
-        e1 = (wp[0] + 0x40000) - wp[16];
+        d1 = wp[8];
+        d3 = wp[24];
+        d0 = wp[0] + 0x40000;
+        d2 = wp[16];
+        t = ((d1 - d3) * 181) >> 8;
+        e13 = t + (d3 + d1);
+        e0 = d0 + d2;
+        e1 = d0 - d2;
         o[0] = CLAMP_U8((e0 + e13) >> 11);
         o[stride] = CLAMP_U8((e1 + t) >> 11);
         o[stride * 2] = CLAMP_U8((e1 - t) >> 11);
@@ -74,15 +86,23 @@ void fn_800838D4(s32* in, u8* out, u16 stride, s32 extent) {
     s32 t;
     s32 e0;
     s32 e1;
+    s32 d0;
+    s32 d1;
+    s32 d2;
+    s32 d3;
     s32 e13;
 
     ip = in + 24;
     wp = ws + 24;
     for (i = 0; i < 4; i++) {
-        t = ((ip[1] - ip[3]) * 181) >> 8;
-        e13 = t + (ip[3] + ip[1]);
-        e0 = ip[0] + ip[2];
-        e1 = ip[0] - ip[2];
+        d1 = ip[1];
+        d3 = ip[3];
+        d0 = ip[0];
+        d2 = ip[2];
+        t = ((d1 - d3) * 181) >> 8;
+        e13 = t + (d3 + d1);
+        e0 = d0 + d2;
+        e1 = d0 - d2;
         wp[0] = e0 + e13;
         wp[1] = e1 + t;
         wp[2] = e1 - t;
@@ -94,10 +114,14 @@ void fn_800838D4(s32* in, u8* out, u16 stride, s32 extent) {
     wp = &ws[3];
     for (i = 3; i >= 0; i--) {
         s8* o = (s8*)out + i;
-        t = ((wp[8] - wp[24]) * 181) >> 8;
-        e13 = t + (wp[24] + wp[8]);
-        e0 = wp[0] + wp[16];
-        e1 = wp[0] - wp[16];
+        d1 = wp[8];
+        d3 = wp[24];
+        d0 = wp[0];
+        d2 = wp[16];
+        t = ((d1 - d3) * 181) >> 8;
+        e13 = t + (d3 + d1);
+        e0 = d0 + d2;
+        e1 = d0 - d2;
         o[0] = CLAMP_S8((e0 + e13) >> 11);
         o[8] = CLAMP_S8((e1 + t) >> 11);
         o[16] = CLAMP_S8((e1 - t) >> 11);
