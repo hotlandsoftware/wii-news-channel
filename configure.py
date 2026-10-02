@@ -866,6 +866,63 @@ config.libs = [
         ],
     },
     {
+        "lib": "kpad",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_rvl,
+        "progress_category": "sdk",
+        "objects": [
+            Object(Matching, "revolution/KPAD/KPAD.c"),
+        ],
+    },
+    {
+        "lib": "euart",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_rvl,
+        "progress_category": "sdk",
+        "objects": [
+            Object(Matching, "revolution/EUART/euart.c"),
+        ],
+    },
+    {
+        "lib": "usb",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_rvl,
+        "progress_category": "sdk",
+        "objects": [
+            Object(Matching, "revolution/USB/usb.c"),
+        ],
+    },
+    {
+        "lib": "wud",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_rvl,
+        "progress_category": "sdk",
+        "objects": [
+            Object(Matching, "revolution/WUD/WUD.c"),
+            Object(Matching, "revolution/WUD/WUDHidHost.c"),
+            Object(Matching, "revolution/WUD/debug_msg.c"),
+        ],
+    },
+    {
+        "lib": "tpl",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_rvl,
+        "progress_category": "sdk",
+        "objects": [
+            Object(Matching, "revolution/TPL/TPL.c"),
+        ],
+    },
+    {
+        "lib": "ndevexi2ad",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_rvl,
+        "progress_category": "sdk",
+        "objects": [
+            Object(Matching, "revolution/NdevExi2AD/DebuggerDriver.c", mw_version="GC/3.0a3", extra_cflags=["-i src/revolution/NdevExi2AD"]),
+            Object(Matching, "revolution/NdevExi2AD/exi2.c", extra_cflags=["-i src/revolution/NdevExi2AD"]),
+        ],
+    },
+    {
         # BTE part 2 (btm, btu, gap, hcicmds, hidd api/conn/mgmt)
         "lib": "bte_btm",
         "mw_version": "GC/3.0a3",

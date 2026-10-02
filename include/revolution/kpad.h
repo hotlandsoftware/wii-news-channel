@@ -111,7 +111,11 @@ typedef void (*KPADControlDpdCallback)(s32 chan, s32 reason);
 typedef WPADCallback KPADCallback;
 typedef WPADChannel KPADChannel;
 
-// Petari (Jun 2008) layout; not verified against our Jun 2007 KPAD.
+// Jun 2007 layout (0x528 bytes), checked against this DOL's KPAD.
+// CONFLICT (Petari, Jun 2008): the ring buffer has 16 entries, not 120, and
+// there are no pos/hori/dist/acc_play_mode fields at the end.
+#define KPAD_RING_BUFFER_SIZE 16
+
 typedef struct KPADInsideStatus {
     KPADStatus status;
 
@@ -136,7 +140,7 @@ typedef struct KPADInsideStatus {
     s16 valid_objs;
     u8 bufIdx;
     u8 bufCount;
-    KPADUnifiedWpadStatus uniRingBuf[120];
+    KPADUnifiedWpadStatus uniRingBuf[KPAD_RING_BUFFER_SIZE]; // at 0x110
     f32 sec_length;
     Vec2 sec_nrm;
     f32 sec_dist;
@@ -181,11 +185,7 @@ typedef struct KPADInsideStatus {
     u8 aimEnabled;
     u8 fsAccRevise;
     u8 padding;
-    KPADPlayMode pos_play_mode;
-    KPADPlayMode hori_play_mode;
-    KPADPlayMode dist_play_mode;
-    KPADPlayMode acc_play_mode;
-} KPADInsideStatus;
+} KPADInsideStatus; // size 0x528
 
 void KPADInit(void);
 
@@ -198,6 +198,19 @@ void KPADSetDistParam(s32, f32, f32);
 
 void KPADReset(void);
 s32 KPADRead(s32, KPADStatus[], u32);
+
+// Projection rectangle for KPADGetProjectionPos (an SDK "Rect").
+typedef struct KPADRect {
+    f32 left;   // at 0x0
+    f32 top;    // at 0x4
+    f32 right;  // at 0x8
+    f32 bottom; // at 0xC
+} KPADRect;
+
+void KPADGetProjectionPos(Vec2* dst, const Vec2* src, const KPADRect* projRect, f32 viewRatio);
+void KPADEnableAimingMode(s32 chan);
+void KPADDisableDPD(s32 chan);
+void KPADEnableDPD(s32 chan);
 
 extern KPADInsideStatus inside_kpads[];
 

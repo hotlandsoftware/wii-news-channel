@@ -1497,6 +1497,39 @@ revolution/WPAD/WPADEncrypt.c:
 revolution/WPAD/debug_msg.c:
 	.text       start:0x801428E0 end:0x80142930
 
+revolution/KPAD/KPAD.c:
+	.text       start:0x80142930 end:0x8014590C
+	.data       start:0x801E5EF0 end:0x801E5F48
+	.bss        start:0x8031BE40 end:0x8031D320
+	.sdata      start:0x803572F0 end:0x80357360
+	.sbss       start:0x80358368 end:0x80358388
+	.sdata2     start:0x80359F98 end:0x8035A008
+
+revolution/EUART/euart.c:
+	.text       start:0x8014590C end:0x80145C7C
+	.sbss       start:0x80358388 end:0x80358398
+
+revolution/USB/usb.c:
+	.text       start:0x80145C7C end:0x80146DA8
+	.data       start:0x801E5F48 end:0x801E65D8
+	.sdata      start:0x80357360 end:0x80357370
+	.sbss       start:0x80358398 end:0x803583A8
+
+revolution/WUD/WUD.c:
+	.text       start:0x80146DA8 end:0x8014B6A4
+	.data       start:0x801E65D8 end:0x801E74D8
+	.bss        start:0x8031D320 end:0x8031F2C8
+	.sdata      start:0x80357370 end:0x80357378
+	.sbss       start:0x803583A8 end:0x803583C8
+	.sdata2     start:0x8035A008 end:0x8035A010
+
+revolution/WUD/WUDHidHost.c:
+	.text       start:0x8014B6A4 end:0x8014BCA0
+	.data       start:0x801E74D8 end:0x801E7758
+
+revolution/WUD/debug_msg.c:
+	.text       start:0x8014BCA0 end:0x8014BCF0
+
 revolution/BTE/gki_buffer.c:
 	.text       start:0x8014BCF0 end:0x8014D134
 	.data       start:0x801E7758 end:0x801E78A0
@@ -1795,6 +1828,20 @@ revolution/BTE/sdp_utils.c:
 	.text       start:0x80178250 end:0x80179290
 	.rodata     start:0x801AEB30 end:0x801AEB40
 	.data       start:0x801ECE28 end:0x801ECF20
+
+revolution/TPL/TPL.c:
+	.text       start:0x80179290 end:0x801794A4
+	.data       start:0x801ECF20 end:0x801ECF50
+	.sdata      start:0x80357418 end:0x80357420
+	.sdata2     start:0x8035A068 end:0x8035A070
+
+revolution/NdevExi2AD/DebuggerDriver.c:
+	.text       start:0x801794A4 end:0x801797D8
+	.sdata      start:0x80357420 end:0x80357428
+	.sbss       start:0x80358400 end:0x80358418
+
+revolution/NdevExi2AD/exi2.c:
+	.text       start:0x801797D8 end:0x80179F64
 
 Runtime.PPCEABI.H/__va_arg.c:
 	.text       start:0x80179F80 end:0x8017A048
