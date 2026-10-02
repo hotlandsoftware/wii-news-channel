@@ -908,12 +908,14 @@ void SlideShow::CalcArrows() {
 void SlideShow::CalcTextPos() {
     if (mTextVisible) {
         f32 lineHeight = lbl_80357568->mLineHeight;
+        f32 area = 114.399994f;
         f32 height = fn_8003414C(lbl_80357568);
+        s32 lines = area / lineHeight;
         f32 ofs;
-        if (height < 114.399994f) {
-            ofs = 0.5f * (114.399994f - height);
+        if (height < area) {
+            ofs = 0.5f * (area - height);
         } else {
-            ofs = 0.5f * (114.399994f - lineHeight * (s32)(114.399994f / lineHeight));
+            ofs = 0.5f * (area - lineHeight * lines);
         }
         ofs += 10.0f;
         if (!mTextMoving) {
@@ -1814,18 +1816,23 @@ void SlideShow::DrawCaption(const wchar_t* text, u8 alpha, f32 x, f32 y, f32 wid
 
 void SlideShow::NextArticle() {
     s32 start = mCategory;
-    if (++mArticleIdx >= GetCategory(start)->mNumArticles) {
+    s32 num = GetCategory(start)->mNumArticles;
+    s32 numCategories = lbl_803575E0;
+    if (++mArticleIdx >= num) {
         if (mLoop) {
-            do {
-                if (++mCategory >= lbl_803575E0) {
+            for (;;) {
+                if (++mCategory >= numCategories) {
                     mCategory = 0;
                 }
                 if (start == mCategory) {
                     mArticleIdx = 0;
                     return;
                 }
-            } while (GetCategory(mCategory)->mArticles == NULL);
-            mArticleIdx = 0;
+                if (GetCategory(mCategory)->mArticles != NULL) {
+                    mArticleIdx = 0;
+                    return;
+                }
+            }
         } else {
             mArticleIdx = 0;
         }
@@ -1834,11 +1841,13 @@ void SlideShow::NextArticle() {
 
 void SlideShow::PrevArticle() {
     s32 start = mCategory;
+    s32 num = GetCategory(start)->mNumArticles;
+    s32 numCategories = lbl_803575E0;
     if (--mArticleIdx < 0) {
         if (mLoop) {
             for (;;) {
                 if (--mCategory < 0) {
-                    mCategory = lbl_803575E0 - 1;
+                    mCategory = numCategories - 1;
                 }
                 if (start == mCategory) {
                     mArticleIdx = GetCategory(mCategory)->mNumArticles - 1;
@@ -1851,7 +1860,7 @@ void SlideShow::PrevArticle() {
                 }
             }
         } else {
-            mArticleIdx = GetCategory(start)->mNumArticles - 1;
+            mArticleIdx = num - 1;
         }
     }
 }
