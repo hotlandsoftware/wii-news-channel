@@ -35,7 +35,8 @@ static ut::Color sTextColor(0, 0, 0, 255);
 static ut::Color sSelectColor(178, 0, 0, 255);
 
 #pragma explicit_zero_data on
-static f32 sStart[2] = {0.0f, 0.0f};
+static f32 sStartX = 0.0f;
+static f32 sStartY = 0.0f;
 #pragma explicit_zero_data reset
 
 static wchar_t sNoBreakBeforeChars[] = {
@@ -674,8 +675,9 @@ void ArticleText::HideAll() {
     }
 }
 
-static inline bool NeedsLineBreak(TextChar* last, f32 x, f32 right, f32 scale) {
-    if (last->mChar == L'\n') {
+static inline bool NeedsLineBreak(TextChar* last, const f32* x, f32 right, f32 scale) {
+    switch (last->mChar) {
+    case '\n':
         return true;
     }
     wchar_t next = last[1].mChar;
@@ -688,7 +690,7 @@ static inline bool NeedsLineBreak(TextChar* last, f32 x, f32 right, f32 scale) {
         case ' ':
             return false;
         }
-        if (x + scale * last[1].mWordWidth > right) {
+        if (*x + scale * last[1].mWordWidth > right) {
             return true;
         }
     }
@@ -776,7 +778,7 @@ bool ArticleText::LayoutPicture(const math::VEC2* pos, f32 scale) {
         } while (c != NULL);
 
         mCursor.x += wordWidth + space;
-        if (NeedsLineBreak(last, mCursor.x, mWrapRight, scale)) {
+        if (NeedsLineBreak(last, &mCursor.x, mWrapRight, scale)) {
             mCursor.x = mLeft;
             mNumLines++;
             mCursor.y += 1.25f * (last->mScaledHeight * scale);
@@ -792,8 +794,8 @@ void ArticleText::Layout(f32 scale) {
 }
 
 void ArticleText::Layout(const math::VEC2* pos, f32 scale) {
-    mCursor.x = sStart[0];
-    mCursor.y = sStart[1];
+    mCursor.x = sStartX;
+    mCursor.y = sStartY;
     mLeft = 0.0f;
     mRight = 0.0f;
     mWrapRight = 0.0f;
@@ -808,7 +810,7 @@ void ArticleText::Layout(const math::VEC2* pos, f32 scale) {
         scale = 0.7f;
     }
 
-    mBaseLineHeight = 1.25f * ((mFont->GetHeight() + lbl_803575CC) * mFontScale);
+    mBaseLineHeight = 1.25f * (((f32)mFont->GetHeight() + lbl_803575CC) * mFontScale);
     mPicLines = 0;
     mPicWrapped = false;
     mLineHeight = mBaseLineHeight * scale;
@@ -816,7 +818,7 @@ void ArticleText::Layout(const math::VEC2* pos, f32 scale) {
 
     if (mIsCaption) {
         mIndent = mFont->GetWidth();
-        mLeft = mCursor.x = pos->x;
+        mCursor.x = mLeft = pos->x;
         mRight = pos->x + mSize.x;
         mCursor.y = pos->y;
     } else {
@@ -825,7 +827,7 @@ void ArticleText::Layout(const math::VEC2* pos, f32 scale) {
         } else {
             mIndent = 0.5f * (scale * mFont->GetWidth());
         }
-        mLeft = mCursor.x = pos->x + mIndent;
+        mCursor.x = mLeft = pos->x + mIndent;
         mRight = mLeft + (mSize.x - 2.0f * mIndent);
         mCursor.y = pos->y;
     }
@@ -843,6 +845,7 @@ void ArticleText::Layout(const math::VEC2* pos, f32 scale) {
     mCursor.y = *top;
     mNumLines = mPicLines;
     s32 count = 0;
+    f32 scaleX;
     f32 bottom = mCursor.y + mLineHeight;
 
     TextChar* c = mChars;
@@ -853,11 +856,10 @@ void ArticleText::Layout(const math::VEC2* pos, f32 scale) {
 
         f32 width = right - mLeft;
         f32 wordWidth = scale * c->mWordWidth;
-        TextChar* last;
         if (mCursor.x == mLeft && wordWidth > width) {
-            f32 scaleX = width / wordWidth;
-            last = PlaceWord(c, scale, scaleX, mCursor, count);
-            switch (last[1].mChar) {
+            scaleX = width / wordWidth;
+            c = PlaceWord(c, scale, scaleX, mCursor, count);
+            switch (c[1].mChar) {
             case ' ':
             case '\n':
             case 0x3000:
@@ -870,16 +872,16 @@ void ArticleText::Layout(const math::VEC2* pos, f32 scale) {
                 break;
             }
         } else {
-            f32 scaleX = 1.0f;
-            last = PlaceWord(c, scale, scaleX, mCursor, count);
-            if (NeedsLineBreak(last, mCursor.x, right, scale)) {
+            scaleX = 1.0f;
+            c = PlaceWord(c, scale, scaleX, mCursor, count);
+            if (NeedsLineBreak(c, &mCursor.x, right, scale)) {
                 mCursor.x = mLeft;
                 mCursor.y += mLineHeight;
                 bottom = mCursor.y + mLineHeight;
                 mNumLines++;
             }
         }
-        c = last + 1;
+        c++;
     }
 
     mHeight = bottom;
