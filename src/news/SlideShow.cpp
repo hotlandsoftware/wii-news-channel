@@ -173,17 +173,13 @@ static inline const wchar_t* GetPictureCaption(NewsArticle* article) {
     return article->mPicture != NULL ? article->mPicture->caption : NULL;
 }
 
+static inline s32 ClampZero(s32 x) {
+    return x < 0 ? 0 : x;
+}
+
 static inline ut::Color operator-(const ut::Color& a, const ut::Color& b) {
-    ut::Color c;
-    s32 da = a.a - b.a;
-    s32 db = a.b - b.b;
-    s32 dg = a.g - b.g;
-    s32 dr = a.r - b.r;
-    c.g = dg < 0 ? 0 : dg;
-    c.r = dr < 0 ? 0 : dr;
-    c.b = db < 0 ? 0 : db;
-    c.a = da < 0 ? 0 : da;
-    return c;
+    return ut::Color(ClampZero(a.r - b.r), ClampZero(a.g - b.g), ClampZero(a.b - b.b),
+                     ClampZero(a.a - b.a));
 }
 
 SlideShow::SlideShow(u32 arc)
@@ -2040,20 +2036,13 @@ BOOL SlideShow::StartGrab(s32 chan, const ut::Rect* rect) {
     if (x > rect->left && x < rect->right && y > rect->top && y < rect->bottom) {
         if (!(lbl_801F0908[chan] & 0x400) && (gTrig[chan] & 0x200)) {
             mGrabbing[chan] = true;
-            if (chan != 0) {
-                mGrabbing[0] = false;
+            for (s32 i = 0; i < 4; i++) {
+                if (i != chan) {
+                    mGrabbing[i] = false;
+                }
             }
-            if (chan != 1) {
-                mGrabbing[1] = false;
-            }
-            if (chan != 2) {
-                mGrabbing[2] = false;
-            }
-            if (chan != 3) {
-                mGrabbing[3] = false;
-            }
-            mGrabStart[chan].x = mGrabPos[chan].x = lbl_801F0888[chan];
-            mGrabStart[chan].y = mGrabPos[chan].y = lbl_801F0898[chan];
+            mGrabPos[chan].x = mGrabStart[chan].x = lbl_801F0888[chan];
+            mGrabPos[chan].y = mGrabStart[chan].y = lbl_801F0898[chan];
             return TRUE;
         }
     }
