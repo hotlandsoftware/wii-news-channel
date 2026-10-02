@@ -69,6 +69,24 @@ news/SmallTextButton.cpp:
 	.sbss       start:0x803574D8 end:0x803574E0
 	.sdata2     start:0x80358890 end:0x803588A8
 
+news/SlideShow.cpp:
+	.text       start:0x8002101C end:0x80027674
+	.ctors      start:0x80191F24 end:0x80191F28
+	.data       start:0x801B1A00 end:0x801B1C38
+	.bss        start:0x801EDE90 end:0x801EDF08
+	.sdata      start:0x803568E8 end:0x80356948
+	.sbss       start:0x803574E0 end:0x80357528
+	.sdata2     start:0x803588A8 end:0x80358990
+
+news/ArticleText.cpp:
+	.text       start:0x80027674 end:0x8002A394
+	.ctors      start:0x80191F28 end:0x80191F2C
+	.data       start:0x801B1C38 end:0x801B1D68
+	.bss        start:0x801EDF08 end:0x801EDF30
+	.sdata      start:0x80356948 end:0x80356960
+	.sbss       start:0x80357528 end:0x80357538
+	.sdata2     start:0x80358990 end:0x803589F0
+
 news/Scroller.cpp:
 	.text       start:0x8002A394 end:0x8002A9D4
 	.data       start:0x801B1D68 end:0x801B1DB0
