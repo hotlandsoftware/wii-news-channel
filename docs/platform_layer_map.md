@@ -45,7 +45,7 @@ Anything matched there can be reused directly.
 | `0x800767C8–0x8007FE28` | 0x9660 | NWC24 | Jun 28 2007 | smg (Dec 2007) + ogws | 50% / 39% |
 | `0x8007FE28–0x8008A0A4` | 0xA27C | **Unidentified** self-contained lib (big unrolled functions, tables at `.rodata 0x801AACF0`) | — | none | — |
 | `0x8008A0A4–0x8008AA44` | 0x9A0 | ARC (`arc.c`, **done**) | — | **smg** | 100% |
-| `0x8008AA44–0x80096D2C` | 0xC2E8 | HBM core (`homebutton::*`) | HBM May 16 2007 (0x4199_60726) | tp `homebuttonLib` | GUIManager 91%, Anm/FrameController 100%, RemoteSpk 82%, Controller 51%, Base 22% |
+| `0x8008AA44–0x80096D2C` | 0xC2E8 | HBM core (`homebutton::*`, task 6 **done**: 6/6 Matching) | HBM May 16 2007 (0x4199_60726) | **ogws `homebuttonMiniLib`** (May 7 2007, same revision); tp `homebuttonLib` for the sound API | ogws: 70–100% per file before porting; tp: Base 22% |
 | `0x80096D2C–0x8009C720` | 0x59F4 | HBM sound (HBMAxSound / `mix`/`syn*`/`seq`; contains `vcmv_main.cpp`) | (HBM) | none (ss has the file list only) | — |
 | `0x8009C720–0x800BA03C` | 0x1D91C | nw4r::ef | — | ogws | ~50% |
 | `0x800BA03C–0x800CE740` | 0x14704 | nw4r::g3d | — | **ogws** | **done** (36/36 Matching) |
@@ -191,9 +191,37 @@ The HBM here is the May 2007 `homebuttonLib`. It is linked against the regular `
 | `HBMFrameController.cpp` | `0x80094418` | tp 100% |
 | `HBMGUIManager.cpp` | `0x800945B8` | tp 91% |
 | `HBMController.cpp` | `0x800959F0` | tp 51% |
-| `HBMRemoteSpk.cpp` | `0x80096BAC` | tp 82% |
+| `HBMRemoteSpk.cpp` | `0x80096538` | tp 82% |
 | `HBMAxSound.cpp` / `HBMCommon.cpp` | ≈`0x80096D2C`, a C++ file ends at `0x8009A3D0`† | none |
 | `mix`, `syn`, `synctrl`, `synenv`, `synmix`, `synpitch`, `synsample`, `synvoice`, `seq` | ≈`0x8009A3D0–0x8009C720` | none (ss has names and order only) |
+
+#### HBM core (Task 6, **done**): `0x8008AA44–0x80096D2C`, 6/6 Matching
+
+Lib `hbm` in `configure.py`, GC/3.0a5.2, `cflags_hbm` = `cflags_rvl` plus the lyt-style NW4R basics (`-DNW4R_MATH_VEC2_NO_DTOR`, `_VEC3_`, `_MTX34_`, `-DNW4R_UT_COLOR_DEFAULT_WHITE`, `-DNW4R_UT_RECT_DEFAULT_ZERO`; with the game's math types the weak `VEC2`/`MTX34` dtors show up). Unlike ogws, small data is on (default `-sdata`/`-sdata2`).
+Sources in `src/revolution/HBM/`, private headers in `include/revolution/hbm/` (`HBMCommon.h` umbrella, `HBMHomeButton.h` = ogws `HBMBase.h`, `HBMSdk.h` = SDK spellings our headers lack).
+
+| File | Range | Data | Status |
+| --- | --- | --- | --- |
+| `HBMBase.cpp` | `0x8008AA44–0x8009430C` | `.rodata 0x801AAF58–0x801AB208`, `.data 0x801CB670–0x801CC260`, `.bss 0x802AFF60–0x802AFF98`, `.sdata 0x80356DE0–0x80356EB0`, `.sbss 0x803578D0`, `.sdata2 0x80359070–0x803590E8` | Matching |
+| `HBMAnmController.cpp` | `0x8009430C–0x80094418` | `.data 0x801CC260` | Matching |
+| `HBMFrameController.cpp` | `0x80094418–0x800945B8` | `.sdata2 0x803590E8` | Matching |
+| `HBMGUIManager.cpp` | `0x800945B8–0x800959F0` | `.data 0x801CC270–0x801CC3C8`, `.sbss 0x803578D8`, `.sdata2 0x803590F0` | Matching |
+| `HBMController.cpp` | `0x800959F0–0x80096538` | `.bss 0x802AFF98–0x802B0128`, `.sbss 0x803578E0`, `.sdata2 0x80359100` | Matching |
+| `HBMRemoteSpk.cpp` | `0x80096538–0x80096D2C` | `.data 0x801CC3C8–0x801CC3D8`, `.sbss 0x803578E8` | Matching |
+
+Findings:
+- **The reference is ogws's `homebuttonMiniLib`, not tp.** Wii Sports' HOME Menu is the `May 7 2007` build of the same revision (`0x4199_60726`). Its files dropped in at 70–100% (Anm/FrameController, GUIManager, RemoteSpk 100%; `HomeButton::create`/`update`/`startPointEvent`/`startTrigEvent` 100%). tp's Sep 2006 HBM is much further away. The "MiniLib" differences are all in the sound handling.
+- **What the full HBM adds over ogws's MiniLib** (all in `HBMBase.cpp`): the C API `HBMDelete`, `HBMPlaySound`, `HBMUpdateSoundArchivePlayer`, `HBMSetSoundVolume`, `HBMStopSound`, `HBMCreateSound(void* soundData, void* memBuf, u32 memSize)` (a frame heap allocator `sSoundAllocator` plus a `MemorySoundArchive` set up from memory, unlike tp's NAND archive), `HBMDeleteSound`, `HBMUpdateSound`; `HomeButton::~HomeButton`, `createSound(SoundArchive*, bool)`, `deleteSound` (no `SoundSystem::ShutdownSoundSystem`), `stopSound()` (no `checkFlag`). Every sound-player access is wrapped in `AutoLock<OSMutex>(sMutex)`.
+- `sizeof(HomeButton)` is 0x768 with ogws's member list unchanged (some of ogws's offset comments are 4 bytes off).
+- In `calc`, the fade-out start sends sound event **6** instead of `HBM_SOUND_RETURN_APP` (3) when `HBM_SELECT_BTN3` was chosen (ogws skips the callback then). Added as `HBM_SOUND_RETURN_APP_BTN3` in `HBMSdk.h` (real name unknown).
+- `Controller::updateSound` (not in ogws) is tp's, with the time checks done in 32 bits: `OSTicksToMilliseconds((u32)OSGetTime() - (u32)mStopSoundTime)`. `~Controller` does not clear `sThis[chan]`.
+- `HBMStartBlackOut`, `HBMPlaySound` … `HBMStopSound`, `HBMSetBlackOutColor`, `HBMIsReassignedControllers` were added to `<revolution/hbm.h>` (C linkage). `HBMAllocMem`/`HBMFreeMem` are C++ (`HBMAllocMem__FUl`).
+- Header additions outside HBM: `ut::List_GetNthConst`/`GetNextConst`/`GetPrevConst` (`ut_list.h`), `lyt::ArcResourceAccessor::RES_TYPE_*` constants, `lyt::Pane::SetTranslate(const math::VEC2&)`.
+- `createSound` needed `void* pStrmBuffer;` declared before the size locals for its register allocation.
+- **Clients of the HBM API in the sound range** (Task 7): `fn_80096D2C` (`0x80096D2C`, right after `HBMRemoteSpk`) is a switch over an event number that tail-calls `HBMPlaySound(0x16…0x1B)`, so the HBM sound engine's first file starts there (or this is its sound-effect front end). `HBMUpdateSoundArchivePlayer`, `HBMSetSoundVolume` and `HBMStopSound` are called from `0x8009C1E4`–`0x8009C2C4`.
+- **HBM sound sources exist in tp**: `libs/revolution/src/homebuttonLib/sound/` has `mix.cpp`, `seq.cpp`, `syn.cpp`, `synctrl.cpp`, `synenv.cpp`, `synmix.cpp`, `synpitch.cpp`, `synsample.cpp`, `synvoice.cpp` (Sep 2006). Task 7 should start from them.
+- **`0x8009C720–0x8009D694`** (Task 7, not split): `fn_8009C720`/`fn_8009C724` are one-instruction tail calls into the HBM sound code (`fn_80098598`, `fn_8009C2FC`), `fn_8009C728` is a setter for `.sbss 0x80357908`, followed by the NAND/CNT loading helpers with C++ exception tables already described in the ef section.
+
 
 ### nw4r::ef (`0x8009C720–0x800BA03C`, ogws)
 
@@ -929,7 +957,7 @@ Difficulty: E = mostly drop-in, M = drop-in plus version fixes, H = little or no
 | 3 | RSO + CNT + ARC + SO/NCD (**done**, 8/10 Matching; SO starts `0x80074AE0`) | `0x80051D4C–0x80053274`, `0x8008A0A4–0x8008AA44`, `0x80074AE0–0x800767C8` | 15 KB | smg, ogws/fc, mkw | E–M |
 | 4 | NWC24 | `0x800767C8–0x8007FE28` | 38 KB | smg + ogws | M |
 | 5 | Identify and decompile the unknown library | `0x8007FE28–0x8008A0A4` | 41 KB | none | H |
-| 6 | HBM core | `0x8008AA44–0x80096D2C` | 49 KB | tp `homebuttonLib` | M–H |
+| 6 | HBM core (**done**, 6/6 Matching; ogws `homebuttonMiniLib` is the reference) | `0x8008AA44–0x80096D2C` | 49 KB | ogws `homebuttonMiniLib`, tp `homebuttonLib` | M–H |
 | 7 | HBM sound | `0x80096D2C–0x8009C720` | 23 KB | none | H |
 | 8 | ef part 1: draworder … resource (**done**, 7/8 Matching; ef starts `0x8009D694`, animcurve WIP) | `0x8009C720–0x800ABAE0` | 62 KB | ogws | M |
 | 9 | ef part 2: util, emform, drawstrategy (**done**, 14/20 Matching + the 3 g3d res files at `0x800B9690`) | `0x800ABAE0–0x800BA03C` | 58 KB | ogws | M |
