@@ -12,6 +12,9 @@ namespace nw4r {
 namespace snd {
 namespace detail {
 
+// This NW4R revision's BasicPlayer (layout from BasicPlayer::InitParam):
+// IsPrepared() is virtual, there is a second pan pair, and no remote
+// filter / pan mode / pan curve
 class BasicPlayer {
 public:
     BasicPlayer();

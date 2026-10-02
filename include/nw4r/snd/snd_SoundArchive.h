@@ -23,6 +23,8 @@ enum SoundType {
 
 class SoundArchive {
 public:
+    // NOTE (snd part 3): this NW4R revision's info structs (cf. TP's nw4hbm)
+    // have no remote filter / pan mode / release priority fields
     struct SoundInfo {
         u32 fileId;                // at 0x0
         u32 playerId;              // at 0x4

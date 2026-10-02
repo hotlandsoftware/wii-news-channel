@@ -8,24 +8,36 @@ namespace nw4r {
 namespace snd {
 namespace detail {
 
+// This NW4R revision's TaskThread (cf. TP's nw4hbm): a singleton woken by
+// messages
 class TaskThread {
 public:
-    TaskThread();
-    ~TaskThread();
+    static TaskThread& GetInstance();
 
     bool Create(s32 priority, void* pStack, u32 stackSize);
-    void Destroy();
+    void SendWakeupMessage();
 
 private:
+    enum ThreadMessage {
+        MSG_NONE,
+        MSG_EXECUTE,
+        MSG_DONE,
+    };
+
+    static const int MSG_QUEUE_CAPACITY = 2;
+
+private:
+    TaskThread() : mStackEnd(NULL), mCreateFlag(false) {}
+
     static void* ThreadFunc(void* pArg);
-    void ThreadProc();
 
 private:
-    OSThread mThread; // at 0x0
-    u32* mStackEnd;   // at 0x318
-
-    volatile bool mFinishFlag; // at 0x31C
-    bool mCreateFlag;          // at 0x31D
+    OSThread mThread;                         // at 0x0
+    OSThreadQueue mThreadQueue;               // at 0x318
+    OSMessageQueue mMsgQueue;                 // at 0x320
+    OSMessage mMsgBuffer[MSG_QUEUE_CAPACITY]; // at 0x340
+    void* mStackEnd;                          // at 0x348
+    bool mCreateFlag;                         // at 0x34C
 };
 
 } // namespace detail

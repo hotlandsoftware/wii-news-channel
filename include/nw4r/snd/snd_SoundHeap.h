@@ -25,7 +25,11 @@ public:
     bool Create(void* pBase, u32 size);
     void Destroy();
 
-    void Clear();
+    // Inline in this NW4R revision (no SoundThread lock)
+    void Clear() {
+        ut::detail::AutoLock<OSMutex> lock(mMutex);
+        mFrameHeap.Clear();
+    }
 
     int SaveState();
     void LoadState(int id);

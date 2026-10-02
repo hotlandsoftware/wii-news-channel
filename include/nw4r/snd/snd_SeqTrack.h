@@ -24,6 +24,8 @@ public:
     static const int VARIABLE_NUM = 16;
     static const int PRGNO_MAX = 0xFFFF;
 
+    // NOTE (snd part 3): no damper flag in this NW4R revision (cf. TP's
+    // nw4hbm), so that sizeof(MmlSeqTrack) == 0xD4
     struct ParserTrackParam {
         const u8* baseAddr;    // at 0x0
         const u8* currentAddr; // at 0x4

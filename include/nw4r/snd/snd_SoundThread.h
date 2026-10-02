@@ -17,20 +17,6 @@ class SoundThread {
 
 public:
     /******************************************************************************
-     * SoundFrameCallback
-     ******************************************************************************/
-    class SoundFrameCallback {
-    public:
-        NW4R_UT_LINKLIST_NODE_DECL(); // at 0x0
-
-        virtual ~SoundFrameCallback() {}    // at 0x8
-        virtual void OnBeginSoundFrame() {} // at 0xC
-        virtual void OnEndSoundFrame() {}   // at 0x10
-    };
-
-    NW4R_UT_LINKLIST_TYPEDEF_DECL(SoundFrameCallback);
-
-    /******************************************************************************
      * PlayerCallback
      ******************************************************************************/
     class PlayerCallback {
@@ -40,7 +26,6 @@ public:
         virtual ~PlayerCallback() {}               // at 0x8
         virtual void OnUpdateFrameSoundThread() {} // at 0xC
         virtual void OnUpdateVoiceSoundThread() {} // at 0x10
-        virtual void OnShutdownSoundThread() {}    // at 0x14
     };
 
     NW4R_UT_LINKLIST_TYPEDEF_DECL(PlayerCallback);
@@ -62,6 +47,10 @@ public:
 public:
     static SoundThread& GetInstance();
 
+    OSMutex& GetSoundMutex() {
+        return mMutex;
+    }
+
     bool Create(s32 priority, void* pStack, u32 stackSize);
     void Shutdown();
 
@@ -78,10 +67,9 @@ private:
     static const int MSG_QUEUE_CAPACITY = 4;
 
 private:
-    SoundThread();
+    SoundThread() : mStackEnd(NULL), mCreateFlag(false) {}
 
     static void AxCallbackFunc();
-    void AxCallbackProc();
 
     static void* SoundThreadFunc(void* pArg);
     void SoundThreadProc();
@@ -101,12 +89,13 @@ private:
     void* mStackEnd;                          // at 0x350
     mutable OSMutex mMutex;                   // at 0x354
 
-    AxManager::CallbackListNode mAxCallbackNode;    // at 0x36C
-    SoundFrameCallbackList mSoundFrameCallbackList; // at 0x378
-    PlayerCallbackList mPlayerCallbackList;         // at 0x384
+    AxManager::CallbackListNode mAxCallbackNode; // at 0x36C
+    PlayerCallbackList mPlayerCallbackList;      // at 0x378
 
-    u32 mProcessTick; // at 0x390
-    bool mCreateFlag; // at 0x394
+    u32 mProcessTick; // at 0x384
+    bool mCreateFlag; // at 0x388
+    // The instance in .bss is 0x3A8 bytes; these members are unused in our code
+    u8 UNK_0x38C[0x3A4 - 0x38C]; // at 0x38C
 };
 
 } // namespace detail

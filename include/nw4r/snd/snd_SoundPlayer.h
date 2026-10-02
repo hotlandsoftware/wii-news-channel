@@ -38,7 +38,7 @@ public:
 
     f32 detail_GetRemoteOutVolume(int idx) const;
 
-    void detail_InsertSoundList(detail::BasicSound* pSound);
+    inline void detail_InsertSoundList(detail::BasicSound* pSound);
     void detail_RemoveSoundList(detail::BasicSound* pSound);
 
     void detail_InsertPriorityList(detail::BasicSound* pSound);
@@ -77,7 +77,8 @@ public:
                                  detail::ExternalSoundPlayer* pExtPlayer);
 
     void detail_AppendPlayerHeap(detail::PlayerHeap* pHeap);
-    detail::PlayerHeap* detail_AllocPlayerHeap(detail::BasicSound* pSound);
+    inline detail::PlayerHeap*
+    detail_AllocPlayerHeap(detail::BasicSound* pSound);
     void detail_FreePlayerHeap(detail::BasicSound* pSound);
 
     int GetPlayingSoundCount() const {
@@ -114,8 +115,6 @@ private:
     int mOutputLineFlag;                        // at 0x30
     f32 mMainOutVolume;                         // at 0x34
     f32 mRemoteOutVolume[WPAD_MAX_CONTROLLERS]; // at 0x38
-
-    mutable OSMutex mMutex; // at 0x48
 };
 
 } // namespace snd

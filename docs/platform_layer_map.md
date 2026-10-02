@@ -219,6 +219,49 @@ Findings (this snd is between TP's `nw4hbm` snd and Wii Sports'):
   - **Shared headers (additive).** `ut_LinkList.h` (ogws `ConstIterator`, `ReverseIterator`, const iterators, `NW4R_UT_LINKLIST_*` macros, `DECLTYPE`), `ut_RuntimeTypeInfo.h` (`NW4R_UT_RTTI_DECL/DEF_*`), `cstring` (`std::strncpy/strncat`), `revolution/nand.h` (`NANDSeek`, `NANDSeekOrigin`), new `include/limits.h` and `include/climits`. `snd_RemoteSpeaker.cpp` defines `WPAD_SPEAKER_OFF/ON/PLAY` locally (guarded) until `wpad.h` has them; `snd_NandSoundArchive.cpp` `#undef`s the `RoundUp`/`RoundDown` macros from `revolution/mem/heapCommon.h`.
   - **Renamed outside the range** (names only): `IOStream::ReadAsync/Write/WriteAsync/IsBusy`, `FileStream::Cancel/CancelAsync`, `FileStream::typeInfo`, `Util::GetDataRefAddressImpl`, `Util::CalcRandom`, `BasicPlayer` (ctor, `InitParam`, `GetFxSend`, `GetRemoteOutVolume/Send/FxSend`), `BasicSound` (ctor, `InitParam`, `Shutdown`, `SetPlayerPriority`, `Is/DetachTempGeneralHandle`, the 15 vtable functions, `typeInfo`), `Channel::Release/Stop/UpdateSweep/SetSweepParam/FreeChannel`, `EnvGenerator::SetAttack/Decay/Sustain/Release`, `LfoParam::Init`, `PoolImpl::Create/Destroy/Alloc/FreeImpl`, `DisposeCallbackManager::GetInstance/Register/UnregisterDisposeCallback`, `VoiceManager::GetInstance` + the two lock functions, `Voice::Pause`, `WPADControlSpeaker`, `WPADCanSendStreamData`, `WPADSendStreamData`.
 
+#### snd part 3 (Task 13, **done**): `0x800DBE40–0x800E84D8`, 22/24 Matching
+
+Lib `nw4r_snd3`, GC/3.0a5.2, `cflags_nw4r_snd3` (= `cflags_nw4r`). Sources in `src/nw4r/snd/`, ported from ogws and changed to the older revision. The layouts follow TP's `nw4hbm/snd` headers, which are the same revision as far as part 3 is concerned (ogws is newer).
+
+| File | Text | Status |
+| --- | --- | --- |
+| `snd_SoundArchivePlayer.cpp` | `0x800DBE40–0x800DE7B0` | NonMatching, 99.99% (one function) |
+| `snd_SoundHandle.cpp` | `0x800DE7B0–0x800DE84C` | Matching |
+| `snd_SoundHeap.cpp` | `0x800DE84C–0x800DE9D8` | Matching |
+| `snd_SoundPlayer.cpp` | `0x800DE9D8–0x800DFB50` | Matching |
+| `snd_SoundStartable.cpp` | `0x800DFB50–0x800DFBBC` | Matching |
+| `snd_SoundSystem.cpp` | `0x800DFBBC–0x800DFD8C` | Matching |
+| `snd_SoundThread.cpp` | `0x800DFD8C–0x800E0198` | Matching |
+| `snd_StrmChannel.cpp` | `0x800E0198–0x800E03B8` | Matching |
+| `snd_StrmFile.cpp` | `0x800E03B8–0x800E07E0` | Matching |
+| `snd_StrmPlayer.cpp` | `0x800E07E0–0x800E2438` | Matching |
+| `snd_StrmSound.cpp` | `0x800E2438–0x800E274C` | Matching |
+| `snd_StrmSoundHandle.cpp` | `0x800E274C–0x800E2784` | Matching |
+| `snd_TaskManager.cpp` | `0x800E2784–0x800E2C8C` | NonMatching, 98.7% (`CancelByTaskId`) |
+| `snd_TaskThread.cpp` | `0x800E2C8C–0x800E2E0C` | Matching |
+| `snd_Voice.cpp` | `0x800E2E0C–0x800E5BA8` | Matching |
+| `snd_VoiceManager.cpp` | `0x800E5BA8–0x800E6248` | Matching |
+| `snd_Util.cpp` | `0x800E6248–0x800E65AC` | Matching |
+| `snd_WaveFile.cpp` | `0x800E65AC–0x800E67DC` | Matching |
+| `snd_WavePlayer.cpp` | `0x800E67DC–0x800E6ED4` | Matching |
+| `snd_WaveSound.cpp` | `0x800E6ED4–0x800E71C8` | Matching |
+| `snd_WaveSoundHandle.cpp` | `0x800E71C8–0x800E7200` | Matching |
+| `snd_WsdFile.cpp` | `0x800E7200–0x800E7548` | Matching |
+| `snd_WsdPlayer.cpp` | `0x800E7548–0x800E7C44` | Matching |
+| `snd_WsdTrack.cpp` | `0x800E7C44–0x800E84D8` | Matching |
+
+Findings:
+
+- **`SoundArchivePlayer` starts at `0x800DBE40`**, not `0x800DC00C`: the constructor and the four callback destructors come first. Part 2's `SoundArchiveLoader` ends there. Data: `.data 0x801CE460–0x801CE530`, `.bss 0x802D5D80–0x802D5FA0` (the 0x200 header buffer and the mutex of `StrmHeaderLoadTask::Execute`, both function-local statics, with the init guard at `.sbss 0x80357CA8`).
+- **Loading goes through Tasks.** `SoundArchivePlayer` (0xD8) holds `SeqLoadCallback` (implements part 2's `SeqSound::SeqLoader`), `SeqNoteOnCallback`, `WsdCallback` and `StrmCallback`. These queue `SeqLoadTask`, `StrmHeaderLoadTask` and `StrmDataLoadTask` (out-of-line constructor) in `TaskManager`'s unit heap. The task ID is the sound or player pointer, and `TaskManager::CancelByTaskId` cancels by that ID. Mutexes are used, with no interrupt lock. `StrmDataLoadTask` sets DVD priority 1 through `ut::DynamicCast<ut::DvdFileStream*>`.
+- **Older API.** `StartInfo` is `{startOffsetType (SAMPLE=0, MILLISEC=1), startOffset, playerId, playerPriority, voiceOutCount}` with no enable flags: an ID of `0xFFFFFFFF` or a negative priority means the archive's value is used. `SoundArchive::SoundInfo`, `SeqSoundInfo` and `WaveSoundInfo` have no remote filter, pan or release-priority fields. `detail_SetupSound` opens and closes the strm file before it allocates the sound. `PrepareSeqImpl` takes only the voice count. There is no `LoadGroup(const char*)`.
+- **sizeof fixes** needed by `SoundArchivePlayer`: `SoundPlayer` is 0x48 (no mutex), `MmlSeqTrack` is 0xD4 (no `damperFlag` in `ParserTrackParam`), `StrmSound` is 0x618 (0x18 unknown bytes after `mManager`), `PlayerHeap` is 0x3C.
+- **`ut::detail::AutoLock`** must lock through its constructor parameter (`Lock(rLockObj)`, as in TP's `nw4hbm/ut/Lock.h`), not through the member. Otherwise the register allocation changes (`SeqLoadTask`/`StrmDataLoadTask::Execute`). `SoundThread` gets `GetSoundMutex()`, and `SoundArchivePlayer::Update` locks it with `AutoLock<OSMutex>`, not `SoundThread::AutoLock`.
+- **`Voice::CalcAXPBMIX`** (matching) computes 12 volumes (`AxVoice::MixParam`: L/R/S for main and aux A/B/C) in staged `switch (GetOutputMode())` blocks: init, main out volume, pan (`CalcPanRatio`, `CalcVolumeRatio(-3.0f)`), surround pan, sends. In DPL2 mode, aux C L/R/S are reused as the right-surround channels through `f32&` references (`m_sr = c_l`, …), like ogws's `CalcMixParam`; without the references the `frsp`s go away. The u16 conversion must be written out as `ut::Min<u32>(USHRT_MAX, static_cast<u32>(AX_MAX_VOLUME * x))`, because the `CalcMixVolume` inline evaluates the product twice in the aliased cases. `CalcAXPBRMTMIX` needs `f32&` per remote and the send values in locals.
+- **MWCC switch trees.** Which `case` labels exist changes the compare tree even when their bodies are empty. With cases {0 empty, 1, 3 empty}, MWCC emits `cmpwi 2; beq; bge; cmpwi 0; beq; bge; b`. With {0, 1, 2, 3} where 2 and 3 are empty, the empty cases are dropped and the tree becomes `cmpwi 1; …`. So `StrmPlayer::Prepare`/`UpdateLoadingBlockIndex` have no `RESULT_CANCELED` case (`UpdateLoadingBlockIndex` lists `FAILED` first, which gives the block order). `CalcAXPBMIX` uses `case STEREO: break; … case MONO: default: break;` and `case STEREO: case SURROUND: default:`. A body that only folds away in the backend (`x *= 1.0f`, `v = v`) also keeps its case. Other order effects: in `StrmPlayer::SetupPlayer` the statements must come in this order: loop start block, last block, block size. The declaration order of `IsPrepared`/`IsStarted` sets the order in which the weak functions are emitted. `sPlayerList` must be defined before `mMramBuf` (bss order).
+- **Remaining:** `SoundArchivePlayer::StrmDataLoadTask::Execute` (two registers in the memcpy block swapped) and `TaskManager::CancelByTaskId` (the original keeps an `i * 12` offset induction variable and recomputes `this + off`; no source form found yet). `ExecuteSingle` matches with `(mCurrentTask = PopTask(…)) == NULL && …` and an `AutoLock`.
+- **Names aligned with parts 1/2:** `AxVoice::MixParam`/`SetMix(const MixParam&)`, `AxVoice::IsCurrentAddressCovered`, `Channel::Start(const WaveData&, int)`, `VoiceManager::Lock/UnlockUpdateVoicePriority`, `SeqSound::SeqLoader`/`Prepare(SeqLoader*, BasicSound*)`.
+
 ### nw4r::ut / math (`0x800E84D8–0x800F0F50`)
 
 The NW4R revision here has out-of-line `CharWriter`/`TextWriterBase` accessors, like TP's `nw4hbm` fork.
@@ -687,6 +730,9 @@ Difficulty: E = mostly drop-in, M = drop-in plus version fixes, H = little or no
 | 12 | snd part 2: MemorySoundArchive … SoundArchiveLoader | `0x800D5DC8–0x800DC00C` | 25 KB | ogws | M |
 | 13 | snd part 3: SoundArchivePlayer … end | `0x800DC00C–0x800E84D8` | 50 KB | ogws | M |
 | 14 | ut + math (rest) (**done**, 18/19 Matching) | `0x800E88E0–0x800F0B58` | 33 KB | tp `nw4hbm`, ogws | M |
+
+| 13 | snd part 3: SoundArchivePlayer … end (**done**, 22/24 Matching; starts `0x800DBE40`) | `0x800DC00C–0x800E84D8` | 50 KB | ogws | M |
+| 14 | ut + math (rest) | `0x800E88E0–0x800F0F50` | 34 KB | tp `nw4hbm`, ogws | M |
 | 15 | lyt | `0x800F0F50–0x800FB9EC` | 43 KB | tp `nw4hbm/lyt` | E–M |
 | 16 | BASE + OS (rest) + `__ppc_eabi_init` | `0x800FB9EC–0x80109434` | 55 KB | ogws/smg | E–M |
 | 17 | EXI, SI, DB, VI, MTX | `0x80109434–0x80112208` | 36 KB | ogws/smg | M |

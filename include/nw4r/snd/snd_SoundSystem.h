@@ -36,6 +36,10 @@ public:
     };
 
 public:
+    // Size of the static work area that InitSoundSystem(s32, s32) uses:
+    // both thread stacks plus the AxVoice, Voice and Channel manager work
+    static const int DEFAULT_WORK_SIZE = 0x15D88;
+
     static void InitSoundSystem(s32 soundThreadPrio, s32 dvdThreadPriority);
     static u32 GetRequiredMemSize(const SoundSystemParam& rParam);
 
@@ -76,7 +80,7 @@ public:
     }
 
 private:
-    static detail::TaskThread sTaskThread;
+    // TaskThread is a singleton in this NW4R revision (no sTaskThread)
 };
 
 } // namespace snd

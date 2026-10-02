@@ -22,26 +22,6 @@ public:
 public:
     /******************************************************************************
      *
-     * Pan info
-     *
-     ******************************************************************************/
-    enum PanCurve {
-        PAN_CURVE_SQRT,
-        PAN_CURVE_SINCOS,
-        PAN_CURVE_LINEAR,
-    };
-
-    struct PanInfo {
-        PanCurve curve;  // at 0x0
-        bool centerZero; // at 0x4
-        bool zeroClamp;  // at 0x5
-
-        PanInfo()
-            : curve(PAN_CURVE_SQRT), centerZero(false), zeroClamp(false) {}
-    };
-
-    /******************************************************************************
-     *
      * DataRef
      *
      ******************************************************************************/
@@ -136,11 +116,10 @@ public:
      ******************************************************************************/
     static f32 CalcPitchRatio(int pitch);
     static f32 CalcVolumeRatio(f32 db);
-    static f32 CalcPanRatio(f32 pan, const PanInfo& rInfo);
-    static f32 CalcSurroundPanRatio(f32 pan, const PanInfo& rInfo);
+    // This NW4R revision has a single (sqrt) pan curve
+    static f32 CalcPanRatio(f32 pan);
+    static f32 CalcSurroundPanRatio(f32 pan);
     static int CalcLpfFreq(f32 scale);
-    static void GetRemoteFilterCoefs(int filter, u16* pB0, u16* pB1, u16* pB2,
-                                     u16* pA1, u16* pA2);
     static u16 CalcRandom();
 
 private:
@@ -166,22 +145,7 @@ private:
     static const int PAN_TABLE_CENTER = PAN_TABLE_MAX / 2;
     static const int PAN_TABLE_SIZE = PAN_TABLE_MAX + 1;
     // tbl[idx] = sqrt(1 - (idx / PAN_TABLE_MAX))
-    static const f32 Pan2RatioTableSqrt[PAN_TABLE_SIZE];
-    // tbl[idx] = cos(idx * (PI / (2 * PAN_TABLE_MAX)))
-    static const f32 Pan2RatioTableSinCos[PAN_TABLE_SIZE];
-    // tbl[idx] = 1 - (idx * (1 / PAN_TABLE_MAX))
-    static const f32 Pan2RatioTableLinear[PAN_TABLE_SIZE];
-
-    // Pan curve tables
-    static const int PAN_CURVE_NUM = PAN_CURVE_LINEAR + 1;
-    static const f32* PanTableTable[PAN_CURVE_NUM];
-
-    // Biquad filter coefficients (b0, b1, b2, a1, a2)
-    static const int COEF_TABLE_MIN = 0;
-    static const int COEF_TABLE_MAX = REMOTE_FILTER_MAX;
-    static const int COEF_TABLE_SIZE = COEF_TABLE_MAX + 1;
-    static const int IIR_COEF_COUNT = 5;
-    static const u16 RemoteFilterCoefTable[COEF_TABLE_SIZE][IIR_COEF_COUNT];
+    static const f32 Pan2RatioTable[PAN_TABLE_SIZE];
 };
 
 } // namespace detail
