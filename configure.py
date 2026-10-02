@@ -889,7 +889,7 @@ config.libs = [
         "cflags": cflags_rvl,
         "progress_category": "sdk",
         "objects": [
-            Object(NonMatching, "revolution/USB/usb.c"),
+            Object(Matching, "revolution/USB/usb.c"),
         ],
     },
     {
