@@ -107,9 +107,9 @@ void fn_80032644();
 void fn_800329CC();
 void fn_80032A94(s32 arg);
 void fn_80032AC0(s32 category, s32 index, s32 arg);
-void fn_8003300C(const wchar_t* text, NewsPicture* picture, const math::VEC2* start,
-                 const math::VEC2* picPos, const f32* picScale, const math::VEC2* size, s32 arg,
-                 f32 scale);
+void fn_8003300C(NewsArticle* article, const wchar_t* category, NewsTexture* picture,
+                 const math::VEC2* start, const math::VEC2* picPos, const f32* picScale,
+                 const math::VEC2* size, s32 arg, bool flag, f32 scale);
 void fn_800332A0(const math::VEC2* pos, s32 arg, f32 scale);
 void fn_800332B4(const math::VEC2* pos, f32 scale);
 void fn_8003336C(f32 scale);
@@ -450,9 +450,8 @@ static inline void SetArticleText(SlideShow* s) {
     math::VEC2 start(0.0f, 0.0f);
     math::VEC2 size(s->mText.right - s->mText.left, s->mText.bottom - s->mText.top);
     NewsArticle* article = s->mArticle;
-    fn_8003300C((const wchar_t*)GetCategory(s->mCategory)->mName,
-                article->mPicture != NULL ? (NewsPicture*)article->mPicture->texture : NULL,
-                &start, &start, lbl_80356940, &size, 1, gTextScale);
+    fn_8003300C(article, GetCategory(s->mCategory)->mName, GetPictureTexture(article), &start,
+                &start, lbl_80356940, &size, 1, false, gTextScale);
     fn_800333C4(gTextScale);
     fn_80033538();
 }
@@ -526,9 +525,8 @@ void SlideShow::LoadArticle() {
 
     math::VEC2 pos(0.0f, 0.0f);
     math::VEC2 size(mText.right - mText.left, mText.bottom - mText.top);
-    fn_8003300C((const wchar_t*)GetCategory(mCategory)->mName,
-                mArticle->mPicture != NULL ? (NewsPicture*)mArticle->mPicture->texture : NULL, &pos,
-                &pos, lbl_80356940, &size, 1, gTextScale);
+    fn_8003300C(mArticle, GetCategory(mCategory)->mName, GetPictureTexture(mArticle), &pos, &pos,
+                lbl_80356940, &size, 1, false, gTextScale);
     fn_800333C4(gTextScale);
     fn_80033538();
     fn_8003483C();
