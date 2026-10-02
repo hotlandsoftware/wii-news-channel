@@ -1289,6 +1289,33 @@ revolution/PAD/Pad.c:
 	.text       start:0x80134BDC end:0x80134C38
 	.sbss       start:0x80358310 end:0x80358318
 
+revolution/WPAD/WPAD.c:
+	.text       start:0x80134C38 end:0x8013C398
+	.rodata     start:0x801AE688 end:0x801AE6C8
+	.data       start:0x801E4330 end:0x801E4628
+	.bss        start:0x80318660 end:0x8031BD88
+	.sdata      start:0x803572E0 end:0x803572F0
+	.sbss       start:0x80358318 end:0x80358348
+	.sdata2     start:0x80359F30 end:0x80359F38
+
+revolution/WPAD/WPADHIDParser.c:
+	.text       start:0x8013C398 end:0x80141838
+	.data       start:0x801E4628 end:0x801E4BC8
+	.bss        start:0x8031BD88 end:0x8031BDF0
+	.sbss       start:0x80358348 end:0x80358360
+	.sdata2     start:0x80359F38 end:0x80359F98
+
+revolution/WPAD/WPADMem.c:
+	.bss        start:0x8031BDF0 end:0x8031BE40
+
+revolution/WPAD/WPADEncrypt.c:
+	.text       start:0x80141838 end:0x801428E0
+	.data       start:0x801E4BC8 end:0x801E5EF0
+	.sbss       start:0x80358360 end:0x80358368
+
+revolution/WPAD/debug_msg.c:
+	.text       start:0x801428E0 end:0x80142930
+
 revolution/BTE/gki_buffer.c:
 	.text       start:0x8014BCF0 end:0x8014D134
 	.data       start:0x801E7758 end:0x801E78A0
