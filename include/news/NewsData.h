@@ -8,8 +8,10 @@ struct NewsTexture;
 struct NewsPicture;
 
 struct NewsLocationRec {
-    u32 nameOfs;  // at 0x0
-    u8 unk4[0x10 - 0x4];
+    u32 nameOfs;    // at 0x0
+    u16 latitude;   // at 0x4 (signed, 0x10000 = 360 degrees)
+    u16 longitude;  // at 0x6
+    u8 unk8[0x10 - 0x8];
 };
 
 // News file header (one file per downloaded hour). All offsets are relative to the file
