@@ -2444,12 +2444,24 @@ static inline f32 GetLogoHeight() {
             }
         } else {
             u32 index = GetSourceIconIndex();
-            if (index != 0xFFFF) {
+            if (index != -1) {
                 h = TPL_GetHeight(gCommonTpl, index);
             }
         }
         if (h > 0.0f) {
-            height = 20.0f + h * GetIconScale();
+            f32 scale = 1.0f;
+            switch (sSourceIconType) {
+            case 0:
+                scale = 0.5f;
+                break;
+            case 3:
+            case 4:
+            case 5:
+            case 6:
+                scale = 0.5f;
+                break;
+            }
+            height = 20.0f + h * scale;
         }
     }
     return height;
@@ -2555,7 +2567,7 @@ void Article_DrawSourceAndDate(math::VEC2* pos, s32 alpha) {
         }
     } else {
         u32 index = GetSourceIconIndex();
-        if (index != 0xFFFF) {
+        if (index != -1) {
             f32 w = TPL_GetWidth(gCommonTpl, index);
             f32 h = TPL_GetHeight(gCommonTpl, index);
             math::VEC3 lp(p.x, p.y - h, 0.0f);
@@ -2588,7 +2600,7 @@ void Article_DrawSourceAndDate(math::VEC2* pos, s32 alpha) {
 void Article_DrawSourceIcon(math::VEC2* pos, BOOL right, f32 alpha) {
     u32 index = GetSourceIconIndex();
     f32 scale = gTextScale * GetIconScale();
-    if (index != 0xFFFF) {
+    if (index != -1) {
         ut::Color color(255, 255, 255, 255.0f * alpha);
         f32 w = scale * TPL_GetWidth(gCommonTpl, index);
         f32 y = (pos->y - scale * TPL_GetHeight(gCommonTpl, index)) - 5.0f;
@@ -2606,14 +2618,15 @@ void Article_DrawSourceIcon(math::VEC2* pos, BOOL right, f32 alpha) {
 }
 
 void Article_DrawSourceLogo(math::VEC2* pos, BOOL right, f32 alpha) {
-    f32 scale = gTextScale * GetIconScale();
     NewsTexture* logo = sSourceLogo;
+    f32 scale = gTextScale * GetIconScale();
     if (logo) {
         ut::Color color(255, 255, 255, 255.0f * alpha);
         f32 y = (pos->y - scale * logo->height) - 5.0f;
+        f32 w = scale * logo->width;
         f32 x;
         if (right) {
-            x = (sArticleSize.x - 14.0f) - scale * logo->width;
+            x = (sArticleSize.x - 14.0f) - w;
         } else {
             x = 0.5f * (sBodyView->mFont->GetWidth() * gTextScale);
         }
