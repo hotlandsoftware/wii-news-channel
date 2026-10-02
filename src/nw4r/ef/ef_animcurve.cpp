@@ -162,6 +162,7 @@ void AnimCurveExecuteAlpha(u8* pCmdList, u8* pTarget, u32 tick, u16 seed,
     u8* pRandomTable = pRandom + pHeader->rangeTable;
 
     u32 loop = 0;
+    u32 nextLoop;
     u16 len = pHeader->frameLength;
     u16 frame;
     f32 time;
@@ -241,10 +242,11 @@ void AnimCurveExecuteAlpha(u8* pCmdList, u8* pTarget, u32 tick, u16 seed,
 
     int f = frame;
     AnimCurveKey* pKeyTable = reinterpret_cast<AnimCurveKey*>(pKey);
+    AnimCurveKeyU8* pKeys;
 
     int idx = pKeyTable->count - 1;
     int mid = idx / 2;
-    AnimCurveKeyU8* pKeys = reinterpret_cast<AnimCurveKeyU8*>(pKeyTable->datas);
+    pKeys = reinterpret_cast<AnimCurveKeyU8*>(pKeyTable->datas);
     int lo = 0;
     bool exact = static_cast<f32>(__fabs(f - time)) < NW4R_MATH_FLT_EPSILON;
 
@@ -303,14 +305,14 @@ found:
     if (exact) {
         pTheKey = &pKeys[idx];
     } else {
-    u32 nextLoop = loop;
+    nextLoop = loop;
     u8 flag = pHeader->processFlag;
 
     if ((flag & AnimCurveHeader::PROC_FLAG_TURN) &&
         ((flag & AnimCurveHeader::PROC_FLAG_INFLOOP) ||
          pHeader->loopCount > 1)) {
 
-        if (!(loop & 1) && idx + 1 >= pKeyTable->count - 1 &&
+        if (!(loop & 1) && idx + 1 >= *reinterpret_cast<u16*>(pKey) - 1 &&
             ((flag & AnimCurveHeader::PROC_FLAG_INFLOOP) ||
              loop < pHeader->loopCount - 1)) {
             nextLoop = loop + 1;
