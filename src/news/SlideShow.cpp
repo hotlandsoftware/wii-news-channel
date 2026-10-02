@@ -40,7 +40,7 @@ extern "C" s32 lbl_80357598;
 extern "C" s32 lbl_803575E0;      // number of categories
 extern "C" u8 lbl_8035697C;
 extern "C" s32 lbl_80356970;      // text size setting
-extern "C" u8 lbl_80356CA0;
+extern "C" bool lbl_80356CA0;
 extern "C" u8 lbl_8035772A;
 extern "C" const wchar_t* lbl_80357564; // title text
 extern "C" ArticleText* lbl_80357568;
@@ -406,8 +406,8 @@ SlideShow::~SlideShow() {
 static inline void ApplyView(SlideShow* s) {
     s->mViewWidth = s->mView.right - s->mView.left;
     s->mViewHeight = s->mView.bottom - s->mView.top;
-    s->mText.bottom = s->mView.bottom - 63.0f;
     s->mText.right = GetContentRight();
+    s->mText.bottom = s->mView.bottom - 63.0f;
     fn_80034CB8(s->mText.bottom - s->mText.top);
 }
 

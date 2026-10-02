@@ -79,9 +79,7 @@ public:
         }
         mSubState = state;
         mSubStateFrame = 0;
-        if (mSubState) {
-            (this->*mSubState)();
-        }
+        (this->*mSubState)();
     }
 
     Layout* mCurLayout;                   // at 0x000
