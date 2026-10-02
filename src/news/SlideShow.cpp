@@ -869,15 +869,14 @@ void SlideShow::Draw() {
 }
 
 void SlideShow::CalcArrows() {
-    f32 top = mView.top;
     f32 cx = mView.left + 0.5f * mViewWidth;
-    f32 upY = 2.0f + top;
-    f32 downY = (top + mViewHeight) - 2.0f;
+    f32 upY = 2.0f + mView.top;
+    f32 downY = (mView.top + mViewHeight) - 2.0f;
     f32 right = 20.0f + cx;
     f32 left = cx - 20.0f;
     f32 downBase = downY - 15.0f;
-    mUpArrow[0].x = cx;
     f32 upBase = 15.0f + upY;
+    mUpArrow[0].x = cx;
     mUpArrow[0].y = downY;
     mUpArrow[1].x = right;
     mUpArrow[1].y = downBase;
