@@ -1100,21 +1100,21 @@ void fn_80083000(JPEGTables* t, s32 dc, s32 ac) {
 s32 fn_80083098(u8* bits, u8* vals, JPEGHuffTable* t) {
     u32 huffsize[256];
     u32 huffcode[256];
+    u32* ps;
     JPEGHuffLookup* lookup;
     JPEGHuffCode* codes;
     u8* dstVals;
     u8 count;
     s32 i;
-    s32 j;
     s32 k;
-    u32* ps;
-    u8* bp;
+    s32 m;
     u16 code;
     u8 si;
     s32 l;
     s32 n;
     s32 shift;
     s32 base;
+    s32 j;
 
     lookup = t->lookup;
     codes = t->codes;
@@ -1124,28 +1124,31 @@ s32 fn_80083098(u8* bits, u8* vals, JPEGHuffTable* t) {
     i = 1;
     j = 1;
     ps = huffsize;
-    bp = bits + 1;
     k = 0;
-    do {
-        while (j <= *bp) {
-            *ps++ = i;
-            k++;
-            j++;
+    for (;;) {
+        if (j > bits[i]) {
+            i++;
+            j = 1;
+            if (i <= 16) {
+                continue;
+            }
+            huffsize[k] = 0;
+            break;
         }
-        i++;
-        j = 1;
-        bp++;
-    } while (i <= 16);
-    huffsize[k] = 0;
+        *ps++ = i;
+        k++;
+        j++;
+    }
 
     ps = huffsize;
     code = 0;
-    k = 0;
+    m = 0;
     si = huffsize[0];
     while (*ps != 0) {
         while ((u8)*ps == si) {
             ps++;
-            huffcode[k++] = code++;
+            huffcode[m++] = code;
+            code++;
         }
         if (code >= (1 << si)) {
             return -0x40;
@@ -1155,25 +1158,25 @@ s32 fn_80083098(u8* bits, u8* vals, JPEGHuffTable* t) {
     }
 
     memset(codes, 0, sizeof(JPEGHuffCode) * 17);
-    for (k = 0; k < count; k++) {
-        if (huffsize[k] <= 16) {
-            codes[huffsize[k]].index = k;
-            codes[huffsize[k]].code = huffcode[k];
+    for (i = 0; i < count; i++) {
+        if (huffsize[i] <= 16) {
+            JPEGHuffCode* c = &codes[huffsize[i]];
+            c->index = i;
+            c->code = huffcode[i];
         }
     }
 
-    k = 0;
-    for (l = 1; l <= 8; l++) {
-        shift = 8 - l;
-        for (i = 1; i <= bits[l]; i++) {
+    i = 0;
+    for (j = 1; j <= 8; j++) {
+        shift = 8 - j;
+        for (m = 1; m <= bits[j]; m++, i++) {
             n = 1 << shift;
-            base = huffcode[k] << shift;
+            base = huffcode[i] << shift;
             for (; n > 0; n--) {
-                lookup[base].len = l;
-                lookup[base].val = vals[k];
+                lookup[base].len = j;
+                lookup[base].val = vals[i];
                 base++;
             }
-            k++;
         }
     }
     memcpy(dstVals, vals, count);
