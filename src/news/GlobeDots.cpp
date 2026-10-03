@@ -5,6 +5,7 @@
 #include <nw4r/math/math_triangular.h>
 #include <nw4r/math/math_types.h>
 #include <revolution/gx.h>
+#include <string.h>
 
 using namespace nw4r;
 
@@ -27,12 +28,14 @@ static const f32 sGlobeDotTexCoords[3][2] = {
     {0.0f, 1.0f},
 };
 
-// Rotation of each dot about x and y: u16 angle units, as u16[GLOBE_DOT_COUNT][2]
-// (the extracted table is bytes).
-static const u8 sGlobeDotAngles[GLOBE_DOT_COUNT * 4] = {
+// Rotation of each dot about x and y (u16 angle units). The extracted table is
+// bytes, hence the union.
+static const union {
+    u8 bytes[GLOBE_DOT_COUNT * 4];
+    u16 angles[GLOBE_DOT_COUNT][2];
+} sGlobeDotAngles = {
 #include "news/GlobeDotAngles.inc"
 };
-#define DOT_ANGLES ((const u16(*)[2])sGlobeDotAngles)
 
 static const u8 sGlobeDotSizes[GLOBE_DOT_COUNT] = {
 #include "news/GlobeDotSizes.inc"
@@ -65,30 +68,31 @@ static inline f32 CosIdx(u16 idx) {
 
 GlobeDots::GlobeDots() {
     for (s32 i = 0; i < GLOBE_DOT_COUNT; i++) {
+        s32 idx = i * 3;
         f32 size = 0.0045f * sGlobeDotSizes[i];
         f32 size3 = 3.0f * size;
-        u16 rotX = DOT_ANGLES[i][0];
-        u16 rotY = DOT_ANGLES[i][1];
+        u16 rotX = sGlobeDotAngles.angles[i][0];
+        u16 rotY = sGlobeDotAngles.angles[i][1];
 
         Mtx mx, my, m;
         PSMTXRotTrig(mx, 'x', SinIdx(rotX), CosIdx(rotX));
         PSMTXRotTrig(my, 'y', SinIdx(rotY), CosIdx(rotY));
         PSMTXConcat(my, mx, m);
 
-        Vec v0 = sGlobeDotTemplate[0];
+        Vec v0 = *(Vec*)&sGlobeDotTemplate[0];
         v0.x = -size;
         v0.y = -size;
-        PSMTXMultVec(m, &v0, &mVerts[i][0]);
+        PSMTXMultVec(m, &v0, &mVerts[idx]);
 
-        Vec v1 = sGlobeDotTemplate[1];
+        Vec v1 = *(Vec*)&sGlobeDotTemplate[1];
         v1.x = size3;
         v1.y = -size;
-        PSMTXMultVec(m, &v1, &mVerts[i][1]);
+        PSMTXMultVec(m, &v1, &mVerts[idx + 1]);
 
-        Vec v2 = sGlobeDotTemplate[2];
+        Vec v2 = *(Vec*)&sGlobeDotTemplate[2];
         v2.x = -size;
         v2.y = size3;
-        PSMTXMultVec(m, &v2, &mVerts[i][2]);
+        PSMTXMultVec(m, &v2, &mVerts[idx + 2]);
     }
 }
 

@@ -19,7 +19,7 @@ public:
     void UpdateAlpha(f32 dx, f32 dy);
     void Draw();
 
-    Vec mVerts[GLOBE_DOT_COUNT][3]; // at 0x00000
+    Vec mVerts[GLOBE_DOT_COUNT * 3]; // at 0x00000
     u8 mAlpha;                      // at 0x4FF20
 };
 
