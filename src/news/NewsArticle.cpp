@@ -97,8 +97,9 @@ found:
         mCopyright = (wchar_t*)mFile->At(mSource->copyrightOfs);
     }
 
-    if (mFile->numLocations > mText->locationIdx && mFile->locationsOfs != 0) {
-        mLocation = (NewsLocationRec*)mFile->At(mFile->locationsOfs) + mText->locationIdx;
+    u32 loc = mText->locationIdx;
+    if (loc < mFile->numLocations && mFile->locationsOfs != 0) {
+        mLocation = (NewsLocationRec*)mFile->At(mFile->locationsOfs) + loc;
         mLocationName = (wchar_t*)mFile->At(mLocation->nameOfs);
         unk5C = wcslen(mLocationName) + 1;
         unk40 = new (&gNewsAllocator) wchar_t[unk5C];
