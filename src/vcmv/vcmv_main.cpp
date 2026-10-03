@@ -63,13 +63,18 @@ volatile u8 vcmvFading = TRUE;
 static u8 sSettingsKeyReleased = TRUE;
 static u8 sFirstFrame = TRUE;
 
-static inline f32 vcmvEase(s32 t, f32 from, f32 to, s32 dummy) {
-    if (t >= 7) {
+// Not inline: its dead out-of-line copy (stripped by the linker) is what puts
+// 3.0f and 2/3 before the int-to-float constant in the .sdata2 pool; 343 and 7
+// come from inlining it with frames = 7.
+f32 vcmvEase(s32 t, f32 from, f32 to, s32 unused, s32 frames) {
+#pragma unused(unused)
+    if (t >= frames) {
         return to;
     }
     {
-        f32 k = (3.0f * (to - from)) / 343.0f;
-        f32 a = (f32)t * (k * (f32)t); return a * (7.0f - (2.0f / 3.0f) * (f32)t) + from;
+        f32 k = (3.0f * (to - from)) / (frames * frames * frames);
+        f32 a = (f32)t * (k * (f32)t);
+        return a * (frames - (2.0f / 3.0f) * (f32)t) + from;
     }
 }
 
@@ -93,9 +98,9 @@ static void vcmvUpdateCursorAnim(volatile vcmvCursor* c) {
 
     c->drawY = c->fy;
     if (c->hold & 2) {
-        c->drawX = vcmvEase(t0, c->fx, vcmvCursorPressX, vcmvFrame - c->downFrame);
+        c->drawX = vcmvEase(t0, c->fx, vcmvCursorPressX, vcmvFrame - c->downFrame, 7);
     } else {
-        c->drawX = vcmvEase(t1, vcmvCursorPressX, c->fx, 0);
+        c->drawX = vcmvEase(t1, vcmvCursorPressX, c->fx, 0, 7);
     }
 }
 
