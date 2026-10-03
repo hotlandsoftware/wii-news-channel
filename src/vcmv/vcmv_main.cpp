@@ -170,13 +170,15 @@ static void vcmvReadClassic(volatile vcmvCursor* c, KPADStatus* k) {
 }
 
 static void vcmvUpdateController(s32 chan) {
-    KPADStatus* k = sKPads[chan];
-    volatile vcmvCursor* c = &vcmvCursors[chan];
-    u32 type;
-    u8 prevType;
-    s32 probe;
     u32 maxActive;
+    u8 prevType;
+    volatile vcmvCursor* c;
+    KPADStatus* k;
+    u32 type;
+    s32 probe;
 
+    c = &vcmvCursors[chan];
+    k = sKPads[chan];
     c->prevSpeed = k->speed;
     probe = WPADProbe(chan, &type);
     prevType = k->dev_type;
@@ -240,6 +242,7 @@ static void vcmvUpdateController(s32 chan) {
             }
         }
         goto pointer;
+    case WPAD_DEV_CORE:
     default:
         vcmvReadPointer(c, k);
     pointer:
@@ -252,7 +255,7 @@ static void vcmvUpdateController(s32 chan) {
     case WPAD_DEV_CLASSIC: {
         s32 sinceClassic = vcmvFrame - c->classicFrame;
         s32 sincePointer = vcmvFrame - c->pointerFrame;
-        if (k->ex_status.cl.hold != 0 || k->ex_status.cl.lstick.x != 0.0f || k->ex_status.cl.lstick.y != 0.0f) {
+        if (k->ex_status.cl.hold != 0 || k->ex_status.cl.lstick.x || k->ex_status.cl.lstick.y) {
             vcmvReadClassic(c, k);
             c->pointing = FALSE;
             c->classicFrame = vcmvFrame;
@@ -416,8 +419,8 @@ static void vcmvWheelEvent(s32 delta, s32 x, s32 y, volatile vcmvCursor* c) {
 }
 
 static void vcmvProcessInput(void) {
-    s32 i;
     volatile vcmvCursor* c;
+    s32 i;
 
     if (vcmvDialogOpen) {
         if (sFirstFrame) {
@@ -481,7 +484,7 @@ static void vcmvProcessInput(void) {
                             vcmvWheelEvent(1, c->x, c->y, c);
                             sWheelRepeat = vcmvFrame;
                             if (vcmvScreenWidth <= 640) {
-                                sWheelRepeat = vcmvFrame + 1;
+                                sWheelRepeat++;
                             }
                         }
                     } else if (c->trig & 8) {
@@ -495,7 +498,7 @@ static void vcmvProcessInput(void) {
                         vcmvWheelEvent(-1, c->x, c->y, c);
                         sWheelRepeat = vcmvFrame;
                         if (vcmvScreenWidth <= 640) {
-                            sWheelRepeat = vcmvFrame + 1;
+                            sWheelRepeat++;
                         }
                     }
                 }
