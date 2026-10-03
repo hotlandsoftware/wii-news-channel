@@ -565,7 +565,7 @@ config.libs = [
             Object(Matching, "news/Locale.cpp"),
             Object(Matching, "news/PointerEffect.cpp"),
             Object(Matching, "news/ErrorScreen.cpp"),
-            Object(NonMatching, "news/Model.cpp"),
+            Object(Matching, "news/Model.cpp"),
             Object(Matching, "news/main.cpp"),
             Object(Matching, "news/DrawUtil.cpp"),
             Object(Matching, "news/SmoothValue.cpp"),
@@ -581,8 +581,8 @@ config.libs = [
             Object(NonMatching, "news/GlobeDots.cpp"),
             Object(NonMatching, "news/System.cpp"),
             Object(NonMatching, "news/WiiConnect24.cpp"),
-            Object(NonMatching, "news/PointerScroll.cpp"),
-            Object(Matching, "news/MathUtil.cpp"),
+            Object(Matching, "news/PointerScroll.cpp"),
+            Object(NonMatching, "news/MathUtil.cpp"),
         ],
     },
     {
@@ -610,7 +610,7 @@ config.libs = [
         "cflags": cflags_game,
         "progress_category": "game",
         "objects": [
-            Object(NonMatching, "news/PaneLayout.cpp", extra_cflags=["-inline auto", "-ipa file"]),
+            Object(Matching, "news/PaneLayout.cpp", extra_cflags=["-inline auto", "-ipa file"]),
             Object(Matching, "news/PointerHistory.cpp"),
             Object(Matching, "news/Fader.cpp"),
             Object(Matching, "news/Thread.cpp"),

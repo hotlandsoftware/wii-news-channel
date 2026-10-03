@@ -66,6 +66,8 @@ public:
     void SetAlpha(s32 alpha);
     nw4r::lyt::Pane* FindPane(const char* name);
 
+    // 1 for a pane below the centre of the layout, -1 for one above it.
+    int GetSlideDir() { return mPane->GetTranslate().y > 0.0f ? 1 : -1; }
     void SetSlide(f32 step) { mOffsetY = step * (mPane->GetTranslate().y > 0.0f ? 1 : -1); }
     void SetBaseAlpha(s32 alpha) { mAlpha = alpha; }
 

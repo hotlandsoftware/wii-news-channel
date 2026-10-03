@@ -77,12 +77,11 @@ So each file ends with a `__sinit` that constructs it, and the `.ctors` table (`
   The constructor now matches: `u32 loc = mText->locationIdx; if (loc < mFile->numLocations && ...)`, with `loc` reused for the pointer add, loads `mText` before `mFile` and compares in the original order.
 - `MainScreen.cpp` (99.55%): see "MainScreen findings" below.
 - `GlobePin.cpp` (99.63%): see "Still NonMatching in 0x80007F58–0x8000FA38".
-- `SaveData.cpp` (98.90%): only `CheckNewsFiles` (97.8%), register allocation (see below). The first loop's `file`/`p` pair is r12/r23 in the original and r23/r12 in ours, whatever the declaration placement or local types.
-- `d_s_news.cpp` (98.97%): see "d_s_news.cpp (NewsScene) findings".
+- `SaveData.cpp` (98.90%): only `CheckNewsFiles` (97.8%), register allocation (see below). The first loop's `file`/`p` pair is r12/r23 in the original and r23/r12 in ours, whatever the declaration placement or local types. In the original the register of the first loop's `p` (r23) is reused for the header pointer of the "newest file" loop, and that loop's counter is r31, so the original probably declares its locals once at the top and reuses them. Wave 7: `srcsearch.py` (400 iterations, 3 restarts) found nothing.
+- `d_s_news.cpp` (99.24%): 9 functions left, see "d_s_news.cpp (NewsScene) findings" and "Wave 7" below.
 - `ArticleText.cpp` (97.24%): `GetPictureRect` (72.6%) loads `pic->height` early and numbers the floats in reverse (`left` f1 ... `top` f4). No statement order or conversion local reproduces it.
 - `SlideShow.cpp` (95.89%): constructor, `Draw`, `StateZoom`, `CheckInput` (scheduling and register allocation), `LoadArticle` (99.4%, zero constant r6 vs. r5 and the `SetViewToTarget` float numbering).
-- `Model.cpp` (94.23%): in `CalcMtx`, the original loads `rotate.y` after the prologue's register copies, right before the multiply. Ours hoists it to the top.
-  `math::MTX34RotXYZDeg(&gWorkMtx, 0.0f, rotate.y, 0.0f)` gets the registers right (constant in f0, `rotate.y` in f2) but not the schedule. Also tried: helper inlines taking the angle, the vector or the matrix; pointer and array access to `rotate.y`; locals for the constants; all compiler versions from 2.7 to 3.0a5.2; `-ipa file`, `-inline auto`.
+- `Model.cpp`, `PaneLayout.cpp` and `PointerScroll.cpp` are Matching since wave 7 (see "Wave 7" below).
 
 ## More codegen patterns
 
@@ -212,6 +211,37 @@ Details and the per-file notes are in `docs/platform_layer_map.md` ("Wave 7 poli
 - **Locals for a member read twice.** `u16 maxTasks = h->maxTasks; if (maxTasks > N || id >= maxTasks)` and `if (h->maxTasks > N || id >= h->maxTasks)` (with a local `h`) allocate differently; the second keeps the pointer's register for the loaded value.
 - **No global CSE in one function.** `#pragma opt_common_subs off` (or `-opt nocse`) keeps local value numbering but reloads after a join (`DrawFreeStrategy::Draw`).
 
+## Wave 7 (Model, PaneLayout, PointerScroll, d_s_news, SaveData)
+
+- **A load that stays behind the prologue means a non-const reference.** `Model::CalcMtx` loads `rotate.y` after all the register saves, right before the multiply. With `const math::VEC3&` MWCC hoists the load above the saves. Casting the constness away inside the function changes nothing; the parameter itself has to be `math::VEC3&` (the symbol is now `CalcMtx__5ModelFRQ34nw4r4math4VEC3`). With that, `math::MTX34RotXYZDeg(&gWorkMtx, 0.0f, rotate.y, 0.0f)` matches. Symbol names of private functions were made up by us, so the `RC` in a mangled name is not evidence.
+- **A getter inside a loop body changes the volatile registers.** `Layout::Calc`'s slide loop got the original counter/button registers as `mButtons[i]->mOffsetY = step * mButtons[i]->GetSlideDir();` inside the inline `Layout::SetSlide(f32)`, with `PaneButton::GetSlideDir()` returning `mPane->GetTranslate().y > 0.0f ? 1 : -1`. Calling `PaneButton::SetSlide(step)` (one inline that does both) swaps the two registers.
+- **`math::FAbs` vs. `__fabsf`.** The `Bgm_*` step computations (`FAbs(target - value) / frames`) put the `fabs` result in a new register; that is nw4r's inline-asm `FAbs` (`register f32 ret`), not `__fabsf`.
+- **`(f32)(f64)x` keeps an `frsp`.** `Bgm_SetSlideshowVolume` takes an `f32` (the caller loads it with `lfs`), stores it unconverted and subtracts an `frsp`'d copy: `mTarget = volume; mStep = FAbs((f32)(f64)volume - mValue) / 120.0f`. With an `f64` parameter the store and the subtraction share one `frsp`.
+- **Statement order from store order.** `Bgm_PlaySlideshow` sets the four targets first and the four steps after, like the other `Bgm_*` functions.
+- **Pointer sum order.** `xfb + width * (y + j) * 2 + x * 2` (not `xfb + x * 2 + ...`) gives the original hoisted `x * 2 + xfb` (`FillXfbRect`).
+- **Declare, then assign in load order.** `PostRetraceCallback` needed `u8* xfb; u16 width; u16 height; u32 size = gXfbSize; width = ...; height = ...; xfb = ...;`: registers follow the declarations, loads follow the assignments.
+- **`(*pin)->` everywhere.** `Pins_GetPointed` matched with every access through `*pin` (no `GlobePin* p` local), `f32 maxY = 393.0f;` declared after `pin`, the literal `63.0f`, and `gCursorY[...][0]` written out in both comparisons.
+- **A local for a global operand.** `f32 space = gCharSpaceScale; SetCharSpace(0.6f * space);` loads the global before the constant (`Article_Set`).
+- **Indexing instead of two walking pointers.** `NewsScene::Calc`'s BGM loop is `for (i...) if (IsSoundPlaying(&gBgmHandles[i])) { sBgmVolume[i].Update(); ... }`; hand-written `handle`/`volume` pointers swap the two `lis`.
+- **Trivial getters change FPR numbering.** `ArticleText::GetHeight()`/`GetLineHeight()` (added to `ArticleText.h`) fixed `Article_Arrange` (`f32 y = headline->GetHeight(); y += scale * logoHeight;` and `body->GetHeight() + body->GetLineHeight()`) and most of `Article_GetLineAt`. Direct member reads load in a different order.
+- **One expression instead of a named intermediate.** `math::VEC2 p(pos.x, pos.y + sBodyView->GetTop() - 8.0f * gTextScale);` matched `Article_Draw`; with `f32 y = pos.y + GetTop();` first, `y` and `pos.x` swap registers.
+- **Float declaration order.** `Draw2D_Texture`: `x0, x1, y0, y1, z` (each initialised where declared). `DrawTabRect`: `x0 = rect.left - w` first, then `left, right, top, bottom`.
+- **Colour temporaries.** `GXSetTevColor(reg, ut::Color(255, 255, 255, alpha))` (bytewise copy) and `GXSetTevColor(reg, (GXColor){48, 48, 48, 128.0f * t})` (word copy) both put the temporary below the by-value copy; a named local puts it above.
+- **Wrong constants hide behind a high percentage.** `SetupTexGX` was at 98.2% with three wrong enum values (`GX_CC_C0, GX_CC_C1`, `GX_LO_SET`, `GX_GREATER`) and unsigned viewport conversions (the original casts `fbWidth`/`efbHeight` to `s32`). Read every `li` difference.
+- **A `switch` with every case listed for a range check.** `switch (mSettings->mNewsLanguage) { case 0: ... case 6: ...; break; default: ... }` gives the original `cmpwi 7; bge; cmpwi 0; bge body; b default` (`StateStartup`); `lang < 7 && lang >= 0` gives `blt`.
+- **A `u8` local for a compared byte.** `u8 lang = file->languages[i]; if (lang == 0xFF) break; if (lang == gLanguage)` puts the loaded byte first in `cmplw`; comparing `file->languages[i]` directly puts the hoisted `gLanguage` first.
+- **PTMF temporaries and inline depth.** In `StateStartup` the two `ChangeState` temporaries were in each other's stack slots until the first call went through a one-line inline member (`StartLanguageSelect()`), one level deeper.
+- **Loop counters declared in the `for`.** `NewsScene::Draw`'s four pin loops are `for (u32 i = 0; ...)` each, with one shared `GlobePin** pin`.
+- **Name the difference before the stores.** `f32 x = ...; f32 y2 = y - h;` ahead of the five stores fixed `StateSlideshow`'s float numbering.
+- **Store order.** The constructor sets `mLogoPos.y` before `mLogoPos.z`. `TPLPalette* tpl = gCursorTpl;` before `0.5f * (GetScreenWidth() - TPL_GetWidth(tpl, 0))` loads the palette ahead of the screen-width test.
+- **Still NonMatching in `d_s_news.cpp` (99.24%).**
+  - `Article_GetMaxScrollOffset` (88.8%): unchanged. The original converts `headlineLines` (`xoris`) in the entry block and stores it twice later, shares one conversion slot between `line` and `creditStart`, and swaps `f29`/`f30` between the first and second inlined `GetLogoHeight()`. `GetMaxScrollLine()`, explicit casts and reordered locals all leave the score at 88.8%.
+  - `Article_DrawZoomedPicture` (95.6%) and `Article_GetZoomedPictureRect` (96.4%): not worked on in detail. In `GetZoomedPictureRect` the original reloads `sBodyView` for the caption and reloads `rect->bottom` after storing it; reading `rect->bottom` directly lowered the score.
+  - `InitNews` (97.4%), `Pins_Sort` (98.9%): callee-saved register permutations (`srcsearch.py` found nothing for `Pins_Sort`).
+  - `StateMain` (98.6%): `Fader::SetColors` does not read its `u8 alpha` (the callee overwrites `r5`), so the original call has one argument and the `li r5, 0xff` is the shared constant for `mLogoTargetAlpha` and `mColor.a`. Fixing it needs `Fader.h`/`Fader.cpp` and the symbol name changed (same case as `fn_800491EC` in MainScreen). The marker position code also keeps `GetScreenWidth() - GetSideMargin()` in its own register; locals, an inline and `z` locals did not reproduce it.
+  - `Article_GetLineAt` (99.6%): `y` (`f31` in the original) and the default logo height (`f29`) are swapped. `Article_PageUp` (99.1%): `sLinesPerPage[size]` and `sScrollLine` registers swapped. `PostRetraceCallback` (99.8%): `c` (`r24`) and the hoisted `counter / 8` (`r20`) swapped.
+  - **Linking.** The file still calls 34 functions of other files through stale `extern "C" fn_...` declarations (`Connect`, `SaveErrorDialog`, `Bubbles`, `GlobePin`, `MainScreen` members, `LoadSaveData`, ...; the list is at the top of the file). `symbols.txt` has the real names, so objdiff shows them as relocation differences and the file cannot link until they go through the real classes.
+
 ## Game code map
 
 | Range | File | Contents |
@@ -239,6 +269,9 @@ Block `0x8003CECC`–`0x80045238` (after `DrawUtil.cpp`, before `SmoothValue.cpp
 | `WiiConnect24.cpp` | `0x80040A70`–`0x800442EC` | `.data 0x801B2A20`–`0x801B3020`, `.bss 0x801F0B40`–`0x8020DC78`, `.sdata 0x80356C48`–`0x80356C60`, `.sbss 0x803576E8`–`0x80357708` | News download: requests (`WC24RequestDownload`/`Update`/`Register`/`Unregister`, one `CWiiConnect24` record of 0x1B8 bytes each in `gWC24Tasks[8]`) are queued to a worker thread (`ThreadMain`) that opens NWC24, registers/updates the hourly download task (`setupDlTasks`), runs it (`execDownload`, SO start-up), reads the 24 hourly files out of the task's VF archive (`readFiles`) and LZ77-decompresses them (`readLZ77FileEx`). `ConvertError` maps NWC24 errors to the codes `Connect` shows. NonMatching (99.6%; 14/16 functions). |
 | `PointerScroll.cpp` | `0x800442EC`–`0x80044508` | `.sdata2 0x80358E90` | `PointerScroll`: B + pointer above/below the centre scrolls with a repeat timer. NonMatching (99.6%; only `Update` is left). |
 | `MathUtil.cpp` | `0x80044508`–`0x80045238` | `.ctors 0x80191F44`, `.rodata 0x801A64A0`, `.bss 0x8020DC78`, `.sdata2 0x80358EB0` | Easing (`Ease`, `EaseAngle`, `Chase`, `CosineEase`), number formatting, calendar helpers (`MinutesToCalendarTime`, `GetCurrentMinutes`), matrix helpers, `__sinit` (the 28-byte piece at `0x8004521C`). Matching. |
+
+| `PointerScroll.cpp` | `0x800442EC`–`0x80044508` | `.sdata2 0x80358E90` | `PointerScroll`: B + pointer above/below the centre scrolls with a repeat timer. Matching. |
+| `MathUtil.cpp` | `0x80044508`–`0x80045238` | `.ctors 0x80191F44`, `.rodata 0x801A64A0`, `.bss 0x8020DC78`, `.sdata2 0x80358EB0` | Easing (`Ease`, `EaseAngle`, `Chase`, `CosineEase`), number formatting, calendar helpers (`MinutesToCalendarTime`, `GetCurrentMinutes`), matrix helpers, `__sinit` (the 28-byte piece at `0x8004521C`). NonMatching (99.4%; only the `VEC2` `Ease` is left). |
 
 Names given in this block (callers updated): `fn_80040994` = `MainHeapAlloc(u32, s32)`, `fn_800409EC` = `MainHeapFree`, `fn_800409F8` = `SubHeapFree`, `fn_80040A14` = `operator new(size_t, s32 align)`, `fn_80040A28` = `operator new(size_t, MEMAllocator*)`, `fn_80040778` = `StartRumble`, `fn_80040824` = `StopRumble`, `fn_80040764` = `SetPointerState`, `fn_80040960` = `Restart`, `fn_8003FB54` = `Draw2D_FillBox`, `fn_8003F7B4` = `LoadContentFile`, `fn_8003FD24` = `SetVideoMode`, the `fn_80040C0C`/`fn_80041090`/`fn_80041514`/`fn_80041964` download requests, and the System globals (`gMainHeap` = `lbl_80357640`, `gCurXfb`, `gXfbSize`, `gHold`, `gRelease`, `gHoldAll`, `gPointerX/Y`, `gRepeatSlow/Fast(All)`, `gKPADStatus`, `gProgressive`, `gAddressID`, `gWC24Tasks`, ...).
 
@@ -350,7 +383,7 @@ New globals named from this block: `gRandSeed` (`0x803576A0`, `include/news/Rand
 
 | File | `.text` | Data | Contents |
 | --- | --- | --- | --- |
-| `PaneLayout.cpp` | `0x80047B50`–`0x8004857C` | `.sdata 0x80356C90`, `.sdata2 0x80358F18` | `Layout`: a `.brlyt` whose top-level panes are `PaneButton`s (slide/fade in and out, hit test, find by name, draw). Built with `-inline auto -ipa file`. NonMatching, 99.95%: only `Layout::Calc` (99.71%) is left, a counter/button-pointer register swap in the slide loop. |
+| `PaneLayout.cpp` | `0x80047B50`–`0x8004857C` | `.sdata 0x80356C90`, `.sdata2 0x80358F18` | `Layout`: a `.brlyt` whose top-level panes are `PaneButton`s (slide/fade in and out, hit test, find by name, draw). Built with `-inline auto -ipa file`. Matching. |
 | `PointerHistory.cpp` | `0x8004857C`–`0x800488B0` | `.sdata2 0x80358F30` | `PointerHistory`: ring buffer of the last 10 pointer positions per channel (`gPointerHistory`, defined in `d_scene.cpp`). Matching. |
 | `Fader.cpp` | `0x800488B0`–`0x800492A0` | `.ctors 0x80191F4C`, `.data 0x801B3020`, `.bss 0x8020DE08`, `.sbss 0x80357708`, `.sdata2 0x80358F38` | `Fader`: full-screen gradient fade (`gFader`/`gFader2`, "m_pFade"/"m_pFade2"). Matching. |
 | `Thread.cpp` | `0x800492A0`–`0x800493A8` | – | `Thread`: `OSThread` with a 16 KB stack, started on construction, joined on destruction; `Restart`. Matching. |
@@ -403,6 +436,9 @@ Globals named from this block: `gHomeMenu`, `gFader`/`gFader2`, `gGlobe` (the si
 - `GlobeDots.cpp` (97.4%): `Draw` (93.7%): the original reads the first colour index of each unrolled group through a separate pointer induction variable.
 - `PointerScroll.cpp` (99.6%): `Update` (98.4%, induction-variable registers; declaration order, element pointers and explicit pointer increments all give the same code).
 - `MathUtil.cpp` is Matching (see the patterns below).
+
+- `PointerScroll.cpp`: Matching since wave 7. `Update` walks `timer`/`dir` pointers that are declared in that order and incremented in the loop header (`for (s32 i = 0; i < 4; i++, dir++, timer++)`), and indexes `gHold[i]`.
+- `MathUtil.cpp` (99.4%): the `VEC2` `Ease` (96.7%, the temporary and `diff` swap stack slots).
 
 More patterns from this block:
 - **Stack slots of struct copies (`VEC2` `Ease`).** The original computes the difference into the lowest slot, word-copies it to the slot right under `d`, and float-copies that to a third slot and to `d`. What reproduces it: an inline `SubLen(d, a, b)` with a local `VEC2 c; c = SubV(*a, *b); *d = c; return LenR(c);`, where `SubV` returns a `VEC2` by value. The return slot of an inline call nested in another inline is created before that inline's locals, the temporary inside `SubV` after them. An assignment from a temporary (`diff = VEC2(...)`) in the function itself moves the destination to a new slot below everything else, which is why no declaration order worked. The last slot (`e` of the final distance) only lands below the temporary when `DistP` is called through one more inline level (`DistR`).

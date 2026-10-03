@@ -249,6 +249,10 @@ public:
         }
     }
 
+    void StartLanguageSelect() {
+        ChangeState(&NewsScene::StateLanguageSelect);
+    }
+
     bool mInitialized;            // at 0xAC
     bool mFadeBgm;                // at 0xAD
     LanguageSelect* mLanguageSelect;  // at 0xB0
@@ -579,11 +583,12 @@ NewsScene::NewsScene()
     u32 logoWidth = TPL_GetWidth(gCommonTpl, sLogoIndex[gLanguage]);
     mLogoPos.x = 0.5f * GetScreenWidth() - 0.5f * logoWidth;
     u32 logoHeight = TPL_GetHeight(gCommonTpl, sLogoIndex[gLanguage]);
-    mLogoPos.z = 0.0f;
     mLogoPos.y = 228.0f - 0.5f * logoHeight;
+    mLogoPos.z = 0.0f;
 
     lbl_803575D0 = TPL_GetHeight(gCursorTpl, 0);
-    f32 x = 0.5f * (GetScreenWidth() - TPL_GetWidth(gCursorTpl, 0));
+    TPLPalette* tpl = gCursorTpl;
+    f32 x = 0.5f * (GetScreenWidth() - TPL_GetWidth(tpl, 0));
     lbl_801EDFA0.y = 68.0f;
     lbl_803575D4 = 68.0f;
     lbl_801EDFB8.x = x;
@@ -812,27 +817,26 @@ void NewsScene::Draw() {
                         fn_8000DFC4(lbl_80357580);
                     } else if (sSortedPins) {
                         GlobePin** pin;
-                        u32 i;
                         pin = sSortedPins;
-                        for (i = 0; i < sNumPins; i++, pin++) {
+                        for (u32 i = 0; i < sNumPins; i++, pin++) {
                             if (*pin && !(*pin)->mFront) {
                                 fn_8000D418(*pin, alpha);
                             }
                         }
                         pin = sSortedPins;
-                        for (i = 0; i < sNumPins; i++, pin++) {
+                        for (u32 i = 0; i < sNumPins; i++, pin++) {
                             if (*pin && !(*pin)->mFront) {
                                 fn_8000DAF8(*pin);
                             }
                         }
                         pin = sSortedPins;
-                        for (i = 0; i < sNumPins; i++, pin++) {
+                        for (u32 i = 0; i < sNumPins; i++, pin++) {
                             if (*pin && (*pin)->mFront) {
                                 fn_8000D418(*pin, alpha);
                             }
                         }
                         pin = sSortedPins;
-                        for (i = 0; i < sNumPins; i++, pin++) {
+                        for (u32 i = 0; i < sNumPins; i++, pin++) {
                             if (*pin && (*pin)->mFront) {
                                 fn_8000DAF8(*pin);
                             }
@@ -927,17 +931,6 @@ static inline void PlayPinHoverSE() {
     }
 }
 
-static inline void UpdateBgmVolume() {
-    snd::SoundHandle* handle = gBgmHandles;
-    SmoothValue* volume = sBgmVolume;
-    for (s32 i = 0; i < 4; i++, volume++, handle++) {
-        if (IsSoundPlaying(handle)) {
-            volume->Update();
-            SetSoundVolume(handle, volume->mValue);
-        }
-    }
-}
-
 void NewsScene::Calc() {
     if (gAllocFailed) {
         if (mState != &NewsScene::StateFatal) {
@@ -969,13 +962,10 @@ void NewsScene::Calc() {
         if (!lbl_803575BC && !lbl_803575BD) {
             PlayPinHoverSE();
         }
-        SmoothValue* volume = sBgmVolume;
-        snd::SoundHandle* handle = gBgmHandles;
-        s32 i = 0;
-        for (; i < 4; i++, handle++, volume++) {
-            if (IsSoundPlaying(handle)) {
-                volume->Update();
-                SetSoundVolume(handle, volume->mValue);
+        for (s32 i = 0; i < 4; i++) {
+            if (IsSoundPlaying(&gBgmHandles[i])) {
+                sBgmVolume[i].Update();
+                SetSoundVolume(&gBgmHandles[i], sBgmVolume[i].mValue);
             }
         }
         if (++sBlinkTimer >= 40) {
@@ -1180,8 +1170,8 @@ BOOL NewsScene::StateLanguageSelect() {
         mDraw = &NewsScene::DrawLanguageSelect;
         mLanguageSelect->Start();
         gFader->FadeIn(25);
-        lbl_803575BA = false;
         SetDPDAll(1);
+        lbl_803575BA = false;
         lbl_803575BB = false;
         break;
     default:
@@ -1223,25 +1213,6 @@ BOOL NewsScene::StateLanguageSelect() {
     return TRUE;
 }
 
-static inline f32 Abs(f32 x) {
-    return __fabsf(x);
-}
-
-static inline void SetBgmTarget(SmoothValue& v, f32 target, f32 frames) {
-    v.mTarget = target;
-    v.mStep = Abs(target - v.mValue) / frames;
-}
-
-static inline void SetBgmTargetStep(SmoothValue& v, f32 target, f32 step) {
-    v.mTarget = target;
-    v.mStep = step;
-}
-
-static inline void SetBgmTargetP(SmoothValue* v, f32 target, f32 frames) {
-    v->mTarget = target;
-    v->mStep = Abs(target - v->mValue) / frames;
-}
-
 void Bgm_MuteMain() {
     if (!IsSoundPlaying(&gBgmHandles[0])) {
         PlaySound(&gBgmHandles[0], 0x1C);
@@ -1253,8 +1224,8 @@ void Bgm_MuteMain() {
     sBgmVolume[1].mTarget = 0.0f;
     sBgmVolume[2].mTarget = 0.0f;
     sBgmVolume[3].mTarget = 0.0f;
-    sBgmVolume[0].mStep = Abs(sBgmVolume[0].mTarget - sBgmVolume[0].mValue) / 120.0f;
-    sBgmVolume[1].mStep = Abs(sBgmVolume[1].mTarget - sBgmVolume[1].mValue) / 120.0f;
+    sBgmVolume[0].mStep = math::FAbs(sBgmVolume[0].mTarget - sBgmVolume[0].mValue) / 120.0f;
+    sBgmVolume[1].mStep = math::FAbs(sBgmVolume[1].mTarget - sBgmVolume[1].mValue) / 120.0f;
     if (IsSoundPlaying(&gBgmHandles[2])) {
         StopSound(&gBgmHandles[2], 120);
     }
@@ -1308,8 +1279,8 @@ void Bgm_PlayMain(BOOL restart) {
     sBgmVolume[1].mTarget = 1.0f;
     sBgmVolume[2].mTarget = 0.0f;
     sBgmVolume[3].mTarget = 0.0f;
-    sBgmVolume[0].mStep = Abs(1.0f - sBgmVolume[0].mValue) / 60.0f;
-    sBgmVolume[1].mStep = Abs(1.0f - sBgmVolume[1].mValue) / 60.0f;
+    sBgmVolume[0].mStep = math::FAbs(1.0f - sBgmVolume[0].mValue) / 60.0f;
+    sBgmVolume[1].mStep = math::FAbs(1.0f - sBgmVolume[1].mValue) / 60.0f;
     sBgmVolume[2].mStep = 1.0f / 60.0f;
     sBgmVolume[3].mStep = 1.0f / 60.0f;
 }
@@ -1330,17 +1301,19 @@ void Bgm_PlaySlideshow() {
         StopSound(&gBgmHandles[2], 60);
     }
     sBgmVolume[0].mTarget = 0.0f;
-    sBgmVolume[0].mStep = 1.0f / 60.0f;
     sBgmVolume[1].mTarget = 0.0f;
-    sBgmVolume[1].mStep = 1.0f / 60.0f;
     sBgmVolume[2].mTarget = 0.0f;
+    sBgmVolume[3].mTarget = 1.0f;
+    sBgmVolume[0].mStep = 1.0f / 60.0f;
+    sBgmVolume[1].mStep = 1.0f / 60.0f;
     sBgmVolume[2].mStep = 1.0f / 60.0f;
-    SetBgmTarget(sBgmVolume[3], 1.0f, 60.0f);
+    sBgmVolume[3].mStep = math::FAbs(1.0f - sBgmVolume[3].mValue) / 60.0f;
 }
 
-void Bgm_SetSlideshowVolume(f64 volume) {
+void Bgm_SetSlideshowVolume(f32 volume) {
     sBgmVolume[3].mTarget = volume;
-    sBgmVolume[3].mStep = Abs((f32)volume - sBgmVolume[3].mValue) / 120.0f;
+    // The round trip through f64 keeps an frsp of the parameter for the difference.
+    sBgmVolume[3].mStep = math::FAbs((f32)(f64)volume - sBgmVolume[3].mValue) / 120.0f;
 }
 
 BOOL NewsScene::StateMain() {
@@ -1471,9 +1444,10 @@ BOOL NewsScene::StateSlideshow() {
         static f32 sMarkZ = 0.0f;
 #pragma pop
         f32 x = 4.0f + GetSideMargin();
+        f32 y2 = y - h;
         lbl_801EDF70.y = y;
         lbl_801EDF70.z = sMarkZ;
-        lbl_801EDF88.y = y - h;
+        lbl_801EDF88.y = y2;
         lbl_801EDF88.x = lbl_801EDF70.x = x;
         lbl_801EDF88.z = sMarkZ;
         break;
@@ -1530,15 +1504,23 @@ BOOL NewsScene::StateStartup() {
         mLoadResult = fn_8000A104();
         if (mLoadResult == 0) {
             if (mSettings->mLanguage == gLanguage) {
-                s32 lang = mSettings->mNewsLanguage;
-                if (lang < 7 && lang >= 0) {
+                switch (mSettings->mNewsLanguage) {
+                case 0:
+                case 1:
+                case 2:
+                case 3:
+                case 4:
+                case 5:
+                case 6:
                     lbl_80356970 = mSettings->mTextSize;
                     gTextScale = lbl_801922D0[lbl_80356970];
                     mStep = 6;
                     gSelectedNewsLanguage = mSettings->mNewsLanguage;
-                } else {
+                    break;
+                default:
                     gFader->FadeOut(25);
                     mStep = 4;
+                    break;
                 }
             } else {
                 mStep = 5;
@@ -1610,10 +1592,11 @@ BOOL NewsScene::StateStartup() {
         BOOL found = FALSE;
         if (mSettings->mNewsLanguage != gLanguage) {
             for (s32 i = 0; i < 16; i++) {
-                if (file->languages[i] == 0xFF) {
+                u8 lang = file->languages[i];
+                if (lang == 0xFF) {
                     break;
                 }
-                if (file->languages[i] == gLanguage) {
+                if (lang == gLanguage) {
                     found = TRUE;
                     break;
                 }
@@ -1635,7 +1618,7 @@ BOOL NewsScene::StateStartup() {
                 delete mLanguageSelect;
             }
             mLanguageSelect = new LanguageSelect((u32)mLayoutArc);
-            ChangeState(&NewsScene::StateLanguageSelect);
+            StartLanguageSelect();
         } else {
             mStep = 10;
             if (mSettings->mNewsLanguage != gLanguage && mLanguageSelect == NULL) {
@@ -1784,8 +1767,7 @@ void DrawLoadingScreen() {
     f32 scale = 0.75f + 0.25f * t;
     f32 w = scale * TPL_GetWidth(gCommonTpl, index);
     f32 h = scale * TPL_GetHeight(gCommonTpl, index);
-    GXColor color = {48, 48, 48, 128.0f * t};
-    GXSetTevColor(GX_TEVREG0, color);
+    GXSetTevColor(GX_TEVREG0, (GXColor){48, 48, 48, 128.0f * t});
     math::VEC3 p(x - 0.5f * w, y - 0.5f * h, 0.0f);
     Draw2D_Tex(gCommonTpl, index, &p, scale, scale);
 }
@@ -1852,7 +1834,7 @@ void PreRetraceCallback(u32 retraceCount) {}
 #pragma auto_inline off
 void FillXfbRect(u8* xfb, u16 width, u32 size, s32 x, s32 y, s32 w, s32 h, u8 y8) {
     for (s32 j = 0; j < h; j++) {
-        u8* p = xfb + x * 2 + width * (y + j) * 2;
+        u8* p = xfb + width * (y + j) * 2 + x * 2;
         for (s32 i = 0; i < w; i++) {
             if (p < xfb || p >= xfb + size) {
                 return;
@@ -1869,10 +1851,13 @@ void PostRetraceCallback(u32 retraceCount) {
         sLoadCounter = 0;
     }
     s32 counter = sLoadCounter;
+    u8* xfb;
+    u16 width;
+    u16 height;
     u32 size = gXfbSize;
-    u16 width = gRenderMode.fbWidth;
-    u16 height = gRenderMode.xfbHeight;
-    u8* xfb = (u8*)gCurXfb;
+    width = gRenderMode.fbWidth;
+    height = gRenderMode.xfbHeight;
+    xfb = (u8*)gCurXfb;
     s32 w = (width * 10) / GetScreenWidth();
     s32 h = (height * 10) / 456;
     s32 gap = (width * 6) / GetScreenWidth();
@@ -2181,12 +2166,11 @@ void Pins_Select(s32 category, s32 index, u8 state) {
 
 GlobePin* Pins_GetPointed(s32* category, s32* index) {
     GlobePin** pin = sSortedPins;
+    f32 maxY = 393.0f;
     for (u32 i = 0; i < sNumPins; i++, pin++) {
-        GlobePin* p = *pin;
-        if (p && p->mPointerChan >= 0) {
-            f32 y = gCursorY[p->mPointerChan][0];
-            if (y > 63.0f && y < 393.0f) {
-                *category = p->mCategory;
+        if (*pin && (*pin)->mPointerChan >= 0) {
+            if (gCursorY[(*pin)->mPointerChan][0] > 63.0f && gCursorY[(*pin)->mPointerChan][0] < maxY) {
+                *category = (*pin)->mCategory;
                 *index = (*pin)->mIndex;
                 return *pin;
             }
@@ -2275,7 +2259,8 @@ BOOL Article_Set(NewsArticle* article, const wchar_t* title, BOOL withPicture,
 
     gTextWriter.SetFont(*gSysFont);
     gTextWriter.SetScale(0.6f);
-    gTextWriter.SetCharSpace(0.6f * gCharSpaceScale);
+    f32 space = gCharSpaceScale;
+    gTextWriter.SetCharSpace(0.6f * space);
     if (lbl_80357564) {
         sTitleWidth = gTextWriter.CalcStringWidth(lbl_80357564);
     }
@@ -2393,9 +2378,11 @@ static inline f32 GetLogoHeight() {
 void Article_Arrange(f32 scale) {
     lbl_80357568->Layout(scale);
     f32 logoHeight = GetLogoHeight();
-    math::VEC2 pos(0.0f, lbl_80357568->mHeight + scale * logoHeight);
+    f32 y = lbl_80357568->GetHeight();
+    y += scale * logoHeight;
+    math::VEC2 pos(0.0f, y);
     sBodyView->Layout(&pos, scale);
-    pos.y = sBodyView->mHeight + sBodyView->mLineHeight;
+    pos.y = sBodyView->GetHeight() + sBodyView->GetLineHeight();
     sCreditView->Layout(&pos, scale);
 }
 
@@ -2578,8 +2565,7 @@ void Article_Draw(const math::VEC2& pos, s32 type, BOOL drawHeadline, f32 alpha,
     if (drawHeadline) {
         lbl_80357568->Draw(&pos, 0, alpha, 1.0f);
     }
-    f32 y = pos.y + sBodyView->GetTop();
-    math::VEC2 p(pos.x, y - 8.0f * gTextScale);
+    math::VEC2 p(pos.x, pos.y + sBodyView->GetTop() - 8.0f * gTextScale);
     if ((u32)(sSourceLayout - 3) <= 3) {
         if (sSourceIconType == 0) {
             Article_DrawSourceLogo(p, sSourceLayout != 6, alpha);
@@ -2626,9 +2612,10 @@ s32 Article_GetLineAt(const f32& offset) {
     ArticleText* headline = lbl_80357568;
     ArticleText* body = sBodyView;
     ArticleText* credit = sCreditView;
-    f32 bodyStart = headline->mHeight + logoHeight * gTextScale;
-    f32 bodyY = body->mHeight;
-    f32 creditStart = bodyY + body->mLineHeight;
+    f32 bodyStart = headline->GetHeight();
+    bodyStart += logoHeight * gTextScale;
+    f32 bodyY = body->GetHeight();
+    f32 creditStart = body->GetHeight() + body->GetLineHeight();
     f32 creditY = credit->mHeight;
     f32 headlineLH = headline->mLineHeight;
     f32 bodyLH = body->mLineHeight;
@@ -2801,10 +2788,10 @@ void Draw2D_Texture(NewsTexture* tex, const math::VEC3* pos, f32 scale) {
                  GX_CLAMP, GX_FALSE);
     GXLoadTexObj(&texObj, GX_TEXMAP0);
     f32 x0 = pos->x;
-    f32 y0 = pos->y;
-    f32 z = pos->z;
     f32 x1 = x0 + scale * tex->width;
+    f32 y0 = pos->y;
     f32 y1 = y0 + scale * tex->height;
+    f32 z = pos->z;
     GXBegin(GX_QUADS, GX_VTXFMT0, 4);
     GXPosition3f32(x0, y0, z);
     GXTexCoord2f32(0.0f, 0.0f);
@@ -3094,13 +3081,12 @@ static inline void SetTevColorWhite(u8 alpha) {
 
 void DrawTabRect(const ut::Rect& rect, u8 alpha, f32 z) {
     u32 w = TPL_GetWidth(gCommonTpl, 5);
+    f32 x0 = rect.left - w;
     f32 left = rect.left;
     f32 right = rect.right;
     f32 top = rect.top;
-    f32 x0 = left - w;
     f32 bottom = rect.bottom;
-    ut::Color color(255, 255, 255, alpha);
-    GXSetTevColor(GX_TEVREG0, color);
+    GXSetTevColor(GX_TEVREG0, ut::Color(255, 255, 255, alpha));
 
     GXTexObj texObj;
     TPL_GetTexObj(gCommonTpl, 5, &texObj);
@@ -3159,7 +3145,7 @@ void SetupTexGX() {
     GXColor black = {0, 0, 0, 0};
     GXSetTevColor(GX_TEVREG1, black);
     GXSetTevOrder(GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLOR_NULL);
-    GXSetTevColorIn(GX_TEVSTAGE0, GX_CC_ZERO, GX_CC_TEXC, GX_CC_C1, GX_CC_C2);
+    GXSetTevColorIn(GX_TEVSTAGE0, GX_CC_ZERO, GX_CC_TEXC, GX_CC_C0, GX_CC_C1);
     GXSetTevAlphaIn(GX_TEVSTAGE0, GX_CA_ZERO, GX_CA_TEXA, GX_CA_A0, GX_CA_A1);
     GXSetTevColorOp(GX_TEVSTAGE0, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, GX_TRUE, GX_TEVPREV);
     GXSetTevAlphaOp(GX_TEVSTAGE0, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, GX_TRUE, GX_TEVPREV);
@@ -3168,15 +3154,15 @@ void SetupTexGX() {
     GXSetNumTevStages(1);
     GXSetNumIndStages(0);
     GXSetTevSwapModeTable(GX_TEV_SWAP0, GX_CH_RED, GX_CH_GREEN, GX_CH_BLUE, GX_CH_ALPHA);
-    GXSetBlendMode(GX_BM_BLEND, GX_BL_SRCALPHA, GX_BL_INVSRCALPHA, GX_LO_NOOP);
+    GXSetBlendMode(GX_BM_BLEND, GX_BL_SRCALPHA, GX_BL_INVSRCALPHA, GX_LO_SET);
     GXSetZMode(GX_TRUE, GX_LEQUAL, GX_TRUE);
     GXSetZCompLoc(GX_FALSE);
-    GXSetAlphaCompare(GX_ALWAYS, 0, GX_AOP_AND, GX_ALWAYS, 0);
+    GXSetAlphaCompare(GX_GREATER, 0, GX_AOP_AND, GX_ALWAYS, 0);
     GXSetColorUpdate(GX_TRUE);
     GXSetAlphaUpdate(GX_FALSE);
     GXSetCullMode(GX_CULL_NONE);
     GXSetClipMode(GX_CLIP_ENABLE);
-    GXSetViewport(0.0f, 0.0f, gRenderMode.fbWidth, gRenderMode.efbHeight, 0.0f, 1.0f);
+    GXSetViewport(0.0f, 0.0f, (s32)gRenderMode.fbWidth, (s32)gRenderMode.efbHeight, 0.0f, 1.0f);
 }
 
 void OnExitRequested() {

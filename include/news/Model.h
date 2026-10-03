@@ -13,7 +13,7 @@ public:
 
     void Update();
     void Calc();
-    nw4r::math::MTX34 CalcMtx(const nw4r::math::VEC3& rotate);
+    nw4r::math::MTX34 CalcMtx(nw4r::math::VEC3& rotate);
     void Draw();
 
     nw4r::g3d::ResMdl GetResMdl() const { return mResMdl; }

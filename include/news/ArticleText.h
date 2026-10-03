@@ -107,6 +107,9 @@ public:
     f32 GetTop();
     bool GetPictureRect(nw4r::ut::Rect* rect);
 
+    f32 GetHeight() { return mHeight; }
+    f32 GetLineHeight() { return mLineHeight; }
+
     MEMAllocator* mAllocator;          // at 0x00
     nw4r::ut::CharWriter* mWriter;     // at 0x04
     const nw4r::ut::Font* mFont;       // at 0x08
