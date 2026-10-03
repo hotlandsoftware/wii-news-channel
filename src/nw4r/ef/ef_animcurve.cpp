@@ -2369,5 +2369,412 @@ void AnimCurveExecuteTexture(u8* pCmdList, Particle* pParticle, u32 tick,
         ((reverse & 3) << layer * 2);
 }
 
+struct AnimCurveChildData {
+    EmitterInheritSetting setting; // at 0x0
+    u16 nameIdx;                   // at 0x8
+};
+
+struct AnimCurveKeyChild {
+    u16 frame; // at 0x0
+    u8 PADDING_0x2[4];
+    u8 random; // at 0x6
+    u8 PADDING_0x7;
+    union {
+        AnimCurveChildData data; // at 0x8
+        u16 randomIdx;           // at 0x8
+    };
+};
+
+void createChild(u8* pKey, u16 seed, AnimCurveHeader* pHeader,
+                 AnimCurveNameTable* pNameTable,
+                 AnimCurveRandomTable* pRandomTable, Particle* pParticle,
+                 u32 loop) {
+    AnimCurveKeyChild* pChildKey = reinterpret_cast<AnimCurveKeyChild*>(pKey);
+    AnimCurveChildData* pData;
+
+    if (pChildKey->random == 0) {
+        pData = &pChildKey->data;
+    } else {
+        AnimCurveRandomSeed rnd;
+        rnd.value = seed * 0x3F81F635 + pHeader->randomSeed * 0x30A74193 +
+                    0x4BF53 +
+                    (loop * 0x7B929 + pChildKey->randomIdx * 0x371097E7);
+        rnd.bytes[2] ^= rnd.bytes[3];
+        rnd.bytes[1] ^= rnd.bytes[2];
+        rnd.bytes[0] ^= rnd.bytes[1];
+
+        if (pChildKey->random & AC_KEY_RANDOM_TABLE) {
+            if (pRandomTable->count == 0) {
+                return;
+            }
+
+            pData = reinterpret_cast<AnimCurveChildData*>(pRandomTable->datas) +
+                    (rnd.value >> 16) % pRandomTable->count;
+        }
+    }
+
+    EmitterResource* pResource = reinterpret_cast<EmitterResource*>(
+        pNameTable->datas[pData->nameIdx].work);
+
+    if (pResource == NULL) {
+        return;
+    }
+
+    if (pData->setting.type == 0) {
+        pParticle->mParticleManager->mManagerEM->mManagerEF->mManagerES
+            ->mCreationQueue.AddParticleCreation(&pData->setting, pParticle,
+                                                 pResource,
+                                                 pParticle->mCalcRemain);
+    } else {
+        pParticle->mParticleManager->mManagerEM->mManagerEF->mManagerES
+            ->mCreationQueue.AddEmitterCreation(&pData->setting, pParticle,
+                                                pResource,
+                                                pParticle->mCalcRemain);
+    }
+}
+
+inline u16 CalcFrameChild(AnimCurveHeader* pHeader, u32 tick, u32 life,
+                          u32& loop, bool& rEnd) {
+    u8 flag = pHeader->processFlag;
+    u16 frame;
+
+    if (!(flag & AnimCurveHeader::PROC_FLAG_INFLOOP) &&
+        pHeader->loopCount <= 1) {
+
+        if (!(flag & AnimCurveHeader::PROC_FLAG_FITTING)) {
+            if (tick >= pHeader->frameLength) {
+                frame = pHeader->frameLength;
+            } else {
+                frame = tick;
+            }
+        } else {
+            frame = pHeader->frameLength * tick / life;
+        }
+    } else if (!(flag & AnimCurveHeader::PROC_FLAG_FITTING)) {
+        frame = pHeader->frameLength;
+
+        if (frame <= 1 || !(flag & AnimCurveHeader::PROC_FLAG_TURN)) {
+            loop = tick / frame;
+
+            if (!(flag & AnimCurveHeader::PROC_FLAG_INFLOOP) &&
+                loop >= pHeader->loopCount) {
+                loop = static_cast<u8>(pHeader->loopCount - 1);
+            } else {
+                frame = tick - loop * frame;
+            }
+        } else {
+            u32 turnLen = frame - 1;
+            loop = tick / turnLen;
+
+            if (!(flag & AnimCurveHeader::PROC_FLAG_INFLOOP) &&
+                loop >= pHeader->loopCount) {
+                if (pHeader->loopCount % 2 == 0) {
+                    if (loop == pHeader->loopCount &&
+                        tick - loop * turnLen == 0) {
+                        rEnd = true;
+                    }
+
+                    frame = 0;
+                } else {
+                    frame = static_cast<u8>(turnLen);
+                }
+
+                loop = static_cast<u8>(pHeader->loopCount - 1);
+            } else if (!(loop & 1)) {
+                frame = tick - loop * turnLen;
+            } else {
+                frame = turnLen * (loop + 1) - tick;
+            }
+        }
+    } else if (tick >= life) {
+        if (!(flag & AnimCurveHeader::PROC_FLAG_TURN) ||
+            pHeader->loopCount % 2 != 0) {
+            frame = pHeader->frameLength;
+        } else {
+            frame = 0;
+        }
+
+        loop = static_cast<u8>(pHeader->loopCount - 1);
+    } else {
+        u32 len = pHeader->frameLength;
+
+        if (len <= 1 || !(flag & AnimCurveHeader::PROC_FLAG_TURN)) {
+            f32 ratio = pHeader->loopCount * (static_cast<f32>(len) / life);
+            loop = tick * ratio / len;
+            frame = tick * ratio - loop * len;
+        } else {
+            int turnLen = len - 1;
+            u8 loopCount = pHeader->loopCount;
+            f32 r = (1.0f + static_cast<f32>(turnLen) * loopCount) / life;
+            u32 time = tick * r;
+            loop = time / turnLen;
+
+            if (loop >= loopCount) {
+                if (loopCount % 2 == 0) {
+                    if (tick == life - 1) {
+                        rEnd = true;
+                    }
+
+                    frame = 0;
+                } else {
+                    frame = static_cast<u8>(turnLen);
+                }
+
+                loop = static_cast<u8>(loopCount - 1);
+            } else if (loop % 2 == 0) {
+                frame = time - loop * turnLen;
+            } else {
+                frame = turnLen * (loop + 1) - time;
+            }
+        }
+    }
+
+    return frame;
+}
+
+// Index of the first key at or after the frame
+inline int SearchKeyChildFwd(const AnimCurveKeyChild* pKeys, u16 numKey,
+                             int frame) {
+    int hi = numKey - 1;
+    int lo = 0;
+    int mid = hi / 2;
+
+    if (frame < pKeys[0].frame || frame == pKeys[0].frame) {
+        return 0;
+    }
+
+    if (pKeys[hi].frame < frame) {
+        return hi;
+    }
+
+    int val = pKeys[mid].frame;
+
+    while (lo < mid) {
+        if (frame == val) {
+            hi = mid;
+        } else {
+            if (val < frame) {
+                lo = mid;
+            }
+            if (val >= frame) {
+                hi = mid;
+            }
+        }
+
+        mid = (lo + hi) / 2;
+        val = pKeys[mid].frame;
+    }
+
+    return lo;
+}
+
+// Index of the last key at or before the frame
+inline int SearchKeyChildRev(const AnimCurveKeyChild* pKeys, u16 numKey,
+                             int frame) {
+    int hi = numKey - 1;
+    int lo = 0;
+    int mid = hi / 2;
+
+    if (frame < pKeys[0].frame) {
+        return 0;
+    }
+
+    if (pKeys[hi].frame < frame || frame == pKeys[hi].frame) {
+        return hi;
+    }
+
+    int val = pKeys[mid].frame;
+
+    while (lo < mid) {
+        if (frame == val) {
+            lo = mid;
+        } else {
+            if (val < frame) {
+                lo = mid;
+            }
+            if (val >= frame) {
+                hi = mid;
+            }
+        }
+
+        mid = (lo + hi) / 2;
+        val = pKeys[mid].frame;
+    }
+
+    return lo;
+}
+
+void AnimCurveExecuteChild(u8* pCmdList, Particle* pParticle, u32 tick,
+                           u16 seed, u32 life) {
+    AnimCurveHeader* pHeader = reinterpret_cast<AnimCurveHeader*>(pCmdList);
+
+    u8* pKey = pCmdList + sizeof(AnimCurveHeader);
+    u8* pRandom = pKey + pHeader->keyTable;
+    AnimCurveRandomTable* pRandomTable =
+        reinterpret_cast<AnimCurveRandomTable*>(pRandom + pHeader->rangeTable);
+    AnimCurveNameTable* pNameTable = reinterpret_cast<AnimCurveNameTable*>(
+        reinterpret_cast<u8*>(pRandomTable) + pHeader->randomTable);
+
+    u32 loop0 = 0;
+    bool end = false;
+    u16 frame0 = CalcFrameChild(pHeader, tick, life, loop0, end);
+
+    u32 loop1 = 0;
+    bool end1 = false;
+    u16 frame1 = CalcFrameChild(pHeader, tick + 1, life, loop1, end1);
+
+    AnimCurveKeyChild* pKeys = reinterpret_cast<AnimCurveKeyChild*>(pKey + 4);
+    AnimCurveKeyChild* pIt;
+    int i;
+
+    if (loop0 == loop1) {
+        if (frame0 == frame1) {
+            if (!end) {
+                return;
+            }
+
+            frame1 = 1;
+        }
+
+        if (frame0 < frame1) {
+            i = SearchKeyChildFwd(pKeys, *reinterpret_cast<u16*>(pKey), frame0);
+
+            for (pIt = &pKeys[i]; i < *reinterpret_cast<u16*>(pKey);
+                 i++, pIt++) {
+                if (pIt->frame >= frame0) {
+                    if (pIt->frame >= frame1) {
+                        return;
+                    }
+
+                    createChild(reinterpret_cast<u8*>(pIt), seed, pHeader,
+                                pNameTable, pRandomTable, pParticle, loop0);
+                }
+            }
+        } else {
+            i = SearchKeyChildRev(pKeys, *reinterpret_cast<u16*>(pKey), frame0);
+
+            for (pIt = &pKeys[i]; i >= 0; i--, pIt--) {
+                if (frame0 >= pIt->frame) {
+                    if (pIt->frame <= frame1) {
+                        return;
+                    }
+
+                    createChild(reinterpret_cast<u8*>(pIt), seed, pHeader,
+                                pNameTable, pRandomTable, pParticle, loop0);
+                }
+            }
+        }
+
+        return;
+    }
+
+    if (pHeader->processFlag & AnimCurveHeader::PROC_FLAG_TURN) {
+        bool odd = loop0 & 1;
+
+        if (!odd) {
+            i = SearchKeyChildFwd(pKeys, *reinterpret_cast<u16*>(pKey), frame0);
+
+            for (pIt = &pKeys[i]; i < *reinterpret_cast<u16*>(pKey);
+                 i++, pIt++) {
+                if (pIt->frame >= frame0) {
+                    if (pIt->frame == pHeader->frameLength - 1) {
+                        break;
+                    }
+
+                    createChild(reinterpret_cast<u8*>(pIt), seed, pHeader,
+                                pNameTable, pRandomTable, pParticle, loop0);
+                }
+            }
+        } else {
+            i = SearchKeyChildRev(pKeys, *reinterpret_cast<u16*>(pKey), frame0);
+
+            for (pIt = &pKeys[i]; i >= 0; i--, pIt--) {
+                if (frame0 >= pIt->frame) {
+                    if (pIt->frame == 0) {
+                        break;
+                    }
+
+                    createChild(reinterpret_cast<u8*>(pIt), seed, pHeader,
+                                pNameTable, pRandomTable, pParticle, loop0);
+                }
+            }
+        }
+
+        for (u32 l = loop0 + 1; l < loop1; l++) {
+            if (!odd) {
+                for (pIt = pKeys, i = 0; i < *reinterpret_cast<u16*>(pKey);
+                     i++, pIt++) {
+                    if (pIt->frame == pHeader->frameLength - 1) {
+                        break;
+                    }
+
+                    createChild(reinterpret_cast<u8*>(pIt), seed, pHeader,
+                                pNameTable, pRandomTable, pParticle, loop0);
+                }
+            } else {
+                i = *reinterpret_cast<u16*>(pKey) - 1;
+
+                for (pIt = &pKeys[i]; i >= 0; i--, pIt--) {
+                    if (pIt->frame == 0) {
+                        break;
+                    }
+
+                    createChild(reinterpret_cast<u8*>(pIt), seed, pHeader,
+                                pNameTable, pRandomTable, pParticle, loop0);
+                }
+            }
+        }
+
+        if (!(loop1 & 1)) {
+            for (pIt = pKeys, i = 0; i < *reinterpret_cast<u16*>(pKey);
+                 i++, pIt++) {
+                if (pIt->frame >= frame1) {
+                    return;
+                }
+
+                createChild(reinterpret_cast<u8*>(pIt), seed, pHeader,
+                            pNameTable, pRandomTable, pParticle, loop0);
+            }
+        } else {
+            i = *reinterpret_cast<u16*>(pKey) - 1;
+
+            for (pIt = &pKeys[i]; i >= 0; i--, pIt--) {
+                if (pIt->frame <= frame1) {
+                    return;
+                }
+
+                createChild(reinterpret_cast<u8*>(pIt), seed, pHeader,
+                            pNameTable, pRandomTable, pParticle, loop0);
+            }
+        }
+    } else {
+        i = SearchKeyChildFwd(pKeys, *reinterpret_cast<u16*>(pKey), frame0);
+
+        for (pIt = &pKeys[i]; i < *reinterpret_cast<u16*>(pKey); i++, pIt++) {
+            if (pIt->frame >= frame0) {
+                createChild(reinterpret_cast<u8*>(pIt), seed, pHeader,
+                            pNameTable, pRandomTable, pParticle, loop0);
+            }
+        }
+
+        for (u32 l = loop0 + 1; l < loop1; l++) {
+            for (pIt = pKeys, i = 0; i < *reinterpret_cast<u16*>(pKey);
+                 i++, pIt++) {
+                createChild(reinterpret_cast<u8*>(pIt), seed, pHeader,
+                            pNameTable, pRandomTable, pParticle, loop0);
+            }
+        }
+
+        for (pIt = pKeys, i = 0; i < *reinterpret_cast<u16*>(pKey); i++, pIt++) {
+            if (pIt->frame >= frame1) {
+                return;
+            }
+
+            createChild(reinterpret_cast<u8*>(pIt), seed, pHeader, pNameTable,
+                        pRandomTable, pParticle, loop0);
+        }
+    }
+}
+
 } // namespace ef
 } // namespace nw4r
