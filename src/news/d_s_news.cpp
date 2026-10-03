@@ -1417,10 +1417,14 @@ BOOL NewsScene::StateMain() {
         lbl_801EDF70.z = sMarkZ;
         lbl_801EDF70.y = y;
         lbl_801EDF70.x = x;
+        f32 y2;
+        f32 x2;
         f32 w2 = TPL_GetWidth(gCommonTpl, 0x3E);
+        y2 = lbl_801EDF70.y - h;
+        x2 = (GetScreenWidth() - GetSideMargin()) - w2;
         lbl_801EDF88.z = lbl_801EDF70.z;
-        lbl_801EDF88.y = lbl_801EDF70.y - h;
-        lbl_801EDF88.x = (GetScreenWidth() - GetSideMargin()) - w2;
+        lbl_801EDF88.y = y2;
+        lbl_801EDF88.x = x2;
         if (lbl_8035775C) {
             fn_8004DB4C(lbl_8035775C, 5);
         }
