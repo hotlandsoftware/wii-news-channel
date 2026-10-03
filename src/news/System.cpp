@@ -171,13 +171,16 @@ void SystemInit() {
         KPADEnableAimingMode(i);
         KPADSetPosParam(i, 0.05f, 1.0f);
         KPADSetDistParam(i, 0.03f, 1.0f);
-        gPointerX[i] = GetScreenWidth() / 2;
+        // The centre is stored after gHold[i] below.
+        f32* pointerX = &gPointerX[i];
+        f32 centerX = GetScreenWidth() / 2;
         gRepeatSlowOn[i] = false;
         gRepeatFastOn[i] = false;
         gZoomStarted[i] = false;
         gPointerY[i] = 228.0f;
         gKPADLatest[i] = -1;
         gHold[i] = 0;
+        *pointerX = centerX;
         gTrig[i] = 0;
         gRelease[i] = 0;
         gCursorHorizon[i].x = 0.0f;
