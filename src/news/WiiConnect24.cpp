@@ -425,13 +425,6 @@ static void* ThreadMain(void* arg) {
     return NULL;
 }
 
-static inline u8 PrevHour(u8 hour) {
-    if (hour == 0) {
-        return 23;
-    }
-    return hour - 1;
-}
-
 s32 CWiiConnect24::readFiles() {
     NWC24DlTask dl;
     u16 id;
@@ -535,7 +528,8 @@ s32 CWiiConnect24::readFiles() {
         }
         return -7;
     }
-    if (NANDRead(&info, mem, length) != length) {
+    result = NANDRead(&info, mem, length);
+    if (result != length) {
         SetError(this, "NANDRead() failed.", 0, 0);
         NANDClose(&info);
         VFUnmountDrive(WC24_DRIVE);
@@ -554,7 +548,7 @@ s32 CWiiConnect24::readFiles() {
         return -8;
     }
 
-    u8 dta[0x400];
+    u8 dta[0x448];
     for (result = VFFindFirst(dta, WC24_DRIVE ":/*", 0x7F); result == 0; result = VFFindNext(dta)) {
     }
 
@@ -572,8 +566,9 @@ s32 CWiiConnect24::readFiles() {
 
     OSCalendarTime cal;
     NETGetUniversalCalendar(&cal);
+    u8 n;
     u8 hour = cal.hour;
-    for (u8 n = 0; n < WC24_NUM_FILES; n++) {
+    for (n = 0; n < WC24_NUM_FILES; n++) {
         char name[16];
         err = NWC24GetDlFilename(&dl, name, sizeof(name), hour);
         if (err != NWC24_OK) {
@@ -620,10 +615,18 @@ s32 CWiiConnect24::readFiles() {
             for (; n < WC24_NUM_FILES; n++) {
                 *mFiles[hour] = NULL;
                 *mSizes[hour] = 0;
-                hour = PrevHour(hour);
+                if (hour == 0) {
+                    hour = 23;
+                } else {
+                    hour--;
+                }
             }
         }
-        hour = PrevHour(hour);
+        if (hour == 0) {
+            hour = 23;
+        } else {
+            hour--;
+        }
     }
 
     err = NWC24GetDlNextTime(&dl, &mNextTime);
