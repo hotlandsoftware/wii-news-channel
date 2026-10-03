@@ -25,6 +25,7 @@ So each file ends with a `__sinit` that constructs it, and the `.ctors` table (`
 - **Currently NonMatching under this rule:** VF `pf_dir.c` (99.97%), `d_vf_sys.c` (99.99%), `nand_drv.c` (99.99%) and `ram_drv.c` (99.88%). All are register-allocation differences. Also nw4r `snd_RemoteSpeaker.cpp` (99.2%, block layout of `Update`) and `NWC24Download.c` (99.89%, register allocation in three functions).
 
 - **Currently NonMatching under this rule:** VF `pf_dir.c` (99.97%), `d_vf_sys.c` (99.99%), `nand_drv.c` (99.99%) and `ram_drv.c` (99.88%). All are register-allocation differences. Also nw4r `snd_RemoteSpeaker.cpp` (99.2%, block layout of `Update`). Also `NCD/ncdsystem.c` (99.70%) and `NET/netcrc.c` (97.86%), both register allocation. Also nw4r ef `emform/ef_disc.cpp` (99.6%) and `emform/ef_cylinder.cpp` (99.7%) (random seed kept in a register across `sqrt`), `ef_drawfreestrategy.cpp` (99.7%), `ef_drawbillboardstrategy.cpp` (99.6%) and `ef_drawdirectionalstrategy.cpp` (96%) (register allocation and scheduling).
+- **TMCC JPEG** (`src/revolution/TMCC_JPEG`): `jpgd_dec.c` (99.9%, `jpgdResync` branch layout and two register swaps), `jpgd_idct.c` (96%), `jpgd_out_rgb565.c` (95%), `jpgd_out_rgba8.c` (90%) and `jpgd_out_yuv.c` (82%) are NonMatching and still in progress; see `docs/platform_layer_map.md`.
 
 ## Compiler
 

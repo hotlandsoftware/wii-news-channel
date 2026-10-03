@@ -186,13 +186,13 @@ Exact ends from `.ctors`/`__sinit` are marked †.
 | File | Range | Contents | Status |
 | --- | --- | --- | --- |
 | `jpgd_stream.c` | `0x8007FE28–0x8008082C` | Input stream: buffered reads through a callback, `jpgdGetByte/Word/Bytes`, bit buffer fill/unread | Matching |
-| `jpgd_idct.c` | `0x8008082C–0x80081348` | 8×8 IDCT for luma (`jpgdIdct8x8Y`) and chroma (`jpgdIdct8x8C`, signed output) | NonMatching (85.6%) |
+| `jpgd_idct.c` | `0x8008082C–0x80081348` | 8×8 IDCT for luma (`jpgdIdct8x8Y`) and chroma (`jpgdIdct8x8C`, signed output) | NonMatching (96.1%) |
 | `jpegdec.c` | `0x80081348–0x80081794` | Public API: `TMCCJPEGDecInit`, `TMCCJPEGDecodeRGB565`, `TMCCJPEGDecSetResolution` | Matching |
-| `jpgd_dec.c` | `0x80081794–0x80083554` | Scale setup, MCU decode, marker parsing (DQT/DHT/SOF/SOS/DRI), restart handling, Huffman table builder | NonMatching (99.4%: `jpgdSetupScale` 99.95%, `jpgdResync` 88.9%) |
-| `jpgd_idct_scaled.c` | `0x80083554–0x80083C60` | 4×4, 2×2, 1×1 IDCTs (Y and C) | NonMatching (94.4%) |
-| `jpgd_out_yuv.c` | `0x80083C60–0x80086E68` | Output setup + I8 plane writers for each sampling (normal and edge-MCU variants) | NonMatching (81.4%) |
-| `jpgd_out_rgb565.c` | `0x80086E68–0x800882F8` | YCbCr→RGB565 tile writers | NonMatching (93.6%) |
-| `jpgd_out_rgba8.c` | `0x800882F8–0x800898F4` | YCbCr→RGBA8 tile writers | NonMatching (88.0%) |
+| `jpgd_dec.c` | `0x80081794–0x80083554` | Scale setup, MCU decode, marker parsing (DQT/DHT/SOF/SOS/DRI), restart handling, Huffman table builder | NonMatching (99.9%: only `jpgdResync` is left, 98.4%) |
+| `jpgd_idct_scaled.c` | `0x80083554–0x80083C60` | 4×4, 2×2, 1×1 IDCTs (Y and C) | Matching |
+| `jpgd_out_yuv.c` | `0x80083C60–0x80086E68` | Output setup + I8 plane writers for each sampling (normal and edge-MCU variants) | NonMatching (81.7%) |
+| `jpgd_out_rgb565.c` | `0x80086E68–0x800882F8` | YCbCr→RGB565 tile writers | NonMatching (95.4%) |
+| `jpgd_out_rgba8.c` | `0x800882F8–0x800898F4` | YCbCr→RGBA8 tile writers | NonMatching (89.9%) |
 | `jpgd_huff.c` | `0x800898F4–0x8008A0A4` | Block decoders (full and scaled), slow Huffman path; tables (`jpgdZigzag`, `jpgdCoefExtent`, sampling tables) | Matching |
 
 - **File boundaries.** `jpegdec.c` must be its own file: `TMCCJPEGDecInit` inlines the static helpers that check the parameters, parse the header and start the scan, but calls `jpgdReadHeader`, `jpgdSetupScale` etc. out of line. In one file with `-ipa file`, MWCC inlines `jpgdReadHeader` (which has no loop of its own once its zigzag loop is an inline helper) into `TMCCJPEGDecInit`.
@@ -201,7 +201,8 @@ Exact ends from `.ctors`/`__sinit` are marked †.
   - Bit extraction is written `v = (n - 1) & (s->bits >> (s->numBits -= rs));`. Splitting the compound assignment into its own statement swaps two registers.
   - Small `static inline` helpers matter for loop unrolling. A pixel writer `jpgdPutI8(p, x, y, tiles, v)` called twice per iteration makes MWCC unroll the YUV luma loops 8× behind its overflow guard and recompute the loop invariants (row base, `(y >> 2) * tiles`) separately for the unrolled and remainder loops, as in the original; the same expression written inline is unrolled 4× without a guard.
   - The clamp is branchless on the low side: `v > 255 ? 255 : (v < 0 ? 0 : v)` gives the original `srawi/andc`. For grayscale RGB output the original copies Y into r/g/b in both arms of `if (yy >> 8)`.
-- **Remaining work.** The 8×8 IDCTs (the `nz` OR-chain is emitted with the new operand first, which no source form tried so far reproduces), the YUV 4:1:1/4:2:2/4:2:0 writers (chroma loops and register pressure), the RGBA8/RGB565 writers (register allocation and scheduling), the three `jpgdSetupOutput*` functions (the original keeps `&ctx->pix` in a register instead of folding it into the offsets), `jpgdResync` (loop exit is `ble; b` instead of `bgt`) and one operand order in `jpgdSetupScale`.
+- **Status.** 41,596 bytes of code; 4/9 files Matching (7,436 bytes linked from `Matching` units, 14,616 bytes in 100% functions), 92.1% fuzzy overall.
+- **Remaining work.** The 8×8 IDCTs (96%, register allocation and scheduling in the column pass), the YUV 4:1:1/4:2:2/4:2:0 writers (74–79%: register pressure; the original spills `h` and keeps the overflow-guard constant `0x80000000` in `r31`, ours rematerializes it), the RGBA8/RGB565 4:1:1/4:2:2/4:2:0 writers (register allocation), the three `jpgdSetupOutput*` functions (94%: the original keeps `&ctx->pix` in a register instead of folding it into the offsets; no source form tried reproduces this), and `jpgdResync` (the loop exit is `ble; b` instead of `bgt`, plus two register swaps). `tools/decomp/srcsearch.py` was used for most of the register-order fixes and is the first thing to try on the remaining functions.
 
 ### HBM (`0x8008AA44–0x8009C720`)
 
@@ -979,7 +980,7 @@ Difficulty: E = mostly drop-in, M = drop-in plus version fixes, H = little or no
 
 | 3 | RSO + CNT + ARC + SO/NCD (**done**, 8/10 Matching; SO starts `0x80074AE0`) | `0x80051D4C–0x80053274`, `0x8008A0A4–0x8008AA44`, `0x80074AE0–0x800767C8` | 15 KB | smg, ogws/fc, mkw | E–M |
 | 4 | NWC24 | `0x800767C8–0x8007FE28` | 38 KB | smg + ogws | M |
-| 5 | TMCC JPEG decoder (identified; in progress: 3/9 files Matching, see "TMCC JPEG decoder") | `0x8007FE28–0x8008A0A4` | 41 KB | none (from disassembly) | H |
+| 5 | TMCC JPEG decoder (identified; in progress: 4/9 files Matching, 92% fuzzy, see "TMCC JPEG decoder") | `0x8007FE28–0x8008A0A4` | 41 KB | none (from disassembly) | H |
 | 6 | HBM core (**done**, 6/6 Matching; ogws `homebuttonMiniLib` is the reference) | `0x8008AA44–0x80096D2C` | 49 KB | ogws `homebuttonMiniLib`, tp `homebuttonLib` | M–H |
 | 7 | HBM sound | `0x80096D2C–0x8009C720` | 23 KB | none | H |
 | 8 | ef part 1: draworder … resource (**done**, 7/8 Matching; ef starts `0x8009D694`, animcurve WIP) | `0x8009C720–0x800ABAE0` | 62 KB | ogws | M |
