@@ -701,21 +701,32 @@ void FxVoice::UpdateBuffer(int channels, void** ppBuffer, u32 size, snd::SampleF
 }
 
 void FxVoice::PitchDown(s32** buffers) {
-    for (s32 ch = 0; ch < 2; ch++) {
+    s32 h;
+    s32 v;
+    s32 pos;
+    s32 i;
+    s32 f;
+    s32 ch;
+    s32 k;
+    s32* src;
+    s32* out;
+    s32 base;
+    s32 back;
+
+    for (ch = 0; ch < 2; ch++) {
         s32 work[FX_FRAME_SAMPLES];
-        for (s32 i = 0; i < FX_FRAME_SAMPLES; i++) {
+        for (i = 0; i < FX_FRAME_SAMPLES; i++) {
             work[i] = 0;
         }
-        for (s32 k = 0; k < 2; k++) {
-            s32 f = (mFrame + k * 64 / 2) % FX_HISTORY_FRAMES;
-            s32 back = -f;
-            s32 base = f * FX_FRAME_SAMPLES;
-            s32 pos = base / 2;
-            s32* src = GetSample(mInput[ch], back, pos);
-            for (s32 i = 0; i < FX_FRAME_SAMPLES; i++) {
-                s32 v;
+        for (k = 0; k < 2; k++) {
+            f = (mFrame + k * 64 / 2) % FX_HISTORY_FRAMES;
+            back = -f;
+            base = FX_FRAME_SAMPLES * f;
+            pos = base / 2;
+            src = GetSample(mInput[ch], back, pos);
+            for (i = 0; i < FX_FRAME_SAMPLES; i++) {
                 if (i == FX_FRAME_SAMPLES - 1) {
-                    s32 h = i / 2;
+                    h = i / 2;
                     v = (src[h] + *GetSample(mInput[ch], back, h + pos + 1)) / 2;
                 } else {
                     v = (src[i / 2] + src[i / 2 + 1]) / 2;
@@ -723,8 +734,8 @@ void FxVoice::PitchDown(s32** buffers) {
                 work[i] += v * mWindowA[base + i] / 4096;
             }
         }
-        s32* out = buffers[ch];
-        for (s32 i = 0; i < FX_FRAME_SAMPLES; i++) {
+        out = buffers[ch];
+        for (i = 0; i < FX_FRAME_SAMPLES; i++) {
             out[i] = work[i] * 0x1333 / 4096;
         }
     }
