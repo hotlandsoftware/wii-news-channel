@@ -28,7 +28,7 @@ static u8 sStartPageOpened;
 volatile u8 vcmvRumbleRequest;
 u8 vcmvPluginsRegistered;
 u8 vcmvWWWLoaded;
-s8 vcmvUnk9B9;
+u8 vcmvUnk9B9;
 void* vcmvBrowser;
 MEMAllocator* vcmvMem1Allocator;
 MEMAllocator* vcmvMem2Allocator;

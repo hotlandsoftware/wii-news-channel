@@ -105,9 +105,9 @@ static u8 sShowTex;
 static u8 sPrevTex;
 static u8 sScrollTex;
 s8 vcmvScrollDir;
-static s32 sScrollMouseY;
-u8 vcmvBusy2;
-static u8 sScrollStart;
+static volatile s32 sScrollMouseY;
+volatile u8 vcmvBusy2;
+static volatile u8 sScrollStart;
 static void* sArchive;
 static u8 sLastPrevTex;
 static u8 sLastShowTex;
@@ -115,25 +115,29 @@ static u8 sLastWriteTex;
 
 // Counts how many sampled pixels of the rectangle changed since the last call
 static void vcmvCompareSamples(vcmvRect* rect, f32* ratio) {
-    s32 cols = (vcmvScreenWidth + 127) / 128;
+    s32 width = vcmvScreenWidth;
+    s32 cols = (width + 127) / 128;
     s32 x = rect->x;
+    s32 xEnd = x + rect->w;
     s32 y = rect->y;
     s32 h = rect->h;
-    s32 xEnd = x + rect->w;
     s32 yEnd = y + h;
     s32 firstCol = x / 128;
-    s32 total = h * (xEnd / 128 - firstCol + 1);
-    s32 changed = 0;
+    s32 lastCol = xEnd / 128;
     u32* sampleRow = sSamples + y * cols + firstCol;
-    u32* rowStart = (u32*)vcmvSurfaceBuffer + firstCol * 128 + y * vcmvScreenWidth;
-    u32* rowEnd = (u32*)vcmvSurfaceBuffer + xEnd + y * vcmvScreenWidth;
+    s32 xFirst = x & 127;
+    u32* rowStart = (u32*)vcmvSurfaceBuffer + (firstCol * 128 + y * width);
+    u32* rowEnd = (u32*)vcmvSurfaceBuffer + (xEnd + y * width);
+    s32 xLast = xEnd & 127;
+    s32 changed = 0;
+    s32 total = h * (lastCol - firstCol + 1);
 
     for (; y < yEnd; y++) {
         s32 col = sSampleColumns[y & 127];
         u32* sample = sampleRow;
         u32* p = rowStart + col;
 
-        if (col < (x & 127)) {
+        if (col < xFirst) {
             sample++;
             p += 128;
             total--;
@@ -144,12 +148,12 @@ static void vcmvCompareSamples(vcmvRect* rect, f32* ratio) {
                 changed++;
             }
         }
-        if (col >= (xEnd & 127)) {
+        if (col >= xLast) {
             total--;
         }
-        rowStart += vcmvScreenWidth;
-        rowEnd += vcmvScreenWidth;
-        sampleRow += cols;
+        sampleRow = sampleRow + cols;
+        rowStart += width;
+        rowEnd = width + rowEnd;
     }
 
     if (total != 0) {
@@ -317,8 +321,7 @@ static void vcmvAddScroll(vcmvRect* rect, s32 dy) {
         sScroll.above = tex;
         sScroll.scroll = 0;
         sScroll.offset = 0;
-        sScroll.velocity = 0.0f;
-        sScroll.current = 0.0f;
+        sScroll.current = sScroll.velocity = 0.0f;
     }
 
     sScroll.scroll += dy;
@@ -348,38 +351,37 @@ static inline void vcmvNextWriteTexture(void) {
 void vcmvFlushCallback(vcmvRect* rect, int arg) {
     s32 dy;
 
-    if (sFlushLock >= 1 || vcmvBusy) {
-        return;
-    }
-
-    if (sPageLoaded) {
-        if (vcmvUnk9B9 && vcmvLoadState < 12) {
-            sPendingPage = TRUE;
-            return;
-        }
-        sPageLoaded = FALSE;
-        if (!sNewPage) {
-            sNewPage = TRUE;
-        }
-    } else if (vcmvScrollDir != 0 && arg == 1 && rect->h > 80) {
-        sScroll.rectChanged = FALSE;
-        if (vcmvBusy2 && sScroll.hasRect && (rect->x != sScroll.rect.x || rect->w != sScroll.rect.w)) {
-            sScroll.rectChanged = TRUE;
-        } else if (vcmvScrollDir == 1) {
-            if (vcmvFindScrollUp(rect, &dy)) {
-                vcmvAddScroll(rect, dy);
+    if (sFlushLock < 1 && !vcmvBusy) {
+        if (sPageLoaded) {
+            if (!vcmvUnk9B9 || vcmvLoadState >= 12) {
+                sPageLoaded = FALSE;
+                if (!sNewPage) {
+                    sNewPage = TRUE;
+                }
+            } else {
+                sPendingPage = TRUE;
+                return;
             }
-        } else if (vcmvScrollDir == -1) {
-            if (vcmvFindScrollDown(rect, &dy)) {
-                vcmvAddScroll(rect, dy);
+        } else if (vcmvScrollDir != 0 && arg == 1 && rect->h > 80) {
+            sScroll.rectChanged = FALSE;
+            if (vcmvBusy2 && sScroll.hasRect && (rect->x != sScroll.rect.x || rect->w != sScroll.rect.w)) {
+                sScroll.rectChanged = TRUE;
+            } else if (vcmvScrollDir == 1) {
+                if (vcmvFindScrollUp(rect, &dy)) {
+                    vcmvAddScroll(rect, dy);
+                }
+            } else if (vcmvScrollDir == -1) {
+                if (vcmvFindScrollDown(rect, &dy)) {
+                    vcmvAddScroll(rect, dy);
+                }
             }
         }
-    }
 
-    sDirty = TRUE;
-    sPendingPage = FALSE;
-    sLoadStarted = FALSE;
-    vcmvNextWriteTexture();
+        sDirty = TRUE;
+        sPendingPage = FALSE;
+        sLoadStarted = FALSE;
+        vcmvNextWriteTexture();
+    }
 }
 
 #define RGB565(p) ((((p) >> 3) & 0x1F) | (((p) >> 5) & 0x7E0) | (((p) >> 8) & 0xF800))
@@ -580,6 +582,7 @@ void vcmvSetRenderMode(GXRenderModeObj* rmode1, GXRenderModeObj* rmode2, u8 flag
 
 void vcmvSetupViewport(void) {
     GXRenderModeObj* rmode;
+    u16 width;
     Mtx44 proj;
     Mtx mtx;
 
@@ -589,10 +592,11 @@ void vcmvSetupViewport(void) {
         rmode = vcmvRenderMode1;
     }
     vcmvRenderMode = rmode;
-    sFbWidth = rmode->fbWidth;
+    width = rmode->fbWidth;
+    sFbWidth = width;
     sEfbHeight = rmode->efbHeight;
-    sEfbWidth = rmode->fbWidth;
-    if (rmode->fbWidth > 640) {
+    sEfbWidth = width;
+    if (width > 640) {
         sEfbWidth = 640;
     }
     GXSetViewport(0.0f, 0.0f, sEfbWidth, sEfbHeight, 0.0f, 1.0f);
@@ -863,7 +867,7 @@ static void vcmvSetupTexDraw(GXTexObj* tex, GXColor color) {
     GXSetTevColor(GX_TEVREG0, color);
 }
 
-void vcmvDrawQuad(vcmvQuad* quad) {
+void vcmvDrawQuad(const vcmvQuad* quad) {
     GXBegin(GX_QUADS, GX_VTXFMT0, 4);
     GXPosition3f32(quad->x[0], quad->y[0], 0.0f);
     GXTexCoord2f32(0.0f, 0.0f);

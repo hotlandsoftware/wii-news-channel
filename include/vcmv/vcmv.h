@@ -59,7 +59,7 @@ extern u8 vcmvLoading;                      // 0x8035795E
 extern u8 vcmvBusy;                         // 0x8035795F
 extern u8 vcmvDialogOpen;                   // 0x80357969
 extern s8 vcmvScrollDir;                    // 0x80357970
-extern u8 vcmvBusy2;                        // 0x80357978
+extern volatile u8 vcmvBusy2;                        // 0x80357978
 extern f32 vcmvHalfWidth;                   // 0x80356EB8
 extern f32 vcmvHalfHeight;                  // 0x80356EBC
 extern f32 vcmvAspectScale;                 // 0x80356EC0
@@ -77,7 +77,7 @@ void vcmvOpenWindow(s32 mode);
 void vcmvUpdate(void);
 void vcmvDrawScreen(f32 shift);
 void vcmvOpenStartPage(void);
-void vcmvDrawQuad(vcmvQuad* quad);
+void vcmvDrawQuad(const vcmvQuad* quad);
 
 // vcmv_jsext.cpp: Opera JavaScript plugin (jsplugin API) "vcJavaScriptExt"
 typedef struct jsplugin_obj {
@@ -176,7 +176,7 @@ extern volatile vcmvCursor vcmvCursors[4]; // 0x802B0610
 extern volatile u8 vcmvRumbleRequest;            // 0x803579B6
 extern u8 vcmvPluginsRegistered;        // 0x803579B7
 extern u8 vcmvWWWLoaded;                // 0x803579B8
-extern s8 vcmvUnk9B9;                   // 0x803579B9
+extern u8 vcmvUnk9B9;                   // 0x803579B9
 extern void* vcmvBrowser;               // 0x803579BC
 extern MEMAllocator* vcmvMem1Allocator; // 0x803579C0
 extern MEMAllocator* vcmvMem2Allocator; // 0x803579C4
