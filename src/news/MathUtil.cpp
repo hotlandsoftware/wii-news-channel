@@ -1,3 +1,4 @@
+#define NW4R_MATH_VEC2_NO_DTOR
 #include <news/MathUtil.h>
 #include <nw4r/math/math_arithmetic.h>
 #include <nw4r/math/math_triangular.h>
@@ -30,22 +31,31 @@ void WrapHour(s32* hour) {
     *hour %= 24;
 }
 
-static inline math::VEC2 Sub(const math::VEC2& a, const math::VEC2& b) {
-    return math::VEC2(a.x - b.x, a.y - b.y);
-}
-
-static inline f32 Len(const math::VEC2& v) {
-    return math::FSqrt(v.x * v.x + v.y * v.y);
-}
-
 static inline BOOL NotEqual(const math::VEC2& a, const math::VEC2& b) {
     return a.x != b.x || a.y != b.y;
 }
 
+static inline void SubP(math::VEC2* out, const math::VEC2* a, const math::VEC2* b) {
+    out->x = a->x - b->x;
+    out->y = a->y - b->y;
+}
+
+static inline f32 LenV(math::VEC2 v) {
+    return math::FSqrt(v.x * v.x + v.y * v.y);
+}
+static inline f32 LenR(const math::VEC2& v) {
+    return math::FSqrt(v.x * v.x + v.y * v.y);
+}
+static inline f32 LenP(const math::VEC2* v) {
+    return math::FSqrt(v->x * v->x + v->y * v->y);
+}
 f32 Ease(math::VEC2* value, const math::VEC2* target, f32 rate, f32 maxStep, f32 minStep) {
+    math::VEC2 e;
     if (NotEqual(*value, *target)) {
-        math::VEC2 d = Sub(*value, *target);
-        f32 len = Len(d);
+        math::VEC2 diff;
+        diff = math::VEC2(value->x - target->x, value->y - target->y);
+        f32 len = LenV(diff);
+        math::VEC2 d = diff;
         if (len < minStep) {
             *value = *target;
         } else {
@@ -69,7 +79,8 @@ f32 Ease(math::VEC2* value, const math::VEC2* target, f32 rate, f32 maxStep, f32
             }
         }
     }
-    return Len(Sub(*value, *target));
+    SubP(&e, value, target);
+    return LenP(&e);
 }
 
 f32 Ease(f32* value, f32 target, f32 rate, f32 maxStep, f32 minStep) {
@@ -157,6 +168,7 @@ f32 CosineEase(u16 angle) {
 }
 
 s32 SplitDigits(s32 value, s32* digits, s32 maxDigits) {
+    s32 i;
     s32 n = 0;
     for (s32 v = value; v != 0; v /= 10) {
         n++;
@@ -164,7 +176,6 @@ s32 SplitDigits(s32 value, s32* digits, s32 maxDigits) {
     if (n > maxDigits) {
         n = maxDigits;
     }
-    s32 i;
     for (i = 0; i < n; i++) {
         digits[i] = value % 10;
         value /= 10;
@@ -182,7 +193,7 @@ wchar_t* FormatNumber(s32 value, wchar_t* buf, s32 width, BOOL zeroPad) {
     }
     if (value < 0) {
         *buf++ = L'-';
-        value = -value;
+        value -= value * 2;
     }
     SplitDigits(value, digits, width);
     for (s32 i = width - 1; i >= 0; i--) {
@@ -200,14 +211,21 @@ wchar_t* FormatNumber(s32 value, wchar_t* buf, s32 width, BOOL zeroPad) {
     return buf;
 }
 
-static inline s32 GetDaysInMonth(s32 month, s32 leap) {
+static inline s32 GetDaysInMonth(s32 month, s32 year) {
     if (month == 4 || month == 6 || month == 9 || month == 11) {
         return 30;
     } else if (month == 2) {
-        return leap == 0 ? 29 : 28;
+        if (year % 4 == 0) {
+            return 29;
+        } else {
+            return 28;
+        }
     } else {
         return 31;
     }
+}
+static inline s32 GetDaysInYear(s32 year) {
+    return year % 4 == 0 ? 366 : 365;
 }
 
 void MinutesToCalendarTime(u32 minutes, OSCalendarTime* time) {
@@ -216,10 +234,8 @@ void MinutesToCalendarTime(u32 minutes, OSCalendarTime* time) {
     s32 totalDays = days;
     s32 year = 0;
     s32 month = 1;
-    s32 leap;
     while (true) {
-        leap = year % 4;
-        s32 n = leap != 0 ? 365 : 366;
+        s32 n = year % 4 == 0 ? 366 : 365;
         if (days < n) {
             break;
         }
@@ -228,7 +244,7 @@ void MinutesToCalendarTime(u32 minutes, OSCalendarTime* time) {
     }
     s32 yday = days;
     while (true) {
-        s32 n = GetDaysInMonth(month, leap);
+        s32 n = GetDaysInMonth(month, year);
         if (days < n) {
             break;
         }
@@ -250,16 +266,29 @@ void MinutesToCalendarTime(u32 minutes, OSCalendarTime* time) {
 u32 GetCurrentMinutes() {
     OSCalendarTime cal;
     NETGetUniversalCalendar(&cal);
-    s32 year = cal.year - 2000;
+    s32 year = cal.year;
     s32 month = cal.mon + 1;
-    s32 days = cal.mday + year * 365;
-    for (s32 i = 0; i < year; i += 4) {
+    s32 days = cal.mday;
+    s32 hour = cal.hour;
+    s32 min = cal.min;
+    days += (year - 2000) * 365;
+    for (s32 i = 0; i < year - 2000; i += 4) {
         days++;
     }
     for (s32 m = 1; m < month; m++) {
-        days += GetDaysInMonth(m, year % 4);
+        if (m == 4 || m == 6 || m == 9 || m == 11) {
+            days += 30;
+        } else if (m == 2) {
+            if (((year - 2000) & 3) == 0) {
+                days += 29;
+            } else {
+                days += 28;
+            }
+        } else {
+            days += 31;
+        }
     }
-    return (days - 1) * 1440 + cal.hour * 60 + cal.min;
+    return (days - 1) * 1440 + hour * 60 + min;
 }
 
 void Mtx_Translate(math::MTX34* mtx, f32 x, f32 y, f32 z) {
