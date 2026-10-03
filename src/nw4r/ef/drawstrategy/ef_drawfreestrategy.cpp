@@ -55,6 +55,14 @@ static void DrawQuad(const math::MTX34& rMtx, const math::_VEC3* pPosArray,
 }
 
 
+// The DOL does no global common-subexpression elimination in this function: it loads
+// pParticle->mParticleManager again for the Y size, after the switch in Draw_GetSizeY (the
+// billboard strategies, built from the same inlines, keep it in a register). Turning CSE off
+// reproduces that exactly; whether the original used this pragma or something else that
+// blocks the CSE is not known. Still different: PSMTXConcat's output argument is set up
+// before the second input in the DOL.
+#pragma push
+#pragma opt_common_subs off
 void DrawFreeStrategy::Draw(const DrawInfo& rInfo, ParticleManager* pManager) {
     InitGraphics(rInfo, pManager);
 
@@ -127,6 +135,8 @@ void DrawFreeStrategy::Draw(const DrawInfo& rInfo, ParticleManager* pManager) {
         }
     }
 }
+
+#pragma pop
 
 void DrawFreeStrategy::InitGraphics(const DrawInfo& rInfo,
                                     ParticleManager* pManager) {
