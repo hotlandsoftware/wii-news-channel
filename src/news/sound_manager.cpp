@@ -49,12 +49,12 @@ public:
 
     s32* GetSample(s32* history, s32 frame, s32 pos) {
         s32 f = frame + pos / FX_FRAME_SAMPLES;
-        s32 i = pos % FX_FRAME_SAMPLES;
-        if (i < 0) {
+        pos %= FX_FRAME_SAMPLES;
+        if (pos < 0) {
             f--;
-            i += FX_FRAME_SAMPLES;
+            pos += FX_FRAME_SAMPLES;
         }
-        return &history[((mFrame + f + FX_HISTORY_FRAMES) % FX_HISTORY_FRAMES) * FX_FRAME_SAMPLES + i];
+        return &history[((mFrame + f + FX_HISTORY_FRAMES) % FX_HISTORY_FRAMES) * FX_FRAME_SAMPLES + pos];
     }
 
     void Read(s32* dst, s32* history, s32 frame, s32 pos, s32 count);
