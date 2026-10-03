@@ -395,6 +395,8 @@ BOOL Globe::StartGrab(s32 chan) {
     return FALSE;
 }
 
+// The original's copies of these are not scheduled (two words, then one).
+#pragma scheduling off
 inline math::VEC3 Camera::GetTargetRot() const {
     return mTargetRot;
 }
@@ -402,6 +404,7 @@ inline math::VEC3 Camera::GetTargetRot() const {
 inline math::VEC3 Camera::GetRot() const {
     return mRot;
 }
+#pragma scheduling reset
 
 s32 Globe::UpdateGrab(s32 chan) {
     Camera* camera = mCamera;
