@@ -4,6 +4,7 @@
 #define NW4R_UT_COLOR_WORD_COPY
 
 #include <news/SlideShow.h>
+#include <news/d_s_news.h>
 #include <news/ArticleText.h>
 #include <news/Common.h>
 #include <news/Draw2D.h>
@@ -96,54 +97,14 @@ void fn_8004CE00(Globe* globe);
 void fn_8004D0B0(Globe* globe);
 void fn_8004D170(Globe* globe);
 void fn_8004D1D4(Globe* globe, const s32* table, f32 t);
-void fn_8004DB4C(s32 arg);
+void fn_8004DB4C(Globe* globe, s32 arg);
 void fn_8004DB80(Globe* globe, s32 arg, const s32* table);
 void fn_8004DD8C(Globe* globe, s32 arg);
 void fn_8004E0B8(Globe* globe, u32 location);
 
 void fn_8001F730(nw4r::lyt::Pane* pane, const nw4r::ut::Color& color);
-void fn_80030960(f32 t);
-void fn_8003256C(f32* out, NewsArticle* article);
-void fn_80032580(NewsArticle* article, s32 arg, f32 zoom, f32 arg3);
-void fn_80032644();
-void fn_800329CC();
-void fn_80032A94(s32 arg);
-void fn_80032AC0(s32 category, s32 index, s32 arg);
-void fn_8003300C(NewsArticle* article, const wchar_t* category, NewsTexture* picture,
-                 const math::VEC2* start, const math::VEC2* picPos, const f32* picScale,
-                 const math::VEC2* size, s32 arg, bool flag, f32 scale);
-void fn_800332A0(const math::VEC2* pos, s32 arg, f32 scale);
-void fn_800332B4(const math::VEC2* pos, f32 scale);
-void fn_8003336C(f32 scale);
-void fn_80033374(f32 scale);
-void fn_800333BC(f32 scale);
-void fn_800333C4(f32 scale);
-void fn_80033538();
-void fn_80033618(const math::VEC2* pos, s32 arg, f32 alpha);
-void fn_80033FFC(const math::VEC2* pos, s32 arg1, s32 arg2, f32 alpha, f32 zoom);
-f32 fn_8003414C(ArticleText* text);
-f32 fn_80034164();
-BOOL fn_80034598();
-void fn_800345E4(s32 size, f32* scroll);
-void fn_80034690(s32 size, f32* scroll);
-BOOL fn_80034770();
-BOOL fn_80034780();
-void fn_80034830();
-void fn_8003483C();
-f32 fn_80034844();
-void fn_80034CB8(f32 height);
-void fn_80034CDC();
-f32 fn_80034D34(s32* flags, f32 scroll, f32 speed);
-BOOL fn_80034F6C(const ut::Rect* rect);
-void fn_80034FD4();
-f32 fn_80035188(s32 size);
-void fn_8003519C(bool zoomIn, bool zoomOut);
-BOOL fn_8003567C(ut::Rect* out, f32 x, f32 y, f32 zoom);
-BOOL fn_80035764(ut::Rect* out);
-void fn_80035A3C(const ut::Rect* text, const ut::Rect* select, f32 alpha);
-void fn_800360EC(const ut::Rect* rect, u8 alpha, f32 z);
+// DrawPointerEffect__FUcUs; the call passes a u32 height without truncating it.
 void fn_80036328(u8 alpha, u32 y);
-void fn_8003633C(s32 arg);
 void fn_80040778(s32 chan, s32 arg1, s32 arg2);
 f32 fn_800449A0(u16 angle);
 }
@@ -392,7 +353,7 @@ SlideShow::SlideShow(u32 arc)
     mViewWidth = mView.right - mView.left;
     mText.bottom = mView.bottom - 63.0f;
     mText.right = GetContentRight();
-    fn_80034CB8(mText.bottom - mText.top);
+    Article_SetHeight(mText.bottom - mText.top);
 
     s32 numCategories = lbl_803575E0;
     while (GetCategory(mCategory)->mArticles == NULL) {
@@ -426,7 +387,7 @@ static inline void ApplyView(SlideShow* s) {
     s->mViewHeight = s->mView.bottom - s->mView.top;
     s->mText.right = GetContentRight();
     s->mText.bottom = s->mView.bottom - 63.0f;
-    fn_80034CB8(s->mText.bottom - s->mText.top);
+    Article_SetHeight(s->mText.bottom - s->mText.top);
 }
 
 static inline void SetViewToTarget(SlideShow* s) {
@@ -453,10 +414,10 @@ static inline void SetArticleText(SlideShow* s) {
     math::VEC2 start(0.0f, 0.0f);
     math::VEC2 size(s->mText.right - s->mText.left, s->mText.bottom - s->mText.top);
     NewsArticle* article = s->mArticle;
-    fn_8003300C(article, GetCategory(s->mCategory)->mName, GetPictureTexture(article), &start,
-                &start, lbl_80356940, &size, 1, false, gTextScale);
-    fn_800333C4(gTextScale);
-    fn_80033538();
+    Article_Set(article, GetCategory(s->mCategory)->mName, (BOOL)GetPictureTexture(article), &start,
+                &start, lbl_80356940, size, true, gTextScale, false);
+    Article_Arrange(gTextScale);
+    Article_Reset();
 }
 
 static inline BOOL IsFirstArticle(SlideShow* s) {
@@ -528,11 +489,11 @@ void SlideShow::LoadArticle() {
 
     math::VEC2 pos(0.0f, 0.0f);
     math::VEC2 size(mText.right - mText.left, mText.bottom - mText.top);
-    fn_8003300C(mArticle, GetCategory(mCategory)->mName, GetPictureTexture(mArticle), &pos, &pos,
-                lbl_80356940, &size, 1, false, gTextScale);
-    fn_800333C4(gTextScale);
-    fn_80033538();
-    fn_8003483C();
+    Article_Set(mArticle, GetCategory(mCategory)->mName, (BOOL)GetPictureTexture(mArticle), &pos,
+                &pos, lbl_80356940, size, true, gTextScale, false);
+    Article_Arrange(gTextScale);
+    Article_Reset();
+    Article_ResetHeadline();
     mPicAlpha = mShowPicture ? 255 : 0;
     LayoutTitle();
 }
@@ -553,8 +514,8 @@ void SlideShow::Start() {
     mPointerIn[1] = false;
     mPointerIn[2] = false;
     mPointerIn[3] = false;
-    mBeltFade = 15;
     mLoop = lbl_8035755C->mCategory == 0;
+    mBeltFade = 15;
     mBeltVisible = true;
     mBounceTimer = 0;
     mQuickMove = false;
@@ -563,20 +524,20 @@ void SlideShow::Start() {
     LoadArticle();
     ChangeState(&SlideShow::StateShow);
     if (lbl_8035775C != NULL) {
-        fn_8004DB4C(7);
+        fn_8004DB4C(lbl_8035775C, 7);
     }
     Calc();
-    fn_8003633C(1);
+    SetDPDAll(1);
 }
 
 void SlideShow::Stop() {
     ChangeState(&SlideShow::StateStop);
-    fn_80033538();
+    Article_Reset();
 }
 
 void SlideShow::Calc() {
-    fn_8003633C(1);
-    fn_80032644();
+    SetDPDAll(1);
+    Globe_ResetFocus();
     mDragging[0] = false;
     mDragging[1] = false;
     mDragging[2] = false;
@@ -647,7 +608,7 @@ void SlideShow::Calc() {
         mSlideAngle = 0x4000;
     }
 
-    fn_8003519C(mZoomInPressed, mZoomOutPressed);
+    UpdateTextSize(mZoomInPressed, mZoomOutPressed);
 
     if (mState) {
         (this->*mState)(NULL);
@@ -691,7 +652,7 @@ void SlideShow::Calc() {
         globe->mLon = camera->mLon;
         globe->mLat = camera->mLat;
         fn_8004CC20(globe, camera);
-        fn_800329CC();
+        Pins_UpdateFade();
         fn_8004D0B0(globe);
         fn_8004D170(globe);
     }
@@ -728,7 +689,7 @@ void SlideShow::Calc() {
         }
     }
     if (active) {
-        fn_8003633C(0);
+        SetDPDAll(0);
         lbl_8035772A = 0;
     }
 
@@ -794,7 +755,7 @@ void SlideShow::Draw() {
         if (mHasTitle) {
             Draw2D_SetupGX();
             Draw2D_SetOrtho();
-            fn_800360EC(&mTitleRect, alpha, 0.0f);
+            DrawTabRect(mTitleRect, alpha, 0.0f);
             ut::TextWriterBase<wchar_t> writer;
             writer.SetFont(*gSysFont);
             writer.SetDrawFlag(0x122);
@@ -897,7 +858,7 @@ void SlideShow::CalcArrows() {
     mArrowColors[1] = sArrowColor;
     mArrowColors[2] = sArrowColor;
 
-    f32 min = fn_80034844();
+    f32 min = Article_GetMaxScrollOffset();
     if (mScroll > 0.0f) {
         mScroll = 0.0f;
         mScrollTarget = 0.0f;
@@ -905,17 +866,17 @@ void SlideShow::CalcArrows() {
         mScroll = min;
         mScrollTarget = min;
     }
-    fn_80034CDC();
+    Article_ClampScroll();
 
     math::VEC2 pos(mText.left, mTextOfs + (mText.top + mScroll));
     if (mZoomed) {
-        fn_80033374(gTextScale);
-        fn_800333C4(fn_80035188(lbl_80356970));
-        fn_800332B4(&pos, gTextScale - fn_80035188(lbl_80356970));
+        Article_Update(gTextScale);
+        Article_Arrange(GetTextScale(lbl_80356970));
+        Article_Layout(&pos, gTextScale - GetTextScale(lbl_80356970));
     } else {
-        fn_8003336C(gTextScale);
-        fn_800333BC(fn_80035188(lbl_80356970));
-        fn_800332A0(&pos, 1, gTextScale - fn_80035188(lbl_80356970));
+        Article_UpdateHeadline(gTextScale);
+        Article_ArrangeHeadline(GetTextScale(lbl_80356970));
+        Article_LayoutHeadline(&pos, 1, gTextScale - GetTextScale(lbl_80356970));
     }
     CalcTextPos();
 }
@@ -924,7 +885,7 @@ void SlideShow::CalcTextPos() {
     if (mTextVisible) {
         f32 lineHeight = lbl_80357568->mLineHeight;
         f32 area = 114.399994f;
-        f32 height = fn_8003414C(lbl_80357568);
+        f32 height = Article_GetHeadlineY();
         s32 lines = area / lineHeight;
         f32 ofs;
         if (height < area) {
@@ -1056,13 +1017,13 @@ BOOL SlideShow::StateStop(const s32* arg) {
 BOOL SlideShow::StateShow(const s32* arg) {
     switch (mStateFrame) {
     case -1:
-        fn_80032A94(0);
+        Pins_SetStateAll(0);
         mTimerFade = 1;
         break;
     case 0:
         mStateFrame++;
         ChangeSubState(&SlideShow::SubStateIdle);
-        fn_80032AC0(mCategory, mArticleIdx, 1);
+        Pins_SetState(mCategory, mArticleIdx, 1);
         mTimerFade = 0;
         mTimer = mSpeed * GetFrameRate();
         break;
@@ -1073,7 +1034,7 @@ BOOL SlideShow::StateShow(const s32* arg) {
         if (lbl_80357694 & 2) {
             mNextPressed = true;
         }
-        fn_80032AC0(mCategory, mArticleIdx, 1);
+        Pins_SetState(mCategory, mArticleIdx, 1);
 
         if (mPrevPressed) {
             if (!IsFirstArticle(this)) {
@@ -1121,7 +1082,8 @@ BOOL SlideShow::StateShow(const s32* arg) {
 }
 
 void SlideShow::StartZoomOut() {
-    fn_80030960(1.0f);
+    f32 volume = 1.0f;
+    Bgm_SetSlideshowVolume(volume);
     ChangeSubState(&SlideShow::SubStateIdle);
     NewsTexture* tex = NULL;
     LayoutArticle();
@@ -1156,7 +1118,8 @@ BOOL SlideShow::StateZoom(const s32* arg) {
         mStateFrame++;
         mUpButton->mDisabled = true;
         mUpButton->Press();
-        fn_80030960(0.0f);
+        f32 volume = 0.0f;
+        Bgm_SetSlideshowVolume(volume);
         mZoomed = true;
         mTextVisible = false;
         mViewTarget[0] = 0.0f;
@@ -1198,7 +1161,7 @@ BOOL SlideShow::StateZoom(const s32* arg) {
             bool close = false;
             f32 screenWidth = GetScreenWidth();
             ut::Rect rect(0.0f, 0.0f, 0.0f, 0.0f);
-            if (fn_8003567C(&rect, mText.left, mTextOfs + (mText.top + mScroll), 1.0f)) {
+            if (Article_GetPictureRect(&rect, mText.left, mTextOfs + (mText.top + mScroll), 1.0f)) {
                 bool hold = false;
                 for (s32 i = 0; i < 4; i++) {
                     if (IsPointerValid(i)) {
@@ -1295,14 +1258,14 @@ BOOL SlideShow::StateZoom(const s32* arg) {
                             mSelect.bottom = mGrabStart[i].y;
                             mSelect.right = mGrabStart[i].x;
                         }
-                        if (fn_80034F6C(&mSelect)) {
+                        if (Article_HitTest(&mSelect)) {
                             PlaySE(0x2B);
                         }
                     }
                     break;
                 case 2:
-                    fn_80034FD4();
-                    fn_800333C4(fn_80035188(lbl_80356970));
+                    Article_ClearHit();
+                    Article_Arrange(GetTextScale(lbl_80356970));
                 case 1:
                 default:
                     if (mGrabbing[i]) {
@@ -1317,7 +1280,7 @@ BOOL SlideShow::StateZoom(const s32* arg) {
                             mSelect.bottom = mGrabStart[i].y;
                             mSelect.right = mGrabStart[i].x;
                         }
-                        if (fn_80034F6C(&mSelect)) {
+                        if (Article_HitTest(&mSelect)) {
                             PlaySE(0x2B);
                         }
                         lbl_801EDFD0[i] = 6;
@@ -1403,7 +1366,7 @@ BOOL SlideShow::StateMove(const s32* arg) {
         mArticle = GetCategory(mCategory)->mArticles[mArticleIdx];
         LayoutArticle();
         SetArticleText(this);
-        fn_8003483C();
+        Article_ResetHeadline();
         LayoutTitle();
 
         NewsArticle* article = mArticle;
@@ -1517,7 +1480,7 @@ void SlideShow::SubStateIdle() {
         break;
     default:
         if (IsNearlyZero(Ease(&mScroll, mScrollTarget, 0.2f, 100.0f, 1.0f))) {
-            fn_80034830();
+            Article_ResetScroll();
         }
         break;
     }
@@ -1543,7 +1506,7 @@ void SlideShow::SubStateWait() {
         }
         StartZoomOut();
         mZoomDone = true;
-        fn_80034830();
+        Article_ResetScroll();
         break;
     }
 }
@@ -1556,7 +1519,7 @@ void SlideShow::SubStateScroll() {
     case -1:
         break;
     default:
-        if (!fn_80034598()) {
+        if (!Article_IsShort()) {
             for (s32 i = 0; i < 4; i++) {
                 if (mDragging[i]) {
                     ChangeSubState(&SlideShow::SubStateDrag);
@@ -1565,14 +1528,14 @@ void SlideShow::SubStateScroll() {
             }
         }
 
-        if (fn_80034770()) {
+        if (Article_IsAtTop()) {
             PaneButton* button = fn_80048364(mMainLayout, "up");
             button->mDisabled = true;
             button->Press();
         } else {
             fn_80048364(mMainLayout, "up")->mDisabled = false;
         }
-        if (fn_80034780()) {
+        if (Article_IsAtBottom()) {
             PaneButton* button = fn_80048364(mMainLayout, "down");
             button->mDisabled = true;
             button->Press();
@@ -1580,15 +1543,15 @@ void SlideShow::SubStateScroll() {
             fn_80048364(mMainLayout, "down")->mDisabled = false;
         }
 
-        if (mDownPressed && !fn_80034780()) {
+        if (mDownPressed && !Article_IsAtBottom()) {
             PlaySE(0x25);
-            fn_80034690(lbl_80356970, &mScroll);
-        } else if (mUpPressed && !fn_80034770()) {
+            Article_PageDown(lbl_80356970, mScroll);
+        } else if (mUpPressed && !Article_IsAtTop()) {
             PlaySE(0x25);
-            fn_800345E4(lbl_80356970, &mScroll);
+            Article_PageUp(lbl_80356970, mScroll);
         }
 
-        mScrollTarget = fn_80034164();
+        mScrollTarget = Article_GetScrollOffset();
         if (IsNearlyZero(gTextScale - lbl_801922D0[lbl_80356970])) {
             Ease(&mScroll, mScrollTarget, 0.2f, 20.0f, 1.0f);
         } else {
@@ -1608,7 +1571,7 @@ void SlideShow::SubStateDrag() {
         lbl_801EDFD0[2] = 1;
         lbl_801EDFD0[3] = 1;
         lbl_803575BB = 0;
-        mScrollTarget = fn_80034D34(lbl_801EDFD0, mScroll, mScrollSpeed);
+        mScrollTarget = Article_ScrollTo(mScroll, mScrollSpeed);
         break;
     case 0:
         mSubStateFrame++;
@@ -1618,7 +1581,7 @@ void SlideShow::SubStateDrag() {
         PlaySE(0x16);
         break;
     default: {
-        if (fn_80034598()) {
+        if (Article_IsShort()) {
             ChangeSubState(&SlideShow::SubStateScroll);
             return;
         }
@@ -1650,7 +1613,7 @@ void SlideShow::SubStateDrag() {
             mScrollSpeed = move / count;
         }
 
-        f32 min = fn_80034844();
+        f32 min = Article_GetMaxScrollOffset();
         mScroll += mScrollSpeed;
         if (mScroll > 0.0f) {
             mScroll = 0.0f;
@@ -1691,15 +1654,15 @@ void SlideShow::DrawPictures() {
     math::VEC2 pos(mText.left, mTextOfs + (mText.top + mScroll));
     if (mQuickMove) {
         if (mZoomed) {
-            fn_80033FFC(&pos, 2, 1, fade,
+            Article_Draw(pos, 2, 1, fade,
                         1.0f + 0.05f * math::SinFIdx(FIdxRad(1.5707964f * (mHoldTimer * 0.125f))));
         }
     } else if (mZoomed) {
-        fn_80033FFC(&pos, 2, 0, fade,
+        Article_Draw(pos, 2, 0, fade,
                     1.0f + 0.05f * math::SinFIdx(FIdxRad(1.5707964f * (mHoldTimer * 0.125f))));
-        fn_80033618(&pos, 0, 1.0f);
+        Article_DrawHeadline(&pos, 0, 1.0f);
     } else {
-        fn_80033618(&pos, 1, 1.0f);
+        Article_DrawHeadline(&pos, 1, 1.0f);
     }
     Draw2D_SetScissor(0, 0, GetScreenWidth(), 456);
 
@@ -1772,10 +1735,10 @@ void SlideShow::DrawSelection() {
     DrawScreenFade(255.0f * t);
     ut::Rect text(0.0f, 0.0f, 0.0f, 0.0f);
     ut::Rect select(0.0f, 0.0f, 0.0f, 0.0f);
-    if (fn_8003567C(&text, mText.left, mTextOfs + (mText.top + mScroll),
+    if (Article_GetPictureRect(&text, mText.left, mTextOfs + (mText.top + mScroll),
                     1.0f + 0.05f * math::SinFIdx(FIdxRad(1.5707964f * (mHoldTimer * 0.125f)))) &&
-        fn_80035764(&select)) {
-        fn_80035A3C(&text, &select, t);
+        Article_GetZoomedPictureRect(&select)) {
+        Article_DrawZoomedPicture(text, select, t);
     }
 }
 
@@ -1891,7 +1854,7 @@ void SlideShow::LayoutArticle() {
             mGlobeZoomFrom = mGlobeZoomTo;
         }
         mGlobeAngle = 0;
-        fn_8003256C(&mGlobeTo.x, mArticle);
+        GetArticleLocation(&mGlobeTo, mArticle);
         mUnk288.x = sGlobeOfsX;
         mUnk288.y = sGlobeOfsY;
         if (lbl_8035775C != NULL) {
@@ -1911,7 +1874,7 @@ void SlideShow::LayoutArticle() {
             mGlobeAngle = 0x8000;
             mGlobeZoom = mGlobeZoomTo;
             mGlobeZoomFrom = mGlobeZoomTo;
-            fn_80032580(mArticle, 7, mGlobeZoomTo, -0.3f);
+            Globe_FocusArticle(mArticle, 7, mGlobeZoomTo, -0.3f);
             lbl_8035697C = 0;
         } else {
             fn_8004E0B8(lbl_8035775C, ((u8*)mArticle->mLocation)[0xC]);

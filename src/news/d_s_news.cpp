@@ -6,6 +6,7 @@
 // System.h declares gSeparatorColor as a GXColor; here it is the ut::Color it really is.
 #define gSeparatorColor gSeparatorColor_GXColor
 #include <news/System.h>
+#include <news/d_s_news.h>
 #include <news/ArticleText.h>
 #include <news/Scene.h>
 #include <news/Camera.h>

@@ -6,6 +6,7 @@
 #include <nw4r/ut/ut_Rect.h>
 #include <nw4r/ut/ut_TextWriterBase.h>
 #include <news/HeadlineList.h>
+#include <news/d_s_news.h>
 #include <news/TextButton.h>
 #include <news/Scroller.h>
 
@@ -67,7 +68,6 @@ extern HeadlineList* lbl_8035755C; // headline list being shown
 extern u32 lbl_803575E0;           // number of news sections
 extern Globe* lbl_8035775C;
 
-void HeadlineList_Draw(const f32& offsetX, f32 alpha, f32 headerAlpha);
 
 // Base of MainScreen (not yet decompiled, 0x800493A8): the text writer and the
 // screen area.
