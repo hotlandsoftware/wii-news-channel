@@ -172,6 +172,19 @@ static inline BOOL IsHomeMenuActive() {
     return gHomeMenu->IsOpen();
 }
 
+static inline void InitCursorTex() {
+    for (s32 i = 0; i < 89; i++) {
+        CursorTex* tex = &sCursorTex[i];
+        tex->id = sCursorTexIds[i];
+        tex->width = TPL_GetWidth(gCursorTpl, tex->id);
+        tex->height = TPL_GetHeight(gCursorTpl, tex->id);
+    }
+}
+
+static inline void* LoadFont(const char* name) {
+    return LoadArcFile(gArchive, name, 32, NULL, lbl_80357640);
+}
+
 Scene::Scene(bool arg)
     : mDrawClock(NULL), mState(NULL), mClockX(0.0f), mClockY(0.0f), mClockRight(0.0f),
       mClockBottom(0.0f), mUnk8C(0.0f), mUnk90(0.0f), mClockSuffixY(0.0f), mStep(0),
@@ -230,13 +243,10 @@ Scene::Scene(bool arg)
     gHomeMenu->mManualEnabled = false;
     gHomeMenu->mSuspendMusic = false;
 
-    switch (gLanguage) {
-    case 0:
-        sTimeFontData = LoadArcFile(gArchive, "font_weather_time.brfnt.LZ", 32, NULL, lbl_80357640);
-        break;
-    default:
-        sTimeFontData = LoadArcFile(gArchive, "font_weather_timeWW.brfnt.LZ", 32, NULL, lbl_80357640);
-        break;
+    if (gLanguage == 0) {
+        sTimeFontData = LoadFont("font_weather_time.brfnt.LZ");
+    } else {
+        sTimeFontData = LoadFont("font_weather_timeWW.brfnt.LZ");
     }
     if (sTimeFontData == NULL) {
         SCENE_ERROR(413);
@@ -300,12 +310,7 @@ Scene::Scene(bool arg)
     mBaseWriter.SetFont(*gCityFont);
     mBaseWriter.SetCharSpace(0.0f);
 
-    for (s32 i = 0; i < 89; i++) {
-        CursorTex* tex = &sCursorTex[i];
-        tex->id = sCursorTexIds[i];
-        tex->width = TPL_GetWidth(gCursorTpl, tex->id);
-        tex->height = TPL_GetHeight(gCursorTpl, tex->id);
-    }
+    InitCursorTex();
 
     if (gLanguage == 0) {
         mClockX = GetSideMargin();

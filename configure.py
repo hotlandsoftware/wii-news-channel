@@ -589,7 +589,7 @@ config.libs = [
             Object(Matching, "news/Fader.cpp"),
             Object(Matching, "news/Thread.cpp"),
             Object(Matching, "news/ScreenBase.cpp"),
-            Object(NonMatching, "news/d_scene.cpp", extra_cflags=["-inline auto", "-ipa file"]),
+            Object(Matching, "news/d_scene.cpp", extra_cflags=["-inline auto", "-ipa file"]),
         ],
     },
     {
