@@ -1835,7 +1835,7 @@ void PreRetraceCallback(u32 retraceCount) {}
 #pragma auto_inline off
 void FillXfbRect(u8* xfb, u16 width, u32 size, s32 x, s32 y, s32 w, s32 h, u8 y8) {
     for (s32 j = 0; j < h; j++) {
-        u8* p = xfb + x * 2 + width * (y + j) * 2;
+        u8* p = xfb + width * (y + j) * 2 + x * 2;
         for (s32 i = 0; i < w; i++) {
             if (p < xfb || p >= xfb + size) {
                 return;
@@ -1852,10 +1852,13 @@ void PostRetraceCallback(u32 retraceCount) {
         sLoadCounter = 0;
     }
     s32 counter = sLoadCounter;
+    u8* xfb;
+    u16 width;
+    u16 height;
     u32 size = gXfbSize;
-    u16 width = gRenderMode.fbWidth;
-    u16 height = gRenderMode.xfbHeight;
-    u8* xfb = (u8*)gCurXfb;
+    width = gRenderMode.fbWidth;
+    height = gRenderMode.xfbHeight;
+    xfb = (u8*)gCurXfb;
     s32 w = (width * 10) / GetScreenWidth();
     s32 h = (height * 10) / 456;
     s32 gap = (width * 6) / GetScreenWidth();
