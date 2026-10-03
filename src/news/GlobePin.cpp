@@ -82,10 +82,12 @@ GlobePin::GlobePin(s32 arg1, s32 arg2, NewsArticle* article, f32 radius)
     }
     mHoverTime = 0;
 
-    math::VEC3 pos = GetPos();
-    math::VEC3 dir;
-    PSVECNormalize(&pos, &dir);
+    math::VEC3 right;
     math::VEC3 up;
+    math::VEC3 dir;
+    Vec pos = GetPos();
+    Mtx mtx;
+    PSVECNormalize(&pos, &dir);
     if (0.0f == dir.x && 0.0f == dir.z) {
         up.x = 0.0f;
         up.y = 0.0f;
@@ -95,12 +97,10 @@ GlobePin::GlobePin(s32 arg1, s32 arg2, NewsArticle* article, f32 radius)
         up.y = 1.0f;
         up.z = 0.0f;
     }
-    math::VEC3 right;
     PSVECCrossProduct(&up, &dir, &right);
     PSVECCrossProduct(&dir, &right, &up);
     PSVECNormalize(&right, &right);
     PSVECNormalize(&up, &up);
-    Mtx mtx;
     mtx[0][0] = right.x;
     mtx[1][0] = right.y;
     mtx[2][0] = right.z;
@@ -115,11 +115,9 @@ GlobePin::GlobePin(s32 arg1, s32 arg2, NewsArticle* article, f32 radius)
     mtx[2][3] = 0.0f;
     C_QUATMtx(&mQuat, mtx);
 
-    mCurQuat.x = mQuat.x;
-    mCurQuat.y = mQuat.y;
-    mCurQuat.z = mQuat.z;
-    mCurQuat.w = mQuat.w;
-    mCardDist = mRadius;
+    mCurQuat = mQuat;
+    f32 r = mRadius;
+    mCardDist = r;
     mLabelPos.x = 0.0f;
     mLabelPos.y = 0.0f;
     mLabelW = 0.0f;
