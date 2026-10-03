@@ -1134,7 +1134,7 @@ config.libs = [
         "progress_category": "sdk",
         "objects": [
             Object(Matching, "revolution/VF/d_vf.c"),
-            Object(NonMatching, "revolution/VF/d_vf_sys.c"),
+            Object(Matching, "revolution/VF/d_vf_sys.c"),
             Object(Matching, "revolution/VF/d_hash.c"),
             Object(Matching, "revolution/VF/d_time.c"),
             Object(Matching, "revolution/VF/d_common.c"),
