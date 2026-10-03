@@ -184,6 +184,15 @@ static inline void SetTevWhite(GXTevRegID reg, u8 a) {
     GXSetTevColor(reg, color);
 }
 
+static inline void SetTevBlack(GXTevRegID reg) {
+    GXSetTevColor(reg, (GXColor)ut::Color(0));
+}
+
+static inline void SetTevWhiteClear(GXTevRegID reg) {
+    const GXColor white = {255, 255, 255, 0};
+    GXSetTevColor(reg, white);
+}
+
 BOOL GlobePin::DrawCards(u8 alpha) {
     BOOL drawn = FALSE;
     Camera* camera = gGlobe->mCamera;
@@ -208,7 +217,7 @@ BOOL GlobePin::DrawCards(u8 alpha) {
         GXSetCurrentMtx(GX_PNMTX0);
         if (i == mCount - 1) {
             SetTevColorAlpha(GX_TEVREG0, mCardAlpha);
-            GXSetTevColor(GX_TEVREG1, (GXColor)ut::Color(0));
+            SetTevBlack(GX_TEVREG1);
             GXSetZMode(GX_TRUE, GX_LEQUAL, GX_FALSE);
             GXTexObj texObj;
             TPL_GetTexObj(gCommonTpl, 0x53, &texObj);
@@ -231,13 +240,12 @@ BOOL GlobePin::DrawCards(u8 alpha) {
                          GX_CLAMP, GX_CLAMP, GX_FALSE);
             GXLoadTexObj(&texObj, GX_TEXMAP0);
             SetTevWhite(GX_TEVREG0, alpha);
-            GXSetTevColor(GX_TEVREG1, (GXColor)ut::Color(0));
+            SetTevBlack(GX_TEVREG1);
         } else {
             GXTexObj texObj;
             TPL_GetTexObj(gCommonTpl, sNoPictureTex[gLanguage], &texObj);
             GXLoadTexObj(&texObj, GX_TEXMAP0);
-            const GXColor white = {255, 255, 255, 0};
-            GXSetTevColor(GX_TEVREG0, white);
+            SetTevWhiteClear(GX_TEVREG0);
             SetTevColorAlpha(GX_TEVREG1, alpha);
         }
         GXBegin(GX_QUADS, GX_VTXFMT0, 4);
