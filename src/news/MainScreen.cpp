@@ -2784,13 +2784,13 @@ void MainScreen::State1BD60(s32* arg) {
             f32 left = 5.0f + (mUnk19C - 0.5f * mUnk1A4);
             f32 right = (mUnk19C + 0.5f * mUnk1A4) - 5.0f;
             f32 bottom = (top + mUnk1B0) - 5.0f;
-            f32 maxY = 223.0f + minY;
             f32 rowHeight = mUnk24C * mUnk250;
+            f32 maxY = 223.0f + minY;
+            s32 sel = -1;
             for (s32 i = 0; i < 4; i++) {
                 mUnk314[i] = mUnk304[i];
                 mUnk304[i] = -1;
             }
-            s32 sel = -1;
             for (s32 i = 0; i < 4; i++) {
                 if (IsPointerValid(i)) {
                     f32 x = gCursorX[i][0];
