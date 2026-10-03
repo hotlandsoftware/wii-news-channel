@@ -13,6 +13,18 @@ namespace ef {
 // per-key random values (seed hash, then the XOR-folded bytes), and
 // linear/smooth/step interpolation.
 
+inline f32 TurnTime(f32 time, u8 flag, u32 loop, int turnLen) {
+    if (!(flag & AnimCurveHeader::PROC_FLAG_TURN)) {
+        return time;
+    }
+
+    if (!(loop & 1)) {
+        return time;
+    }
+
+    return turnLen - time;
+}
+
 struct AnimCurveKeyU8 {
     u16 frame;  // at 0x0
     u16 interp; // at 0x2
@@ -225,10 +237,7 @@ void AnimCurveExecuteColor(u8* pCmdList, u8* pTarget, u32 tick, u16 seed,
             loop = tick * ratio / turnLen;
             time = tick * ratio - loop * turnLen;
 
-            if ((flag & AnimCurveHeader::PROC_FLAG_TURN) && (loop & 1)) {
-                time = turnLen - time;
-            }
-
+            time = TurnTime(time, flag, loop, turnLen);
             frame = time;
         }
     }
@@ -497,10 +506,7 @@ void AnimCurveExecuteAlpha(u8* pCmdList, u8* pTarget, u32 tick, u16 seed,
             loop = tick * ratio / turnLen;
             time = tick * ratio - loop * turnLen;
 
-            if ((flag & AnimCurveHeader::PROC_FLAG_TURN) && (loop & 1)) {
-                time = turnLen - time;
-            }
-
+            time = TurnTime(time, flag, loop, turnLen);
             frame = time;
         }
     }
@@ -830,10 +836,7 @@ void AnimCurveExecuteF32x2(u8* pCmdList, Particle* pParticle, f32* pTarget,
             loop = tick * ratio / turnLen;
             time = tick * ratio - loop * turnLen;
 
-            if ((flag & AnimCurveHeader::PROC_FLAG_TURN) && (loop & 1)) {
-                time = turnLen - time;
-            }
-
+            time = TurnTime(time, flag, loop, turnLen);
             frame = time;
         }
     }
@@ -1073,10 +1076,7 @@ void AnimCurveExecuteF32x3(u8* pCmdList, f32* pTarget, u32 tick, u16 seed,
             loop = tick * ratio / turnLen;
             time = tick * ratio - loop * turnLen;
 
-            if ((flag & AnimCurveHeader::PROC_FLAG_TURN) && (loop & 1)) {
-                time = turnLen - time;
-            }
-
+            time = TurnTime(time, flag, loop, turnLen);
             frame = time;
         }
     }
@@ -1363,10 +1363,7 @@ void AnimCurveExecuteF32(u8* pCmdList, f32* pTarget, u32 tick, u16 seed,
             loop = tick * ratio / turnLen;
             time = tick * ratio - loop * turnLen;
 
-            if ((flag & AnimCurveHeader::PROC_FLAG_TURN) && (loop & 1)) {
-                time = turnLen - time;
-            }
-
+            time = TurnTime(time, flag, loop, turnLen);
             frame = time;
         }
     }
@@ -1683,10 +1680,7 @@ void AnimCurveExecuteRotate(u8* pCmdList, f32* pTarget, u32 tick, u16 seed,
             loop = tick * ratio / turnLen;
             time = tick * ratio - loop * turnLen;
 
-            if ((flag & AnimCurveHeader::PROC_FLAG_TURN) && (loop & 1)) {
-                time = turnLen - time;
-            }
-
+            time = TurnTime(time, flag, loop, turnLen);
             frame = time;
         }
     }
@@ -1950,10 +1944,7 @@ void AnimCurveExecuteF32x1(u8* pCmdList, Particle* pParticle, f32* pTarget,
             loop = tick * ratio / turnLen;
             time = tick * ratio - loop * turnLen;
 
-            if ((flag & AnimCurveHeader::PROC_FLAG_TURN) && (loop & 1)) {
-                time = turnLen - time;
-            }
-
+            time = TurnTime(time, flag, loop, turnLen);
             frame = time;
         }
     }
