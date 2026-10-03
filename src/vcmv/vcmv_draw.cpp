@@ -898,6 +898,19 @@ typedef struct vcmvPageRect {
     f32 bottom; // 0xC
 } vcmvPageRect;
 
+static inline void vcmvDrawPage(const vcmvPageRect* rect) {
+    GXBegin(GX_QUADS, GX_VTXFMT0, 4);
+    GXPosition3f32(rect->left, rect->top, 0.0f);
+    GXTexCoord2f32(0.0f, 0.0f);
+    GXPosition3f32(rect->left, rect->bottom, 0.0f);
+    GXTexCoord2f32(0.0f, 1.0f);
+    GXPosition3f32(rect->right, rect->bottom, 0.0f);
+    GXTexCoord2f32(1.0f, 1.0f);
+    GXPosition3f32(rect->right, rect->top, 0.0f);
+    GXTexCoord2f32(1.0f, 0.0f);
+    GXEnd();
+}
+
 void vcmvDrawScreen(f32 shift) {
     Mtx44 proj;
 
@@ -973,8 +986,8 @@ void vcmvDrawScreen(f32 shift) {
             top = vcmvHalfHeight - sScroll.rect.y;
             bottom = vcmvHalfHeight - y1;
             delta = sScroll.offset - sScroll.entries[sScroll.above].scroll;
-            va0 = (sScroll.rect.y + delta) * sTexScaleY;
             bandBottom = bottom + delta;
+            va0 = (sScroll.rect.y + delta) * sTexScaleY;
             vb0 = (sScroll.rect.y + (sScroll.offset + (sScroll.rect.h - delta) - sScroll.entries[sScroll.below].scroll)) *
                   sTexScaleY;
             vb1 = (sScroll.rect.y + (sScroll.offset + (sScroll.rect.h - delta) - sScroll.entries[sScroll.below].scroll) +
@@ -984,7 +997,16 @@ void vcmvDrawScreen(f32 shift) {
             if (va0 < v0 || vb0 < v0 || vb1 > v1) {
             plain:
                 vcmvSetupTexDraw(&sTexObjs[sScrollTex], white);
-                vcmvDrawRect(-vcmvHalfWidth, vcmvHalfHeight, vcmvHalfWidth, -vcmvHalfHeight, 0.0f, 0.0f, 1.0f, 1.0f);
+                GXBegin(GX_QUADS, GX_VTXFMT0, 4);
+                GXPosition3f32(-vcmvHalfWidth, vcmvHalfHeight, 0.0f);
+                GXTexCoord2f32(0.0f, 0.0f);
+                GXPosition3f32(-vcmvHalfWidth, -vcmvHalfHeight, 0.0f);
+                GXTexCoord2f32(0.0f, 1.0f);
+                GXPosition3f32(vcmvHalfWidth, -vcmvHalfHeight, 0.0f);
+                GXTexCoord2f32(1.0f, 1.0f);
+                GXPosition3f32(vcmvHalfWidth, vcmvHalfHeight, 0.0f);
+                GXTexCoord2f32(1.0f, 0.0f);
+                GXEnd();
                 sShowTex = sScrollTex;
                 return;
             }
@@ -999,16 +1021,52 @@ void vcmvDrawScreen(f32 shift) {
                 vcmvSetupTexDraw(&sTexObjs[sScrollTex], white);
             }
             if (sScroll.rect.y != 0) {
-                vcmvDrawRect(-vcmvHalfWidth, vcmvHalfHeight, vcmvHalfWidth, top, 0.0f, 0.0f, 1.0f, v0);
+                GXBegin(GX_QUADS, GX_VTXFMT0, 4);
+                GXPosition3f32(-vcmvHalfWidth, vcmvHalfHeight, 0.0f);
+                GXTexCoord2f32(0.0f, 0.0f);
+                GXPosition3f32(-vcmvHalfWidth, top, 0.0f);
+                GXTexCoord2f32(0.0f, v0);
+                GXPosition3f32(vcmvHalfWidth, top, 0.0f);
+                GXTexCoord2f32(1.0f, v0);
+                GXPosition3f32(vcmvHalfWidth, vcmvHalfHeight, 0.0f);
+                GXTexCoord2f32(1.0f, 0.0f);
+                GXEnd();
             }
             if (sScroll.rect.x != 0) {
-                vcmvDrawRect(-vcmvHalfWidth, vcmvHalfHeight, left, -vcmvHalfHeight, 0.0f, 0.0f, u0, 1.0f);
+                GXBegin(GX_QUADS, GX_VTXFMT0, 4);
+                GXPosition3f32(-vcmvHalfWidth, vcmvHalfHeight, 0.0f);
+                GXTexCoord2f32(0.0f, 0.0f);
+                GXPosition3f32(-vcmvHalfWidth, -vcmvHalfHeight, 0.0f);
+                GXTexCoord2f32(0.0f, 1.0f);
+                GXPosition3f32(left, -vcmvHalfHeight, 0.0f);
+                GXTexCoord2f32(u0, 1.0f);
+                GXPosition3f32(left, vcmvHalfHeight, 0.0f);
+                GXTexCoord2f32(u0, 0.0f);
+                GXEnd();
             }
             if (x1 < vcmvScreenWidth) {
-                vcmvDrawRect(right, vcmvHalfHeight, vcmvHalfWidth, -vcmvHalfHeight, u1, 0.0f, 1.0f, 1.0f);
+                GXBegin(GX_QUADS, GX_VTXFMT0, 4);
+                GXPosition3f32(right, vcmvHalfHeight, 0.0f);
+                GXTexCoord2f32(u1, 0.0f);
+                GXPosition3f32(right, -vcmvHalfHeight, 0.0f);
+                GXTexCoord2f32(u1, 1.0f);
+                GXPosition3f32(vcmvHalfWidth, -vcmvHalfHeight, 0.0f);
+                GXTexCoord2f32(1.0f, 1.0f);
+                GXPosition3f32(vcmvHalfWidth, vcmvHalfHeight, 0.0f);
+                GXTexCoord2f32(1.0f, 0.0f);
+                GXEnd();
             }
             if (y1 < vcmvScreenHeight) {
-                vcmvDrawRect(-vcmvHalfWidth, bottom, vcmvHalfWidth, -vcmvHalfHeight, 0.0f, v1, 1.0f, 1.0f);
+                GXBegin(GX_QUADS, GX_VTXFMT0, 4);
+                GXPosition3f32(-vcmvHalfWidth, bottom, 0.0f);
+                GXTexCoord2f32(0.0f, v1);
+                GXPosition3f32(-vcmvHalfWidth, -vcmvHalfHeight, 0.0f);
+                GXTexCoord2f32(0.0f, 1.0f);
+                GXPosition3f32(vcmvHalfWidth, -vcmvHalfHeight, 0.0f);
+                GXTexCoord2f32(1.0f, 1.0f);
+                GXPosition3f32(vcmvHalfWidth, bottom, 0.0f);
+                GXTexCoord2f32(1.0f, v1);
+                GXEnd();
             }
             return;
         }
@@ -1050,7 +1108,7 @@ void vcmvDrawScreen(f32 shift) {
 
         if (sTexBufs[sShowTex] != NULL) {
             vcmvSetupTexDraw(&sTexObjs[sShowTex], white);
-            vcmvDrawRect(next.left, next.top, next.right, next.bottom, 0.0f, 0.0f, 1.0f, 1.0f);
+            vcmvDrawPage(&next);
         }
 
         if (vcmvLoadState < vcmvLoadDone) {
@@ -1058,7 +1116,7 @@ void vcmvDrawScreen(f32 shift) {
             if (sTexBufs[sPrevTex] != NULL) {
                 GXColor color = {255, 255, 255, alpha};
                 vcmvSetupTexDraw(&sTexObjs[sPrevTex], color);
-                vcmvDrawRect(prev.left, prev.top, prev.right, prev.bottom, 0.0f, 0.0f, 1.0f, 1.0f);
+                vcmvDrawPage(&prev);
             }
             vcmvLoadState++;
         } else {
