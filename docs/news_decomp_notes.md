@@ -65,7 +65,7 @@ So each file ends with a `__sinit` that constructs it, and the `.ctors` table (`
 1. Find the file range from `.ctors`/`__sinit`, then run `tools/decomp/refs.py START END` to get its data ranges.
 2. Add the split to `config/HAGE/splits.txt` and `Object(NonMatching, ...)` to `configure.py`.
 3. Write the source, `ninja`, then rename symbols with `tools/decomp/ren.py` (mangled names from `build/binutils/powerpc-eabi-nm`).
-4. Iterate with `tools/decomp/od.py` and `tools/decomp/variants.py`.
+4. Iterate with `tools/decomp/od.py` and `tools/decomp/variants.py`. For remaining register swaps, `tools/decomp/srcsearch.py <src> <function> 500` searches declaration orders, statement orders and operand orders automatically.
 5. When every function is 100%, switch to `Matching` and check that `ninja` still prints `build/HAGE/main.dol: OK`.
 
 ## Known non-matching

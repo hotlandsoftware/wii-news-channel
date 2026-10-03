@@ -6,53 +6,53 @@
 #define CLAMP_U8(x) (((x) >> 19) == 0 ? ((x) >> 11) : ((x) < 0 ? 0 : 255))
 
 void jpgdIdct8x8Y(s32* in, u8* out, u16 stride, s32 extent) {
-    s32 d2;
-    s32 tmp1;
-    s32 d3;
-    s32 tmp3;
-    s32 nz;
-    s32 d1;
-    s32 tmp10;
-    s32 d0;
-    s32 ws[64];
-    s32 tmp11;
-    s32 d4;
-    s32* wp;
-    s32 tmp7;
     s32 tmp4;
-    s32 d6;
-    s32 rows;
-    s32 z10;
-    s32 tmp6;
+    s32 nz;
     s32 tmp0;
-    s32 tmp13;
-    s32 z13;
-    s32 tmp12;
-    s32 z5;
-    s32 i;
-    s32 z11;
-    s32 tmp5;
-    s32 d7;
-    s32 d5;
-    s32 z12;
+    s32 tmp11;
+    s32 d1;
+    s32 tmp1;
+    s32 d2;
+    s32 ws[64];
     s32 tmp2;
+    s32 d3;
+    s32 d0;
+    s32 rows;
+    s32 tmp3;
+    s32* wp;
+    s32 tmp10;
+    s32 z12;
+    s32 z10;
+    s32 tmp13;
+    s32 d4;
+    s32 d5;
+    s32 d7;
+    s32 tmp7;
+    s32 z5;
+    s32 tmp12;
+    s32 z11;
+    s32 z13;
+    s32 d6;
+    s32 i;
+    s32 tmp5;
+    s32 tmp6;
 
     rows = (extent >> 4) * 8;
     wp = ws;
 
     for (i = 0; i < rows; i += 8) {
         d2 = in[2];
+        d6 = in[6];
         d1 = in[1];
         d4 = in[4];
-        d6 = in[6];
-        nz = (u32)d4 | (u32)d6;
+        d5 = in[5];
+        nz = (u32)d6 | (u32)d4;
         nz = (u32)d2 | nz;
         d7 = in[7];
         nz = (u32)d1 | nz;
-        d5 = in[5];
-        nz = (u32)d7 | nz;
         d3 = in[3];
-        nz = nz | (u32)d5;
+        nz = (u32)d7 | nz;
+        nz = (u32)d5 | nz;
         nz = (u32)d3 | nz;
         if (nz == 0) {
             d0 = in[0];
@@ -68,29 +68,29 @@ void jpgdIdct8x8Y(s32* in, u8* out, u16 stride, s32 extent) {
             d0 = in[0];
             tmp12 = DESCALE8((d2 - d6) * 181);
             tmp13 = tmp12 + (d2 + d6);
+            tmp10 = d0 + d4;
             tmp11 = d0 - d4;
-            tmp10 = d4 + d0;
+            tmp1 = tmp11 + tmp12;
             tmp0 = tmp10 + tmp13;
             tmp3 = tmp10 - tmp13;
-            tmp1 = tmp11 + tmp12;
             tmp2 = tmp11 - tmp12;
 
-            z12 = d1 - d7;
             z11 = d1 + d7;
             z13 = d5 + d3;
+            z12 = d1 - d7;
             z10 = d5 - d3;
 
             tmp11 = DESCALE8((z11 - z13) * 181);
             z5 = DESCALE8((z10 + z12) * 98);
-            tmp10 = DESCALE8(334 * z12) - z5;
+            tmp10 = DESCALE8(z12 * 334) - z5;
             tmp12 = z5 + DESCALE8(z10 * 139);
 
-            tmp4 = tmp12;
             tmp7 = z11 + (tmp10 + z13);
             tmp5 = tmp12 + tmp11;
             tmp6 = tmp11 + tmp10;
+            tmp4 = tmp12;
 
-            wp[0] = tmp7 + tmp0;
+            wp[0] = tmp0 + tmp7;
             wp[7] = tmp0 - tmp7;
             wp[1] = tmp1 + tmp6;
             wp[6] = tmp1 - tmp6;
@@ -99,8 +99,8 @@ void jpgdIdct8x8Y(s32* in, u8* out, u16 stride, s32 extent) {
             wp[3] = tmp3 + tmp4;
             wp[4] = tmp3 - tmp4;
         }
-        in = in + 8;
-        wp += 8;
+        in = 8 + in;
+        wp = 8 + wp;
     }
     for (; i <= 56; i += 8) {
         memset(&ws[i], 0, 32);
@@ -109,16 +109,16 @@ void jpgdIdct8x8Y(s32* in, u8* out, u16 stride, s32 extent) {
     wp = &ws[7];
     for (i = 7; i >= 0; i--) {
         u8* o = out + i;
-        d5 = wp[40];
+        d1 = wp[8];
         d6 = wp[48];
+        d5 = wp[40];
         d4 = wp[32];
         nz = (u32)d6 | (u32)d4;
         d2 = wp[16];
-        nz = (u32)d2 | nz;
         d3 = wp[24];
-        d1 = wp[8];
-        d7 = wp[56];
+        nz = (u32)d2 | nz;
         nz = (u32)d1 | nz;
+        d7 = wp[56];
         nz = (u32)d7 | nz;
         nz = (u32)d5 | nz;
         nz = (u32)d3 | nz;
@@ -136,19 +136,19 @@ void jpgdIdct8x8Y(s32* in, u8* out, u16 stride, s32 extent) {
         } else {
             s32 x;
 
-            d0 = 0x40000 + wp[0];
+            d0 = wp[0] + 0x40000;
             tmp12 = DESCALE8((d2 - d6) * 181);
             tmp13 = tmp12 + (d2 + d6);
             tmp10 = d0 + d4;
-            tmp11 = d0 - d4;
             tmp3 = tmp10 - tmp13;
+            tmp11 = d0 - d4;
             tmp2 = tmp11 - tmp12;
-            tmp0 = tmp13 + tmp10;
             tmp1 = tmp11 + tmp12;
+            tmp0 = tmp10 + tmp13;
 
-            z10 = d5 - d3;
-            z11 = d7 + d1;
             z13 = d5 + d3;
+            z11 = d1 + d7;
+            z10 = d5 - d3;
             z12 = d1 - d7;
 
             tmp11 = DESCALE8((z11 - z13) * 181);
@@ -156,10 +156,10 @@ void jpgdIdct8x8Y(s32* in, u8* out, u16 stride, s32 extent) {
             tmp10 = DESCALE8(z12 * 334) - z5;
             tmp12 = z5 + DESCALE8(139 * z10);
 
-            tmp4 = tmp12;
-            tmp6 = tmp10 + tmp11;
-            tmp5 = tmp11 + tmp12;
+            tmp6 = tmp11 + tmp10;
             tmp7 = z11 + (tmp10 + z13);
+            tmp4 = tmp12;
+            tmp5 = tmp11 + tmp12;
 
             x = tmp0 + tmp7;
             o[0] = CLAMP_U8(x);
@@ -169,7 +169,7 @@ void jpgdIdct8x8Y(s32* in, u8* out, u16 stride, s32 extent) {
             o[stride] = CLAMP_U8(x);
             x = tmp1 - tmp6;
             o[stride * 6] = CLAMP_U8(x);
-            x = tmp5 + tmp2;
+            x = tmp2 + tmp5;
             o[stride * 2] = CLAMP_U8(x);
             x = tmp2 - tmp5;
             o[stride * 5] = CLAMP_U8(x);
@@ -184,52 +184,52 @@ void jpgdIdct8x8Y(s32* in, u8* out, u16 stride, s32 extent) {
 
 void jpgdIdct8x8C(s32* in, u8* out, u16 stride, s32 extent) {
     s32 z13;
+    s32 i;
     s32* wp;
-    s32 d7;
-    u32 nz;
-    s32 tmp1;
-    s32 tmp13;
     s32 tmp7;
+    s32 tmp12;
     s32 ws[64];
-    s32 tmp3;
+    s32 tmp4;
+    s32 d6;
+    s32 tmp5;
+    s32 d7;
     s32 d1;
     s32 d2;
-    s32 i;
-    s32 d0;
-    s32 d6;
+    s32 tmp1;
+    s32 tmp3;
     s32 d5;
-    s32 d4;
-    s32 tmp11;
-    s32 d3;
-    s32 tmp10;
-    s32 tmp5;
-    s32 z10;
-    s32 tmp6;
-    s32 tmp4;
-    s32 z12;
-    s32 tmp2;
-    s32 tmp0;
-    s32 tmp12;
-    s32 z11;
     s32 rows;
+    s32 tmp13;
+    s32 z10;
+    s32 z12;
+    s32 d0;
+    s32 d3;
+    u32 nz;
+    s32 tmp0;
+    s32 tmp11;
+    s32 tmp6;
+    s32 tmp10;
+    s32 tmp2;
     s32 z5;
+    s32 z11;
+    s32 d4;
 
     if (extent == 0x11) {
         memset(out, (s8)CLAMP_S8(in[0] >> 11), 64);
         return;
     }
     rows = (extent >> 4) * 8;
-    if ((0xF & extent) <= 2) {
+    if ((extent & 0xF) <= 2) {
         wp = ws;
         for (i = 0; i < rows; i += 8) {
             d1 = in[1];
             d0 = in[0];
-            tmp11 = DESCALE8(d1 * 181);
-            z5 = DESCALE8(98 * d1);
-            tmp10 = DESCALE8(d1 * 334) - z5;
+            tmp11 = DESCALE8(181 * d1);
+            z5 = DESCALE8(d1 * 98);
+            tmp10 = DESCALE8(334 * d1) - z5;
             tmp7 = d1 + tmp10;
-            tmp5 = z5 + tmp11;
             tmp6 = tmp11 + tmp10;
+            tmp5 = z5 + tmp11;
             wp[0] = d0 + tmp7;
             wp[7] = d0 - tmp7;
             wp[1] = d0 + tmp6;
@@ -238,8 +238,8 @@ void jpgdIdct8x8C(s32* in, u8* out, u16 stride, s32 extent) {
             wp[5] = d0 - tmp5;
             wp[3] = d0 + z5;
             wp[4] = d0 - z5;
-            wp = 8 + wp;
-            in = 8 + in;
+            in += 8;
+            wp += 8;
         }
         for (; i <= 56; i += 8) {
             memset(&ws[i], 0, 32);
@@ -249,17 +249,17 @@ void jpgdIdct8x8C(s32* in, u8* out, u16 stride, s32 extent) {
         for (i = 0; i < rows; i += 8) {
             d4 = in[4];
             d6 = in[6];
-            d7 = in[7];
             d2 = in[2];
-            nz = (u32)d4 | (u32)d6;
-            d5 = in[5];
             d1 = in[1];
-            nz |= (u32)d2;
-            nz |= (u32)d1;
+            d7 = in[7];
+            d5 = in[5];
             d3 = in[3];
+            nz = (u32)d4 | (u32)d6;
+            nz = (u32)d2 | nz;
+            nz = (u32)d1 | nz;
             nz = (u32)d7 | nz;
-            nz = nz | (u32)d5;
-            nz |= (u32)d3;
+            nz = (u32)d5 | nz;
+            nz = (u32)d3 | nz;
             if (nz == 0) {
                 d0 = in[0];
                 wp[7] = d0;
@@ -274,8 +274,8 @@ void jpgdIdct8x8C(s32* in, u8* out, u16 stride, s32 extent) {
                 d0 = in[0];
                 tmp12 = DESCALE8((d2 - d6) * 181);
                 tmp11 = d0 - d4;
-                tmp13 = tmp12 + (d2 + d6);
                 tmp10 = d4 + d0;
+                tmp13 = tmp12 + (d2 + d6);
                 tmp0 = tmp10 + tmp13;
                 tmp1 = tmp12 + tmp11;
                 tmp3 = tmp10 - tmp13;
@@ -288,15 +288,15 @@ void jpgdIdct8x8C(s32* in, u8* out, u16 stride, s32 extent) {
 
                 tmp11 = DESCALE8((z11 - z13) * 181);
                 z5 = DESCALE8((z10 + z12) * 98);
-                tmp10 = DESCALE8(334 * z12) - z5;
-                tmp12 = z5 + DESCALE8(z10 * 139);
+                tmp10 = DESCALE8(z12 * 334) - z5;
+                tmp12 = z5 + DESCALE8(139 * z10);
 
+                tmp5 = tmp11 + tmp12;
                 tmp4 = tmp12;
-                tmp5 = tmp12 + tmp11;
-                tmp6 = tmp11 + tmp10;
                 tmp7 = z11 + (tmp10 + z13);
+                tmp6 = tmp11 + tmp10;
 
-                wp[0] = tmp7 + tmp0;
+                wp[0] = tmp0 + tmp7;
                 wp[7] = tmp0 - tmp7;
                 wp[1] = tmp1 + tmp6;
                 wp[6] = tmp1 - tmp6;
@@ -316,18 +316,18 @@ void jpgdIdct8x8C(s32* in, u8* out, u16 stride, s32 extent) {
     wp = &ws[7];
     for (i = 7; i >= 0; i--) {
         s8* o = (s8*)out + i;
-        d1 = wp[8];
         d4 = wp[32];
-        d2 = wp[16];
         d6 = wp[48];
-        d7 = wp[56];
+        d2 = wp[16];
         nz = (u32)d4 | (u32)d6;
-        nz = (u32)d2 | nz;
-        nz = nz | (u32)d1;
+        nz |= (u32)d2;
         d5 = wp[40];
-        nz = (u32)d7 | nz;
-        nz = nz | (u32)d5;
+        d1 = wp[8];
+        d7 = wp[56];
+        nz = (u32)d1 | nz;
         d3 = wp[24];
+        nz = (u32)d7 | nz;
+        nz |= (u32)d5;
         nz |= (u32)d3;
         if (nz == 0) {
             s32 c = CLAMP_S8(wp[0] >> 11);
@@ -344,22 +344,22 @@ void jpgdIdct8x8C(s32* in, u8* out, u16 stride, s32 extent) {
 
             d0 = wp[0];
             tmp12 = DESCALE8((d2 - d6) * 181);
-            tmp13 = tmp12 + (d6 + d2);
+            tmp13 = tmp12 + (d2 + d6);
             tmp10 = d4 + d0;
             tmp11 = d0 - d4;
-            tmp3 = tmp10 - tmp13;
-            tmp1 = tmp12 + tmp11;
-            tmp2 = tmp11 - tmp12;
+            tmp1 = tmp11 + tmp12;
             tmp0 = tmp10 + tmp13;
+            tmp3 = tmp10 - tmp13;
+            tmp2 = tmp11 - tmp12;
 
             z10 = d5 - d3;
-            z12 = d1 - d7;
             z13 = d5 + d3;
+            z12 = d1 - d7;
             z11 = d1 + d7;
 
             tmp11 = DESCALE8((z11 - z13) * 181);
             z5 = DESCALE8((z12 + z10) * 98);
-            tmp10 = DESCALE8(334 * z12) - z5;
+            tmp10 = DESCALE8(z12 * 334) - z5;
             tmp12 = z5 + DESCALE8(139 * z10);
 
             tmp7 = z11 + (tmp10 + z13);
