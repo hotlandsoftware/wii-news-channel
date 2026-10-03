@@ -738,7 +738,7 @@ vcmv/vcmv_wwwlib.cpp:
 	extabindex  start:0x80006B5C end:0x80006BD4
 	.text       start:0x8009C78C end:0x8009D5F4
 	.rodata     start:0x801AB408 end:0x801ABDD0
-	.data       start:0x801CC620 end:0x801CD8B0
+	.data       start:0x801CC620 end:0x801CD8B0 align:32
 	.bss        start:0x802B2B80 end:0x802B2C78
 	.sdata      start:0x80356ED8 end:0x80356F00
 	.sbss       start:0x80357A30 end:0x80357C00

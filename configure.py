@@ -1107,7 +1107,7 @@ config.libs = [
         "objects": [
             Object(Matching, "vcmv/vcmv_cursor.cpp"),
             Object(NonMatching, "vcmv/vcmv_draw.cpp"),
-            Object(NonMatching, "vcmv/vcmv_jsext.cpp"),
+            Object(Matching, "vcmv/vcmv_jsext.cpp"),
             Object(NonMatching, "vcmv/vcmv_main.cpp"),
             Object(NonMatching, "vcmv/vcmv_wwwlib.cpp"),
             Object(NonMatching, "vcmv/vcmv_rsostatic.cpp"),

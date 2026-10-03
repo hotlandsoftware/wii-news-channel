@@ -134,7 +134,7 @@ void* WWWHTTPRemoveAuthCredentials;
 void* WWWHTTPSetProxy;
 void* WWWHTTPRemoveProxy;
 void* WWWHTTPEndLoading;
-void* WWWAddJSPlugin;
+void (*WWWAddJSPlugin)(const char* name, jsplugin_capabilities* caps, jsplugin_callbacks** callbacks);
 void* WWWAddNSPlugin;
 void* WWWProtocolWrite;
 void* WWWProtocolSetMimeType;

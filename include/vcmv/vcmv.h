@@ -72,10 +72,71 @@ void vcmvDrawScreen(f32 alpha);
 void vcmvOpenStartPage(void);
 void vcmvDrawQuad(vcmvQuad* quad);
 
-// vcmv_jsext.cpp
+// vcmv_jsext.cpp: Opera JavaScript plugin (jsplugin API) "vcJavaScriptExt"
+typedef struct jsplugin_obj {
+    void* plugin_private; // 0x0
+    void* opera_private;  // 0x4
+} jsplugin_obj;
+
+typedef struct jsplugin_value {
+    int type; // 0x0
+    union {
+        double number;
+        const char* string;
+        int boolean;
+        jsplugin_obj* object;
+    } u; // 0x8
+} jsplugin_value;
+
+enum {
+    JSP_TYPE_OBJECT = 0,
+    JSP_TYPE_NUMBER = 2,
+};
+
+// Return codes of getters and functions
+enum {
+    JSP_GET_VALUE = 6,
+    JSP_GET_VALUE_CACHE = 7,
+    JSP_GET_NOTFOUND = 8,
+    JSP_GET_ERROR = 10,
+    JSP_CALL_VALUE = 16,
+    JSP_CALL_NO_VALUE = 17,
+    JSP_CALL_ERROR = 18,
+    JSP_CALL_EXCEPTION = 19,
+};
+
+typedef int (*jsplugin_getter)(jsplugin_obj* obj, const char* name, jsplugin_value* result);
+typedef int (*jsplugin_setter)(jsplugin_obj* obj, const char* name, jsplugin_value* value);
+typedef int (*jsplugin_function)(jsplugin_obj* this_obj, jsplugin_obj* function_obj, int argc,
+                                 jsplugin_value* argv, jsplugin_value* result);
+typedef void (*jsplugin_destructor)(jsplugin_obj* obj);
+
+typedef struct jsplugin_callbacks {
+    int (*create_function)(jsplugin_obj* refobj, jsplugin_getter getter, jsplugin_setter setter,
+                           jsplugin_function f_call, jsplugin_function f_construct,
+                           const char* f_signature, jsplugin_destructor destructor,
+                           jsplugin_obj** result); // 0x0
+    int (*create_object)(jsplugin_obj* refobj, jsplugin_getter getter, jsplugin_setter setter,
+                         jsplugin_destructor destructor, jsplugin_obj** result); // 0x4
+} jsplugin_callbacks;
+
+typedef struct jsplugin_capabilities {
+    const char** global_names;                                         // 0x00
+    const char** object_types;                                         // 0x04
+    jsplugin_getter global_getter;                                     // 0x08
+    jsplugin_setter global_setter;                                     // 0x0C
+    void (*init)(jsplugin_obj* global);                                // 0x10
+    void (*destroy)(jsplugin_obj* global);                             // 0x14
+    void (*gc_trace)(jsplugin_obj* obj);                               // 0x18
+    int (*allow_access)(const char* protocol, const char* host, int port); // 0x1C
+} jsplugin_capabilities;
+
 extern u8 vcmvJSReady; // 0x80357998
 
 void vcmvAddJSPlugin(void);
+s32 vcmvJSGetTransition(void);
+s32 vcmvJSGetTransitionArg(void);
+void vcmvJSResetTransition(void);
 
 // vcmv_main.cpp
 typedef struct vcmvCursor {
@@ -283,7 +344,7 @@ extern void* WWWHTTPRemoveAuthCredentials;
 extern void* WWWHTTPSetProxy;
 extern void* WWWHTTPRemoveProxy;
 extern void* WWWHTTPEndLoading;
-extern void* WWWAddJSPlugin;
+extern void (*WWWAddJSPlugin)(const char* name, jsplugin_capabilities* caps, jsplugin_callbacks** callbacks);
 extern void* WWWAddNSPlugin;
 extern void* WWWProtocolWrite;
 extern void* WWWProtocolSetMimeType;
