@@ -245,7 +245,9 @@ void Globe::CalcCameraMtx(math::MTX34* mtx) {
     PSMTXMultVec(view, pos, viewPos);
     f32 x = mOffsetX * viewPos.z / proj._00;
     f32 y = mOffsetY * viewPos.z / proj._11;
-    PSMTXTrans(gWorkMtx, x - viewPos.x, y - viewPos.y, 0.0f);
+    f32 ty = y - viewPos.y;
+    f32 tx = x - viewPos.x;
+    PSMTXTrans(gWorkMtx, tx, ty, 0.0f);
     PSMTXConcat(gWorkMtx, view, gWorkMtx);
     *mtx = gWorkMtx;
 }
@@ -357,7 +359,8 @@ BOOL Globe::StartGrab(s32 chan) {
         mLevelling = false;
         mSpinning = false;
 
-        mGrabRot[chan].x = mCamera->GetTargetRot().x;
+        f32 rx = mCamera->GetTargetRot().x;
+        mGrabRot[chan].x = rx;
         mGrabRot[chan].y = mCamera->GetTargetRot().y;
         mGrabPos[chan].x = gPointerX[chan];
         mGrabPos[chan].y = gPointerY[chan];

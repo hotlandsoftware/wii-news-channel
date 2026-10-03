@@ -617,8 +617,8 @@ void ArticleText::Update(const math::VEC2* pos, bool clip, f32 scroll) {
     mLastVisible = 0;
     s32 i = 0;
     bool overflow = false;
-    mFirstVisible = mCount;
     mLastFull = 0;
+    mFirstVisible = mCount;
     for (; c->mChar != 0; c++) {
         c->Update(pos, &mRevealRate);
         f32 top = pos->y + c->mPos.y;
