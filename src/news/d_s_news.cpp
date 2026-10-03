@@ -81,7 +81,6 @@ void fn_8000C89C(void* obj, f32 x, f32 y);
 // Globe pins (0x8000D01C..)
 GlobePin* fn_8000D01C(void* mem, u32 category, u32 index, NewsArticle* article, f32 depth);
 void fn_8000D418(GlobePin* pin, u8 alpha);
-void fn_8000D6A0(math::VEC2* out, GlobePin* pin);
 void fn_8000DAF8(GlobePin* pin);
 void fn_8000DFC4(GlobePin* pin);
 void fn_8000E418(GlobePin* pin, s32 arg);
@@ -197,6 +196,7 @@ void* operator new[](size_t size, MEMAllocator* allocator);
 class GlobePin {
 public:
     virtual ~GlobePin();
+    math::VEC2 GetPos();
 
     u8 unk4[0x28 - 0x4];
     GlobePin* mNext;     // at 0x28 (pins sharing the same spot)
@@ -2105,12 +2105,12 @@ void Pins_Sort() {
                     *sorted = *pin;
                     break;
                 }
-                math::VEC2 tmp;
-                fn_8000D6A0(&tmp, *pin);
-                math::VEC2 a = tmp;
-                math::VEC2 b;
-                fn_8000D6A0(&b, *sorted);
-                math::VEC2 d(a.x - b.x, a.y - b.y);
+                math::VEC2 a;
+                a = (*pin)->GetPos();
+                math::VEC2 b = (*sorted)->GetPos();
+                math::VEC2 d;
+                d.x = a.x - b.x;
+                d.y = a.y - b.y;
                 f32 dist = math::FSqrt(d.x * d.x + d.y * d.y);
                 GlobePin* p = *sorted;
                 if (dist < 35.0f * (*pin)->mRadius + 35.0f * p->mRadius) {
