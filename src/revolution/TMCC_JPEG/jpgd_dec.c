@@ -271,55 +271,47 @@ s32 jpgdSetupScale(JPEGDecContext* ctx) {
 
 
 s32 jpgdDecodeMcu(u32 x, u32 y, JPEGDecContext* ctx, s32* work) {
-    s32* dcPred;
-    u8* scan;
-    JPEGDecHandle* h;
-    u8** outC;
     JPEGScan* sc;
-    u8** pOut;
     s32* quant;
     s32 i;
-    s32 ret;
+    u8* scan;
     s32 comp;
     s32 j;
-    s32 coef[64];
     u16 stride;
+    s32 coef[64];
     JPEGFrame* frame;
-    u8* nBlocks;
     JPEGTables* tables;
     u8** out;
     JPEGIdctFunc idctY;
+    s32 ret;
+    JPEGDecHandle* h;
     JPEGIdctFunc idctC;
     JPEGBlockFunc decodeBlock;
-
-    sc = &ctx->scan;
     frame = &ctx->frame;
+    sc = &ctx->scan;
     scan = sc->comp;
     tables = &ctx->tables;
     out = ctx->blockOut;
-    dcPred = sc->dcPred;
-    i = 0;
+
     h = ctx->handle;
     decodeBlock = ctx->decodeBlock;
     idctY = ctx->idctY;
+    i = 0;
     idctC = ctx->idctC;
     stride = ctx->stride;
-    for (; i < frame->scanComps; dcPred++, i++, scan++) {
-        comp = *scan;
+    for (; i < frame->scanComps; i++) {
+        comp = scan[i];
         quant = tables->quant[sc->quantSel[comp]];
         jpgdSelectHuffTables(tables, sc->dcSel[comp], sc->acSel[comp]);
-        pOut = out;
-        outC = &out[comp];
-        nBlocks = &frame->blocks[i];
-        for (j = 0; j < *nBlocks; pOut++, j++) {
-            ret = decodeBlock(coef, quant, dcPred, ctx);
+        for (j = 0; j < frame->blocks[i]; j++) {
+            ret = decodeBlock(coef, quant, &sc->dcPred[i], ctx);
             if (ret < 0) {
                 return ret;
             }
             if (comp == 0) {
-                idctY(coef, *pOut, stride, ret);
+                idctY(coef, out[j], stride, ret);
             } else {
-                idctC(coef, outC[4], stride, ret);
+                idctC(coef, out[comp + 4], stride, ret);
             }
         }
     }
@@ -1143,7 +1135,7 @@ s32 jpgdBuildHuffTable(u8* bits, u8* vals, JPEGHuffTable* t) {
     m = 0;
     si = huffsize[0];
     while (*ps != 0) {
-        while ((u8)*ps == si) {
+        while (si == (u8)*ps) {
             ps++;
             huffcode[m++] = code;
             code++;
