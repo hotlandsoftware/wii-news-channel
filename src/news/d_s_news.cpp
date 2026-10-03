@@ -1753,8 +1753,7 @@ void DrawLoadingScreen() {
     f32 scale = 0.75f + 0.25f * t;
     f32 w = scale * TPL_GetWidth(gCommonTpl, index);
     f32 h = scale * TPL_GetHeight(gCommonTpl, index);
-    GXColor color = {48, 48, 48, 128.0f * t};
-    GXSetTevColor(GX_TEVREG0, color);
+    GXSetTevColor(GX_TEVREG0, (GXColor){48, 48, 48, 128.0f * t});
     math::VEC3 p(x - 0.5f * w, y - 0.5f * h, 0.0f);
     Draw2D_Tex(gCommonTpl, index, &p, scale, scale);
 }
@@ -2774,10 +2773,10 @@ void Draw2D_Texture(NewsTexture* tex, const math::VEC3* pos, f32 scale) {
                  GX_CLAMP, GX_FALSE);
     GXLoadTexObj(&texObj, GX_TEXMAP0);
     f32 x0 = pos->x;
-    f32 y0 = pos->y;
-    f32 z = pos->z;
     f32 x1 = x0 + scale * tex->width;
+    f32 y0 = pos->y;
     f32 y1 = y0 + scale * tex->height;
+    f32 z = pos->z;
     GXBegin(GX_QUADS, GX_VTXFMT0, 4);
     GXPosition3f32(x0, y0, z);
     GXTexCoord2f32(0.0f, 0.0f);
@@ -3067,13 +3066,12 @@ static inline void SetTevColorWhite(u8 alpha) {
 
 void DrawTabRect(const ut::Rect& rect, u8 alpha, f32 z) {
     u32 w = TPL_GetWidth(gCommonTpl, 5);
+    f32 x0 = rect.left - w;
     f32 left = rect.left;
     f32 right = rect.right;
     f32 top = rect.top;
-    f32 x0 = left - w;
     f32 bottom = rect.bottom;
-    ut::Color color(255, 255, 255, alpha);
-    GXSetTevColor(GX_TEVREG0, color);
+    GXSetTevColor(GX_TEVREG0, ut::Color(255, 255, 255, alpha));
 
     GXTexObj texObj;
     TPL_GetTexObj(gCommonTpl, 5, &texObj);
@@ -3132,7 +3130,7 @@ void SetupTexGX() {
     GXColor black = {0, 0, 0, 0};
     GXSetTevColor(GX_TEVREG1, black);
     GXSetTevOrder(GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLOR_NULL);
-    GXSetTevColorIn(GX_TEVSTAGE0, GX_CC_ZERO, GX_CC_TEXC, GX_CC_C1, GX_CC_C2);
+    GXSetTevColorIn(GX_TEVSTAGE0, GX_CC_ZERO, GX_CC_TEXC, GX_CC_C0, GX_CC_C1);
     GXSetTevAlphaIn(GX_TEVSTAGE0, GX_CA_ZERO, GX_CA_TEXA, GX_CA_A0, GX_CA_A1);
     GXSetTevColorOp(GX_TEVSTAGE0, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, GX_TRUE, GX_TEVPREV);
     GXSetTevAlphaOp(GX_TEVSTAGE0, GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, GX_TRUE, GX_TEVPREV);
@@ -3141,15 +3139,15 @@ void SetupTexGX() {
     GXSetNumTevStages(1);
     GXSetNumIndStages(0);
     GXSetTevSwapModeTable(GX_TEV_SWAP0, GX_CH_RED, GX_CH_GREEN, GX_CH_BLUE, GX_CH_ALPHA);
-    GXSetBlendMode(GX_BM_BLEND, GX_BL_SRCALPHA, GX_BL_INVSRCALPHA, GX_LO_NOOP);
+    GXSetBlendMode(GX_BM_BLEND, GX_BL_SRCALPHA, GX_BL_INVSRCALPHA, GX_LO_SET);
     GXSetZMode(GX_TRUE, GX_LEQUAL, GX_TRUE);
     GXSetZCompLoc(GX_FALSE);
-    GXSetAlphaCompare(GX_ALWAYS, 0, GX_AOP_AND, GX_ALWAYS, 0);
+    GXSetAlphaCompare(GX_GREATER, 0, GX_AOP_AND, GX_ALWAYS, 0);
     GXSetColorUpdate(GX_TRUE);
     GXSetAlphaUpdate(GX_FALSE);
     GXSetCullMode(GX_CULL_NONE);
     GXSetClipMode(GX_CLIP_ENABLE);
-    GXSetViewport(0.0f, 0.0f, gRenderMode.fbWidth, gRenderMode.efbHeight, 0.0f, 1.0f);
+    GXSetViewport(0.0f, 0.0f, (s32)gRenderMode.fbWidth, (s32)gRenderMode.efbHeight, 0.0f, 1.0f);
 }
 
 void OnExitRequested() {
