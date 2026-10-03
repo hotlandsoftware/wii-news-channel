@@ -579,6 +579,17 @@ config.libs = [
         ],
     },
     {
+        "lib": "news_8004C398",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_game,
+        "progress_category": "game",
+        "objects": [
+            Object(NonMatching, "news/Globe.cpp"),
+            Object(NonMatching, "news/Resource.cpp"),
+            Object(NonMatching, "news/sound_manager.cpp"),
+        ],
+    },
+    {
         "lib": "nw4r_ut",
         "mw_version": "GC/3.0a5.2",
         "cflags": cflags_nw4r_ut,

@@ -274,6 +274,32 @@ news/PaneButton.cpp:
 	.sdata      start:0x80356C60 end:0x80356C90
 	.sdata2     start:0x80358EE0 end:0x80358F18
 
+news/Globe.cpp:
+	.text       start:0x8004C43C end:0x8004E748
+	.ctors      start:0x80191F54 end:0x80191F58
+	.rodata     start:0x801A6620 end:0x801A66A0
+	.data       start:0x801B3508 end:0x801B3518
+	.bss        start:0x8020E850 end:0x8020E880
+	.sdata      start:0x80356CB8 end:0x80356CC0
+	.sbss       start:0x80357798 end:0x803577A8
+	.sdata2     start:0x80358F98 end:0x80359030
+
+news/Resource.cpp:
+	.text       start:0x8004E748 end:0x8004EB24
+	.ctors      start:0x80191F58 end:0x80191F5C
+	.data       start:0x801B3518 end:0x801B35A8
+	.bss        start:0x8020E880 end:0x8021E8E0
+
+news/sound_manager.cpp:
+	.text       start:0x8004EB24 end:0x80051D4C
+	.ctors      start:0x80191F5C end:0x80191F60
+	.rodata     start:0x801A66A0 end:0x801A66B8
+	.data       start:0x801B35A8 end:0x801B3620
+	.bss        start:0x8021E8E0 end:0x8021E938
+	.sdata      start:0x80356CC0 end:0x80356CC8
+	.sbss       start:0x803577A8 end:0x803577F8
+	.sdata2     start:0x80359030 end:0x80359050
+
 revolution/RSO/RSOLink.c:
 	.text       start:0x80051D4C end:0x80052D5C
 	.data       start:0x801CABC0 end:0x801CACD8
