@@ -65,7 +65,7 @@ bool UpdateTextSize(BOOL up, BOOL down);
 BOOL Article_GetPictureRect(nw4r::ut::Rect* rect, f32 x, f32 y, f32 scale);
 BOOL Article_GetZoomedPictureRect(nw4r::ut::Rect* rect);
 void Article_DrawZoomedPicture(const nw4r::ut::Rect& from, const nw4r::ut::Rect& to, f32 t);
-void Bgm_SetSlideshowVolume(f64 volume);
+void Bgm_SetSlideshowVolume(f32 volume);
 void HeadlineList_Draw(const f32& offsetX, f32 alpha, f32 headerAlpha);
 void Article_SetHeight(f32 height);
 void Article_ResetScroll();

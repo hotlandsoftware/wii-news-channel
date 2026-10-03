@@ -1223,25 +1223,6 @@ BOOL NewsScene::StateLanguageSelect() {
     return TRUE;
 }
 
-static inline f32 Abs(f32 x) {
-    return __fabsf(x);
-}
-
-static inline void SetBgmTarget(SmoothValue& v, f32 target, f32 frames) {
-    v.mTarget = target;
-    v.mStep = Abs(target - v.mValue) / frames;
-}
-
-static inline void SetBgmTargetStep(SmoothValue& v, f32 target, f32 step) {
-    v.mTarget = target;
-    v.mStep = step;
-}
-
-static inline void SetBgmTargetP(SmoothValue* v, f32 target, f32 frames) {
-    v->mTarget = target;
-    v->mStep = Abs(target - v->mValue) / frames;
-}
-
 void Bgm_MuteMain() {
     if (!IsSoundPlaying(&gBgmHandles[0])) {
         PlaySound(&gBgmHandles[0], 0x1C);
@@ -1253,8 +1234,8 @@ void Bgm_MuteMain() {
     sBgmVolume[1].mTarget = 0.0f;
     sBgmVolume[2].mTarget = 0.0f;
     sBgmVolume[3].mTarget = 0.0f;
-    sBgmVolume[0].mStep = Abs(sBgmVolume[0].mTarget - sBgmVolume[0].mValue) / 120.0f;
-    sBgmVolume[1].mStep = Abs(sBgmVolume[1].mTarget - sBgmVolume[1].mValue) / 120.0f;
+    sBgmVolume[0].mStep = math::FAbs(sBgmVolume[0].mTarget - sBgmVolume[0].mValue) / 120.0f;
+    sBgmVolume[1].mStep = math::FAbs(sBgmVolume[1].mTarget - sBgmVolume[1].mValue) / 120.0f;
     if (IsSoundPlaying(&gBgmHandles[2])) {
         StopSound(&gBgmHandles[2], 120);
     }
@@ -1308,8 +1289,8 @@ void Bgm_PlayMain(BOOL restart) {
     sBgmVolume[1].mTarget = 1.0f;
     sBgmVolume[2].mTarget = 0.0f;
     sBgmVolume[3].mTarget = 0.0f;
-    sBgmVolume[0].mStep = Abs(1.0f - sBgmVolume[0].mValue) / 60.0f;
-    sBgmVolume[1].mStep = Abs(1.0f - sBgmVolume[1].mValue) / 60.0f;
+    sBgmVolume[0].mStep = math::FAbs(1.0f - sBgmVolume[0].mValue) / 60.0f;
+    sBgmVolume[1].mStep = math::FAbs(1.0f - sBgmVolume[1].mValue) / 60.0f;
     sBgmVolume[2].mStep = 1.0f / 60.0f;
     sBgmVolume[3].mStep = 1.0f / 60.0f;
 }
@@ -1330,17 +1311,19 @@ void Bgm_PlaySlideshow() {
         StopSound(&gBgmHandles[2], 60);
     }
     sBgmVolume[0].mTarget = 0.0f;
-    sBgmVolume[0].mStep = 1.0f / 60.0f;
     sBgmVolume[1].mTarget = 0.0f;
-    sBgmVolume[1].mStep = 1.0f / 60.0f;
     sBgmVolume[2].mTarget = 0.0f;
+    sBgmVolume[3].mTarget = 1.0f;
+    sBgmVolume[0].mStep = 1.0f / 60.0f;
+    sBgmVolume[1].mStep = 1.0f / 60.0f;
     sBgmVolume[2].mStep = 1.0f / 60.0f;
-    SetBgmTarget(sBgmVolume[3], 1.0f, 60.0f);
+    sBgmVolume[3].mStep = math::FAbs(1.0f - sBgmVolume[3].mValue) / 60.0f;
 }
 
-void Bgm_SetSlideshowVolume(f64 volume) {
+void Bgm_SetSlideshowVolume(f32 volume) {
     sBgmVolume[3].mTarget = volume;
-    sBgmVolume[3].mStep = Abs((f32)volume - sBgmVolume[3].mValue) / 120.0f;
+    // The round trip through f64 keeps an frsp of the parameter for the difference.
+    sBgmVolume[3].mStep = math::FAbs((f32)(f64)volume - sBgmVolume[3].mValue) / 120.0f;
 }
 
 BOOL NewsScene::StateMain() {
