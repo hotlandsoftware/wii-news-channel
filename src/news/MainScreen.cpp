@@ -517,6 +517,7 @@ MainScreen::MainScreen(u32 arc, ut::TextWriterBase<wchar_t>* writer, math::VEC2&
     }
     lbl_8035755C = mLists[0];
 
+    u32 i;
     s32 align;
     f32 width;
     if (gLanguage == 0) {
@@ -526,7 +527,7 @@ MainScreen::MainScreen(u32 arc, ut::TextWriterBase<wchar_t>* writer, math::VEC2&
         align = TextButton::ALIGN_LEFT;
         width = 448.0f;
     }
-    for (u32 i = 0; i < lbl_803575E0; i++) {
+    for (i = 0; i < lbl_803575E0; i++) {
         mButtons[i] = new FrameTextButton(gNewsData->mCategories[i].mName,
                                           math::VEC2(width, 56.0f), i, true, align, 0.9f);
         if (mButtons[i] == NULL) {
