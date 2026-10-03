@@ -50,6 +50,12 @@ public:
                                               AheadContext* pContext,
                                               Particle* pParticle);
 
+    static math::MTX34 CalcStripeMtx(Particle* pParticle,
+                                     AheadContextStripe* pContext,
+                                     const math::VEC3& rAhead,
+                                     const math::VEC3& rPos,
+                                     math::VEC3* pPrevAxis);
+
     // Older revision (News Channel): steps with GetElderDrawParticle
     static Particle* GetYoungestDrawParticle_Stripe(ParticleManager* pManager) {
         Particle* pIt = GetYoungestParticle(pManager);

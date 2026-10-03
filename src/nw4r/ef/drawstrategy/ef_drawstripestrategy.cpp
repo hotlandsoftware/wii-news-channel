@@ -15,6 +15,31 @@ DrawStripeStrategy::DrawStripeStrategy() {}
 
 static void GXEnd();
 
+// Builds the particle's local axes from the ahead direction and the previous
+// axis (shared by DrawParticle and Draw)
+inline math::MTX34
+DrawStripeStrategy::CalcStripeMtx(Particle* pParticle,
+              AheadContextStripe* pContext,
+              const math::VEC3& rAhead, const math::VEC3& rPos,
+              math::VEC3* pPrevAxis) {
+    math::VEC3 axisX;
+    math::VEC3Cross(&axisX, &rAhead, &pParticle->mPrevAxis);
+
+    if (!Normalize(&axisX)) {
+        axisX = pContext->mEmitterAxisX;
+    }
+
+    math::VEC3 axisZ;
+    math::VEC3Cross(&axisZ, &axisX, &rAhead);
+    Normalize(&axisZ);
+
+    pParticle->mPrevAxis = axisZ;
+    *pPrevAxis = axisZ;
+
+    return math::MTX34(axisX.x, rAhead.x, axisZ.x, rPos.x, axisX.y, rAhead.y,
+                       axisZ.y, rPos.y, axisX.z, rAhead.z, axisZ.z, rPos.z);
+}
+
 #pragma push
 #pragma dont_inline on
 void DrawStripeStrategy::DrawStripe(AheadContextStripe* pContext,
@@ -117,22 +142,8 @@ void DrawStripeStrategy::DrawParticle(Particle* pParticle,
     math::VEC3 ahead;
     pCalcAheadFunc(&ahead, pContext, pParticle);
 
-    math::VEC3 axisX;
-    math::VEC3Cross(&axisX, &ahead, &pParticle->mPrevAxis);
-
-    if (!Normalize(&axisX)) {
-        axisX = pContext->mEmitterAxisX;
-    }
-
-    math::VEC3 axisZ;
-    math::VEC3Cross(&axisZ, &axisX, &ahead);
-    Normalize(&axisZ);
-
-    pParticle->mPrevAxis = axisZ;
-    *pPrevAxis = axisZ;
-
-    math::MTX34 baseMtx(axisX.x, ahead.x, axisZ.x, rPos.x, axisX.y, ahead.y,
-                        axisZ.y, rPos.y, axisX.z, ahead.z, axisZ.z, rPos.z);
+    math::MTX34 baseMtx =
+        CalcStripeMtx(pParticle, pContext, ahead, rPos, pPrevAxis);
 
     math::VEC3 rot;
     pParticle->Draw_GetRotate(&rot);
@@ -219,24 +230,9 @@ void DrawStripeStrategy::Draw(const DrawInfo& rInfo,
             math::VEC3 ahead;
             pCalcAheadFunc(&ahead, &context, pIt);
 
-            math::VEC3 axisX;
-            math::VEC3Cross(&axisX, &ahead, &pIt->mPrevAxis);
-
-            if (!Normalize(&axisX)) {
-                axisX = context.mEmitterAxisX;
-            }
-
-            math::VEC3 axisZ;
-            math::VEC3Cross(&axisZ, &axisX, &ahead);
-            Normalize(&axisZ);
-
-            pIt->mPrevAxis = axisZ;
-            prevAxis = axisZ;
-
-            const math::VEC3& rPos = pIt->mParameter.mPosition;
-            math::MTX34 mtx(axisX.x, ahead.x, axisZ.x, rPos.x, axisX.y,
-                            ahead.y, axisZ.y, rPos.y, axisX.z, ahead.z,
-                            axisZ.z, rPos.z);
+            math::MTX34 mtx = CalcStripeMtx(pIt, &context, ahead,
+                                            pIt->mParameter.mPosition,
+                                            &prevAxis);
         }
 
         return;
