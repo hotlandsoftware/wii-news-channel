@@ -82,6 +82,8 @@ NewsTexture* JPEGDecoder::Decode(const void* data, u32 size, MEMAllocator* alloc
     h = ROUND_UP(handle.height, 8);
     tex = new (allocator) PictureTexture(allocator, handle.width, handle.height);
     if (tex == NULL || tex->data == NULL) {
+        // The original tests tex again here and does nothing with the result
+        // (probably a stripped "delete tex").
         if (tex != NULL) {
             tex = NULL;
         }

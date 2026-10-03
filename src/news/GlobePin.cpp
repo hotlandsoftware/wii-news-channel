@@ -704,6 +704,7 @@ void GlobePin::TruncateHeadline(ut::CharWriter* writer) {
                 width += cw;
                 *++dst = 0;
                 if (width > maxWidth) {
+                    // Both cases use the same scale; the original keeps the compare.
                     f32 s = scale;
                     if (n < mHeadlineLen) {
                         s = scale;
@@ -735,6 +736,7 @@ void GlobePin::TruncateHeadline(ut::CharWriter* writer) {
                 width += cw;
                 *++dst = 0;
                 if (width > maxWidth) {
+                    // Both cases use the same scale; the original keeps the compare.
                     f32 s = scale;
                     if (n < mHeadlineLen) {
                         s = scale;

@@ -130,6 +130,8 @@ void GlobeDots::Draw() {
     GXSetTevColor(GX_TEVREG0, (GXColor){0, 0, 0, mAlpha});
 
     GXBegin(GX_TRIANGLES, GX_VTXFMT0, GLOBE_DOT_COUNT * 3);
+    // The dot index is not the loop counter: the original keeps a count, the
+    // index and a pointer into the colour table as three induction variables.
     s32 pos = 0;
     s32 i = 0;
     for (s32 n = 0; n < GLOBE_DOT_COUNT; n++) {
