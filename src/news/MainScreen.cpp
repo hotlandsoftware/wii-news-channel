@@ -969,7 +969,12 @@ void MainScreen::DrawCursor() {
 
 #pragma auto_inline reset
 void MainScreen::Update() {
-    UpdateMode();
+    mSoundId = -1;
+    if (mMode) {
+        (this->*mMode)();
+    } else {
+        SetMode(&MainScreen::ModeMain);
+    }
 }
 
 inline void MainScreen::ResetListPos() {
@@ -996,7 +1001,7 @@ void MainScreen::SetMode(ModeFunc mode) {
     }
     mMode = mode;
     mModeStep = 0;
-    UpdateMode();
+    Update();
 }
 
 static inline void SetButtonEnabled(PaneButton* button, BOOL enabled) {
@@ -2847,7 +2852,8 @@ void MainScreen::State1C600(s32* arg) {
         }
         if (gTrigAll & 0x800) {
             PlaySE(0x41);
-            lbl_80356CA0 = gUpdateMsgType == 1 ? true : mUnk354;
+            bool show = mUnk354;
+            lbl_80356CA0 = gUpdateMsgType == 1 ? true : show;
             mStateStep = 2;
         }
         break;
@@ -2862,6 +2868,8 @@ void MainScreen::State1C600(s32* arg) {
                 ChangeState(&MainScreen::State195B8, NULL);
             }
         }
+        break;
+    case -1:
         break;
     }
 }

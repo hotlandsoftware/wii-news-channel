@@ -137,14 +137,6 @@ public:
         return IsState(&MainScreen::State16960) || IsState(&MainScreen::StateList);
     }
 
-    void UpdateMode() {
-        mSoundId = -1;
-        if (mMode) {
-            (this->*mMode)();
-        } else {
-            SetMode(&MainScreen::ModeMain);
-        }
-    }
 
     bool IsListIdle();
     void SetSubState(Func func);
