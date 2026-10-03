@@ -2665,27 +2665,33 @@ s32 Article_GetLineAt(const f32& offset) {
     f32 y = -offset;
     f32 headlineY = lbl_80357568->mHeight;
     f32 logoHeight = GetLogoHeight();
-    f32 bodyStart = lbl_80357568->mHeight + logoHeight * gTextScale;
-    f32 bodyY = sBodyView->mHeight;
-    f32 lineHeight = sBodyView->mLineHeight;
-    f32 creditStart = bodyY + lineHeight;
+    ArticleText* headline = lbl_80357568;
+    ArticleText* body = sBodyView;
+    ArticleText* credit = sCreditView;
+    f32 bodyStart = headline->mHeight + logoHeight * gTextScale;
+    f32 bodyY = body->mHeight;
+    f32 creditStart = bodyY + body->mLineHeight;
+    f32 creditY = credit->mHeight;
+    f32 headlineLH = headline->mLineHeight;
+    f32 bodyLH = body->mLineHeight;
+    f32 creditLH = credit->mLineHeight;
     if (y <= headlineY) {
-        return 0.999f + y / lbl_80357568->mLineHeight;
+        return 0.999f + y / headlineLH;
     }
     if (y <= bodyStart) {
-        return lbl_80357568->mNumLines + 1;
+        return headline->mNumLines + 1;
     }
     if (y <= bodyY) {
-        return lbl_80357568->mNumLines + (s32)(0.999f + (y - bodyStart) / lineHeight) + 1;
+        return headline->mNumLines + (s32)(0.999f + (y - bodyStart) / bodyLH) + 1;
     }
     if (y <= creditStart) {
-        return lbl_80357568->mNumLines + sBodyView->mNumLines + 2;
+        return headline->mNumLines + body->mNumLines + 2;
     }
-    if (y < sCreditView->mHeight) {
-        return lbl_80357568->mNumLines + sBodyView->mNumLines +
-               (s32)(0.999f + (y - creditStart) / sCreditView->mLineHeight) + 2;
+    if (y < creditY) {
+        return headline->mNumLines + body->mNumLines +
+               (s32)(0.999f + (y - creditStart) / creditLH) + 2;
     }
-    return lbl_80357568->mNumLines + sBodyView->mNumLines + sCreditView->mNumLines + 1;
+    return headline->mNumLines + body->mNumLines + 1 + credit->mNumLines;
 }
 
 
