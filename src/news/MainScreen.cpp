@@ -2464,11 +2464,13 @@ void MainScreen::State1B134(s32* arg) {
         }
         for (s32 i = 0; i < 4; i++) {
             f32 y = gCursorY[i][0];
+            f32 minY = 63.0f;
+            f32 maxY = 393.0f;
             if (Pins_IsHovered(i)) {
                 lbl_801EDFD0[i] = 1;
             } else if (globe->mGrab[i]) {
                 lbl_801EDFD0[i] = 2;
-            } else if (y <= 63.0f || y > 393.0f) {
+            } else if (y <= minY || y > maxY) {
                 lbl_801EDFD0[i] = 1;
             } else {
                 lbl_801EDFD0[i] = 3;
@@ -2665,11 +2667,14 @@ void MainScreen::State1BD60(s32* arg) {
             }
             f32 top = 5.0f + (67.0f + mUnk1A0);
             f32 minY = 150.0f;
-            f32 left = 5.0f + (mUnk19C - 0.5f * mUnk1A4);
-            f32 right = (mUnk19C + 0.5f * mUnk1A4) - 5.0f;
+            f32 half = 0.5f * mUnk1A4;
+            f32 cx = mUnk19C;
+            f32 left = 5.0f + (cx - half);
+            f32 right = (cx + half) - 5.0f;
             f32 bottom = (top + mUnk1B0) - 5.0f;
+            f32 maxY;
             f32 rowHeight = mUnk24C * mUnk250;
-            f32 maxY = 223.0f + minY;
+            maxY = 223.0f + minY;
             s32 sel = -1;
             for (s32 i = 0; i < 4; i++) {
                 mUnk314[i] = mUnk304[i];
