@@ -881,7 +881,10 @@ NWC24Err NWC24iDeleteOldestDlTask(void) {
     return result;
 }
 
-static NWC24Err GetDlTitleDir(const NWC24DlTask* pPublic, char* pBuf, u32 size) {
+// Not static: the DOL has the "/title/..." format string in front of the VF file name that
+// GetDlVfPath loads first, so this function was compiled on its own before GetDlVfPath
+// inlined it. The out-of-line copy is unreferenced and the linker strips it.
+NWC24Err NWC24iGetDlTitleDir(const NWC24DlTask* pPublic, char* pBuf, u32 size) {
     const NWC24iDlTask* pTask = (const NWC24iDlTask*)pPublic;
     NWC24Err result;
 
@@ -916,7 +919,7 @@ static NWC24Err GetDlVfPath(const NWC24iDlTask* pTask, char* pBuf, u32 size) {
         return NWC24_ERR_INVALID_VALUE;
     }
 
-    result = GetDlTitleDir((const NWC24DlTask*)pTask, pBuf, size);
+    result = NWC24iGetDlTitleDir((const NWC24DlTask*)pTask, pBuf, size);
     if (result < 0) {
         return result;
     }
@@ -1226,8 +1229,8 @@ static NWC24Err WriteDlHeader(NWC24File* pFile) {
 }
 
 static NWC24Err SeekDlTaskEntry(u16 id, NWC24File* pFile) {
-    u16 maxTasks = NWC24iGetCachedDlHeader()->maxTasks;
-    if (maxTasks > NWC24i_DL_TASK_MAX || id >= maxTasks) {
+    NWC24iDlHeader* pHeader = NWC24iGetCachedDlHeader();
+    if (pHeader->maxTasks > NWC24i_DL_TASK_MAX || id >= pHeader->maxTasks) {
         return NWC24_ERR_INVALID_VALUE;
     }
     return NWC24FSeek(pFile, sizeof(NWC24iDlHeader) + id * sizeof(NWC24iDlTask), NWC24_SEEK_BEG);
