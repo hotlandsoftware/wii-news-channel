@@ -363,8 +363,9 @@ cflags_hbm = [
 ]
 
 # VC manual viewer / Opera (WWW) front end that follows the HOME Menu
-# (vcmv_main.cpp): HBM flags plus C++ exceptions (every function with a stack
-# frame has an extab entry)
+# (src/vcmv): HBM flags plus C++ exceptions (every function with a stack
+# frame has an extab entry), fused multiply-adds, fsel for float ternaries
+# and stmw/lmw prologues
 cflags_vcmv = [
     *cflags_hbm,
     "-Cpp_exceptions on",
