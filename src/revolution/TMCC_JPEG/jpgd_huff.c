@@ -75,20 +75,19 @@ static inline s32 jpgdHuffDecodeSlowInline(JPEGHuffCode* codes, u8* vals, JPEGSt
 }
 
 s32 jpgdDecodeBlock(s32* coef, s32* quant, s32* dcPred, JPEGDecContext* ctx) {
-    const u8* zz;
-    u8 pos;
     s32 k;
-    JPEGHuffLookup e;
     s32 n;
-    s32 rs;
-    s32 q;
-    JPEGStream* s = &ctx->stream;
+    JPEGHuffLookup e;
     s32 v;
+    s32 q;
+    JPEGHuffLookup* lk;
+    s32 ret;
+    u8 pos;
+    JPEGStream* s = &ctx->stream;
     s32 sz;
     JPEGHuffCode* codes;
     u8* vals;
-    s32 ret;
-    JPEGHuffLookup* lk;
+    s32 rs;
     lk = ctx->tables.dc.lookup;
 
     FILL_BITS(s, 8);
@@ -121,7 +120,6 @@ s32 jpgdDecodeBlock(s32* coef, s32* quant, s32* dcPred, JPEGDecContext* ctx) {
     memset(&coef[1], 0, 63 * sizeof(s32));
     k = 1;
     FILL_BITS(s, 8);
-    zz = jpgdZigzag;
     e = lk[(s->bits >> (s->numBits - 8)) & 0xFF];
     do {
         if (e.len != 0) {
@@ -136,7 +134,7 @@ s32 jpgdDecodeBlock(s32* coef, s32* quant, s32* dcPred, JPEGDecContext* ctx) {
         sz = rs & 0xF;
         if (sz != 0) {
             k += rs >> 4;
-            pos = zz[k];
+            pos = jpgdZigzag[k];
             if (k >= 64) {
                 return -0x64;
             }

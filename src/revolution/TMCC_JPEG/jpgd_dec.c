@@ -347,11 +347,10 @@ static s32 jpgdParseSOF(JPEGDecContext* ctx) {
 }
 
 s32 jpgdReadHeader(JPEGDecContext* ctx) {
-    s32 ret;
-
-    const u8* zz = jpgdZigzag;
     u16 marker;
+    const u8* zz = jpgdZigzag;
     s32 i;
+    s32 ret;
 
     ctx->frame.restartInterval = 0;
     ctx->frame.eoi = 0;

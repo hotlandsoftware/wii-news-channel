@@ -6,27 +6,53 @@
 #define CLAMP_U8(x) (((x) >> 19) == 0 ? ((x) >> 11) : ((x) < 0 ? 0 : 255))
 
 void jpgdIdct8x8Y(s32* in, u8* out, u16 stride, s32 extent) {
-    s32 rows;
-    s32* wp;
-    s32 ws[64];
-    s32 i;
-
-    s32 d0, d1, d2, d3, d4, d5, d6, d7;
-    s32 tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
-    s32 tmp10, tmp11, tmp12, tmp13;
-    s32 z5, z10, z11, z12, z13;
+    s32 tmp3;
+    s32 tmp7;
+    s32 tmp1;
     s32 nz;
-
+    s32 rows;
+    s32 d2;
+    s32 tmp6;
+    s32 d1;
+    s32 tmp0;
+    s32 ws[64];
+    s32 d4;
+    s32 tmp10;
+    s32 i;
+    s32 d0;
+    s32 d6;
+    s32 d5;
+    s32 z5;
+    s32 d3;
+    s32 z10;
+    s32 tmp4;
+    s32 tmp11;
+    s32 tmp13;
+    s32 tmp12;
+    s32 d7;
+    s32* wp;
+    s32 tmp5;
+    s32 z12;
+    s32 tmp2;
+    s32 z11;
+    s32 z13;
     rows = (extent >> 4) * 8;
     wp = ws;
+
     for (i = 0; i < rows; i += 8) {
-        nz = in[4];
-        nz |= in[6];
-        nz |= in[2];
-        nz |= in[1];
-        nz |= in[7];
-        nz |= in[5];
-        nz |= in[3];
+        d4 = in[4];
+        d6 = in[6];
+        d2 = in[2];
+        d1 = in[1];
+        d7 = in[7];
+        d5 = in[5];
+        d3 = in[3];
+        nz = d4 | d6;
+        nz = d2 | nz;
+        nz = d1 | nz;
+        nz = d7 | nz;
+        nz = d5 | nz;
+        nz = d3 | nz;
         if (nz == 0) {
             d0 = in[0];
             wp[7] = d0;
@@ -39,13 +65,6 @@ void jpgdIdct8x8Y(s32* in, u8* out, u16 stride, s32 extent) {
             wp[0] = d0;
         } else {
             d0 = in[0];
-            d1 = in[1];
-            d2 = in[2];
-            d3 = in[3];
-            d4 = in[4];
-            d5 = in[5];
-            d6 = in[6];
-            d7 = in[7];
             tmp12 = DESCALE8((d2 - d6) * 181);
             tmp13 = tmp12 + (d6 + d2);
             tmp10 = d0 + d4;

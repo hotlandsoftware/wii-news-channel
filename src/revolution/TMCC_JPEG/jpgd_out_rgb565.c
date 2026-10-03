@@ -106,40 +106,40 @@ s32 jpgdSetupOutputRGB565(JPEGDecContext* ctx) {
     }
 
 void jpgdOutRGB565_411(JPEGDecContext* ctx, u32 x, u32 y) {
-    u8* out;
     s32 cb;
-    s32 g;
-    u8* sy;
-    s32 k;
-    s32 r;
-    u8* scb;
-    u8* scr;
-    s32 cr;
     s32 b;
+    u8* out;
+    s32 k;
+    u8* sy;
+    u8* scr;
+    u8* scb;
     s32 i;
-    s32 xe;
     JPEGDecHandle* h;
+    s32 xe;
+    s32 cr;
     s32 t;
-    s32 hh;
     s32 ye;
-    s32 cga;
+    s32 r;
+    s32 j;
     u32 tiles;
     s32 w;
-    s32 j;
+    s32 cga;
+    s32 hh;
+    s32 yy;
     s32 cra;
     s32 cba;
-    s32 yy;
-
+    s32 g;
     sy = ctx->pix.y;
-    h = ctx->handle;
     scb = ctx->pix.cb;
     scr = ctx->pix.cr;
+
+    h = ctx->handle;
+    tiles = TILES();
+    out = h->out;
     w = 32 / h->scale;
     hh = 8 / h->scale;
-    tiles = TILES();
-    ye = y + hh;
     xe = x + w;
-    out = h->out;
+    ye = y + hh;
     for (j = y; j < ye; j++) {
         for (i = x; i < xe; i += 4) {
             YCC_CHROMA_R(*scb++, *scr++);
@@ -209,40 +209,40 @@ void jpgdOutRGB565_411Edge(JPEGDecContext* ctx, u32 x, u32 y) {
 }
 
 void jpgdOutRGB565_422(JPEGDecContext* ctx, u32 x, u32 y) {
-    s32 b;
-    s32 ye;
-    s32 g;
     s32 xe;
-    u8* sy;
-    s32 cra;
-    s32 hh;
-    u8* scr;
-    s32 k;
-    s32 i;
-    u8* scb;
-    s32 r;
-    s32 cr;
-    JPEGDecHandle* h;
     u32 tiles;
-    s32 cba;
+    s32 k;
+    JPEGDecHandle* h;
+    s32 cra;
+    u8* sy;
+    s32 i;
     s32 t;
-    s32 w;
-    s32 cga;
+    u8* scr;
+    s32 g;
     u8* out;
-    s32 yy;
-    s32 cb;
+    s32 r;
+    s32 b;
+    s32 w;
+    s32 ye;
+    s32 cr;
+    u8* scb;
     s32 j;
-
+    s32 cga;
+    s32 cb;
+    s32 cba;
+    s32 hh;
+    s32 yy;
     scb = ctx->pix.y + 0x80;
+    sy = ctx->pix.y;
     scr = ctx->pix.y + 0xC0;
+
     h = ctx->handle;
     tiles = TILES();
-    sy = ctx->pix.y;
+    out = h->out;
     w = 16 / h->scale;
     hh = 8 / h->scale;
-    out = h->out;
-    ye = y + hh;
     xe = x + w;
+    ye = y + hh;
     for (j = y; j < ye; j++) {
         for (i = x; i < xe; i += 2) {
             YCC_CHROMA_R(*scb++, *scr++);
@@ -259,40 +259,40 @@ void jpgdOutRGB565_422(JPEGDecContext* ctx, u32 x, u32 y) {
 }
 
 void jpgdOutRGB565_422Edge(JPEGDecContext* ctx, u32 x, u32 y) {
-    u8* out;
     u8* scr;
-    s32 i;
-    s32 g;
-    u8* scb;
     u8* sy;
-    s32 xe;
+    s32 cr;
     JPEGDecHandle* h;
+    u8* scb;
+    u8* out;
+    s32 i;
+    s32 xe;
+    s32 w;
+    s32 j;
+    s32 t;
+    s32 g;
     s32 ye;
+    s32 cb;
     u32 tiles;
-    s32 cga;
     s32 cra;
     s32 hh;
+    s32 cga;
+    s32 b;
     s32 cba;
-    s32 cr;
-    s32 cb;
-    s32 j;
+    s32 r;
     s32 k;
     s32 yy;
-    s32 b;
-    s32 w;
-    s32 r;
-    s32 t;
-
-    scr = ctx->pix.y + 0xC0;
-    h = ctx->handle;
-    scb = ctx->pix.y + 0x80;
-    out = h->out;
-    tiles = TILES();
     sy = ctx->pix.y;
+    scb = ctx->pix.y + 0x80;
+    scr = ctx->pix.y + 0xC0;
+
+    h = ctx->handle;
+    tiles = TILES();
+    out = h->out;
     w = (h->lastX == x) ? h->remX : 16 / h->scale;
     hh = (h->lastY == y) ? h->remY : 8 / h->scale;
-    ye = y + hh;
     xe = x + w;
+    ye = y + hh;
     for (j = y; j < ye; j++) {
         for (i = x; i < xe; i++) {
             if (((i - x) & 1) == 0) {
@@ -308,38 +308,38 @@ void jpgdOutRGB565_422Edge(JPEGDecContext* ctx, u32 x, u32 y) {
 }
 
 void jpgdOutRGB565_420(JPEGDecContext* ctx, u32 x, u32 y) {
-    u32 tiles;
-    s32 b;
-    u8* sy;
-    s32 i;
-    s32 cga;
-    u8* scr;
     u8* out;
-    s32 xe;
-    s32 k;
-    s32 hh;
+    s32 b;
     s32 j;
-    s32 ye;
-    s32 cb;
-    u8* scb;
-    s32 cra;
-    s32 cba;
-    s32 t;
-    s32 r;
-    s32 g;
-    s32 cr;
     s32 w;
     s32 yy;
     JPEGDecHandle* h;
-
-    sy = ctx->pix.y;
+    s32 k;
+    s32 t;
+    u8* sy;
+    s32 cr;
+    u8* scb;
+    u8* scr;
+    s32 i;
+    s32 r;
+    s32 xe;
+    s32 ye;
+    s32 hh;
+    s32 cra;
+    s32 cb;
+    s32 cga;
+    s32 cba;
+    s32 g;
+    u32 tiles;
     scb = ctx->pix.cb;
-    h = ctx->handle;
-    out = h->out;
-    hh = 16 / h->scale;
+    sy = ctx->pix.y;
     scr = ctx->pix.cr;
+
+    h = ctx->handle;
     tiles = TILES();
+    out = h->out;
     w = 16 / h->scale;
+    hh = 16 / h->scale;
     xe = x + w;
     ye = y + hh;
     for (j = y; j < ye; j++) {
@@ -363,40 +363,40 @@ void jpgdOutRGB565_420(JPEGDecContext* ctx, u32 x, u32 y) {
 }
 
 void jpgdOutRGB565_420Edge(JPEGDecContext* ctx, u32 x, u32 y) {
-    s32 cb;
-    s32 t;
     u32 tiles;
-    s32 k;
     u8* sy;
-    u8* scb;
-    u8* scr;
-    s32 w;
-    u8* out;
-    s32 hh;
-    JPEGDecHandle* h;
     s32 j;
+    u8* scb;
+    s32 k;
+    s32 w;
+    u8* scr;
+    s32 i;
+    s32 t;
+    s32 cr;
     s32 xe;
     s32 ye;
-    s32 i;
-    s32 cga;
+    u8* out;
+    s32 yy;
     s32 cra;
+    s32 cga;
     s32 cba;
     s32 g;
+    s32 cb;
     s32 r;
     s32 b;
-    s32 cr;
-    s32 yy;
-
+    s32 hh;
+    JPEGDecHandle* h;
     sy = ctx->pix.y;
     scb = ctx->pix.cb;
-    h = ctx->handle;
     scr = ctx->pix.cr;
+
+    h = ctx->handle;
     tiles = TILES();
     out = h->out;
     w = (h->lastX == x) ? h->remX : 16 / h->scale;
     hh = (h->lastY == y) ? h->remY : 16 / h->scale;
-    ye = y + hh;
     xe = x + w;
+    ye = y + hh;
     for (j = y; j < ye; j++) {
         for (i = x; i < xe; i++) {
             if (((i - x) & 1) == 0) {
@@ -418,39 +418,39 @@ void jpgdOutRGB565_420Edge(JPEGDecContext* ctx, u32 x, u32 y) {
 
 void jpgdOutRGB565_444(JPEGDecContext* ctx, u32 x, u32 y) {
     u8* out;
-    u8* sy;
-    u8* scr;
-    u8* scb;
-    s32 g;
-    s32 w;
-    s32 cra;
-    s32 i;
-    s32 ye;
-    s32 j;
     s32 cba;
     s32 cga;
-    s32 t;
-    s32 xe;
-    u32 tiles;
-    s32 k;
-    s32 b;
-    s32 r;
+    u8* sy;
     s32 cb;
-    s32 cr;
-    s32 hh;
+    u8* scb;
+    u8* scr;
+    s32 k;
     JPEGDecHandle* h;
     s32 yy;
-
+    s32 b;
+    s32 g;
+    s32 i;
+    s32 cr;
+    s32 xe;
+    s32 t;
+    s32 ye;
+    s32 j;
+    s32 hh;
+    u32 tiles;
+    s32 w;
+    s32 r;
+    s32 cra;
     sy = ctx->pix.y;
-    scr = ctx->pix.y + 0x80;
-    h = ctx->handle;
     scb = ctx->pix.y + 0x40;
+    scr = ctx->pix.y + 0x80;
+
+    h = ctx->handle;
     tiles = TILES();
-    hh = 8 / h->scale;
     out = h->out;
     w = 8 / h->scale;
-    ye = y + hh;
+    hh = 8 / h->scale;
     xe = x + w;
+    ye = y + hh;
     for (j = y; j < ye; j++) {
         for (i = x; i < xe; i++) {
             YCC_CHROMA(*scb++, *scr++);
@@ -467,38 +467,38 @@ void jpgdOutRGB565_444(JPEGDecContext* ctx, u32 x, u32 y) {
 void jpgdOutRGB565_444Edge(JPEGDecContext* ctx, u32 x, u32 y) {
     u32 tiles;
     u8* sy;
-    u8* scb;
     u8* scr;
-    s32 cra;
-    JPEGDecHandle* h;
-    s32 cr;
-    s32 hh;
-    s32 i;
-    s32 k;
-    s32 cga;
-    s32 xe;
-    s32 j;
-    u8* out;
-    s32 ye;
-    s32 r;
-    s32 t;
+    u8* scb;
     s32 cba;
-    s32 w;
+    s32 i;
+    s32 xe;
+    s32 cra;
+    s32 t;
+    s32 b;
+    s32 k;
+    s32 g;
+    s32 ye;
+    u8* out;
     s32 cb;
     s32 yy;
-    s32 b;
-    s32 g;
-
+    JPEGDecHandle* h;
+    s32 w;
+    s32 r;
+    s32 hh;
+    s32 cga;
+    s32 cr;
+    s32 j;
     sy = ctx->pix.y;
     scb = ctx->pix.y + 0x40;
     scr = ctx->pix.y + 0x80;
+
     h = ctx->handle;
     tiles = TILES();
     out = h->out;
     w = (h->lastX == x) ? h->remX : 8 / h->scale;
     hh = (h->lastY == y) ? h->remY : 8 / h->scale;
-    ye = y + hh;
     xe = x + w;
+    ye = y + hh;
     for (j = y; j < ye; j++) {
         for (i = x; i < xe; i++) {
             YCC_CHROMA(*scb++, *scr++);
