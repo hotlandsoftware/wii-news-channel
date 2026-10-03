@@ -1052,12 +1052,12 @@ s32 jpgdResync(JPEGDecContext* ctx) {
         ctx->scan.nextRestart = (c + 1) & 7;
         mcusX = h->mcusX;
         pos = ctx->scan.mcuPos;
+        n = (u8)pos * mcusX + (skip + (pos >> 16));
         ctx->scan.dcPred[0] = 0;
         ctx->scan.dcPred[1] = 0;
         ctx->scan.dcPred[2] = 0;
         ctx->scan.dcPred[3] = 0;
         ctx->scan.restartCount = 0;
-        n = (u8)pos * mcusX + (skip + (pos >> 16));
         y = n / mcusX;
         x = n % mcusX;
         ctx->scan.mcuPos = (x << 16) + y;

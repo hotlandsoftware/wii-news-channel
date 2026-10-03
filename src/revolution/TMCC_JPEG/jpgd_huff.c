@@ -75,23 +75,22 @@ static inline s32 jpgdHuffDecodeSlowInline(JPEGHuffCode* codes, u8* vals, JPEGSt
 }
 
 s32 jpgdDecodeBlock(s32* coef, s32* quant, s32* dcPred, JPEGDecContext* ctx) {
-    JPEGHuffLookup* lk;
     const u8* zz;
-    s32 rs;
-    s32 n;
-    s32 ret;
+    u8 pos;
     s32 k;
+    JPEGHuffLookup e;
+    s32 n;
+    s32 rs;
     s32 q;
-
     JPEGStream* s = &ctx->stream;
+    s32 v;
     s32 sz;
     JPEGHuffCode* codes;
-    JPEGHuffLookup e;
     u8* vals;
-    s32 v;
-    u8 pos;
-
+    s32 ret;
+    JPEGHuffLookup* lk;
     lk = ctx->tables.dc.lookup;
+
     FILL_BITS(s, 8);
     e = lk[(s->bits >> (s->numBits - 8)) & 0xFF];
     if (e.len != 0) {
@@ -145,8 +144,8 @@ s32 jpgdDecodeBlock(s32* coef, s32* quant, s32* dcPred, JPEGDecContext* ctx) {
             FILL_BITS(s, sz + 8);
             n = 1 << sz;
             s->numBits -= sz;
-            e = lk[(s->bits >> (s->numBits - 8)) & 0xFF];
             v = (n - 1) & (s->bits >> s->numBits);
+            e = lk[(s->bits >> (s->numBits - 8)) & 0xFF];
             if ((n >> 1) > v) {
                 v -= n - 1;
             }

@@ -179,30 +179,45 @@ void jpgdOutYUV411Edge(JPEGDecContext* ctx, u32 x, u32 y) {
 }
 
 void jpgdOutYUV422(JPEGDecContext* ctx, u32 x, u32 y) {
-    s32 xe;
-    s32 ye;
-
-    JPEGDecHandle* h = ctx->handle;
-    u8* sy = ctx->pix.y;
-    u8* scb = ctx->pix.y + 0x80;
-    u8* scr = ctx->pix.y + 0xC0;
-    u8 scale = h->scale;
-    s32 w = 16 / scale;
-    u8* py = h->planeY;
-    u8* pcb = h->planeCb;
-    u32 tiles = h->strideY >> 3;
-    u8* pcr = h->planeCr;
+    JPEGDecHandle* h;
+    u8* sy;
+    u8* scb;
+    u8* scr;
+    s32 w;
+    s32 hh;
     s32 i;
     s32 j;
     s32 t;
+    u32 stride;
+    u8* py;
+    u8* pcb;
+    u8* pcr;
+    s32 xe;
+    s32 ye;
     s32 cw;
     u32 cx;
-    u32 ctiles;
+    u32 cstride;
+    s32 row;
+    u8* dy;
 
-    for (j = y; j < (s32)(y + 8 / scale); j++) {
+    sy = ctx->pix.y;
+    scb = ctx->pix.y + 0x80;
+    scr = ctx->pix.y + 0xC0;
+    h = ctx->handle;
+    w = 16 / h->scale;
+    hh = 8 / h->scale;
+    stride = h->strideY >> 3;
+    py = h->planeY;
+    pcb = h->planeCb;
+    pcr = h->planeCr;
+    for (j = y; j < (s32)(y + hh); j++) {
+        row = (j >> 2) * stride;
+        dy = py + ((j & 3) << 3);
         for (i = x; i < (s32)(x + w); i += 2) {
-            PUT_I8(py, i, j, tiles, sy[0]);
-            PUT_I8(py, i + 1, j, tiles, sy[1]);
+            t = ((i >> 3) + row) << 5;
+            dy[t + (i & 7)] = sy[0];
+            t = (((i + 1) >> 3) + row) << 5;
+            dy[t + ((i + 1) & 7)] = sy[1];
             sy += 2;
         }
         sy += 16 - w;
@@ -210,12 +225,12 @@ void jpgdOutYUV422(JPEGDecContext* ctx, u32 x, u32 y) {
 
     cx = x >> 1;
     cw = 8 / h->scale;
-    ctiles = h->strideC >> 3;
+    cstride = h->strideC >> 3;
     xe = cx + cw;
     ye = y + cw;
     for (j = y; j < ye; j++) {
         for (i = cx; i < xe; i++) {
-            t = (i >> 3) + (j >> 2) * ctiles;
+            t = (i >> 3) + (j >> 2) * cstride;
             pcb[(t << 5) + ((j & 3) << 3) + (i & 7)] = *scb++ + 0x80;
             pcr[(t << 5) + ((j & 3) << 3) + (i & 7)] = *scr++ + 0x80;
         }
