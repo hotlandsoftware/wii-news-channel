@@ -560,6 +560,19 @@ config.libs = [
         ],
     },
     {
+        "lib": "news_8003CECC",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_game,
+        "progress_category": "game",
+        "objects": [
+            Object(NonMatching, "news/GlobeDots.cpp"),
+            Object(NonMatching, "news/System.cpp"),
+            Object(NonMatching, "news/WiiConnect24.cpp"),
+            Object(NonMatching, "news/PointerScroll.cpp"),
+            Object(NonMatching, "news/MathUtil.cpp"),
+        ],
+    },
+    {
         "lib": "news_8001F994",
         "mw_version": "GC/3.0a5.2",
         "cflags": cflags_game,

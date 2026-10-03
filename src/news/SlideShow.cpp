@@ -24,9 +24,6 @@ using namespace nw4r;
 // the globe (0x8004BD60) and input globals.
 extern u8 lbl_801EE270[];         // layout resource accessor
 extern "C" s32 gHoverButtons[4];   // per-channel "pointer used" flags
-extern "C" f32 lbl_801F0888[4];   // pointer x per channel
-extern "C" f32 lbl_801F0898[4];   // pointer y per channel (stride 0xC)
-extern "C" u32 lbl_801F0908[4];   // held buttons
 extern "C" f32 gPointerScroll[];    // pointer movement
 extern "C" s32 lbl_801EDFD0[4];
 extern "C" f32 lbl_801EDFA0[6];
@@ -35,9 +32,6 @@ extern "C" f32 lbl_803575D0;
 extern "C" GXColor lbl_80357600;
 extern "C" u8 lbl_803575BA;
 extern "C" u8 lbl_803575BB;
-extern "C" u32 lbl_80357688;      // pointer button hold
-extern "C" u32 lbl_80357694;      // repeat trigger
-extern "C" u32 lbl_80357698;      // D-pad trigger
 extern "C" s32 lbl_80357598;
 extern "C" s32 lbl_803575E0;      // number of categories
 extern "C" u8 lbl_8035697C;
@@ -136,8 +130,6 @@ void fn_80035A3C(const ut::Rect* text, const ut::Rect* select, f32 alpha);
 void fn_800360EC(const ut::Rect* rect, u8 alpha, f32 z);
 void fn_80036328(u8 alpha, u32 y);
 void fn_8003633C(s32 arg);
-void fn_80040778(s32 chan, s32 arg1, s32 arg2);
-f32 fn_800449A0(u16 angle);
 }
 
 // OSu16tof32: u16 to f32 through the paired-single unit (GQR3 = u16).
@@ -592,14 +584,14 @@ void SlideShow::Calc() {
     }
 
     if (IsState(&SlideShow::StateShow) || IsState(&SlideShow::StateMove)) {
-        if (lbl_80357694 & 0x200) {
+        if (gRepeatSlowAll & 0x200) {
             if (mSpeed < 10) {
                 mSpeed++;
                 mTimer = mSpeed * GetFrameRate();
                 PlaySE(0x56);
             }
         }
-        if (lbl_80357694 & 0x100) {
+        if (gRepeatSlowAll & 0x100) {
             if (mSpeed > 1) {
                 mSpeed--;
                 mTimer = mSpeed * GetFrameRate();
@@ -648,7 +640,7 @@ void SlideShow::Calc() {
         if (mGlobeAngle > 0x8000) {
             mGlobeAngle = 0x8000;
         }
-        f32 t = range * fn_800449A0(mGlobeAngle);
+        f32 t = range * CosineEase(mGlobeAngle);
         mGlobeZoom = mGlobeZoomFrom + t;
         globe->mZoom = mGlobeZoom;
         fn_8004D1D4(globe, lbl_80192370, t);
@@ -657,7 +649,7 @@ void SlideShow::Calc() {
         if (g != NULL) {
             GlobeCamera* camera = g->mCamera;
             if (camera != NULL) {
-                f32 s = fn_800449A0(mGlobeAngle);
+                f32 s = CosineEase(mGlobeAngle);
                 f32 lon = mGlobeFrom.x + (mGlobeTo.x - mGlobeFrom.x) * s;
                 camera->mLon = lon;
                 camera->mLat = mGlobeFrom.y + (mGlobeTo.y - mGlobeFrom.y) * s;
@@ -931,10 +923,10 @@ void SlideShow::CalcTextPos() {
 BOOL SlideShow::CheckInput() {
     bool dragging = false;
     if (!(IsState(&SlideShow::StateShow) || IsState(&SlideShow::StateMove))) {
-        if (lbl_80357698 & 0x1000) {
+        if (gRepeatFastAll & 0x1000) {
             mZoomOutPressed = true;
         }
-        if (lbl_80357698 & 0x10) {
+        if (gRepeatFastAll & 0x10) {
             mZoomInPressed = true;
         }
         return FALSE;
@@ -953,19 +945,19 @@ BOOL SlideShow::CheckInput() {
 
     if (!IsState(&SlideShow::StateMessage)) {
         UpdateLayoutButtons(mCurLayout, 0x23);
-        if (lbl_801F0908[0] & 0x400) {
+        if (gHold[0] & 0x400) {
             mDragging[0] = true;
             dragging = true;
         }
-        if (lbl_801F0908[1] & 0x400) {
+        if (gHold[1] & 0x400) {
             mDragging[1] = true;
             dragging = true;
         }
-        if (lbl_801F0908[2] & 0x400) {
+        if (gHold[2] & 0x400) {
             mDragging[2] = true;
             dragging = true;
         }
-        if (lbl_801F0908[3] & 0x400) {
+        if (gHold[3] & 0x400) {
             mDragging[3] = true;
             dragging = true;
         }
@@ -974,14 +966,14 @@ BOOL SlideShow::CheckInput() {
 
         if (CheckButtonHold("zoom_out", 0x800) >= 0) {
             mZoomOutPressed = true;
-        } else if (lbl_80357698 & 0x1000) {
+        } else if (gRepeatFastAll & 0x1000) {
             mZoomOutPressed = true;
             mZoomOutButton->SetPressed(true);
         }
 
         if (CheckButtonHold("zoom_in", 0x800) >= 0) {
             mZoomInPressed = true;
-        } else if (lbl_80357698 & 0x10) {
+        } else if (gRepeatFastAll & 0x10) {
             mZoomInPressed = true;
             mZoomInButton->SetPressed(true);
         }
@@ -996,13 +988,13 @@ BOOL SlideShow::CheckInput() {
         if (!dragging) {
             if (CheckButtonHold("up", 0x800) >= 0) {
                 mUpPressed = true;
-            } else if (lbl_80357698 & 8) {
+            } else if (gRepeatFastAll & 8) {
                 mUpPressed = true;
                 mUpButton->SetPressed(true);
             }
             if (CheckButtonHold("down", 0x800) >= 0) {
                 mDownPressed = true;
-            } else if (lbl_80357698 & 4) {
+            } else if (gRepeatFastAll & 4) {
                 mDownPressed = true;
                 mDownButton->SetPressed(true);
             }
@@ -1050,10 +1042,10 @@ BOOL SlideShow::StateShow(const s32* arg) {
         mTimer = mSpeed * GetFrameRate();
         break;
     default:
-        if (lbl_80357694 & 1) {
+        if (gRepeatSlowAll & 1) {
             mPrevPressed = true;
         }
-        if (lbl_80357694 & 2) {
+        if (gRepeatSlowAll & 2) {
             mNextPressed = true;
         }
         fn_80032AC0(mCategory, mArticleIdx, 1);
@@ -1160,7 +1152,7 @@ BOOL SlideShow::StateZoom(const s32* arg) {
         if (mZoomAngle > 0x8000) {
             mZoomAngle = 0x8000;
         }
-        f32 t = fn_800449A0(mZoomAngle);
+        f32 t = CosineEase(mZoomAngle);
         mView.left = mZoomFrom[0] + mZoomFrom[1] * t;
         mView.top = mZoomFrom[2] + mZoomFrom[3] * t;
         mText.left = mZoomFrom[4] + mZoomFrom[5] * t;
@@ -1201,7 +1193,7 @@ BOOL SlideShow::StateZoom(const s32* arg) {
                             in = false;
                         }
                         if (in && !mPointerIn[i]) {
-                            fn_80040778(i, 3, 20);
+                            StartRumble(i, 3, 20);
                         }
                         mPointerIn[i] = in;
                     }
@@ -1221,8 +1213,8 @@ BOOL SlideShow::StateZoom(const s32* arg) {
 
             for (s32 i = 0; i < 4; i++) {
                 if (IsPointerValid(i)) {
-                    f32 x = lbl_801F0888[i];
-                    f32 y = lbl_801F0898[i];
+                    f32 x = gPointerX[i];
+                    f32 y = gPointerY[i];
                     if (x > 0.0f && x < screenWidth && y > 63.0f && y < 393.0f && (gTrig[i] & 0x800)) {
                         close = true;
                         break;
@@ -1418,7 +1410,7 @@ BOOL SlideShow::StateMove(const s32* arg) {
                 SetViewToTarget(this);
                 return TRUE;
             }
-            f32 t = fn_800449A0(mZoomAngle);
+            f32 t = CosineEase(mZoomAngle);
             mView.left = mZoomFrom[0] + mZoomFrom[1] * t;
             mView.top = mZoomFrom[2] + mZoomFrom[3] * t;
             mText.left = mZoomFrom[4] + mZoomFrom[5] * t;
@@ -1623,7 +1615,7 @@ void SlideShow::SubStateDrag() {
         s32 count = 0;
         for (s32 i = 0; i < 4; i++) {
             lbl_801EDFD0[i] = 1;
-            if (lbl_801F0908[i] & 0x400) {
+            if (gHold[i] & 0x400) {
                 count++;
                 lbl_801EDFD0[i] = 5;
                 move += 0.1f * gPointerScroll[i];
@@ -2025,15 +2017,15 @@ BOOL SlideShow::StartGrab(s32 chan, const ut::Rect* rect) {
     f32 x = gCursorX[chan][0];
     f32 y = gCursorY[chan][0];
     if (x > rect->left && x < rect->right && y > rect->top && y < rect->bottom) {
-        if (!(lbl_801F0908[chan] & 0x400) && (gTrig[chan] & 0x200)) {
+        if (!(gHold[chan] & 0x400) && (gTrig[chan] & 0x200)) {
             mGrabbing[chan] = true;
             for (s32 i = 0; i < 4; i++) {
                 if (i != chan) {
                     mGrabbing[i] = false;
                 }
             }
-            mGrabPos[chan].x = mGrabStart[chan].x = lbl_801F0888[chan];
-            mGrabPos[chan].y = mGrabStart[chan].y = lbl_801F0898[chan];
+            mGrabPos[chan].x = mGrabStart[chan].x = gPointerX[chan];
+            mGrabPos[chan].y = mGrabStart[chan].y = gPointerY[chan];
             return TRUE;
         }
     }
@@ -2041,10 +2033,10 @@ BOOL SlideShow::StartGrab(s32 chan, const ut::Rect* rect) {
 }
 
 s32 SlideShow::UpdateGrab(s32 chan, const ut::Rect* rect) {
-    f32 x = lbl_801F0888[chan];
-    f32 y = lbl_801F0898[chan];
+    f32 x = gPointerX[chan];
+    f32 y = gPointerY[chan];
     if (mGrabbing[chan]) {
-        if (!(lbl_80357688 & 0xFDFF) && (lbl_801F0908[chan] & 0x200) && y > rect->top &&
+        if (!(gHoldAll & 0xFDFF) && (gHold[chan] & 0x200) && y > rect->top &&
             y < rect->bottom) {
             mGrabPos[chan].x = x;
             if (x < rect->left) {

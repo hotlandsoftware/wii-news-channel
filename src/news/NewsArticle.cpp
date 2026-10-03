@@ -8,20 +8,23 @@ extern MEMAllocator gNewsAllocator; // general allocator
 extern MEMAllocator gPictureAllocator; // picture allocator
 extern s32 gBlinkPhase;
 
+// operator new(size_t, MEMAllocator*) and operator new[](size_t, MEMAllocator*) (System.cpp).
+// Called through inline wrappers: calling the operators directly changes the register
+// allocation of NewsData::GetPicture.
 extern "C" {
-void* fn_80040A28(size_t size, MEMAllocator* allocator);
-void* fn_80040A48(size_t size, MEMAllocator* allocator);
+void* __nw__FUlP12MEMAllocator(size_t size, MEMAllocator* allocator);
+void* __nwa__FUlP12MEMAllocator(size_t size, MEMAllocator* allocator);
 void fn_8004E748(void* decoder);
 void fn_8004E754(void* decoder, s32 flags);
 NewsTexture* fn_8004E794(void* decoder, const void* data, u32 size, MEMAllocator* allocator);
 }
 
 inline void* operator new(size_t size, MEMAllocator* allocator) {
-    return fn_80040A28(size, allocator);
+    return __nw__FUlP12MEMAllocator(size, allocator);
 }
 
 inline void* operator new[](size_t size, MEMAllocator* allocator) {
-    return fn_80040A48(size, allocator);
+    return __nwa__FUlP12MEMAllocator(size, allocator);
 }
 
 class JPEGDecoder {

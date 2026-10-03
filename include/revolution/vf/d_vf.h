@@ -20,7 +20,10 @@ extern "C" {
 
 void VFInitEx(void* i_heap_start_address_p, u32 i_size);
 void VFInit(void);
+s32 VFCreateSystemFileRAM(void* i_memory_p, u32 i_size);
+s32 VFMountDriveNANDFlash(const char* i_drive, const char* i_sys_file_name_p);
 s32 VFMountDriveNANDFlashEx(const char* i_drive, const char* i_sys_file_name_p);
+s32 VFMountDriveRAM(const char* i_drive, void* i_memory_p);
 s32 VFUnmountDrive(const char* i_drive);
 void* VFOpenFile(const char* i_path_p, const char* i_mode, u32 i_attr);
 s32 VFCloseFile(void* i_file_p);
@@ -29,6 +32,9 @@ s32 VFReadFile(void* i_file_p, void* o_buf_p, u32 i_size, u32* o_read_size_p);
 s32 VFWriteFile(void* i_file_p, void* i_buf_p, u32 i_size);
 s32 VFDeleteFile(const char* i_path_p);
 s32 VFGetFileSizeByFd(void* i_file_p);
+s32 VFFindFirst(void* o_dta_p, const char* i_path_p, u32 i_attr);
+s32 VFFindNext(void* io_dta_p);
+s32 VFSyncDrive(const char* i_drive, u32 i_mode);
 s32 VFGetLastError();
 s32 VFGetLastDeviceError(const char* i_drive);
 s32 VFGetDriveFreeSize(const char* i_drive);

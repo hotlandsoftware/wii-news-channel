@@ -35,6 +35,9 @@ void TPL_GetTexObj(TPLPalette* tpl, u32 index, GXTexObj* texObj);
 void Draw2D_CalcMtx(const nw4r::math::VEC3& scale, const nw4r::math::VEC2& dir,
                     const nw4r::math::VEC3& pos, Mtx out);
 
+// Fills the quad (p0.x, p0.y, p0.z), (p1.x, p0.y, p0.z), (p1.x, p1.y, p1.z), (p0.x, p1.y, p1.z).
+void Draw2D_FillBox(const nw4r::math::VEC3& p0, const nw4r::math::VEC3& p1, const GXColor& color);
+
 u32 TPL_GetWidth(TPLPalette* tpl, u32 index);
 u32 TPL_GetHeight(TPLPalette* tpl, u32 index);
 

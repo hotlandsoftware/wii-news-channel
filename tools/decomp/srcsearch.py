@@ -72,6 +72,11 @@ def score(src, func):
     for s in d["left"]["symbols"]:
         if s["name"] == func:
             return float(s.get("match_percent") or 0.0)
+    # C++: match the mangled name of a free function or member ("Func__..." or
+    # "Func__5Class..."); pass the mangled name with --sym when it is overloaded.
+    for s in d["left"]["symbols"]:
+        if s["name"].startswith(func + "__"):
+            return float(s.get("match_percent") or 0.0)
     return -1.0
 
 

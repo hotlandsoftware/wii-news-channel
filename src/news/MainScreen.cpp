@@ -24,8 +24,6 @@ extern u8 lbl_801EE270[];          // layout resource accessor
 extern f32 lbl_803575DC;
 extern u8 lbl_803575BF;
 extern s32 lbl_80357598;
-extern u32 lbl_80357698;           // D-pad trigger
-extern u32 lbl_801F0908[4];        // held buttons
 extern s32 lbl_80356970;           // text zoom level (0-9)
 extern u8 lbl_8035697C;
 extern s32 gEarthModel;
@@ -46,9 +44,6 @@ extern f32 lbl_803575C8;
 extern s32 lbl_801EDFD0[4];        // pointer cursor shape per channel
 extern s32 lbl_80357580;
 extern s32 gHoverButtons[4];
-extern f32 lbl_801F0888[4];        // pointer x per channel
-extern f32 lbl_801F0898[4];        // pointer y per channel
-extern u32 lbl_80357688;           // pointer button hold
 extern u8 lbl_803575B9;
 extern u8 lbl_803575BA;
 extern f32 lbl_801EDFA0[6];
@@ -90,7 +85,6 @@ void fn_80032644(void);
 BOOL fn_8004DABC(Globe* globe);
 void fn_8004D0B0(Globe* globe);
 void fn_8004D170(Globe* globe);
-f32 fn_800449A0(u16 t);
 void fn_800329CC(void);
 BOOL fn_8003251C(void);
 void fn_80032658(u8 region);
@@ -118,7 +112,6 @@ f32 fn_80034164(void);
 void fn_80030650(void);
 BOOL fn_80034F6C(ut::Rect* rect);
 void fn_80034FD4(void);
-void fn_80040778(s32 chan, s32 arg1, s32 arg2);
 void fn_8004D2E8(Globe* globe);
 BOOL fn_80032BE0(s32 chan);
 void fn_8004DA8C(Globe* globe, s32 arg1, s32 arg2);
@@ -1109,7 +1102,7 @@ void MainScreen::ModeMain() {
                 UpdateLayoutButtons(mActiveLayout, 0x23);
             }
             for (s32 i = 0; i < 4; i++) {
-                if (lbl_801F0908[i] & 0x400) {
+                if (gHold[i] & 0x400) {
                     mHeld[i] = true;
                     held = TRUE;
                 }
@@ -1129,7 +1122,7 @@ void MainScreen::ModeMain() {
             if (!held) {
                 if (CheckButtonHold("up", 0x800) >= 0) {
                     mUpPressed = true;
-                } else if (lbl_80357698 & 8) {
+                } else if (gRepeatFastAll & 8) {
                     mUpPressed = true;
                     if (mActiveLayout == mMainLayout) {
                         mUpButton->SetPressed(true);
@@ -1139,7 +1132,7 @@ void MainScreen::ModeMain() {
                 }
                 if (CheckButtonHold("down", 0x800) >= 0) {
                     mDownPressed = true;
-                } else if (lbl_80357698 & 4) {
+                } else if (gRepeatFastAll & 4) {
                     mDownPressed = true;
                     if (mActiveLayout == mMainLayout) {
                         mDownButton->SetPressed(true);
@@ -1150,7 +1143,7 @@ void MainScreen::ModeMain() {
             }
             if (CheckButtonHold("zoom_out", 0x800) >= 0) {
                 mZoomOutPressed = true;
-            } else if (lbl_80357698 & 0x1000) {
+            } else if (gRepeatFastAll & 0x1000) {
                 mZoomOutPressed = true;
                 if (mActiveLayout == mMainLayout) {
                     mZoomOutButton->SetPressed(true);
@@ -1162,7 +1155,7 @@ void MainScreen::ModeMain() {
             }
             if (CheckButtonHold("zoom_in", 0x800) >= 0) {
                 mZoomInPressed = true;
-            } else if (lbl_80357698 & 0x10) {
+            } else if (gRepeatFastAll & 0x10) {
                 mZoomInPressed = true;
                 if (mActiveLayout == mMainLayout) {
                     mZoomInButton->SetPressed(true);
@@ -1180,23 +1173,23 @@ void MainScreen::ModeMain() {
             }
             if (CheckButtonHold("rot_a", 0x800) >= 0) {
                 mRotAPressed = true;
-            } else if (lbl_80357698 & 8) {
+            } else if (gRepeatFastAll & 8) {
                 mRotAPressed = true;
                 mRotAButton->SetPressed(true);
             }
             if (CheckButtonHold("rot_b", 0x800) >= 0) {
                 mRotBPressed = true;
-            } else if (lbl_80357698 & 4) {
+            } else if (gRepeatFastAll & 4) {
                 mRotBPressed = true;
                 mRotBButton->SetPressed(true);
             }
             if (CheckButtonTrig("reset", 0x800) >= 0) {
                 mResetPressed = true;
             }
-            if (lbl_80357698 & 1) {
+            if (gRepeatFastAll & 1) {
                 mUnk2B6 = true;
             }
-            if (lbl_80357698 & 2) {
+            if (gRepeatFastAll & 2) {
                 mUnk2B7 = true;
             }
         }
@@ -1221,7 +1214,7 @@ void MainScreen::ModeMain() {
             if (mUnk32C > 0x8000) {
                 mUnk32C = 0x8000;
             }
-            g->mHeight = mUnk270 = mUnk274 + range * fn_800449A0(mUnk32C);
+            g->mHeight = mUnk270 = mUnk274 + range * CosineEase(mUnk32C);
             if (gGlobe != NULL && mUnk11C) {
                 (this->*mUnk11C)();
             }
@@ -1561,7 +1554,7 @@ void MainScreen::State16960(s32* arg) {
         if (mUnk338 > 0x8000) {
             mUnk338 = 0x8000;
         }
-        f32 t = fn_800449A0(mUnk338);
+        f32 t = CosineEase(mUnk338);
         mScreenRect.right = mUnk290 + mUnk294 * t;
         mUnk23C += 1.0f / 18.0f;
         if (mUnk23C > 1.0f) {
@@ -1770,7 +1763,7 @@ inline void MainScreen::UpdateGlobeCamera() {
     if (globe != NULL) {
         GlobeCamera* camera = globe->mCamera;
         if (camera != NULL) {
-            f32 t = fn_800449A0(mUnk32C);
+            f32 t = CosineEase(mUnk32C);
             f32 dx = mUnk194.x - mUnk18C.x;
             camera->mX = mUnk18C.x + dx * t;
             f32 dy = mUnk194.y - mUnk18C.y;
@@ -1864,7 +1857,7 @@ void MainScreen::State17E6C(s32* arg) {
         if (mUnk338 > 0x8000) {
             mUnk338 = 0x8000;
         }
-        f32 t = fn_800449A0(mUnk338);
+        f32 t = CosineEase(mUnk338);
         mUnk244 += 1.0f / 12.0f;
         if (mUnk244 > 1.0f) {
             mUnk244 = 1.0f;
@@ -1996,7 +1989,7 @@ void MainScreen::State18770(s32* arg) {
         if (mUnk338 > 0x8000) {
             mUnk338 = 0x8000;
         }
-        f32 t = fn_800449A0(mUnk338);
+        f32 t = CosineEase(mUnk338);
         f32 x = mUnk280 + mUnk284 * t;
         f32 right = mUnk290 + mUnk294 * t;
         mUnk240 -= 1.0f / 18.0f;
@@ -2293,7 +2286,7 @@ void MainScreen::State195B8(s32* arg) {
                             }
                         }
                         if (hit && !mUnk356[i]) {
-                            fn_80040778(i, 3, 20);
+                            StartRumble(i, 3, 20);
                         }
                         mUnk356[i] = hit;
                         if (y > 83.0f && y < 373.0f && (gTrig[i] & 0x800)) {
@@ -2424,7 +2417,7 @@ void MainScreen::State1A750(s32* arg) {
             ChangeState(&MainScreen::State1B134, NULL);
             return;
         }
-        f32 t = fn_800449A0(mUnk338);
+        f32 t = CosineEase(mUnk338);
         mFadeRect.left = mUnk280 + t * (fn_8000D6A0(item).x - mUnk280);
         mFadeRect.right = mUnk284 + t * (fn_8000D6A0(item).x - mUnk284);
         mFadeRect.top = mUnk288 + t * (fn_8000D6A0(item).y - mUnk288);
@@ -2471,7 +2464,7 @@ void MainScreen::State1AC60(s32* arg) {
             ChangeState(&MainScreen::State1B134, NULL);
             return;
         }
-        f32 t = fn_800449A0(mUnk338);
+        f32 t = CosineEase(mUnk338);
         mUnk164.x = mUnk280 + mUnk284 * t;
         mScreenRect.right = mUnk290 + mUnk294 * t;
         if (globe != NULL) {
@@ -3116,7 +3109,7 @@ void MainScreen::Sub1D594() {
         s32 count = 0;
         for (s32 i = 0; i < 4; i++) {
             lbl_801EDFD0[i] = 1;
-            if (lbl_801F0908[i] & 0x400) {
+            if (gHold[i] & 0x400) {
                 count++;
                 lbl_801EDFD0[i] = 5;
                 velocity += 0.1f * gPointerScroll[i];
@@ -3251,7 +3244,7 @@ void MainScreen::Sub1DC30() {
         s32 count = 0;
         for (s32 i = 0; i < 4; i++) {
             lbl_801EDFD0[i] = 1;
-            if (lbl_801F0908[i] & 0x400) {
+            if (gHold[i] & 0x400) {
                 count++;
                 lbl_801EDFD0[i] = 5;
                 velocity += 0.1f * gPointerScroll[i];
@@ -3662,7 +3655,7 @@ BOOL MainScreen::StartDrag(s32 chan, const ut::Rect* rect) {
     f32 x = gCursorX[chan][0];
     f32 y = gCursorY[chan][0];
     if (x > rect->left && x < rect->right && y > rect->top && y < rect->bottom &&
-        !(lbl_801F0908[chan] & 0x400) && (gTrig[chan] & 0x200))
+        !(gHold[chan] & 0x400) && (gTrig[chan] & 0x200))
     {
         mDragging[chan] = true;
         for (s32 i = 0; i < 4; i++) {
@@ -3670,18 +3663,18 @@ BOOL MainScreen::StartDrag(s32 chan, const ut::Rect* rect) {
                 mDragging[i] = false;
             }
         }
-        mDragPos[chan].x = mDragStart[chan].x = lbl_801F0888[chan];
-        mDragPos[chan].y = mDragStart[chan].y = lbl_801F0898[chan];
+        mDragPos[chan].x = mDragStart[chan].x = gPointerX[chan];
+        mDragPos[chan].y = mDragStart[chan].y = gPointerY[chan];
         return TRUE;
     }
     return FALSE;
 }
 
 s32 MainScreen::UpdateDrag(s32 chan, const ut::Rect* rect) {
-    f32 x = lbl_801F0888[chan];
-    f32 y = lbl_801F0898[chan];
+    f32 x = gPointerX[chan];
+    f32 y = gPointerY[chan];
     if (mDragging[chan]) {
-        if (!(lbl_80357688 & 0xFDFF) && (lbl_801F0908[chan] & 0x200) && y > rect->top &&
+        if (!(gHoldAll & 0xFDFF) && (gHold[chan] & 0x200) && y > rect->top &&
             y < rect->bottom)
         {
             mDragPos[chan].x = x;

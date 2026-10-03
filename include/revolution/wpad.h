@@ -408,6 +408,7 @@ s32 WPADSendStreamData(s32, void*, u16);
 BOOL WPADCanSendStreamData(s32);
 void WPADGetAccGravityUnit(s32 chan, u32 type, WPADAcc* acc);
 void WPADControlMotor(s32, u32);
+BOOL WPADIsMotorEnabled(void);
 BOOL WPADStopSimpleSync(void);
 
 BOOL WPADIsDpdEnabled(s32 chan);
