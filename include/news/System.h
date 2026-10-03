@@ -130,12 +130,12 @@ void StartRumble(s32 chan, s32 frames, s32 cooldown);
 void StopRumble(s32 chan, s32 cooldown);
 
 // Main loop and scenes (System.cpp)
-extern u32 gSceneId;
-extern u32 gSceneRequest;
+extern s32 gSceneId;
+extern s32 gSceneRequest;
 void SystemInit();
 void SystemCalc();
 void SystemDraw();
-void ChangeScene(u32 id);
+void ChangeScene(s32 id);
 void Restart();
 
 #endif

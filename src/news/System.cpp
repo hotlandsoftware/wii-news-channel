@@ -93,8 +93,8 @@ u32 gXfbSize;
 void* gXfb1;
 void* gXfb2;
 void* gCurXfb;
-u32 gSceneId;
-u32 gSceneRequest;
+s32 gSceneId;
+s32 gSceneRequest;
 bool gZoomStarted[4];
 bool gZoomArmed[4];
 bool gPointerSeen[4];
@@ -137,7 +137,7 @@ void PowerCallback();
 void ResetCallback();
 static void* AllocForWPAD(u32 size);
 static u8 FreeForWPAD(void* ptr);
-void ChangeScene(u32 id);
+void ChangeScene(s32 id);
 void SetVideoMode(bool progressive, bool widescreen, bool narrow);
 void SetRenderMode(GXRenderModeObj* rm);
 
@@ -473,7 +473,8 @@ void SystemCalc() {
             on = true;
         }
         if (gRumblePattern[i]) {
-            char c = gRumblePattern[i][gRumblePos[i]++];
+            char c = gRumblePattern[i][gRumblePos[i]];
+            gRumblePos[i]++;
             if (c == '\0') {
                 gRumblePattern[i] = NULL;
                 gRumblePos[i] = 0;
@@ -684,7 +685,7 @@ void SystemDraw() {
     gCurXfb = gCurXfb == gXfb1 ? gXfb2 : gXfb1;
 }
 
-void ChangeScene(u32 id) {
+void ChangeScene(s32 id) {
     gTrigAll = 0;
     gHoldAll = 0;
     gReleaseAll = 0;
