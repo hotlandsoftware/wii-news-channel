@@ -913,7 +913,7 @@ void MainScreen::ModeMain() {
     if (list != NULL) {
         ticker = GetListItem(list, mSelected);
         if (ticker != NULL) {
-            article = ticker->mArticle;
+            article = ticker->GetArticle();
         }
     }
 
@@ -1226,7 +1226,7 @@ s32 MainScreen::OpenArticle(s32* arg) {
     HeadlineList* list = lbl_8035755C;
     Ticker* ticker = GetListItem(list, mSelected);
     if (ticker != NULL) {
-        NewsArticle* article = ticker->mArticle;
+        NewsArticle* article = ticker->GetArticle();
         math::VEC2 thumbPos = ticker->GetThumbPos();
         bool noLocation;
         s32 result;
@@ -1260,8 +1260,8 @@ s32 MainScreen::OpenArticle(s32* arg) {
             SetLocation(article);
         }
         ticker->GetOrigin(origin);
-        origin.y = (origin.y + list->mScroll) - 40.0f;
-        thumbPos.y += list->mScroll;
+        origin.y = (origin.y + list->GetScroll()) - 40.0f;
+        thumbPos.y += list->GetScroll();
         mUnk224 = 0.0f;
         mUnk228 = 0.0f;
         NewsTexture* texture = ticker->mArticle->GetTexture();
@@ -1977,7 +1977,7 @@ BOOL MainScreen::CheckArticleSwitch() {
         count = list->mNumItems;
         Ticker* ticker = GetListItem(list, mSelected);
         if (ticker != NULL) {
-            NewsArticle* article = ticker->mArticle;
+            NewsArticle* article = ticker->GetArticle();
             if (article != NULL) {
                 location = article->mLocation;
             }
@@ -2071,7 +2071,7 @@ void MainScreen::State195B8(s32* arg) {
         count = list->mNumItems;
         Ticker* ticker = GetListItem(list, mSelected);
         if (ticker != NULL) {
-            NewsArticle* article = ticker->mArticle;
+            NewsArticle* article = ticker->GetArticle();
             if (article != NULL) {
                 location = article->mLocation;
             }
@@ -2924,7 +2924,7 @@ BOOL MainScreen::OpenRelated(GlobePin* item, s32* arg) {
         Globe* globe = gGlobe;
         Ticker* ticker = GetListItem(list, mSelected);
         if (ticker != NULL) {
-            NewsArticle* article = ticker->mArticle;
+            NewsArticle* article = ticker->GetArticle();
             math::VEC2 thumbPos = ticker->GetThumbPos();
             SetLocation(article);
             globe->mUnk6C = sGlobeX;
@@ -3022,7 +3022,9 @@ void MainScreen::Sub1D594() {
     case 0:
         mUnk2D4++;
         lbl_801EDFA0[1] = gWidescreen ? 19 : 34;
-        lbl_801EDFB8[1] = (456 - (gWidescreen ? 19 : 34)) - lbl_803575D0;
+        f32 y = 456 - (gWidescreen ? 19 : 34);
+        f32 d = lbl_803575D0;
+        lbl_801EDFB8[1] = y - d;
         lbl_80357600.a = 100;
         PlaySE(0x16);
         break;
@@ -3331,7 +3333,7 @@ BOOL MainScreen::ExitGlobe(BOOL related) {
         Globe* globe = gGlobe;
         Ticker* ticker = GetListItem(list, mSelected);
         if (ticker != NULL) {
-            NewsArticle* article = ticker->mArticle;
+            NewsArticle* article = ticker->GetArticle();
             s32 dir = 0;
             math::VEC2 thumbPos = ticker->GetThumbPos();
             SetLocation(article);

@@ -33,6 +33,7 @@ public:
     void ScrollDown();
     f32 GetOffset(s32 index);
     f32 GetTopButtonBottom();
+    f32 GetScroll() const { return mScroll; }
     void Snap();
     void UpdateButtons(nw4r::math::VEC2 pos);
     s32 GetMaxIndex();
