@@ -29,14 +29,14 @@ public:
     void CalcPoles();
     void UpdateLights();
     void CalcScene();
-    void UpdateZoom(const u32* se);
+    void UpdateZoom(const s32* se);
     void ReleaseGrab();
     BOOL StartGrab(s32 chan);
     s32 UpdateGrab(s32 chan);
     void SetTilt(s32 level, bool level0);
     BOOL IsRotating();
     void SetTiltNow(s32 level);
-    void UpdateTilt(s32 unused, const u32* se);
+    void UpdateTilt(s32 unused, const s32* se);
     void UpdateSpin(u32 stop);
     void SetZoom(s32 level);
     void SetTwist(f32 twist);

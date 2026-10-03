@@ -123,15 +123,6 @@ void fn_8004C294(void);
 
 // Globe (0x8004C240..)
 void fn_8004C240(u16 x, u16 y, math::VEC2* out);
-void fn_8004C69C(void* globe, math::VEC3* pos, u8 zoom);
-void fn_8004C890(void* globe, math::VEC3* rot);
-void fn_8004CA10(void* globe);
-void fn_8004CAE4(void* globe, math::VEC3* pos, s32 arg, f32 scale);
-void fn_8004CB38(void* globe);
-void fn_8004DA8C(void* globe, s32 arg0, s32 arg1);
-void fn_8004DB4C(void* globe, s32 arg);
-void fn_8004E0B8(void* globe, s32 level);
-void fn_8004E0D4(void* globe, f32 arg);
 
 }
 
@@ -150,7 +141,18 @@ struct HomeMenuInfo {
     void* mHeap;     // at 0x04
 };
 
+// Globe view (Globe.cpp, include/news/Globe.h)
 struct Globe {
+    void Init(const math::VEC3* rot, s32 zoom);
+    void Reset(const math::VEC3* rot);
+    void Draw();
+    void DrawCursor(const Vec* pos, s32 unused, f32 scale);
+    void ResetScene();
+    void SetTilt(s32 level, bool level0);
+    void SetTiltNow(s32 level);
+    void SetZoom(s32 level);
+    void SetTwist(f32 twist);
+
     u8 unk0[0x4];
     s32 mFocus;      // at 0x04
     u8 unk8[0x6C - 0x8];
@@ -810,11 +812,11 @@ void NewsScene::OnHomeMenuClose() {
     if (!gFatalError) {
         if (lbl_8035775C) {
             math::VEC3 rot(0.0f, 0.0f, 0.0f);
-            fn_8004C890(lbl_8035775C, &rot);
+            lbl_8035775C->Reset(&rot);
             fn_8003D168(sGlobeRenderer);
         }
         if (lbl_8035775C) {
-            fn_8004DB4C(lbl_8035775C, 5);
+            lbl_8035775C->SetTiltNow(5);
         }
         fn_8000BE74(sPointerEffect);
         RestoreDPD();
@@ -844,7 +846,7 @@ void NewsScene::Draw() {
             if (lbl_8035775C != NULL && !lbl_8035697C) {
                 fn_8003D178(sGlobeRenderer, lbl_8035775C->mCenterX, lbl_8035775C->mCenterY);
                 fn_8003D21C(sGlobeRenderer);
-                fn_8004CA10(lbl_8035775C);
+                lbl_8035775C->Draw();
                 if (!lbl_803575BC) {
                     u8 alpha = 255.0f * sPinAlpha;
                     if (lbl_80357580) {
@@ -886,7 +888,7 @@ void NewsScene::Draw() {
                     Draw2D_FillRect(&rect, &lbl_803575FC);
                 }
                 math::VEC3 pos(lbl_801EDF70.x, lbl_801EDF70.y + lbl_803575C8, lbl_801EDF70.z);
-                fn_8004CAE4(lbl_8035775C, &pos, 0, 1.0f);
+                lbl_8035775C->DrawCursor(&pos, 0, 1.0f);
                 if (gNewsData->mHeader->unk2C[1] && lbl_803575B9) {
                     pos.x = lbl_801EDF88.x;
                     pos.y -= TPL_GetHeight(gCommonTpl, 0x3E);
@@ -1418,7 +1420,7 @@ BOOL NewsScene::StateMain() {
         lbl_801EDF88.y = y2;
         lbl_801EDF88.x = x2;
         if (lbl_8035775C) {
-            fn_8004DB4C(lbl_8035775C, 5);
+            lbl_8035775C->SetTiltNow(5);
         }
         if (!mInitialized) {
             sBgmVolume[0].mValue = sBgmVolume[0].mTarget;
@@ -2043,22 +2045,22 @@ void Globe_FocusArticle(NewsArticle* article, s32 arg, f32 x, f32 y) {
         f32 px = loc.x;
         math::VEC3 pos(px, py, 0.0f);
         lbl_8035775C->mOffset = ofs;
-        fn_8004C69C(lbl_8035775C, &pos, article->mLocation->unk4[8]);
-        fn_8004DA8C(lbl_8035775C, 5, 0);
-        fn_8004DB4C(lbl_8035775C, arg);
-        fn_8004E0D4(lbl_8035775C, 0.0f);
+        lbl_8035775C->Init(&pos, article->mLocation->unk4[8]);
+        lbl_8035775C->SetTilt(5, 0);
+        lbl_8035775C->SetTiltNow(arg);
+        lbl_8035775C->SetTwist(0.0f);
     }
 }
 
 void Globe_ResetFocus() {
     if (lbl_8035775C) {
-        fn_8004CB38(lbl_8035775C);
+        lbl_8035775C->ResetScene();
     }
 }
 
 void Globe_SetZoom(s32 level) {
     if (lbl_8035775C) {
-        fn_8004E0B8(lbl_8035775C, level);
+        lbl_8035775C->SetZoom(level);
     }
 }
 

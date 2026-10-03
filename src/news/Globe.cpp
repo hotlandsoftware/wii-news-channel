@@ -321,7 +321,7 @@ void Globe::CalcScene() {
     }
 }
 
-void Globe::UpdateZoom(const u32* se) {
+void Globe::UpdateZoom(const s32* se) {
     s32 prev = mZoomLevel;
     if (mCamera != NULL) {
         if (mZoomOut) {
@@ -503,7 +503,7 @@ void Globe::SetTiltNow(s32 level) {
     mCamera->mResetting = false;
 }
 
-void Globe::UpdateTilt(s32 unused, const u32* se) {
+void Globe::UpdateTilt(s32 unused, const s32* se) {
     if (mCamera == NULL) {
         return;
     }
