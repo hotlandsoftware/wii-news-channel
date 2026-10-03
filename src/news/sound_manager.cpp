@@ -771,29 +771,43 @@ static inline BOOL InWindow(s32 n) {
 }
 
 void FxVoice::PitchUp(s32** buffers) {
-    for (s32 ch = 0; ch < 2; ch++) {
+    s32 sum;
+    s32 pos;
+    s32 f;
+    s32 s1;
+    s32 frac;
+    s32 ch;
+    s32 s0;
+    s32 i;
+    s32 v;
+    s32* out;
+    s32 k;
+    s32 j;
+    s32 n;
+
+    for (ch = 0; ch < 2; ch++) {
         s32 work[FX_FRAME_SAMPLES + 11];
-        for (s32 i = 0; i < FX_FRAME_SAMPLES + 11; i++) {
+        for (i = 0; i < FX_FRAME_SAMPLES + 11; i++) {
             work[i] = 0;
         }
-        for (s32 k = 0; k < 2; k++) {
-            s32 f = (mFrame + k * 64 / 2) % FX_HISTORY_FRAMES;
-            s32 n = f * FX_FRAME_SAMPLES - 11;
-            for (s32 j = -11; j < FX_FRAME_SAMPLES; j++, n++) {
+        for (k = 0; k < 2; k++) {
+            f = (mFrame + k * 64 / 2) % FX_HISTORY_FRAMES;
+            n = f * FX_FRAME_SAMPLES - 11;
+            for (j = -11; j < FX_FRAME_SAMPLES; j++, n++) {
                 if (InWindow(n)) {
-                    s32 pos = n * 0x1800 / 4096;
-                    s32 s0 = *GetSample(mOutput[ch], -32 - f, pos);
-                    s32 s1 = *GetSample(mOutput[ch], -32 - f, pos + 1);
-                    s32 frac = n * 0x1800 % 4096;
-                    s32 v = s0 + (s32)((s64)frac * (s1 - s0) / 4096);
+                    pos = n * 0x1800 / 4096;
+                    s0 = *GetSample(mOutput[ch], -32 - f, pos);
+                    s1 = *GetSample(mOutput[ch], -32 - f, pos + 1);
+                    frac = n * 0x1800 % 4096;
+                    v = s0 + (s32)((s64)frac * (s1 - s0) / 4096);
                     work[j + 11] += v * mWindowB[n] / 4096;
                 }
             }
         }
-        s32* out = buffers[ch];
-        for (s32 i = FX_FRAME_SAMPLES - 1; i >= 0; i--) {
-            s32 sum = 0;
-            for (s32 k = 0; k < 11; k++) {
+        out = buffers[ch];
+        for (i = FX_FRAME_SAMPLES - 1; i >= 0; i--) {
+            sum = 0;
+            for (k = 0; k < 11; k++) {
                 sum += mFilterC[k] * work[i - k + 11];
             }
             out[i] = sum / 4096;
