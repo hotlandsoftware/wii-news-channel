@@ -3362,14 +3362,13 @@ void MainScreen::UpdateGlobeInput() {
     f32 maxY = 393.0f;
     f32 prevDistance = GetGlobeDistance(globe);
     bool moving = false;
-    f32 minY = 63.0f;
     for (s32 i = 0; i < 4; i++) {
         switch (fn_8004D628(globe, i)) {
         case 0:
-            if (mState == &MainScreen::State1B134 && gCursorY[i][0] > minY &&
-                gCursorY[i][0] < maxY && fn_8004D300(globe, i))
-            {
-                mSoundId = 0x15;
+            if (IsState(&MainScreen::State1B134)) {
+                if (gCursorY[i][0] > 63.0f && gCursorY[i][0] < maxY && fn_8004D300(globe, i)) {
+                    mSoundId = 0x15;
+                }
             }
             break;
         case 2:
@@ -3384,8 +3383,8 @@ void MainScreen::UpdateGlobeInput() {
     }
     f32 delta = __fabsf(GetGlobeDistance(lbl_8035775C) - prevDistance);
     if (!IsNearlyZero(delta) && IsNearlyZero(mUnk268)) {
-        f32 v = delta > 2.0f ? 2.0f : delta;
-        f32 s = v * 0.5f;
+        f32 s = delta > 2.0f ? 2.0f : delta;
+        s *= 0.5f;
         fn_8004F8E0(0x12, 0.5f + 0.5f * s, 1.0f + s, 0.0f);
     }
     mUnk268 += delta;
