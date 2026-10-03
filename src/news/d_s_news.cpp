@@ -6,6 +6,7 @@
 // System.h declares gSeparatorColor as a GXColor; here it is the ut::Color it really is.
 #define gSeparatorColor gSeparatorColor_GXColor
 #include <news/System.h>
+#include <news/ArticleText.h>
 #include <news/Scene.h>
 #include <news/Camera.h>
 #include <news/Draw2D.h>
@@ -15,6 +16,7 @@
 #include <news/NewsArticle.h>
 #include <news/NewsData.h>
 #include <news/PaneButton.h>
+#include <news/SlideShow.h>
 #include <news/SmoothValue.h>
 #undef gSeparatorColor
 #include <news/Common.h>
@@ -37,7 +39,6 @@ using namespace nw4r;
 // Not yet decompiled: classes and globals of other files.
 
 class GlobePin;
-class TextView;
 
 extern "C" {
 // Heap helpers (0x80040764..)
@@ -47,7 +48,6 @@ void* fn_80040994(u32 size, s32 align);
 void fn_800409EC(void* block);
 void fn_800409F8(void* block);
 void* fn_80040A28(size_t size, MEMAllocator* allocator);
-void* fn_80040A48(size_t size, MEMAllocator* allocator);
 
 // Opening animation (0x80007F58..)
 void* fn_80007F58(void* mem, MEMHeapHandle heap, void* arc, NewsData* data);
@@ -96,34 +96,6 @@ void fn_800138F0(void* view);
 void fn_80013C2C(void* view);
 void fn_80015054(void* view);
 void fn_80015200(void* view);
-
-// Slideshow (0x8002101C..)
-void* fn_8002101C(void* mem, void* arc);
-void fn_80021818(void* view, s32 flag);
-void fn_80021B6C(void* view);
-void fn_80021CD0(void* view);
-void fn_80021D88(void* view);
-void fn_80022364(void* view);
-
-// Text views (0x80027674..)
-TextView* fn_80027674(void* mem, MEMAllocator* allocator, ut::TextWriterBase<wchar_t>* writer,
-                      s32 length, math::VEC2* size, f32 scale);
-void fn_8002780C(TextView* view, s32 flag);
-void fn_80027F94(TextView* view, const wchar_t* text, NewsPicture* picture, s32 arg3, s32 arg4,
-                 s32 arg5, const math::VEC2* size, s32 arg7, f32 x, f32 scale, u8 latest, s32 arg9);
-void fn_800284C0(TextView* view, const math::VEC2* pos, s32 arg, f32 alpha, f32 arg2);
-void fn_80028DC8(TextView* view, s32 arg0, s32 arg1, f32 arg2);
-void fn_80029178(TextView* view);
-void fn_8002963C(TextView* view);
-void fn_8002966C(TextView* view, math::VEC2* pos, f32 arg);
-void fn_80029C98(TextView* view);
-void fn_80029D70(TextView* view);
-void fn_80029D7C(TextView* view, f32 arg);
-void fn_80029E30(TextView* view, s32 arg0, s32 arg1, s32 arg2, s32 arg3);
-BOOL fn_80029EBC(TextView* view, s32 arg);
-void fn_8002A1BC(TextView* view);
-f32 fn_8002A234(TextView* view);
-BOOL fn_8002A254(TextView* view, ut::Rect* rect);
 
 // Globe renderer (0x8003CECC..)
 void* fn_8003CECC(void* mem);
@@ -219,9 +191,7 @@ inline void* operator new(size_t size, MEMAllocator* allocator) {
     return fn_80040A28(size, allocator);
 }
 
-inline void* operator new[](size_t size, MEMAllocator* allocator) {
-    return fn_80040A48(size, allocator);
-}
+void* operator new[](size_t size, MEMAllocator* allocator);
 
 // A pin on the globe, one per article that has a location.
 class GlobePin {
@@ -248,28 +218,6 @@ public:
     bool mFront;         // at 0xFC
 };
 
-// A block of article text (headline, body, credits, caption).
-class TextView {
-public:
-    u8 unk0[0x8];
-    ut::Font* mFont;            // at 0x08
-    u8 unkC[0x10 - 0xC];
-    NewsTexture* mTexture;      // at 0x10
-    u8 unk14[0x18 - 0x14];
-    const wchar_t* mCaption;    // at 0x18
-    u8 unk1C[0x20 - 0x1C];
-    f32 mX;                     // at 0x20
-    f32 mWidth;                 // at 0x24
-    u8 unk28[0x5C - 0x28];
-    f32 mY;                     // at 0x5C
-    u8 unk60[0x70 - 0x60];
-    f32 mLineHeight;            // at 0x70
-    u8 unk74[0xB0 - 0x74];
-    s32 mNumLines;              // at 0xB0
-    u8 unkB4[0xC0 - 0xB4];
-    bool mScrolling;            // at 0xC0
-};
-
 struct Settings {
     u32 unk0;
     s32 mLanguage;       // at 0x04
@@ -286,11 +234,6 @@ struct Intro {
     u8 unk0[0x18];
     NewsHeader* mFiles[(0x3C8 - 0x18) / 4];  // at 0x18
     s32 mCurrent;        // at 0x3C8
-};
-
-struct Slideshow {
-    u8 unk0[0x31E];
-    bool mShowCursor;    // at 0x31E
 };
 
 // ---------------------------------------------------------------------------
@@ -349,7 +292,7 @@ public:
     bool mInitialized;            // at 0xAC
     bool mFadeBgm;                // at 0xAD
     LanguageSelect* mLanguageSelect;  // at 0xB0
-    Slideshow* mSlideshow;        // at 0xB4
+    SlideShow* mSlideshow;        // at 0xB4
     void* mMainView;              // at 0xB8
     Intro* mIntro;                // at 0xBC
     Dialog* mDialog;              // at 0xC0
@@ -381,10 +324,10 @@ NewsData* gNewsData;
 HeadlineList* lbl_8035755C;          // 0x8035755C
 NewsArticle* lbl_80357560;                // 0x80357560
 const wchar_t* lbl_80357564;         // 0x80357564
-TextView* lbl_80357568;              // 0x80357568
-TextView* sBodyView;                  // 0x8035756C
-TextView* sCreditView;                // 0x80357570
-TextView* lbl_80357574;               // 0x80357574
+ArticleText* lbl_80357568;              // 0x80357568
+ArticleText* sBodyView;                  // 0x8035756C
+ArticleText* sCreditView;                // 0x80357570
+ArticleText* lbl_80357574;               // 0x80357574
 GlobePin** sPins;                     // 0x80357578
 GlobePin** sSortedPins;               // 0x8035757C
 GlobePin* lbl_80357580;               // 0x80357580
@@ -547,7 +490,7 @@ static inline bool IsArrowVisible() {
 BOOL Article_IsShort();
 
 static inline bool IsArticleShort() {
-    return (s32)(sCreditView->mY + 60.0f) <= (s32)sArticleSize.y;
+    return (s32)(sCreditView->mHeight + 60.0f) <= (s32)sArticleSize.y;
 }
 
 static inline s32 GetMaxScrollLine() {
@@ -784,22 +727,22 @@ NewsScene::~NewsScene() {
         sGlobeRenderer = NULL;
     }
     if (mSlideshow) {
-        fn_80021818(mSlideshow, 1);
+        delete mSlideshow;
     }
     if (mMainView) {
         fn_800137A4(mMainView, 1);
     }
     if (lbl_80357574) {
-        fn_8002780C(lbl_80357574, -1);
+        lbl_80357574->~ArticleText();
     }
     if (sCreditView) {
-        fn_8002780C(sCreditView, -1);
+        sCreditView->~ArticleText();
     }
     if (sBodyView) {
-        fn_8002780C(sBodyView, -1);
+        sBodyView->~ArticleText();
     }
     if (lbl_80357568) {
-        fn_8002780C(lbl_80357568, -1);
+        lbl_80357568->~ArticleText();
     }
     if (sSortedPins) {
         sSortedPins = NULL;
@@ -992,7 +935,7 @@ void NewsScene::DrawMain() {
 }
 
 void NewsScene::DrawSlideshow() {
-    fn_80022364(mSlideshow);
+    mSlideshow->Draw();
 }
 
 void NewsScene::DrawIntro() {
@@ -1206,36 +1149,20 @@ BOOL NewsScene::InitNews() {
     Pins_ResetStacks();
 
     void* mem;
-    mem = fn_80040A28(0xC8, &gNewsAllocator);
-    if (mem) {
-        mem = fn_80027674(mem, &gNewsAllocator, &mSysWriter, headlineLen, &size, 1.0f);
-    }
-    lbl_80357568 = (TextView*)mem;
+    lbl_80357568 = new (&gNewsAllocator) ArticleText(&gNewsAllocator, &mSysWriter, headlineLen, size, 1.0f);
     if (lbl_80357568 == NULL) {
         return FALSE;
     }
-    mem = fn_80040A28(0xC8, &gNewsAllocator);
-    if (mem) {
-        mem = fn_80027674(mem, &gNewsAllocator, &mArticleWriter, bodyLen, &size, 1.0f);
-    }
-    sBodyView = (TextView*)mem;
+    sBodyView = new (&gNewsAllocator) ArticleText(&gNewsAllocator, &mArticleWriter, bodyLen, size, 1.0f);
     if (sBodyView == NULL) {
         return FALSE;
     }
-    mem = fn_80040A28(0xC8, &gNewsAllocator);
-    if (mem) {
-        mem = fn_80027674(mem, &gNewsAllocator, &mSysWriter, creditLen, &size, 1.0f);
-    }
-    sCreditView = (TextView*)mem;
+    sCreditView = new (&gNewsAllocator) ArticleText(&gNewsAllocator, &mSysWriter, creditLen, size, 1.0f);
     if (sCreditView == NULL) {
         return FALSE;
     }
     if (hasCaption) {
-        mem = fn_80040A28(0xC8, &gNewsAllocator);
-        if (mem) {
-            mem = fn_80027674(mem, &gNewsAllocator, &mSysWriter, captionLen, &size, 1.0f);
-        }
-        lbl_80357574 = (TextView*)mem;
+        lbl_80357574 = new (&gNewsAllocator) ArticleText(&gNewsAllocator, &mSysWriter, captionLen, size, 1.0f);
         if (lbl_80357574 == NULL) {
             return FALSE;
         }
@@ -1270,11 +1197,7 @@ BOOL NewsScene::InitNews() {
         return FALSE;
     }
 
-    mem = operator new(0x410);
-    if (mem) {
-        mem = fn_8002101C(mem, mLayoutArc);
-    }
-    mSlideshow = (Slideshow*)mem;
+    mSlideshow = new SlideShow((u32)mLayoutArc);
     if (mSlideshow == NULL) {
         return FALSE;
     }
@@ -1282,7 +1205,7 @@ BOOL NewsScene::InitNews() {
         return FALSE;
     }
 
-    fn_80021B6C(mSlideshow);
+    mSlideshow->Start();
     fn_8004B960();
     sSettingsReady = true;
     BOOL selectLanguage = FALSE;
@@ -1584,7 +1507,7 @@ BOOL NewsScene::StateSlideshow() {
         lbl_803575BB = false;
         mDraw = &NewsScene::DrawSlideshow;
         gLargeFont = true;
-        fn_80021B6C(mSlideshow);
+        mSlideshow->Start();
         f32 h = TPL_GetHeight(gCursorTpl, 6);
         f32 y = 273.6f - h;
 #pragma push
@@ -1602,7 +1525,7 @@ BOOL NewsScene::StateSlideshow() {
     default:
         switch (mStep) {
         case 2:
-            fn_80021D88(mSlideshow);
+            mSlideshow->Calc();
             switch (lbl_80357598) {
             case 1:
                 break;
@@ -1616,18 +1539,18 @@ BOOL NewsScene::StateSlideshow() {
         case 3:
         default:
             if (++mTimer >= 12) {
-                mSlideshow->mShowCursor = false;
+                mSlideshow->mShowMain = false;
             }
             if (!lbl_8035772C->mBusy) {
-                mSlideshow->mShowCursor = true;
+                mSlideshow->mShowMain = true;
                 gLargeFont = false;
                 SetDPDAll(1);
-                fn_80021CD0(mSlideshow);
+                mSlideshow->Stop();
                 fn_80015200(mMainView);
                 ChangeState(&NewsScene::StateMain);
                 return TRUE;
             }
-            fn_80021D88(mSlideshow);
+            mSlideshow->Calc();
             break;
         }
         break;
@@ -2380,8 +2303,9 @@ void FormatElapsedTime(s32 time) {
     }
 }
 
-BOOL Article_Set(NewsArticle* article, const wchar_t* title, BOOL withPicture, s32 arg3, s32 arg4,
-                 s32 arg5, const math::VEC2& size, s32 arg7, f32 x, bool latest) {
+BOOL Article_Set(NewsArticle* article, const wchar_t* title, BOOL withPicture,
+                 const math::VEC2* start, const math::VEC2* picPos, const f32* picScale,
+                 const math::VEC2& size, bool indent, f32 x, bool latest) {
     sSourceIconType = article->mSource->noLogo;
     sSourceLayout = ((u8*)article->mSource)[1];
     NewsTexture* logo = sSourceIconType == 0 ? article->mSourceLogo : NULL;
@@ -2433,41 +2357,41 @@ BOOL Article_Set(NewsArticle* article, const wchar_t* title, BOOL withPicture, s
     } else {
         scale = gDefaultFontScale;
     }
-    fn_80027F94(lbl_80357568, article->mHeadlineText, NULL, arg3, arg4, arg5, &size, arg7, x, scale,
+    lbl_80357568->Set(article->mHeadlineText, NULL, start, picPos, picScale, &size, indent, x, scale,
                 latest, 0);
-    fn_80027F94(sBodyView, article->mBody, withPicture ? article->mPicture : NULL, arg3, arg4, arg5,
-                &size, arg7, x, 0.8f, latest, 0);
-    fn_80027F94(sCreditView, article->mCopyright, NULL, arg3, arg4, arg5, &size, arg7, x, 0.6f,
+    sBodyView->Set(article->mBody, withPicture ? article->mPicture : NULL, start, picPos, picScale,
+                &size, indent, x, 0.8f, latest, 0);
+    sCreditView->Set(article->mCopyright, NULL, start, picPos, picScale, &size, indent, x, 0.6f,
                 latest, 0);
     return TRUE;
 }
 
-void Article_LayoutHeadline(s32 arg0, s32 arg1, f32 arg2) {
-    fn_80028DC8(lbl_80357568, arg0, arg1, arg2);
+void Article_LayoutHeadline(const math::VEC2* pos, bool clip, f32 scroll) {
+    lbl_80357568->Update(pos, clip, scroll);
 }
 
-void Article_Layout(s32 arg, f32 y) {
-    f32 bottom = sCreditView->mY;
+void Article_Layout(const math::VEC2* pos, f32 y) {
+    f32 bottom = sCreditView->mHeight;
     if ((s32)(60.0f + bottom) <= (s32)sArticleSize.y) {
         sScrollLine = 0;
     }
-    fn_80028DC8(lbl_80357568, arg, 0, y);
-    fn_80028DC8(sBodyView, arg, 0, y);
-    fn_80028DC8(sCreditView, arg, 0, y);
+    lbl_80357568->Update(pos, false, y);
+    sBodyView->Update(pos, false, y);
+    sCreditView->Update(pos, false, y);
 }
 
 void Article_UpdateHeadline(f32 arg) {
-    fn_80029D7C(lbl_80357568, arg);
+    lbl_80357568->SetScale(arg);
 }
 
 void Article_Update(f32 arg) {
-    fn_80029D7C(lbl_80357568, arg);
-    fn_80029D7C(sBodyView, arg);
-    fn_80029D7C(sCreditView, arg);
+    lbl_80357568->SetScale(arg);
+    sBodyView->SetScale(arg);
+    sCreditView->SetScale(arg);
 }
 
-void Article_ArrangeHeadline() {
-    fn_8002963C(lbl_80357568);
+void Article_ArrangeHeadline(f32 scale) {
+    lbl_80357568->Layout(scale);
 }
 
 static inline f32 GetIconScale() {
@@ -2520,31 +2444,32 @@ static inline f32 GetLogoHeight() {
 }
 
 void Article_Arrange(f32 scale) {
-    fn_8002963C(lbl_80357568);
+    lbl_80357568->Layout(scale);
     f32 logoHeight = GetLogoHeight();
-    math::VEC2 pos(0.0f, lbl_80357568->mY + scale * logoHeight);
-    fn_8002966C(sBodyView, &pos, scale);
-    pos.y = sBodyView->mY + sBodyView->mLineHeight;
-    fn_8002966C(sCreditView, &pos, scale);
+    math::VEC2 pos(0.0f, lbl_80357568->mHeight + scale * logoHeight);
+    sBodyView->Layout(&pos, scale);
+    pos.y = sBodyView->mHeight + sBodyView->mLineHeight;
+    sCreditView->Layout(&pos, scale);
 }
 
 void Article_Reset() {
-    fn_80029C98(lbl_80357568);
-    fn_80029C98(sBodyView);
-    fn_80029C98(sCreditView);
+    lbl_80357568->Snap();
+    sBodyView->Snap();
+    sCreditView->Snap();
 }
 
-void Article_SetSelection(s32 arg0, s32 arg1, s32 arg2, s32 arg3) {
-    fn_8002A1BC(lbl_80357568);
-    fn_80029E30(lbl_80357568, arg0, arg1, arg2, arg3);
-    fn_8002A1BC(sBodyView);
-    fn_80029E30(sBodyView, arg0, arg1, arg2, arg3);
-    fn_8002A1BC(sCreditView);
-    fn_80029E30(sCreditView, arg0, arg1, arg2, arg3);
+void Article_SetSelection(const math::VEC2* pos, const math::VEC2* from, const math::VEC2* picPos,
+                          const f32* picScale) {
+    lbl_80357568->ClearSelection();
+    lbl_80357568->StartScroll(pos, from, picPos, picScale);
+    sBodyView->ClearSelection();
+    sBodyView->StartScroll(pos, from, picPos, picScale);
+    sCreditView->ClearSelection();
+    sCreditView->StartScroll(pos, from, picPos, picScale);
 }
 
-void Article_DrawHeadline(math::VEC2* pos, s32 arg, f32 alpha) {
-    fn_800284C0(lbl_80357568, pos, arg, alpha, 1.0f);
+void Article_DrawHeadline(const math::VEC2* pos, bool clip, f32 alpha) {
+    lbl_80357568->Draw(pos, clip, alpha, 1.0f);
 }
 
 void Article_DrawFrame(const math::VEC2& pos, s32 type, f32 alpha) {
@@ -2563,7 +2488,7 @@ void Article_DrawFrame(const math::VEC2& pos, s32 type, f32 alpha) {
         rect.bottom = 1.0f + rect.top;
         Draw2D_FillRect(&rect, &color);
     }
-    rect.top = (pos.y + fn_8002A234(sCreditView)) - 6.0f;
+    rect.top = (pos.y + sCreditView->GetTop()) - 6.0f;
     rect.bottom = 1.0f + rect.top;
     Draw2D_FillRect(&rect, &black);
 
@@ -2693,9 +2618,9 @@ void Article_Draw(const math::VEC2& pos, s32 type, BOOL drawHeadline, f32 alpha,
     Draw2D_SetOrtho();
     Article_DrawFrame(pos, type, alpha);
     if (drawHeadline) {
-        fn_800284C0(lbl_80357568, &pos, 0, alpha, 1.0f);
+        lbl_80357568->Draw(&pos, 0, alpha, 1.0f);
     }
-    f32 y = pos.y + fn_8002A234(sBodyView);
+    f32 y = pos.y + sBodyView->GetTop();
     math::VEC2 p(pos.x, y - 8.0f * gTextScale);
     if ((u32)(sSourceLayout - 3) <= 3) {
         if (sSourceIconType == 0) {
@@ -2704,16 +2629,16 @@ void Article_Draw(const math::VEC2& pos, s32 type, BOOL drawHeadline, f32 alpha,
             Article_DrawSourceIcon(p, sSourceLayout != 6, alpha);
         }
     }
-    fn_800284C0(sBodyView, &pos, 0, alpha, bodyAlpha);
-    fn_800284C0(sCreditView, &pos, 0, alpha, 1.0f);
+    sBodyView->Draw(&pos, 0, alpha, bodyAlpha);
+    sCreditView->Draw(&pos, 0, alpha, 1.0f);
 }
 
 f32 Article_GetHeadlineY() {
-    return lbl_80357568->mY;
+    return lbl_80357568->mHeight;
 }
 
 bool Article_IsBodyScrolling() {
-    return sBodyView->mScrolling;
+    return sBodyView->mIndentFirst;
 }
 
 f32 Article_GetScrollOffset() {
@@ -2737,10 +2662,10 @@ f32 Article_GetScrollOffset() {
 
 s32 Article_GetLineAt(const f32& offset) {
     f32 y = -offset;
-    f32 headlineY = lbl_80357568->mY;
+    f32 headlineY = lbl_80357568->mHeight;
     f32 logoHeight = GetLogoHeight();
-    f32 bodyStart = lbl_80357568->mY + logoHeight * gTextScale;
-    f32 bodyY = sBodyView->mY;
+    f32 bodyStart = lbl_80357568->mHeight + logoHeight * gTextScale;
+    f32 bodyY = sBodyView->mHeight;
     f32 lineHeight = sBodyView->mLineHeight;
     f32 creditStart = bodyY + lineHeight;
     if (y <= headlineY) {
@@ -2755,7 +2680,7 @@ s32 Article_GetLineAt(const f32& offset) {
     if (y <= creditStart) {
         return lbl_80357568->mNumLines + sBodyView->mNumLines + 2;
     }
-    if (y < sCreditView->mY) {
+    if (y < sCreditView->mHeight) {
         return lbl_80357568->mNumLines + sBodyView->mNumLines +
                (s32)(0.999f + (y - creditStart) / sCreditView->mLineHeight) + 2;
     }
@@ -2764,12 +2689,12 @@ s32 Article_GetLineAt(const f32& offset) {
 
 
 BOOL Article_IsShort() {
-    f32 bottom = sCreditView->mY;
+    f32 bottom = sCreditView->mHeight;
     return (s32)(60.0f + bottom) <= (s32)sArticleSize.y;
 }
 
 void Article_PageUp(s32 size, const f32& offset) {
-    f32 bottom = sCreditView->mY;
+    f32 bottom = sCreditView->mHeight;
     if ((s32)(60.0f + bottom) <= (s32)sArticleSize.y) {
         sScrollLine = 0;
         return;
@@ -2786,7 +2711,7 @@ void Article_PageUp(s32 size, const f32& offset) {
 }
 
 void Article_PageDown(s32 size, const f32& offset) {
-    f32 bottom = sCreditView->mY;
+    f32 bottom = sCreditView->mHeight;
     if ((s32)(60.0f + bottom) <= (s32)sArticleSize.y) {
         sScrollLine = 0;
         return;
@@ -2803,7 +2728,7 @@ BOOL Article_IsAtTop() {
 }
 
 BOOL Article_IsAtBottom() {
-    f32 bottom = sCreditView->mY;
+    f32 bottom = sCreditView->mHeight;
     if ((s32)(60.0f + bottom) <= (s32)sArticleSize.y) {
         return TRUE;
     }
@@ -2811,8 +2736,8 @@ BOOL Article_IsAtBottom() {
 }
 
 void Article_SetX(f32 x) {
-    lbl_80357568->mX = x;
-    sBodyView->mX = x;
+    lbl_80357568->mSize.x = x;
+    sBodyView->mSize.x = x;
 }
 
 void Article_ResetScroll() {
@@ -2820,7 +2745,7 @@ void Article_ResetScroll() {
 }
 
 void Article_ResetHeadline() {
-    fn_80029178(lbl_80357568);
+    lbl_80357568->HideAll();
 }
 
 f32 Article_GetMaxScrollOffset() {
@@ -2850,9 +2775,9 @@ f32 Article_GetMaxScrollOffset() {
 
 void Article_SetHeight(f32 width) {
     sArticleSize.y = width;
-    lbl_80357568->mWidth = width;
-    sBodyView->mWidth = width;
-    sCreditView->mWidth = width;
+    lbl_80357568->mSize.y = width;
+    sBodyView->mSize.y = width;
+    sCreditView->mSize.y = width;
 }
 
 void Article_ClampScroll() {
@@ -2891,15 +2816,15 @@ void Article_ScrollTo(f32 offset, f32 dir) {
     Article_GetScrollOffset();
 }
 
-BOOL Article_HitTest(s32 arg) {
-    BOOL a = fn_80029EBC(lbl_80357568, arg);
-    BOOL b = fn_80029EBC(sBodyView, arg);
+BOOL Article_HitTest(const ut::Rect* rect) {
+    BOOL a = lbl_80357568->Select(rect);
+    BOOL b = sBodyView->Select(rect);
     return a || b;
 }
 
 void Article_ClearHit() {
-    fn_80029D70(lbl_80357568);
-    fn_80029D70(sBodyView);
+    lbl_80357568->ResetUnk80();
+    sBodyView->ResetUnk80();
 }
 
 void Draw2D_Texture(NewsTexture* tex, const math::VEC3* pos, f32 scale) {
@@ -3040,7 +2965,7 @@ void Draw2D_Icon(u32 index, math::VEC3* pos, f32 scaleX, f32 scaleY, u32 flags) 
 }
 
 BOOL Article_GetPictureRect(ut::Rect* rect, f32 x, f32 y, f32 scale) {
-    if (!fn_8002A254(sBodyView, rect)) {
+    if (!sBodyView->GetPictureRect(rect)) {
         return FALSE;
     }
     f32 s = scale - 1.0f;
@@ -3054,7 +2979,7 @@ BOOL Article_GetPictureRect(ut::Rect* rect, f32 x, f32 y, f32 scale) {
 }
 
 BOOL Article_GetZoomedPictureRect(ut::Rect* rect) {
-    NewsTexture* tex = sBodyView->mTexture;
+    NewsTexture* tex = sBodyView->mPicture;
     if (tex == NULL) {
         return FALSE;
     }
@@ -3067,7 +2992,7 @@ BOOL Article_GetZoomedPictureRect(ut::Rect* rect) {
     f32 cy = 228.0f;
     f32 maxW = GetScreenWidth() - 2.0f * GetSideMargin();
     f32 maxH = 456.0f - 2.0f * (gWidescreen ? 19 : 34);
-    const wchar_t* caption = sBodyView->mCaption;
+    const wchar_t* caption = sBodyView->mPicLabel;
     f32 captionH;
     if (caption) {
         ut::TextWriterBase<wchar_t> writer;
@@ -3104,7 +3029,7 @@ BOOL Article_GetZoomedPictureRect(ut::Rect* rect) {
 }
 
 void Article_DrawZoomedPicture(const ut::Rect& from, const ut::Rect& to, f32 t) {
-    NewsTexture* tex = sBodyView->mTexture;
+    NewsTexture* tex = sBodyView->mPicture;
     if (tex) {
         f32 left = from.left;
         f32 top = from.top;
@@ -3115,7 +3040,7 @@ void Article_DrawZoomedPicture(const ut::Rect& from, const ut::Rect& to, f32 t) 
         Draw2D_SetOrtho();
         GXSetZMode(GX_FALSE, GX_NEVER, GX_FALSE);
         Draw2D_Texture(tex, &pos, scale);
-        const wchar_t* caption = sBodyView->mCaption;
+        const wchar_t* caption = sBodyView->mPicLabel;
         if (caption) {
             ut::TextWriterBase<wchar_t> writer;
             f32 x = to.right;
