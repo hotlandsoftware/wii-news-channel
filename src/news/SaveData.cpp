@@ -27,7 +27,7 @@ u32 fn_80044F08(); // current time in minutes
 
 static const char sSaveDir[] = "noerase";
 static const char sSavePath[] = "noerase/savedata.dat";
-static const char sSaveLabel[4] = {'H', 'A', 'G', '0'};
+static const char sSaveLabel[] = "HAG0";
 
 static void* sSaveBuffer;
 static u32 sSaveSize;
@@ -69,24 +69,19 @@ s32 LoadSaveData() {
     } else if (result != sSaveSize) {
         OSReport("NANDRead() failed(%d).\n", result);
     } else {
-        u32* end = (u32*)((u8*)sSaveBuffer + sSaveSize);
-        if (end[-1] != NETCalcCRC32(sSaveBuffer, sSaveSize - 4)) {
+        if (*GetSaveCRC() != NETCalcCRC32(sSaveBuffer, sSaveSize - 4)) {
             OSReport("NAND data broken.\n");
         } else {
-            char* data = (char*)sSaveBuffer;
-            if (sSaveLabel[0] != data[0]) {
-                OSReport("NAND data invalid label.\n");
-            } else if (sSaveLabel[1] != data[1]) {
-                OSReport("NAND data invalid label.\n");
-            } else if (sSaveLabel[2] != data[2]) {
-                OSReport("NAND data invalid label.\n");
-            } else if (sSaveLabel[3] != data[3]) {
-                OSReport("NAND data invalid label.\n");
-            } else {
-                ok = TRUE;
+            for (s32 i = 0; i < 4; i++) {
+                if (sSaveLabel[i] != ((char*)sSaveBuffer)[i]) {
+                    OSReport("NAND data invalid label.\n");
+                    goto close;
+                }
             }
+            ok = TRUE;
         }
     }
+close:
 
     result = NANDClose(&info);
     if (result == NAND_RESULT_CORRUPT) {
@@ -136,8 +131,7 @@ s32 WriteSaveData() {
     ((char*)sSaveBuffer)[1] = 'A';
     ((char*)sSaveBuffer)[2] = 'G';
     ((char*)sSaveBuffer)[3] = '0';
-    u32* end = (u32*)((u8*)sSaveBuffer + sSaveSize);
-    end[-1] = NETCalcCRC32(sSaveBuffer, sSaveSize - 4);
+    *GetSaveCRC() = NETCalcCRC32(sSaveBuffer, sSaveSize - 4);
 
     result = NANDWrite(&info, sSaveBuffer, sSaveSize);
     if (result == NAND_RESULT_CORRUPT) {
@@ -314,8 +308,8 @@ void SaveErrorDialog::Draw() {
         fn_80048154(mQuestion);
         PaneButton* button = fn_80048364(mQuestion, "message");
         s32 w = GetScreenWidth();
-        f32 cy = (button->mRect.top + button->mRect.bottom) / 2.0f;
         f32 cx = (button->mRect.right + button->mRect.left) / 2.0f;
+        f32 cy = (button->mRect.top + button->mRect.bottom) / 2.0f;
         f32 x = cx + 0.5f * w;
         f32 y = -cy + GetScreenCenterY();
         ut::TextWriterBase<wchar_t> writer;
@@ -371,8 +365,8 @@ void SaveErrorDialog::Draw() {
         fn_80048154(mNotice2);
         PaneButton* button = fn_80048364(mQuestion, "message");
         s32 w = GetScreenWidth();
-        f32 cy = (button->mRect.top + button->mRect.bottom) / 2.0f;
         f32 cx = (button->mRect.right + button->mRect.left) / 2.0f;
+        f32 cy = (button->mRect.top + button->mRect.bottom) / 2.0f;
         f32 x = cx + 0.5f * w;
         f32 y = -cy + GetScreenCenterY();
         ut::TextWriterBase<wchar_t> writer;
