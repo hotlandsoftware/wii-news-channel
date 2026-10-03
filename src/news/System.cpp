@@ -171,10 +171,10 @@ void SystemInit() {
         KPADEnableAimingMode(i);
         KPADSetPosParam(i, 0.05f, 1.0f);
         KPADSetDistParam(i, 0.03f, 1.0f);
+        gPointerX[i] = GetScreenWidth() / 2;
         gRepeatSlowOn[i] = false;
         gRepeatFastOn[i] = false;
         gZoomStarted[i] = false;
-        gPointerX[i] = GetScreenWidth() / 2;
         gPointerY[i] = 228.0f;
         gKPADLatest[i] = -1;
         gHold[i] = 0;
@@ -200,7 +200,8 @@ void SystemInit() {
     PSMTXIdentity(m);
     GXLoadTexMtxImm(m, GX_IDENTITY, GX_MTX3x4);
 
-    u8 lang = gLanguage = GetSupportedLanguage();
+    gLanguage = GetSupportedLanguage();
+    u8 lang = gLanguage;
     if (lang != SCGetLanguage()) {
         SCSetLanguage(lang);
         SCFlush();
