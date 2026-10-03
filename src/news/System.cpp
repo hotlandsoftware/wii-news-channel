@@ -46,6 +46,8 @@ public:
     virtual BOOL CanOpenHomeMenu();
     virtual BOOL Shutdown();
     virtual void RestoreDPD();
+
+    u8 mUnkAC[0x1D4 - 0xAC];
 };
 
 #define SCENE_NONE 'NONE'
@@ -674,23 +676,21 @@ void ChangeScene(u32 id) {
     gRepeatSlowAll = 0;
     gRepeatFastAll = 0;
     for (s32 i = 0; i < 4; i++) {
+        gHold[i] = 0;
+        gTrig[i] = 0;
+        gRelease[i] = 0;
         for (s32 j = 0; j < 16; j++) {
             gKPADStatus[i][j].hold = 0;
             gKPADStatus[i][j].trig = 0;
             gKPADStatus[i][j].release = 0;
         }
-        gHold[i] = 0;
-        gTrig[i] = 0;
-        gRelease[i] = 0;
     }
 
     switch (gSceneId) {
     case SCENE_NONE:
         break;
     case SCENE_NEWS:
-        if (gNewsScene) {
-            delete gNewsScene;
-        }
+        delete gNewsScene;
         gNewsScene = NULL;
         break;
     case SCENE_FATAL:
@@ -700,10 +700,12 @@ void ChangeScene(u32 id) {
     }
 
     BOOL leak = FALSE;
-    if (gMainHeapFree != MEMGetTotalFreeSizeForExpHeap(gMainHeap) && gMainHeapFree != 0) {
+    u32 size = MEMGetTotalFreeSizeForExpHeap(gMainHeap);
+    if (gMainHeapFree != size && gMainHeapFree != 0) {
         leak = TRUE;
     }
-    if (gSubHeapFree != MEMGetTotalFreeSizeForExpHeap(gSubHeap) && gSubHeapFree != 0) {
+    size = MEMGetTotalFreeSizeForExpHeap(gSubHeap);
+    if (gSubHeapFree != size && gSubHeapFree != 0) {
         leak = TRUE;
     }
     if (id != SCENE_FATAL && leak) {
