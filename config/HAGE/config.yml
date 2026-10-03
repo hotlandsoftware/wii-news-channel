@@ -18,6 +18,29 @@ block_relocations:
   # Random rodata table bytes that look like pointers into snd's SoundSystem work area (.bss)
   - source: 0x8019E188
   - source: 0x8019F040
+  # Random cp932 table bytes that look like a pointer into GlobeDots' angle table
+  - source: 0x801A9A30
   # OSInit: lis/addi of 0x80004000 (start of .init)
   - source: 0x800FC6F8
   - source: 0x800FC770
+
+# Large data tables are extracted from the DOL at build time
+# (build/HAGE/include/...), so that they never live in the repository.
+extract:
+  # GlobeDots: the dots of the globe (angles, sizes, colour indices, colours)
+  - symbol: sGlobeDotAngles
+    binary: news/GlobeDotAngles.bin
+    header: news/GlobeDotAngles.inc
+    header_type: raw
+  - symbol: sGlobeDotSizes
+    binary: news/GlobeDotSizes.bin
+    header: news/GlobeDotSizes.inc
+    header_type: raw
+  - symbol: sGlobeDotColorIdx
+    binary: news/GlobeDotColorIdx.bin
+    header: news/GlobeDotColorIdx.inc
+    header_type: raw
+  - symbol: sGlobeDotColors
+    binary: news/GlobeDotColors.bin
+    header: news/GlobeDotColors.inc
+    header_type: raw

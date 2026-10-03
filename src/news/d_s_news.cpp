@@ -10,6 +10,7 @@
 #include <news/Scene.h>
 #include <news/Camera.h>
 #include <news/Draw2D.h>
+#include <news/GlobeDots.h>
 #include <news/HeadlineList.h>
 #include <news/LanguageSelect.h>
 #include <news/Message.h>
@@ -98,12 +99,6 @@ void fn_80013C2C(void* view);
 void fn_80015054(void* view);
 void fn_80015200(void* view);
 
-// Globe renderer (0x8003CECC..)
-void* fn_8003CECC(void* mem);
-void fn_8003D128(void* obj, s32 flag);
-void fn_8003D168(void* obj);
-void fn_8003D178(void* obj, f32 x, f32 y);
-void fn_8003D21C(void* obj);
 void fn_8003FB54(const math::VEC3& pos, const math::VEC3& size, const GXColor& color);
 
 // Faders (0x80048C80..)
@@ -374,7 +369,7 @@ MEMAllocator gPictureAllocator;
 SmoothValue sBgmVolume[4];            // 0x801EE210
 ut::Color lbl_803575FC(0, 0, 0, 0);    // 0x803575FC
 ut::Color lbl_80357600(255, 255, 255, 255);
-void* sGlobeRenderer;                 // 0x80357604
+GlobeDots* sGlobeRenderer;            // 0x80357604
 void* sPointerEffect;                 // 0x80357608
 bool gAllocFailed;
 s32 sLoadFrame;                       // 0x80357610
@@ -695,11 +690,7 @@ NewsScene::NewsScene()
     mSettings = (Settings*)SubHeapAlloc(0x20, 32);
     fn_8000A0F8(mSettings, 0x20);
 
-    void* renderer = operator new(0x4FF24);
-    if (renderer) {
-        renderer = fn_8003CECC(renderer);
-    }
-    sGlobeRenderer = renderer;
+    sGlobeRenderer = new GlobeDots;
     if (sGlobeRenderer == NULL) {
         gAllocFailed = true;
         return;
@@ -724,7 +715,7 @@ NewsScene::~NewsScene() {
         sPointerEffect = NULL;
     }
     if (sGlobeRenderer) {
-        fn_8003D128(sGlobeRenderer, 1);
+        delete sGlobeRenderer;
         sGlobeRenderer = NULL;
     }
     if (mSlideshow) {
@@ -820,7 +811,7 @@ void NewsScene::OnHomeMenuClose() {
         if (lbl_8035775C) {
             math::VEC3 rot(0.0f, 0.0f, 0.0f);
             fn_8004C890(lbl_8035775C, &rot);
-            fn_8003D168(sGlobeRenderer);
+            sGlobeRenderer->ResetAlpha();
         }
         if (lbl_8035775C) {
             fn_8004DB4C(lbl_8035775C, 5);
@@ -851,8 +842,8 @@ void NewsScene::Draw() {
         mArticleWriter.SetDrawFlag(0);
         if (mDraw) {
             if (lbl_8035775C != NULL && !lbl_8035697C) {
-                fn_8003D178(sGlobeRenderer, lbl_8035775C->mCenterX, lbl_8035775C->mCenterY);
-                fn_8003D21C(sGlobeRenderer);
+                sGlobeRenderer->UpdateAlpha(lbl_8035775C->mCenterX, lbl_8035775C->mCenterY);
+                sGlobeRenderer->Draw();
                 fn_8004CA10(lbl_8035775C);
                 if (!lbl_803575BC) {
                     u8 alpha = 255.0f * sPinAlpha;
