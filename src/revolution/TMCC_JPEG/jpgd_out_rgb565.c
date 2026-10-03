@@ -498,29 +498,29 @@ void jpgdOutRGB565_444(JPEGDecContext* ctx, u32 x, u32 y) {
 }
 
 void jpgdOutRGB565_444Edge(JPEGDecContext* ctx, u32 x, u32 y) {
-    s32 cr;
-    s32 yy;
+    s32 cra;
+    s32 w;
+    JPEGDecHandle* h;
+    s32 t;
+    s32 cga;
     u8* out;
+    s32 j;
+    s32 yy;
+    s32 g;
     u8* sy;
     u8* scb;
     u8* scr;
-    s32 k;
-    s32 cra;
     s32 i;
+    s8 cb;
+    s32 k;
     s32 xe;
     s32 ye;
-    u32 tiles;
-    JPEGDecHandle* h;
     s32 cba;
-    s32 t;
-    s32 j;
-    s32 cga;
-    s32 g;
+    s8 cr;
     s32 hh;
     s32 b;
-    s32 cb;
+    u32 tiles;
     s32 r;
-    s32 w;
 
     sy = ctx->pix.y;
     scb = ctx->pix.y + 0x40;
@@ -535,11 +535,11 @@ void jpgdOutRGB565_444Edge(JPEGDecContext* ctx, u32 x, u32 y) {
 
     for (j = y; j < ye; j++) {
         for (i = x; i < xe; i++) {
-            cb = (s8)*scb++;
-            cr = (s8)*scr++;
+            yy = *sy++;
+            cb = *scb++;
+            cr = *scr++;
             cba = (cb * 0x1C6) >> 8;
             cra = (cr * 0x167) >> 8;
-            yy = *sy++;
             cga = -(cb * 0x58 + cr * 0xB7) >> 8;
             g = yy + cga;
             r = yy + cra;

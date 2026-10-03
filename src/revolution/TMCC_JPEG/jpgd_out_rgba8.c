@@ -433,29 +433,29 @@ void jpgdOutRGBA8_420Edge(JPEGDecContext* ctx, u32 x, u32 y) {
 }
 
 void jpgdOutRGBA8_444(JPEGDecContext* ctx, u32 x, u32 y) {
-    s32 cba;
     u8* out;
-    s32 t;
-    s32 w;
-    s32 hh;
     u8* sy;
-    s32 cb;
-    s32 cga;
+    s32 hh;
     u8* scb;
-    u8* scr;
-    s32 i;
     s32 cra;
+    u8* scr;
+    s32 cga;
+    s32 i;
+    s32 cba;
+    s32 w;
     s32 xe;
-    s32 k;
-    s32 ye;
-    u32 tiles;
-    s32 j;
     s32 cr;
+    JPEGDecHandle* h;
+    s32 t;
+    s32 ye;
+    s32 j;
+    s32 yy;
+    u32 tiles;
+    s32 cb;
+    s32 k;
     s32 r;
     s32 g;
     s32 b;
-    JPEGDecHandle* h;
-    s32 yy;
 
     h = ctx->handle;
     sy = ctx->pix.y;

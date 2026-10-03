@@ -51,27 +51,27 @@ void jpgdIdct4x4Y(s32* in, u8* out, u16 stride, s32 extent) {
 }
 
 void jpgdIdct2x2Y(s32* in, u8* out, u16 stride, s32 extent) {
-    s32 d1;
+    s32 d0;
     s32 d8;
     s32 t1;
-    s32 t0;
-    s32 t3;
     s32 d9;
-    s32 d0;
+    s32 t3;
+    s32 t0;
+    s32 d1;
     s32 t2;
 
     d0 = in[0] + 0x40000;
     d1 = in[1];
+    t0 = d0 + d1;
     d8 = in[8];
-    d9 = in[9];
-    t0 = d1 + d0;
-    t2 = d8 + d9;
-    t3 = d8 - d9;
     t1 = d0 - d1;
+    d9 = in[9];
+    t3 = d8 - d9;
+    t2 = d8 + d9;
     out[0] = CLAMP_U8((t0 + t2) >> 11);
     out[stride] = CLAMP_U8((t0 - t2) >> 11);
     out[1] = CLAMP_U8((t1 + t3) >> 11);
-    out[stride + 1] = CLAMP_U8((t1 - t3) >> 11);
+    (out + stride)[1] = CLAMP_U8((t1 - t3) >> 11);
 }
 
 void jpgdIdct1x1Y(s32* in, u8* out, u16 stride, s32 extent) {
@@ -123,24 +123,24 @@ void jpgdIdct4x4C(s32* in, u8* out, u16 stride, s32 extent) {
 }
 
 void jpgdIdct2x2C(s32* in, u8* out, u16 stride, s32 extent) {
-    s32 d1;
     s32 d0;
     s32 d9;
-    s32 t0;
     s32 t1;
+    s32 t3;
+    s32 d1;
+    s32 t0;
     s32 d8;
     s32 t2;
-    s32 t3;
     s8* o = (s8*)out;
 
-    d1 = in[1];
-    d9 = in[9];
-    d8 = in[8];
     d0 = in[0];
-    t3 = d8 - d9;
-    t1 = d0 - d1;
+    d8 = in[8];
+    d9 = in[9];
     t2 = d8 + d9;
-    t0 = d1 + d0;
+    d1 = in[1];
+    t3 = d8 - d9;
+    t0 = d0 + d1;
+    t1 = d0 - d1;
     o[0] = CLAMP_S8((t0 + t2) >> 11);
     o[8] = CLAMP_S8((t0 - t2) >> 11);
     o[1] = CLAMP_S8((t1 + t3) >> 11);
