@@ -2394,9 +2394,7 @@ void createChild(u8* pKey, u16 seed, AnimCurveHeader* pHeader,
         pData = &pChildKey->data;
     } else {
         AnimCurveRandomSeed rnd;
-        rnd.value = seed * 0x3F81F635 + pHeader->randomSeed * 0x30A74193 +
-                    0x4BF53 +
-                    (loop * 0x7B929 + pChildKey->randomIdx * 0x371097E7);
+        rnd.value = seed * 0x3F81F635 + pHeader->randomSeed * 0x30A74193 + loop * 0x7B929 + pChildKey->randomIdx * 0x371097E7 + 0x4BF53;
         rnd.bytes[2] ^= rnd.bytes[3];
         rnd.bytes[1] ^= rnd.bytes[2];
         rnd.bytes[0] ^= rnd.bytes[1];
