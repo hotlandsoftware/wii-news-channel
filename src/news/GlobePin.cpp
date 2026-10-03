@@ -761,13 +761,14 @@ void GlobePin::TruncateLocation(ut::CharWriter* writer) {
 }
 
 f32 GlobePin::CalcHeadlineWidth(const wchar_t* str, const ut::Font* font, f32 scale, f32 space) {
-    u32 len = wcslen(str);
+    const wchar_t* p = str;
+    u32 len = wcslen(p);
     f32 width = 0.0f;
-    for (u32 n = 0; *str != 0; str++, n++) {
+    for (u32 n = 0; *p != 0; p++, n++) {
         if (n >= mHeadlineLen) {
-            width += scale * font->GetCharWidth(*str);
+            width += scale * font->GetCharWidth(*p);
         } else {
-            width = width + scale * font->GetCharWidth(*str);
+            width = width + scale * font->GetCharWidth(*p);
         }
     }
     if (len >= mHeadlineLen) {
