@@ -391,10 +391,10 @@ static inline void ApplyView(SlideShow* s) {
 }
 
 static inline void SetViewToTarget(SlideShow* s) {
-    s->mView.left = s->mViewTarget[0];
-    s->mView.top = s->mViewTarget[1];
     s->mText.left = s->mTextTarget[0];
     s->mText.top = s->mTextTarget[1];
+    s->mView.left = s->mViewTarget[0];
+    s->mView.top = s->mViewTarget[1];
     ApplyView(s);
 }
 
@@ -452,16 +452,18 @@ static inline BOOL IsLastArticle(SlideShow* s) {
 }
 
 void SlideShow::LoadArticle() {
+    MenuState* list = lbl_8035755C;
     mUnk328 = 0;
-    if (lbl_8035755C == NULL) {
+    if (list == NULL) {
         return;
     }
 
-    s32 start = lbl_8035755C->mCategory;
+    s32 start = list->mCategory;
+    s32 count = lbl_803575E0;
     mCategory = start;
     NewsArticle** articles = GetCategory(start)->mArticles;
     while (articles == NULL) {
-        if (++mCategory >= lbl_803575E0) {
+        if (++mCategory >= count) {
             mCategory = 0;
         }
         if (mCategory == start) {
@@ -487,12 +489,7 @@ void SlideShow::LoadArticle() {
 
     SetViewToTarget(this);
 
-    math::VEC2 pos(0.0f, 0.0f);
-    math::VEC2 size(mText.right - mText.left, mText.bottom - mText.top);
-    Article_Set(mArticle, GetCategory(mCategory)->mName, (BOOL)GetPictureTexture(mArticle), &pos,
-                &pos, lbl_80356940, size, true, gTextScale, false);
-    Article_Arrange(gTextScale);
-    Article_Reset();
+    SetArticleText(this);
     Article_ResetHeadline();
     mPicAlpha = mShowPicture ? 255 : 0;
     LayoutTitle();
