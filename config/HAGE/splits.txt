@@ -86,7 +86,7 @@ news/GlobePoint.cpp:
 	.data       start:0x801B1120 end:0x801B1130
 	.sdata2     start:0x80358608 end:0x80358610
 
-news/SlideItem.cpp:
+news/TextChar.cpp:
 	.text       start:0x8000CA98 end:0x8000D01C
 	.data       start:0x801B1130 end:0x801B1170
 	.sdata      start:0x803567B8 end:0x803567C8

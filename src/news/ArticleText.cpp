@@ -622,7 +622,7 @@ void ArticleText::Update(const math::VEC2* pos, bool clip, f32 scroll) {
     mFirstVisible = mCount;
     mLastFull = 0;
     for (; c->mChar != 0; c++) {
-        fn_8000CC2C(c, pos, &mRevealRate);
+        c->Update(pos, &mRevealRate);
         f32 top = pos->y + c->mPos.y;
         f32 lineBottom = top + mLineHeight;
         if (i < mFirstVisible && lineBottom >= 0.0f) {
@@ -909,8 +909,8 @@ TextChar* ArticleText::PlaceWord(TextChar* c, const f32& scale, const f32& scale
     f32 s = scale * scaleX;
     f32 space = s * gCharSpaceScale;
     c->mScaleX = scaleX;
-    fn_8000CE30(c, cursor.x, cursor.y);
-    fn_8000CD74(c, mNumLines);
+    c->SetTarget(cursor.x, cursor.y);
+    c->SetLine(mNumLines);
     cursor.x += c->mScaledWidth * s;
     count++;
     if (c->mNext == NULL) {
@@ -922,8 +922,8 @@ TextChar* ArticleText::PlaceWord(TextChar* c, const f32& scale, const f32& scale
         f32 sx = scaleX;
         cursor.x += space;
         n->mScaleX = sx;
-        fn_8000CE30(n, cursor.x, cursor.y);
-        fn_8000CD74(n, mNumLines);
+        n->SetTarget(cursor.x, cursor.y);
+        n->SetLine(mNumLines);
         cursor.x += n->mScaledWidth * s;
         count++;
     }
