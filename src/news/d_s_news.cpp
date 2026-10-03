@@ -249,6 +249,10 @@ public:
         }
     }
 
+    void StartLanguageSelect() {
+        ChangeState(&NewsScene::StateLanguageSelect);
+    }
+
     bool mInitialized;            // at 0xAC
     bool mFadeBgm;                // at 0xAD
     LanguageSelect* mLanguageSelect;  // at 0xB0
@@ -812,27 +816,26 @@ void NewsScene::Draw() {
                         fn_8000DFC4(lbl_80357580);
                     } else if (sSortedPins) {
                         GlobePin** pin;
-                        u32 i;
                         pin = sSortedPins;
-                        for (i = 0; i < sNumPins; i++, pin++) {
+                        for (u32 i = 0; i < sNumPins; i++, pin++) {
                             if (*pin && !(*pin)->mFront) {
                                 fn_8000D418(*pin, alpha);
                             }
                         }
                         pin = sSortedPins;
-                        for (i = 0; i < sNumPins; i++, pin++) {
+                        for (u32 i = 0; i < sNumPins; i++, pin++) {
                             if (*pin && !(*pin)->mFront) {
                                 fn_8000DAF8(*pin);
                             }
                         }
                         pin = sSortedPins;
-                        for (i = 0; i < sNumPins; i++, pin++) {
+                        for (u32 i = 0; i < sNumPins; i++, pin++) {
                             if (*pin && (*pin)->mFront) {
                                 fn_8000D418(*pin, alpha);
                             }
                         }
                         pin = sSortedPins;
-                        for (i = 0; i < sNumPins; i++, pin++) {
+                        for (u32 i = 0; i < sNumPins; i++, pin++) {
                             if (*pin && (*pin)->mFront) {
                                 fn_8000DAF8(*pin);
                             }
@@ -1166,8 +1169,8 @@ BOOL NewsScene::StateLanguageSelect() {
         mDraw = &NewsScene::DrawLanguageSelect;
         mLanguageSelect->Start();
         gFader->FadeIn(25);
-        lbl_803575BA = false;
         SetDPDAll(1);
+        lbl_803575BA = false;
         lbl_803575BB = false;
         break;
     default:
@@ -1499,15 +1502,23 @@ BOOL NewsScene::StateStartup() {
         mLoadResult = fn_8000A104();
         if (mLoadResult == 0) {
             if (mSettings->mLanguage == gLanguage) {
-                s32 lang = mSettings->mNewsLanguage;
-                if (lang < 7 && lang >= 0) {
+                switch (mSettings->mNewsLanguage) {
+                case 0:
+                case 1:
+                case 2:
+                case 3:
+                case 4:
+                case 5:
+                case 6:
                     lbl_80356970 = mSettings->mTextSize;
                     gTextScale = lbl_801922D0[lbl_80356970];
                     mStep = 6;
                     gSelectedNewsLanguage = mSettings->mNewsLanguage;
-                } else {
+                    break;
+                default:
                     gFader->FadeOut(25);
                     mStep = 4;
+                    break;
                 }
             } else {
                 mStep = 5;
@@ -1579,10 +1590,11 @@ BOOL NewsScene::StateStartup() {
         BOOL found = FALSE;
         if (mSettings->mNewsLanguage != gLanguage) {
             for (s32 i = 0; i < 16; i++) {
-                if (file->languages[i] == 0xFF) {
+                u8 lang = file->languages[i];
+                if (lang == 0xFF) {
                     break;
                 }
-                if (file->languages[i] == gLanguage) {
+                if (lang == gLanguage) {
                     found = TRUE;
                     break;
                 }
@@ -1604,7 +1616,7 @@ BOOL NewsScene::StateStartup() {
                 delete mLanguageSelect;
             }
             mLanguageSelect = new LanguageSelect((u32)mLayoutArc);
-            ChangeState(&NewsScene::StateLanguageSelect);
+            StartLanguageSelect();
         } else {
             mStep = 10;
             if (mSettings->mNewsLanguage != gLanguage && mLanguageSelect == NULL) {
