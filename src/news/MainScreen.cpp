@@ -2419,8 +2419,8 @@ void MainScreen::State1A750(s32* arg) {
     Globe* globe = lbl_8035775C;
     switch (mStateStep) {
     case 0:
-        mStateStep++;
         mUnk2BE = true;
+        mStateStep++;
         mActiveLayout = mEarthLayout;
         SetSubState(NULL);
         SetInputHook(&MainScreen::Hook1E758);
@@ -2446,10 +2446,8 @@ void MainScreen::State1A750(s32* arg) {
     default: {
         mUnk16C.x = fn_80034158() ? mUnk164.x + GetSideMargin() : mUnk164.x + GetSideMargin();
         RelatedItem* item = mRelated;
-        math::VEC2 a = fn_8000D6A0(item);
-        math::VEC2 b = fn_8000D6A0(item);
+        math::VEC2 ofs(fn_8000D6A0(item).x - mUnk16C.x, fn_8000D6A0(item).y - (123.0f + mUnk224));
         mUnk244 -= 1.0f / 12.0f;
-        math::VEC2 ofs(a.x - mUnk16C.x, b.y - (123.0f + mUnk224));
         if (mUnk244 < 0.0f) {
             mUnk244 = 0.0f;
         }
