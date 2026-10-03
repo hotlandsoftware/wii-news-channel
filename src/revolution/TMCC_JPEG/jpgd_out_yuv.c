@@ -123,6 +123,8 @@ void jpgdOutYUV411(JPEGDecContext* ctx, u32 x, u32 y) {
 }
 
 void jpgdOutYUV411Edge(JPEGDecContext* ctx, u32 x, u32 y) {
+    s32 xe;
+    s32 ye;
     JPEGDecHandle* h;
     u8* sy;
     u8* scb;
@@ -151,8 +153,10 @@ void jpgdOutYUV411Edge(JPEGDecContext* ctx, u32 x, u32 y) {
     w = (h->lastX == x) ? h->remX : (u8)(32 / h->scale);
     hh = (h->lastY == y) ? h->remY : (u8)(8 / h->scale);
 
-    for (j = y; j < (s32)(y + hh); j++) {
-        for (i = x; i < (s32)(x + w); i++) {
+    xe = x + w;
+    ye = y + hh;
+    for (j = y; j < ye; j++) {
+        for (i = x; i < xe; i++) {
             PUT_I8(py, i, j, tiles, *sy++);
         }
         sy += 32 - w;
@@ -173,6 +177,8 @@ void jpgdOutYUV411Edge(JPEGDecContext* ctx, u32 x, u32 y) {
 }
 
 void jpgdOutYUV422(JPEGDecContext* ctx, u32 x, u32 y) {
+    s32 xe;
+    s32 ye;
     JPEGDecHandle* h = ctx->handle;
     u8* sy = ctx->pix.y;
     u8* scb = ctx->pix.y + 0x80;
@@ -202,8 +208,10 @@ void jpgdOutYUV422(JPEGDecContext* ctx, u32 x, u32 y) {
     cx = x >> 1;
     cw = 8 / h->scale;
     ctiles = h->strideC >> 3;
-    for (j = y; j < (s32)(y + cw); j++) {
-        for (i = cx; i < (s32)(cx + cw); i++) {
+    xe = cx + cw;
+    ye = y + cw;
+    for (j = y; j < ye; j++) {
+        for (i = cx; i < xe; i++) {
             t = (i >> 3) + (j >> 2) * ctiles;
             pcb[(t << 5) + ((j & 3) << 3) + (i & 7)] = *scb++ + 0x80;
             pcr[(t << 5) + ((j & 3) << 3) + (i & 7)] = *scr++ + 0x80;
@@ -214,6 +222,8 @@ void jpgdOutYUV422(JPEGDecContext* ctx, u32 x, u32 y) {
 }
 
 void jpgdOutYUV422Edge(JPEGDecContext* ctx, u32 x, u32 y) {
+    s32 xe;
+    s32 ye;
     JPEGDecHandle* h;
     u8* sy;
     u8* scb;
@@ -242,8 +252,10 @@ void jpgdOutYUV422Edge(JPEGDecContext* ctx, u32 x, u32 y) {
     w = (h->lastX == x) ? h->remX : (u8)(16 / h->scale);
     hh = (h->lastY == y) ? h->remY : (u8)(8 / h->scale);
 
-    for (j = y; j < (s32)(y + hh); j++) {
-        for (i = x; i < (s32)(x + w); i++) {
+    xe = x + w;
+    ye = y + hh;
+    for (j = y; j < ye; j++) {
+        for (i = x; i < xe; i++) {
             PUT_I8(py, i, j, tiles, *sy++);
         }
         sy += 16 - w;
@@ -264,6 +276,8 @@ void jpgdOutYUV422Edge(JPEGDecContext* ctx, u32 x, u32 y) {
 }
 
 void jpgdOutYUV420(JPEGDecContext* ctx, u32 x, u32 y) {
+    s32 xe;
+    s32 ye;
     JPEGDecHandle* h = ctx->handle;
     u8* sy = ctx->pix.y;
     u8* scb = ctx->pix.cb;
@@ -281,8 +295,10 @@ void jpgdOutYUV420(JPEGDecContext* ctx, u32 x, u32 y) {
     u32 cy;
     u32 ctiles;
 
-    for (j = y; j < (s32)(y + w); j++) {
-        for (i = x; i < (s32)(x + w); i += 2) {
+    xe = x + w;
+    ye = y + w;
+    for (j = y; j < ye; j++) {
+        for (i = x; i < xe; i += 2) {
             PUT_I8(py, i, j, tiles, sy[0]);
             PUT_I8(py, i + 1, j, tiles, sy[1]);
             sy += 2;
@@ -306,6 +322,8 @@ void jpgdOutYUV420(JPEGDecContext* ctx, u32 x, u32 y) {
 }
 
 void jpgdOutYUV420Edge(JPEGDecContext* ctx, u32 x, u32 y) {
+    s32 xe;
+    s32 ye;
     JPEGDecHandle* h;
     u8* sy;
     u8* scb;
@@ -336,8 +354,10 @@ void jpgdOutYUV420Edge(JPEGDecContext* ctx, u32 x, u32 y) {
     w = (h->lastX == x) ? h->remX : (u8)(16 / h->scale);
     hh = (h->lastY == y) ? h->remY : (u8)(16 / h->scale);
 
-    for (j = y; j < (s32)(y + hh); j++) {
-        for (i = x; i < (s32)(x + w); i++) {
+    xe = x + w;
+    ye = y + hh;
+    for (j = y; j < ye; j++) {
+        for (i = x; i < xe; i++) {
             PUT_I8(py, i, j, tiles, *sy++);
         }
         sy += 16 - w;
@@ -360,6 +380,8 @@ void jpgdOutYUV420Edge(JPEGDecContext* ctx, u32 x, u32 y) {
 }
 
 void jpgdOutYUV444(JPEGDecContext* ctx, u32 x, u32 y) {
+    s32 xe;
+    s32 ye;
     u8* pcr;
     u8* sy;
     u8* scb;
@@ -383,8 +405,10 @@ void jpgdOutYUV444(JPEGDecContext* ctx, u32 x, u32 y) {
     py = h->planeY;
     pcb = h->planeCb;
     pcr = h->planeCr;
-    for (j = y; j < (s32)(y + n); j++) {
-        for (i = x; i < (s32)(x + n); i++) {
+    xe = x + n;
+    ye = y + n;
+    for (j = y; j < ye; j++) {
+        for (i = x; i < xe; i++) {
             t = (i >> 3) + (j >> 2) * stride;
             py[(t << 5) + ((j & 3) << 3) + (i & 7)] = *sy++;
             pcb[(t << 5) + ((j & 3) << 3) + (i & 7)] = *scb++ + 0x80;
@@ -397,6 +421,8 @@ void jpgdOutYUV444(JPEGDecContext* ctx, u32 x, u32 y) {
 }
 
 void jpgdOutYUV444Edge(JPEGDecContext* ctx, u32 x, u32 y) {
+    s32 xe;
+    s32 ye;
     JPEGDecHandle* h;
     u8* sy;
     u8* scb;
@@ -421,8 +447,10 @@ void jpgdOutYUV444Edge(JPEGDecContext* ctx, u32 x, u32 y) {
     pcr = h->planeCr;
     w = (h->lastX == x) ? h->remX : 8 / h->scale;
     hh = (h->lastY == y) ? h->remY : 8 / h->scale;
-    for (j = y; j < (s32)(y + hh); j++) {
-        for (i = x; i < (s32)(x + w); i++) {
+    xe = x + w;
+    ye = y + hh;
+    for (j = y; j < ye; j++) {
+        for (i = x; i < xe; i++) {
             t = (i >> 3) + (j >> 2) * stride;
             py[(t << 5) + ((j & 3) << 3) + (i & 7)] = *sy++;
             pcb[(t << 5) + ((j & 3) << 3) + (i & 7)] = *scb++ + 0x80;
@@ -435,6 +463,8 @@ void jpgdOutYUV444Edge(JPEGDecContext* ctx, u32 x, u32 y) {
 }
 
 void jpgdOutYUVGray(JPEGDecContext* ctx, u32 x, u32 y) {
+    s32 xe;
+    s32 ye;
     JPEGDecHandle* h = ctx->handle;
     u8* sy = ctx->pix.y;
     s32 n = 8 / h->scale;
@@ -444,8 +474,10 @@ void jpgdOutYUVGray(JPEGDecContext* ctx, u32 x, u32 y) {
     s32 j;
     s32 t;
 
-    for (j = y; j < (s32)(y + n); j++) {
-        for (i = x; i < (s32)(x + n); i++) {
+    xe = x + n;
+    ye = y + n;
+    for (j = y; j < ye; j++) {
+        for (i = x; i < xe; i++) {
             PUT_I8(py, i, j, tiles, *sy++);
         }
         sy += 8 - n;
@@ -453,6 +485,8 @@ void jpgdOutYUVGray(JPEGDecContext* ctx, u32 x, u32 y) {
 }
 
 void jpgdOutYUVGrayEdge(JPEGDecContext* ctx, u32 x, u32 y) {
+    s32 xe;
+    s32 ye;
     JPEGDecHandle* h;
     u8* sy;
     u8* py;
@@ -469,8 +503,10 @@ void jpgdOutYUVGrayEdge(JPEGDecContext* ctx, u32 x, u32 y) {
     tiles = h->strideY >> 3;
     w = (h->lastX == x) ? h->remX : (u8)(8 / h->scale);
     hh = (h->lastY == y) ? h->remY : (u8)(8 / h->scale);
-    for (j = y; j < (s32)(y + hh); j++) {
-        for (i = x; i < (s32)(x + w); i++) {
+    xe = x + w;
+    ye = y + hh;
+    for (j = y; j < ye; j++) {
+        for (i = x; i < xe; i++) {
             PUT_I8(py, i, j, tiles, *sy++);
         }
         sy += 8 - w;
