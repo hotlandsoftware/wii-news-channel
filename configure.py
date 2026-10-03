@@ -362,6 +362,14 @@ cflags_hbm = [
     "-DNW4R_UT_RECT_DEFAULT_ZERO",
 ]
 
+# VC manual viewer / Opera (WWW) front end that follows the HOME Menu
+# (vcmv_main.cpp): HBM flags plus C++ exceptions (every function with a stack
+# frame has an extab entry)
+cflags_vcmv = [
+    *cflags_hbm,
+    "-Cpp_exceptions on",
+]
+
 config.linker_version = "GC/3.0a5.2"
 
 
@@ -1085,6 +1093,19 @@ config.libs = [
             Object(Matching, "revolution/HBM/HBMGUIManager.cpp"),
             Object(Matching, "revolution/HBM/HBMController.cpp"),
             Object(Matching, "revolution/HBM/HBMRemoteSpk.cpp"),
+        ],
+    },
+    {
+        "lib": "vcmv",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_vcmv,
+        "progress_category": "sdk",
+        "objects": [
+            Object(NonMatching, "vcmv/vcmv_sound.cpp"),
+            Object(NonMatching, "vcmv/vcmv_draw.cpp"),
+            Object(NonMatching, "vcmv/vcmv_jsext.cpp"),
+            Object(NonMatching, "vcmv/vcmv_main.cpp"),
+            Object(NonMatching, "vcmv/vcmv_wwwlib.cpp"),
         ],
     },
     {
