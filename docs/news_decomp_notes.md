@@ -184,6 +184,10 @@ Library details are in `docs/platform_layer_map.md` ("TMCC JPEG decoder").
 - **Inline helpers and auto-inlining of the caller.** Moving a function's only loop into an inline helper can make the function itself small enough for `-inline auto` to inline it into its callers (`jpgdReadHeader` into `TMCCJPEGDecInit`). If the original calls it out of line, the caller is probably in another file.
 - **`#pragma dont_inline on` around a function** stops both inlining of that function and inlining inside it. It is not a way to keep one callee out of line.
 - **Loop bounds.** `for (i = x; i < (s32)(x + w); i++)` and `xe = x + w; for (i = x; i < xe; i++)` hoist the bound into different registers; both forms occur in this library.
+- **Commutative operand order follows evaluation order, not source order.** MWCC prints `add rD, rA, rB` with the operand it evaluated (allocated) first in `rA`. In `(w + s - 1) / s` the divisor `s` is shared, so it is evaluated first and the add comes out as `add rD, s, w` whichever way the source is written. A cast or a temporary on the sum (`((s32)(w + s) - 1) / s`, or `v = w + s; (v - 1) / s`) puts `w` first (`jpgdSetupScale`).
+- **Explicit casts change OR/ADD chains.** `nz = d2 | nz` gives `or rD, nz, d2`; `nz = (u32)d2 | nz` gives `or rD, d2, nz`. A single expression `d4 | d6 | d2 | ...` is also rebalanced into two parallel chains, while statement-per-OR keeps one chain (`jpgdIdct8x8*`).
+- **Reassigning a parameter.** `x >>= 1;` and then looping from `x` reuses `x`'s register (`srwi r4, r4, 1`), where `cx = x >> 1;` takes a new one. Look for this when a parameter register is overwritten in place.
+- **Local types.** Declaring the chroma locals `s8 cb, cr;` (assigned from `*scb++`) rather than `s32 cb = (s8)*scb++;` changes their registers.
 - **Search tools and statement order.** When automatically permuting the order of setup statements, keep every statement after the ones whose results it reads. A use-before-assignment order still compiles (MWCC does not warn) and can score higher than the correct code.
 
 ## Game code map
