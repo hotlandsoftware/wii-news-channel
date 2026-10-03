@@ -25,7 +25,7 @@ static OSThread sDrawThread;
 static s32 sWindowMode;
 static u8 sUnk9B4;
 static u8 sStartPageOpened;
-u8 vcmvRumbleRequest;
+volatile u8 vcmvRumbleRequest;
 u8 vcmvPluginsRegistered;
 u8 vcmvWWWLoaded;
 s8 vcmvUnk9B9;
@@ -55,11 +55,11 @@ static void* sBrowserRealloc;
 static void* sBrowserFree;
 static OSThreadQueue sDrawQueue;
 static u8 sDrawThreadRunning;
-static s32 sFadeCount;
-static s32 sFadeSoundLength;
-static s32 sFadeLength;
+static volatile s32 sFadeCount;
+static volatile s32 sFadeSoundLength;
+static volatile s32 sFadeLength;
 
-u8 vcmvFading = TRUE;
+volatile u8 vcmvFading = TRUE;
 static u8 sSettingsKeyReleased = TRUE;
 static u8 sFirstFrame = TRUE;
 
@@ -531,16 +531,13 @@ static void vcmvProcessInput(void) {
 }
 
 BOOL vcmvAllocIfNecessary(void* pPtr, u32 size, MEMAllocator* first, MEMAllocator* second) {
-    void** p = (void**)pPtr;
     BOOL ok;
 
-    if (*p == NULL) {
-        *p = MEMAllocFromAllocator(first, size);
-        if (*p == NULL) {
-            *p = MEMAllocFromAllocator(second, size);
-        }
+    if (*(void**)pPtr == NULL && (((*(void**)pPtr = MEMAllocFromAllocator(first, size)) == NULL && (*(void**)pPtr = MEMAllocFromAllocator(second, size)) == NULL), *(void**)pPtr == NULL)) {
+        ok = FALSE;
+    } else {
+        ok = TRUE;
     }
-    ok = *p != NULL;
     if (!ok) {
         OSReport("AllocIfNecessary size=%p failed\n ", size);
         return FALSE;
@@ -549,16 +546,39 @@ BOOL vcmvAllocIfNecessary(void* pPtr, u32 size, MEMAllocator* first, MEMAllocato
 }
 
 void vcmvFree(void* pPtr) {
-    void** p = (void**)pPtr;
-
-    if (*p != NULL) {
-        if (!((u32)*p & 0x30000000)) {
-            MEMFreeToAllocator(vcmvMem1Allocator, *p);
+    if (*(void**)pPtr != NULL) {
+        if (!((u32)*(void**)pPtr & 0x30000000)) {
+            MEMFreeToAllocator(vcmvMem1Allocator, *(void**)pPtr);
         } else {
-            MEMFreeToAllocator(vcmvMem2Allocator, *p);
+            MEMFreeToAllocator(vcmvMem2Allocator, *(void**)pPtr);
         }
-        *p = NULL;
+        *(void**)pPtr = NULL;
     }
+}
+
+static inline void* vcmvAlloc(u32 size, MEMAllocator* first, MEMAllocator* second) {
+    void* p = MEMAllocFromAllocator(first, size);
+    if (p == NULL) {
+        p = MEMAllocFromAllocator(second, size);
+    }
+    if (p == NULL) {
+        OSReport("AllocIfNecessary size=%p failed\n ", size);
+    }
+    return p;
+}
+
+static inline BOOL vcmvAlloc2(void** p, u32 size, MEMAllocator* first, MEMAllocator* second) {
+    if (*p == NULL) {
+        *p = MEMAllocFromAllocator(first, size);
+        if (*p == NULL) {
+            *p = MEMAllocFromAllocator(second, size);
+        }
+    }
+    if (*p == NULL) {
+        OSReport("AllocIfNecessary size=%p failed\n ", size);
+        return FALSE;
+    }
+    return TRUE;
 }
 
 static void vcmvInitWWW(void) {
@@ -606,7 +626,7 @@ static void* vcmvDrawThreadMain(void* arg) {
     s32 i;
     s32 rate;
     u8 alpha;
-    s32 ticks;
+    u32 ticks;
 
     elapsed = vcmvFrame;
     vcmvFrame = 100;
@@ -631,12 +651,10 @@ static void* vcmvDrawThreadMain(void* arg) {
     sDrawThreadRunning = TRUE;
     OSInitThreadQueue(&sDrawQueue);
 
-    rate = 60;
-    if (VIGetTvFormat() == VI_PAL) {
-        rate = 50;
-    }
+    rate = VIGetTvFormat() == VI_PAL ? 50 : 60;
+    ticks = ((OS_TIMER_CLOCK / 125000) * (1000000 / rate)) / 8;
     OSCreateAlarm(&alarm);
-    OSSetPeriodicAlarm(&alarm, OSGetTime(), OSMicrosecondsToTicks(1000000 / rate), vcmvAlarmHandler);
+    OSSetPeriodicAlarm(&alarm, OSGetTime(), ticks, vcmvAlarmHandler);
 
     PSMTXIdentity(mtx);
     GXLoadPosMtxImm(mtx, GX_PNMTX0);
@@ -722,8 +740,7 @@ static const char* vcmvRun(vcmvDrawCallback callback, const char* url, u8 chan) 
         vcmvJSReady = FALSE;
         vcmvUpdate();
 
-        stack = NULL;
-        vcmvAllocIfNecessary(&stack, 0x4000, vcmvMem1Allocator, vcmvMem2Allocator);
+        stack = vcmvAlloc(0x4000, vcmvMem1Allocator, vcmvMem2Allocator);
         if (stack != NULL) {
             OSCreateThread(&sDrawThread, vcmvDrawThreadMain, NULL, (u8*)stack + 0x4000, 0x4000, 14, 1);
             OSResumeThread(&sDrawThread);
@@ -817,7 +834,7 @@ void VCMVSetArchive(void* arc) {
     vcmvSetArchive(arc);
 }
 
-const char* VCMVRun(vcmvDrawCallback callback, const char* url, s32 chan) {
+const char* VCMVRun(vcmvDrawCallback callback, const char* url, u8 chan) {
     return vcmvRun(callback, url, chan);
 }
 

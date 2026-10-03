@@ -99,7 +99,7 @@ typedef struct vcmvCursor {
 typedef void (*vcmvDrawCallback)(u8 alpha, GXRenderModeObj* rmode);
 
 extern volatile vcmvCursor vcmvCursors[4]; // 0x802B0610
-extern u8 vcmvRumbleRequest;            // 0x803579B6
+extern volatile u8 vcmvRumbleRequest;            // 0x803579B6
 extern u8 vcmvPluginsRegistered;        // 0x803579B7
 extern u8 vcmvWWWLoaded;                // 0x803579B8
 extern s8 vcmvUnk9B9;                   // 0x803579B9
@@ -114,7 +114,7 @@ extern s32 vcmvScrollTime;              // 0x803579E0
 extern u8 vcmvGoBack;                   // 0x803579E9
 extern u8 vcmvGoForward;                // 0x803579EA
 extern s32 vcmvLastMouseY;              // 0x803579F4
-extern u8 vcmvFading;                   // 0x80356ED0
+extern volatile u8 vcmvFading;                   // 0x80356ED0
 
 BOOL vcmvAllocIfNecessary(void* pPtr, u32 size, MEMAllocator* first, MEMAllocator* second);
 void vcmvFree(void* pPtr);
@@ -131,7 +131,7 @@ void VCMVDestroySurface(void);
 BOOL VCMVCreateHeap(u32 size);
 void VCMVDestroyHeap(void);
 void VCMVSetArchive(void* arc);
-const char* VCMVRun(vcmvDrawCallback callback, const char* url, s32 chan);
+const char* VCMVRun(vcmvDrawCallback callback, const char* url, u8 chan);
 void VCMVSetStartUrl(const char* url);
 void VCMVQuit(s32 frames);
 void VCMVLoadCursor(HBMDataInfo* info);
