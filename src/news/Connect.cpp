@@ -35,10 +35,8 @@ struct DownloadTask {
 
 // Not yet decompiled: data and code in other files.
 extern u8 lbl_801EE270[];         // layout resource accessor
-extern u32 lbl_801F0908[4];       // held buttons
 extern DownloadTask lbl_8020CEB8[8];
 extern u8 lbl_80357729;
-extern u32 lbl_80357688;          // pointer button hold
 
 void AdvanceLoadingFrame();
 void DrawLoadingScreen();
@@ -46,9 +44,6 @@ void DrawScreenFade(s32 alpha);
 void OnExitRequested();
 
 extern "C" {
-void* fn_80040994(u32 size, s32 align);
-void fn_800409EC(void* p);
-void fn_80040778(s32 chan, s32 arg1, s32 arg2);
 s32 fn_80040C0C(MEMHeapHandle heap, u32 arg, NewsHeader** files, u32* arg3, u32* sizes,
                 const char* url, u32 arg6);
 s32 fn_80041090(MEMHeapHandle heap, u32 arg, NewsHeader** files, u32* arg3, u32* sizes, u32 mask);
@@ -106,7 +101,7 @@ Connect::Connect(u32 arg, u32 arc, NewsData* newsData) {
     mArc = arc;
     mNewsData = newsData;
     mFader = lbl_8035772C;
-    mHeapMem = fn_80040994(0x800000, 0x20);
+    mHeapMem = MainHeapAlloc(0x800000, 0x20);
     if (mHeapMem == NULL) {
         OSPanic("Connect.cpp", 41, "MEMORY ERROR");
     }
@@ -150,7 +145,7 @@ Connect::~Connect() {
         }
     }
     MEMDestroyExpHeap(mHeap);
-    fn_800409EC(mHeapMem);
+    MainHeapFree(mHeapMem);
 }
 
 void Connect::Reset(s32 country, s32 language) {
@@ -200,7 +195,7 @@ void Connect::Update() {
     case DL_START: {
         BOOL test = FALSE;
         for (s32 i = 0; i < 4; i++) {
-            if ((lbl_801F0908[i] & 0x1310) == 0x1310) {
+            if ((gHold[i] & 0x1310) == 0x1310) {
                 test = TRUE;
                 break;
             }
@@ -483,7 +478,7 @@ void Connect::Update() {
             for (s32 i = 0; i < 4; i++) {
                 if (IsPointerValid(i) && mMascot->HitTest(GetCursorX(i), GetCursorY(i))) {
                     if (!mHover[i]) {
-                        fn_80040778(i, 3, 20);
+                        StartRumble(i, 3, 20);
                     }
                     mHover[i] = true;
                 } else {
@@ -498,7 +493,7 @@ void Connect::Update() {
                         continue;
                     }
                     for (s32 chan = 0; chan < 4; chan++) {
-                        if (IsPointerValid(chan) && (lbl_80357688 & 0x800)) {
+                        if (IsPointerValid(chan) && (gHoldAll & 0x800)) {
                             f32 dx = GetCursorX(chan) - x;
                             f32 dy = GetCursorY(chan) - 280.0f;
                             if (dx >= -15.0f && dx < 15.0f && dy >= -10.0f && dy < 30.0f) {

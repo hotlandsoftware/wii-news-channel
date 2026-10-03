@@ -87,4 +87,55 @@ void ReturnToMenu();
 struct OSCalendarTime;
 void MinutesToCalendarTime(u32 minutes, OSCalendarTime* time);
 
+// Heaps, allocation (System.cpp)
+struct MEMAllocator;
+struct KPADStatus;
+extern MEMHeapHandle gMainHeap;  // MEM1 heap
+extern MEMAllocator gLytAllocator;
+extern MEMAllocator gContentAllocator;
+extern MEMAllocator gSubAllocator;
+extern MEMAllocator gMdlAllocator;
+void* MainHeapAlloc(u32 size, s32 align);
+void MainHeapFree(void* ptr);
+void SubHeapFree(void* ptr);
+void* operator new(size_t size, s32 align);
+void* LoadContentFile(u32 archive, const char* name, s32 align, u32* size, MEMHeapHandle heap);
+
+// Video (System.cpp)
+extern bool gProgressive;
+extern u32 gXfbSize;   // size of one external frame buffer
+extern void* gXfb1;
+extern void* gXfb2;
+extern void* gCurXfb;  // frame buffer drawn this frame
+extern u32 gAddressID; // SCGetSimpleAddressID() & 0xFF000000 (country)
+void SetVideoMode(bool progressive, bool widescreen, bool narrow);
+
+// Input (System.cpp)
+extern KPADStatus gKPADStatus[4][16];
+extern s32 gKPADCount[4];
+extern f32 gCursorDist[4][16];
+extern f32 gPointerX[4]; // smoothed cursor position
+extern f32 gPointerY[4];
+extern f32 gPointerZoom[4];
+extern u32 gHold[4];
+extern u32 gRelease[4];
+extern u32 gRepeatSlow[4]; // gTrig plus gHold every 10 frames after 40 frames held
+extern u32 gRepeatFast[4]; // gTrig plus gHold every 4 frames after 40 frames held
+extern u32 gHoldAll;
+extern u32 gReleaseAll;
+extern u32 gRepeatSlowAll;
+extern u32 gRepeatFastAll;
+void SetPointerState(s32 chan, s32 state);
+void StartRumble(s32 chan, s32 frames, s32 cooldown);
+void StopRumble(s32 chan, s32 cooldown);
+
+// Main loop and scenes (System.cpp)
+extern u32 gSceneId;
+extern u32 gSceneRequest;
+void SystemInit();
+void SystemCalc();
+void SystemDraw();
+void ChangeScene(u32 id);
+void Restart();
+
 #endif

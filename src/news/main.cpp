@@ -15,19 +15,8 @@ using namespace nw4r;
 
 // Not yet decompiled: application code in other files.
 extern "C" {
-extern MEMHeapHandle lbl_80357640; // MEM1 heap
-extern void* lbl_80357664;         // external frame buffer
 extern void* lbl_8035772C;
-extern bool lbl_803576A5;
-extern KPADStatus lbl_801EE478[4][16];
 
-void fn_8003D634(void);
-void fn_8003DC30(void);
-void fn_8003EA30(void);
-void* fn_8003F7B4(u32 arc, const char* path, s32 align, u32* size, MEMHeapHandle heap);
-void fn_8003FD24(bool progressive, bool widescreen, bool blackOut);
-void fn_800409EC(void* block);
-void fn_800409F8(void* block);
 void fn_80048C80(void* obj, s32 arg);
 BOOL fn_8004A074(void);
 void fn_8004A2D4(void);
@@ -112,7 +101,7 @@ HomeMenu::HomeMenu(u32 manualArc, const char* manualPath, const char* startUrl,
         mInfo->spkSeBuf = LoadArcFile(4, "HomeButton3/Huf8_SpeakerSe.arc", 32, NULL, gSubHeap);
         mInfo->msgBuf = LoadArcFile(7, "home_nosave.csv.LZ", 32, NULL, gSubHeap);
         mInfo->configBuf =
-            fn_8003F7B4(4, "HomeButton3/config.txt", 32, &mInfo->configBufSize, gSubHeap);
+            LoadContentFile(4, "HomeButton3/config.txt", 32, &mInfo->configBufSize, gSubHeap);
 
         if (hbmAllocator != NULL) {
             mInfo->pAllocator = hbmAllocator;
@@ -128,7 +117,7 @@ HomeMenu::HomeMenu(u32 manualArc, const char* manualPath, const char* startUrl,
         mSoundHeap = SubHeapAlloc(HBM_SOUND_HEAP_SIZE, 0);
 
         u32 size;
-        void* arc = fn_8003F7B4(7, "Opera.arc", 32, &size, lbl_80357640);
+        void* arc = LoadContentFile(7, "Opera.arc", 32, &size, gMainHeap);
         if (arc != NULL) {
             s32 result =
                 NANDCreate("/tmp/opera.arc", NAND_PERM_OWNER_READ | NAND_PERM_OWNER_WRITE, 0);
@@ -141,7 +130,7 @@ HomeMenu::HomeMenu(u32 manualArc, const char* manualPath, const char* startUrl,
                     }
                 }
             }
-            fn_800409EC(arc);
+            MainHeapFree(arc);
         }
 
         if (mInfo->layoutBuf != NULL && mInfo->spkSeBuf != NULL && mInfo->msgBuf != NULL &&
@@ -199,28 +188,28 @@ HomeMenu::~HomeMenu() {
     }
 
     if (mSoundHeap != NULL) {
-        fn_800409F8(mSoundHeap);
+        SubHeapFree(mSoundHeap);
     }
 
     if (mSoundData != NULL) {
-        fn_800409F8(mSoundData);
+        SubHeapFree(mSoundData);
     }
 
     if (mInfo != NULL) {
         if (mInfo->mem != NULL) {
-            fn_800409F8(mInfo->mem);
+            SubHeapFree(mInfo->mem);
         }
         if (mInfo->configBuf != NULL) {
-            fn_800409F8(mInfo->configBuf);
+            SubHeapFree(mInfo->configBuf);
         }
         if (mInfo->msgBuf != NULL) {
-            fn_800409F8(mInfo->msgBuf);
+            SubHeapFree(mInfo->msgBuf);
         }
         if (mInfo->spkSeBuf != NULL) {
-            fn_800409F8(mInfo->spkSeBuf);
+            SubHeapFree(mInfo->spkSeBuf);
         }
         if (mInfo->layoutBuf != NULL) {
-            fn_800409F8(mInfo->layoutBuf);
+            SubHeapFree(mInfo->layoutBuf);
         }
         delete mInfo;
     }
@@ -255,9 +244,9 @@ s32 HomeMenu::Calc() {
             s32 result = WPADProbe(i, &type);
 
             if (gKPADLatest[i] >= 0) {
-                kpads[i] = lbl_801EE478[i][gKPADLatest[i]];
+                kpads[i] = gKPADStatus[i][gKPADLatest[i]];
             } else {
-                kpads[i] = lbl_801EE478[i][0];
+                kpads[i] = gKPADStatus[i][0];
             }
 
             switch (result) {
@@ -358,7 +347,7 @@ void HomeMenu::Draw() {
 void HomeMenu::PrintHeapInfo() {
     MEMGetTotalFreeSizeForExpHeap((MEMHeapHandle)mBrowserAllocator->pHeap);
     MEMGetTotalFreeSizeForExpHeap((MEMHeapHandle)mArcAllocator->pHeap);
-    MEMGetTotalFreeSizeForExpHeap(lbl_80357640);
+    MEMGetTotalFreeSizeForExpHeap(gMainHeap);
     MEMGetTotalFreeSizeForExpHeap(gSubHeap);
 }
 
@@ -369,13 +358,13 @@ BOOL HomeMenu::RunManual() {
     PrintHeapInfo();
 
     u32 size;
-    void* arc = fn_8003F7B4(mManualArc, mManualPath, 32, &size,
+    void* arc = LoadContentFile(mManualArc, mManualPath, 32, &size,
                             (MEMHeapHandle)mArcAllocator->pHeap);
     if (arc != NULL) {
         VISetBlack(TRUE);
         VIFlush();
         VIWaitForRetrace();
-        fn_8003FD24(lbl_803576A5, gWidescreen, true);
+        SetVideoMode(gProgressive, gWidescreen, true);
         VISetBlack(FALSE);
         VIFlush();
         PrintHeapInfo();
@@ -422,7 +411,7 @@ BOOL HomeMenu::RunManual() {
         VIFlush();
         VIWaitForRetrace();
         VIWaitForRetrace();
-        fn_8003FD24(lbl_803576A5, gWidescreen, false);
+        SetVideoMode(gProgressive, gWidescreen, false);
         MEMFreeToAllocator(mArcAllocator, arc);
     }
 
@@ -460,10 +449,10 @@ void HomeMenu::BrowserDrawCallback(BOOL fade, GXRenderModeObj* rmode) {
     GXSetDispCopySrc(0, 0, rmode->fbWidth, rmode->efbHeight);
     GXSetDispCopyDst(rmode->fbWidth, 456);
     GXSetDispCopyYScale(GXGetYScaleFactor(rmode->efbHeight, rmode->xfbHeight));
-    GXCopyDisp(lbl_80357664, GX_TRUE);
+    GXCopyDisp(gCurXfb, GX_TRUE);
     GXDrawDone();
     VIConfigure(rmode);
-    VISetNextFrameBuffer(lbl_80357664);
+    VISetNextFrameBuffer(gCurXfb);
     VIFlush();
     VIWaitForRetrace();
 }
@@ -476,9 +465,9 @@ void HomeMenu::Quit() {
 }
 
 int main() {
-    fn_8003D634();
+    SystemInit();
     while (true) {
-        fn_8003DC30();
-        fn_8003EA30();
+        SystemCalc();
+        SystemDraw();
     }
 }

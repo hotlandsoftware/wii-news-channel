@@ -4,7 +4,6 @@
 
 using namespace nw4r;
 
-extern "C" u32 lbl_801F0908[4]; // held buttons
 
 static inline BOOL IsInDeadZone(f32 d) {
     return d < 20.0f && d > -20.0f;
@@ -48,7 +47,7 @@ void PointerScroll::Update() {
     s32* timer = mTimer;
     for (s32 i = 0; i < 4; i++) {
         dir[i] = 0;
-        if (lbl_801F0908[i] & 0x400) {
+        if (gHold[i] & 0x400) {
             mActive = true;
             UpdateChannel(i);
         } else {

@@ -72,6 +72,7 @@ void OSReport(const char*, ...);
 void OSVReport(const char*, va_list);
 void OSPanic(const char*, int, const char*, ...);
 
+void OSInit(void);
 void* OSGetArenaHi(void);
 void* OSGetArenaLo(void);
 

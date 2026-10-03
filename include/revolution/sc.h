@@ -182,6 +182,8 @@ typedef enum {
 } SCProductArea;
 
 u8 SCGetLanguage(void);
+BOOL SCSetLanguage(u8 language);
+u32 SCGetSimpleAddressID(void);
 
 u8* __SCGetConfBuf(void);
 u32 __SCGetConfBufSize(void);
