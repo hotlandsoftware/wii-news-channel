@@ -1,3 +1,9 @@
+// The DOL keeps the emitter's random seed in a register across the call to sqrt, so the
+// compiler knew that sqrt has no side effects: the original <math.h> must have declared it
+// that way. It is declared here, ahead of the shared header, so that no other unit changes
+// (the attribute only counts on the first declaration).
+extern "C" double sqrt(double) __attribute__((const));
+
 #include <nw4r/ef.h>
 
 #include <cmath>
