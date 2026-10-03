@@ -2787,7 +2787,7 @@ f32 Article_GetMaxScrollOffset() {
         return -(lbl_80357568->mLineHeight * lbl_80357568->mNumLines +
                  GetLogoHeight() * gTextScale);
     }
-    return -(line * (lbl_80357568->mLineHeight * headlineLines));
+    return -(line * (headlineLines * lbl_80357568->mLineHeight));
 }
 
 void Article_SetHeight(f32 width) {
