@@ -207,13 +207,6 @@ static inline void EnableButton(PaneButton* button) {
     button->mDisabled = false;
 }
 
-static inline void SetButtonDisabled(PaneButton* button, bool disabled) {
-    button->mDisabled = disabled;
-    if (disabled) {
-        button->Press();
-    }
-}
-
 static inline void DisableButton(PaneButton* button) {
     button->mDisabled = true;
     button->Press();
