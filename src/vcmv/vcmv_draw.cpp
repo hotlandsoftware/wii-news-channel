@@ -971,7 +971,7 @@ void vcmvDrawScreen(f32 shift) {
 
         {
             s32 x1, y1, delta;
-            f32 u0, u1, v0, v1, left, right, top, bottom, bandBottom, va0, vb0, vb1;
+            f32 u0, u1, v0, v1, left, right, top, bottom, va0, bandBottom, vb0, vb1;
 
             sScroll.current += sScroll.velocity;
             sScroll.offset = 0.5f + sScroll.current;
@@ -987,12 +987,14 @@ void vcmvDrawScreen(f32 shift) {
             bottom = vcmvHalfHeight - y1;
             delta = sScroll.offset - sScroll.entries[sScroll.above].scroll;
             bandBottom = bottom + delta;
-            va0 = (sScroll.rect.y + delta) * sTexScaleY;
-            vb0 = (sScroll.rect.y + (sScroll.offset + (sScroll.rect.h - delta) - sScroll.entries[sScroll.below].scroll)) *
-                  sTexScaleY;
-            vb1 = (sScroll.rect.y + (sScroll.offset + (sScroll.rect.h - delta) - sScroll.entries[sScroll.below].scroll) +
-                   delta) *
-                  sTexScaleY;
+            {
+                s32 ya = sScroll.rect.y + delta;
+                s32 yb;
+                va0 = ya * sTexScaleY;
+                yb = sScroll.rect.y + (sScroll.offset + (sScroll.rect.h - delta) - sScroll.entries[sScroll.below].scroll);
+                vb0 = yb * sTexScaleY;
+                vb1 = (yb + delta) * sTexScaleY;
+            }
 
             if (va0 < v0 || vb0 < v0 || vb1 > v1) {
             plain:
@@ -1108,7 +1110,16 @@ void vcmvDrawScreen(f32 shift) {
 
         if (sTexBufs[sShowTex] != NULL) {
             vcmvSetupTexDraw(&sTexObjs[sShowTex], white);
-            vcmvDrawPage(&next);
+            GXBegin(GX_QUADS, GX_VTXFMT0, 4);
+            GXPosition3f32(next.left, next.top, 0.0f);
+            GXTexCoord2f32(0.0f, 0.0f);
+            GXPosition3f32(next.left, next.bottom, 0.0f);
+            GXTexCoord2f32(0.0f, 1.0f);
+            GXPosition3f32(next.right, next.bottom, 0.0f);
+            GXTexCoord2f32(1.0f, 1.0f);
+            GXPosition3f32(next.right, next.top, 0.0f);
+            GXTexCoord2f32(1.0f, 0.0f);
+            GXEnd();
         }
 
         if (vcmvLoadState < vcmvLoadDone) {
@@ -1116,7 +1127,16 @@ void vcmvDrawScreen(f32 shift) {
             if (sTexBufs[sPrevTex] != NULL) {
                 GXColor color = {255, 255, 255, alpha};
                 vcmvSetupTexDraw(&sTexObjs[sPrevTex], color);
-                vcmvDrawPage(&prev);
+                GXBegin(GX_QUADS, GX_VTXFMT0, 4);
+            GXPosition3f32(prev.left, prev.top, 0.0f);
+            GXTexCoord2f32(0.0f, 0.0f);
+            GXPosition3f32(prev.left, prev.bottom, 0.0f);
+            GXTexCoord2f32(0.0f, 1.0f);
+            GXPosition3f32(prev.right, prev.bottom, 0.0f);
+            GXTexCoord2f32(1.0f, 1.0f);
+            GXPosition3f32(prev.right, prev.top, 0.0f);
+            GXTexCoord2f32(1.0f, 0.0f);
+            GXEnd();
             }
             vcmvLoadState++;
         } else {
