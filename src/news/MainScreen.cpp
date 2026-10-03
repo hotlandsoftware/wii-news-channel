@@ -3117,11 +3117,11 @@ void MainScreen::Sub1D594() {
     bool held = false;
     switch (mUnk2D4) {
     case -1:
-        lbl_803575BA = false;
         lbl_801EDFD0[0] = 1;
         lbl_801EDFD0[1] = 1;
         lbl_801EDFD0[2] = 1;
         lbl_801EDFD0[3] = 1;
+        lbl_803575BA = false;
         lbl_803575BB = false;
         mUnk228 = fn_80034D34(mUnk224, mUnk22C);
         break;
