@@ -388,6 +388,7 @@ void GlobePin::DrawName() {
 void GlobePin::DrawHeadline(ut::CharWriter* writer) {
     const ut::Font* font = writer->GetFont();
     f32 right = GetScreenWidth();
+    f32 right2;
     f32 scaleH = writer->GetScaleH();
     f32 ascent = scaleH * font->GetAscent();
     f32 space = ((ut::TextWriterBase<wchar_t>*)writer)->GetCharSpace();
@@ -406,10 +407,11 @@ void GlobePin::DrawHeadline(ut::CharWriter* writer) {
             ((ut::TextWriterBase<wchar_t>*)writer)->SetCharSpace(space);
             writer->SetScale(scaleH);
             writer->SetCursorY(y + offset);
-            f32 right2 = GetScreenWidth();
-            f32 x2 = writer->GetCursorX();
+            right2 = GetScreenWidth();
+            // The original reuses y for the cursor x here.
+            y = writer->GetCursorX();
             while (*str != 0) {
-                if (x2 > right2) {
+                if (y > right2) {
                     break;
                 }
                 if (*str == 0xA0) {
@@ -417,8 +419,8 @@ void GlobePin::DrawHeadline(ut::CharWriter* writer) {
                 } else {
                     writer->Print(*str);
                 }
-                x2 = space + writer->GetCursorX();
-                writer->SetCursorX(x2);
+                y = space + writer->GetCursorX();
+                writer->SetCursorX(y);
                 str++;
             }
             return;
