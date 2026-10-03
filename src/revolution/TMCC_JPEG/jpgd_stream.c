@@ -1,6 +1,6 @@
 #include <string.h>
 #include "jpgd_internal.h"
-s32 fn_8007FE28(JPEGStream* s, JPEGSource* src) {
+s32 jpgdStreamInit(JPEGStream* s, JPEGSource* src) {
     u32 size;
     u8* dst;
     u32 avail;
@@ -43,11 +43,11 @@ s32 fn_8007FE28(JPEGStream* s, JPEGSource* src) {
     return 0;
 }
 
-s32 fn_8007FF3C(u8* out, JPEGStream* s) {
+s32 jpgdGetByte(u8* out, JPEGStream* s) {
     *out = *s->cur;
     if (s->cur >= s->end) {
         if (s->remain != 0) {
-            s32 ret = fn_800805A4(s);
+            s32 ret = jpgdRefillBuffer(s);
             if (ret < 0) {
                 return ret;
             }
@@ -60,17 +60,17 @@ s32 fn_8007FF3C(u8* out, JPEGStream* s) {
     return 0;
 }
 
-s32 fn_8007FFAC(u16* out, JPEGStream* s) {
+s32 jpgdGetWord(u16* out, JPEGStream* s) {
     u8 c;
     u16 v;
     s32 ret;
 
-    ret = fn_8007FF3C(&c, s);
+    ret = jpgdGetByte(&c, s);
     if (ret < 0) {
         return ret;
     }
     v = c << 8;
-    ret = fn_8007FF3C(&c, s);
+    ret = jpgdGetByte(&c, s);
     if (ret < 0) {
         return ret;
     }
@@ -78,13 +78,13 @@ s32 fn_8007FFAC(u16* out, JPEGStream* s) {
     return 0;
 }
 
-s32 fn_800800B0(u8* dst, u32 size, JPEGStream* s) {
+s32 jpgdGetBytes(u8* dst, u32 size, JPEGStream* s) {
     u32 i;
     s32 ret;
     u8 c;
 
     for (i = 0; i < size; i++) {
-        ret = fn_8007FF3C(&c, s);
+        ret = jpgdGetByte(&c, s);
         if (ret < 0) {
             return ret;
         }
@@ -93,7 +93,7 @@ s32 fn_800800B0(u8* dst, u32 size, JPEGStream* s) {
     return 0;
 }
 
-s32 fn_80080158(s32 n, JPEGStream* s) {
+s32 jpgdSkipBytes(s32 n, JPEGStream* s) {
     s32 left;
     s32 ret;
 
@@ -101,7 +101,7 @@ s32 fn_80080158(s32 n, JPEGStream* s) {
         while ((left = (s->remain == 0) ? (s->end - s->cur + 2) : (s->end - s->cur + 1)) <= n) {
             n -= left;
             if (s->remain != 0) {
-                ret = fn_800805A4(s);
+                ret = jpgdRefillBuffer(s);
                 if (ret < 0) {
                     return ret;
                 }
@@ -120,9 +120,9 @@ s32 fn_80080158(s32 n, JPEGStream* s) {
     return 0;
 }
 
-s32 fn_80080364(JPEGStream* s);
+s32 jpgdRefillKeepBits(JPEGStream* s);
 
-s32 fn_80080234(JPEGStream* s) {
+s32 jpgdFillBits(JPEGStream* s) {
     u8 over;
     u8 i;
     u32 bits;
@@ -160,12 +160,12 @@ s32 fn_80080234(JPEGStream* s) {
             s->cur = s->end;
             s->bitsEnd = 1;
         } else {
-            ret = fn_80080364(s);
+            ret = jpgdRefillKeepBits(s);
             if (ret < 0) {
                 return ret;
             }
             if (s->numBits <= 24) {
-                ret = fn_80080234(s);
+                ret = jpgdFillBits(s);
                 if (ret < 0) {
                     return ret;
                 }
@@ -175,11 +175,11 @@ s32 fn_80080234(JPEGStream* s) {
     return 0;
 }
 
-u32 fn_80080354(JPEGStream* s) {
+u32 jpgdGetReadSize(JPEGStream* s) {
     return s->cur - s->base;
 }
 
-s32 fn_80080364(JPEGStream* s) {
+s32 jpgdRefillKeepBits(JPEGStream* s) {
     u32 size;
     u8* dst;
     u32 avail;
@@ -225,7 +225,7 @@ s32 fn_80080364(JPEGStream* s) {
     return 0;
 }
 
-s32 fn_800805A4(JPEGStream* s) {
+s32 jpgdRefillBuffer(JPEGStream* s) {
     u32 size;
     u8* dst;
     u32 avail;
@@ -254,13 +254,13 @@ s32 fn_800805A4(JPEGStream* s) {
     return 0;
 }
 
-s32 fn_80080764(JPEGStream* s) {
+s32 jpgdResetBits(JPEGStream* s) {
     s->bits = 0;
     s->numBits = 0;
-    return fn_80080234(s);
+    return jpgdFillBits(s);
 }
 
-s32 fn_80080774(JPEGStream* s) {
+s32 jpgdUnreadBits(JPEGStream* s) {
     u32 bits;
     s32 n;
     s32 ret;
@@ -271,12 +271,12 @@ s32 fn_80080774(JPEGStream* s) {
     n = s->numBits;
     bits = s->bits;
     for (n -= 8; n >= 0; n -= 8) {
-        ret = fn_80080158(-1, s);
+        ret = jpgdSkipBytes(-1, s);
         if (ret < 0) {
             return ret;
         }
         if ((u8)bits == 0xFF) {
-            ret = fn_80080158(-1, s);
+            ret = jpgdSkipBytes(-1, s);
             if (ret < 0) {
                 return ret;
             }

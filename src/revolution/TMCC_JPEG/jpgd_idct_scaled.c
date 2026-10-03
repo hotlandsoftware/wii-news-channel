@@ -4,7 +4,7 @@
 #define CLAMP_U8(v) (((v) < 256 && (v) > -1) ? (v) : ((v) < 0 ? 0 : 255))
 #define CLAMP_S8(v) (((v) < 128 && (v) > -129) ? (v) : ((v) > 0 ? 127 : -128))
 
-void fn_80083554(s32* in, u8* out, u16 stride, s32 extent) {
+void jpgdIdct4x4Y(s32* in, u8* out, u16 stride, s32 extent) {
     s32 ws[64];
     s32* ip;
     s32* wp;
@@ -56,7 +56,7 @@ void fn_80083554(s32* in, u8* out, u16 stride, s32 extent) {
     }
 }
 
-void fn_80083774(s32* in, u8* out, u16 stride, s32 extent) {
+void jpgdIdct2x2Y(s32* in, u8* out, u16 stride, s32 extent) {
     s32 a;
     s32 t0;
     s32 t1;
@@ -74,11 +74,11 @@ void fn_80083774(s32* in, u8* out, u16 stride, s32 extent) {
     out[stride + 1] = CLAMP_U8((t1 - t3) >> 11);
 }
 
-void fn_80083890(s32* in, u8* out, u16 stride, s32 extent) {
+void jpgdIdct1x1Y(s32* in, u8* out, u16 stride, s32 extent) {
     out[0] = CLAMP_U8((in[0] >> 11) + 0x80);
 }
 
-void fn_800838D4(s32* in, u8* out, u16 stride, s32 extent) {
+void jpgdIdct4x4C(s32* in, u8* out, u16 stride, s32 extent) {
     s32 ws[64];
     s32* ip;
     s32* wp;
@@ -130,7 +130,7 @@ void fn_800838D4(s32* in, u8* out, u16 stride, s32 extent) {
     }
 }
 
-void fn_80083AF8(s32* in, u8* out, u16 stride, s32 extent) {
+void jpgdIdct2x2C(s32* in, u8* out, u16 stride, s32 extent) {
     s32 t0;
     s32 t1;
     s32 t2;
@@ -147,6 +147,6 @@ void fn_80083AF8(s32* in, u8* out, u16 stride, s32 extent) {
     o[9] = CLAMP_S8((t1 - t3) >> 11);
 }
 
-void fn_80083C1C(s32* in, u8* out, u16 stride, s32 extent) {
+void jpgdIdct1x1C(s32* in, u8* out, u16 stride, s32 extent) {
     *(s8*)out = CLAMP_S8(in[0] >> 11);
 }

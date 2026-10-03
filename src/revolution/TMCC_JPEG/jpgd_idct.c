@@ -5,7 +5,7 @@
 #define CLAMP_S8(v) (((v) < 128 && (v) > -129) ? (v) : ((v) > 0 ? 127 : -128))
 #define CLAMP_U8(x) (((x) >> 19) == 0 ? ((x) >> 11) : ((x) < 0 ? 0 : 255))
 
-void fn_8008082C(s32* in, u8* out, u16 stride, s32 extent) {
+void jpgdIdct8x8Y(s32* in, u8* out, u16 stride, s32 extent) {
     s32 ws[64];
     s32* wp;
     s32 i;
@@ -155,7 +155,7 @@ void fn_8008082C(s32* in, u8* out, u16 stride, s32 extent) {
     }
 }
 
-void fn_80080C30(s32* in, u8* out, u16 stride, s32 extent) {
+void jpgdIdct8x8C(s32* in, u8* out, u16 stride, s32 extent) {
     s32 ws[64];
     s32* wp;
     s32 i;

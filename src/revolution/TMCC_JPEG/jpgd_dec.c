@@ -14,8 +14,8 @@ static s32 jpgdSetParam(JPEGDecHandle* h, JPEGDecParam* p) {
     return 0;
 }
 
-static s32 jpgdReadHeader(JPEGDecContext* ctx) {
-    s32 ret = fn_80081C6C(ctx);
+static s32 jpgdParseHeader(JPEGDecContext* ctx) {
+    s32 ret = jpgdReadHeader(ctx);
     if (ret < 0) {
         return ret;
     }
@@ -27,8 +27,8 @@ static s32 jpgdReadHeader(JPEGDecContext* ctx) {
     return ret;
 }
 
-static s32 jpgdStartScan(JPEGDecContext* ctx) {
-    s32 ret = fn_80081EB8(ctx);
+static s32 jpgdBeginScan(JPEGDecContext* ctx) {
+    s32 ret = jpgdStartScan(ctx);
     if (ret < 0) {
         return ret;
     }
@@ -38,7 +38,7 @@ static s32 jpgdStartScan(JPEGDecContext* ctx) {
     return ret;
 }
 
-s32 fn_80081348(JPEGDecHandle* h, JPEGDecParam* p) {
+s32 JPEGDecInit(JPEGDecHandle* h, JPEGDecParam* p) {
     JPEGDecContext* ctx = p->work;
     s32 ret;
 
@@ -52,37 +52,37 @@ s32 fn_80081348(JPEGDecHandle* h, JPEGDecParam* p) {
 
     ret = jpgdSetParam(h, p);
     if (ret >= 0) {
-        ret = fn_8007FE28(&ctx->stream, &p->source);
+        ret = jpgdStreamInit(&ctx->stream, &p->source);
         if (ret < 0) {
             return ret;
         }
-        ret = jpgdReadHeader(ctx);
+        ret = jpgdParseHeader(ctx);
         if (ret >= 0) {
-            ret = jpgdStartScan(ctx);
+            ret = jpgdBeginScan(ctx);
             if (ret >= 0 && ctx->frame.eoi == 0) {
-                ret = fn_80081794(ctx);
+                ret = jpgdSetupScale(ctx);
                 if (ret >= 0) {
                     switch (h->format) {
                     case 0:
-                        ret = fn_80086E68(ctx);
+                        ret = jpgdSetupOutputRGB565(ctx);
                         if (ret < 0) {
                             goto error;
                         }
                         break;
                     case 1:
-                        ret = fn_800882F8(ctx);
+                        ret = jpgdSetupOutputRGBA8(ctx);
                         if (ret < 0) {
                             goto error;
                         }
                         break;
                     case 2:
-                        ret = fn_80083C60(ctx);
+                        ret = jpgdSetupOutputYUV(ctx);
                         if (ret < 0) {
                             goto error;
                         }
                         break;
                     }
-                    h->readSize = fn_80080354(&ctx->stream);
+                    h->readSize = jpgdGetReadSize(&ctx->stream);
                     return h->numMcus;
                 }
             }
@@ -92,7 +92,7 @@ error:
     return ret < 0 ? ret : -2;
 }
 
-s32 fn_80081554(JPEGDecHandle* h, s32 count, void* out) {
+s32 JPEGDecDecode(JPEGDecHandle* h, s32 count, void* out) {
     s32 work[95];
     u32 py;
     JPEGDecContext* ctx = h->ctx;
@@ -122,7 +122,7 @@ s32 fn_80081554(JPEGDecHandle* h, s32 count, void* out) {
     while (y < mcusY && n < count) {
         py = y * mcuH;
         while (x < mcusX && n < count) {
-            ret = fn_80081AA8(x * mcuW, py, ctx, work);
+            ret = jpgdDecodeMcu(x * mcuW, py, ctx, work);
             if (ret < 0) {
                 goto error;
             }
@@ -135,25 +135,25 @@ s32 fn_80081554(JPEGDecHandle* h, s32 count, void* out) {
         }
     }
     if (mcusY == y && x == 0) {
-        ret = fn_80081DFC(ctx);
+        ret = jpgdCheckEOI(ctx);
         if (ret < 0) {
             return ret;
         }
     }
     h->mcuX = x;
     h->mcuY = y;
-    h->readSize = fn_80080354(&ctx->stream);
+    h->readSize = jpgdGetReadSize(&ctx->stream);
     return h->numMcus - y * mcusX - x;
 
 error:
     if (ctx->frame.restartInterval != 0 && ret != -0xF0) {
         h->error = ret;
-        ret = fn_80082E4C(ctx);
+        ret = jpgdResync(ctx);
     }
     return ret;
 }
 
-s32 fn_800816B4(JPEGDecHandle* h, s32 scale) {
+s32 JPEGDecSetScale(JPEGDecHandle* h, s32 scale) {
     JPEGDecContext* ctx;
     s32 ret;
 
@@ -162,25 +162,25 @@ s32 fn_800816B4(JPEGDecHandle* h, s32 scale) {
     if ((u8)scale != 1 && (u8)scale != 2 && (u8)scale != 4 && (u8)scale != 8) {
         return -1;
     }
-    ret = fn_80081794(ctx);
+    ret = jpgdSetupScale(ctx);
     if (ret < 0) {
         return ret;
     }
     switch (h->format) {
     case 0:
-        ret = fn_80086E68(ctx);
+        ret = jpgdSetupOutputRGB565(ctx);
         if (ret < 0) {
             return ret;
         }
         break;
     case 1:
-        ret = fn_800882F8(ctx);
+        ret = jpgdSetupOutputRGBA8(ctx);
         if (ret < 0) {
             return ret;
         }
         break;
     case 2:
-        ret = fn_80083C60(ctx);
+        ret = jpgdSetupOutputYUV(ctx);
         if (ret < 0) {
             return ret;
         }
@@ -190,40 +190,40 @@ s32 fn_800816B4(JPEGDecHandle* h, s32 scale) {
 }
 
 
-s32 fn_80081794(JPEGDecContext* ctx) {
+s32 jpgdSetupScale(JPEGDecContext* ctx) {
     JPEGDecHandle* h = ctx->handle;
 
     switch (h->scale) {
     case 1:
         ctx->coefLimit = 64;
         ctx->coefLimit2 = 64;
-        ctx->idctY = fn_8008082C;
-        ctx->idctC = fn_80080C30;
-        ctx->decodeBlock = fn_800898F4;
+        ctx->idctY = jpgdIdct8x8Y;
+        ctx->idctC = jpgdIdct8x8C;
+        ctx->decodeBlock = jpgdDecodeBlock;
         ctx->blockSize = 8;
         break;
     case 2:
         ctx->coefLimit = 25;
         ctx->coefLimit2 = 108;
-        ctx->idctY = fn_80083554;
-        ctx->idctC = fn_800838D4;
-        ctx->decodeBlock = fn_80089D2C;
+        ctx->idctY = jpgdIdct4x4Y;
+        ctx->idctC = jpgdIdct4x4C;
+        ctx->decodeBlock = jpgdDecodeBlockScaled;
         ctx->blockSize = 4;
         break;
     case 4:
         ctx->coefLimit = 5;
         ctx->coefLimit2 = 36;
-        ctx->idctY = fn_80083774;
-        ctx->idctC = fn_80083AF8;
-        ctx->decodeBlock = fn_80089D2C;
+        ctx->idctY = jpgdIdct2x2Y;
+        ctx->idctC = jpgdIdct2x2C;
+        ctx->decodeBlock = jpgdDecodeBlockScaled;
         ctx->blockSize = 2;
         break;
     case 8:
         ctx->coefLimit = 1;
         ctx->coefLimit2 = 0;
-        ctx->idctY = fn_80083890;
-        ctx->idctC = fn_80083C1C;
-        ctx->decodeBlock = fn_80089D2C;
+        ctx->idctY = jpgdIdct1x1Y;
+        ctx->idctC = jpgdIdct1x1C;
+        ctx->decodeBlock = jpgdDecodeBlockScaled;
         ctx->blockSize = 1;
         break;
     default:
@@ -269,7 +269,7 @@ s32 fn_80081794(JPEGDecContext* ctx) {
 }
 
 
-s32 fn_80081AA8(u32 x, u32 y, JPEGDecContext* ctx, s32* work) {
+s32 jpgdDecodeMcu(u32 x, u32 y, JPEGDecContext* ctx, s32* work) {
     s32 coef[64];
     JPEGDecHandle* h;
     u8* scan;
@@ -306,7 +306,7 @@ s32 fn_80081AA8(u32 x, u32 y, JPEGDecContext* ctx, s32* work) {
     for (; i < frame->scanComps; dcPred++, i++, scan++) {
         comp = *scan;
         quant = tables->quant[sc->quantSel[comp]];
-        fn_80083000(tables, sc->dcSel[comp], sc->acSel[comp]);
+        jpgdSelectHuffTables(tables, sc->dcSel[comp], sc->acSel[comp]);
         pOut = out;
         outC = &out[comp];
         nBlocks = &frame->blocks[i];
@@ -329,7 +329,7 @@ s32 fn_80081AA8(u32 x, u32 y, JPEGDecContext* ctx, s32* work) {
         ctx->outputEdge(ctx, x, y);
     }
     if (frame->restartInterval != 0) {
-        ret = fn_8008218C(ctx, x, y);
+        ret = jpgdCheckRestart(ctx, x, y);
         if (ret < 0) {
             return ret;
         }
@@ -337,17 +337,17 @@ s32 fn_80081AA8(u32 x, u32 y, JPEGDecContext* ctx, s32* work) {
     return 0;
 }
 
-static s32 jpgdReadSOF(JPEGDecContext* ctx) {
-    s32 ret = fn_80082910(ctx);
+static s32 jpgdParseSOF(JPEGDecContext* ctx) {
+    s32 ret = jpgdReadSOF(ctx);
     if (ret < 0) {
         return ret;
     }
     return 0;
 }
 
-s32 fn_80081C6C(JPEGDecContext* ctx) {
+s32 jpgdReadHeader(JPEGDecContext* ctx) {
     s32 ret;
-    const u8* zz = lbl_801AAE18;
+    const u8* zz = jpgdZigzag;
     u16 marker;
     s32 i;
 
@@ -356,7 +356,7 @@ s32 fn_80081C6C(JPEGDecContext* ctx) {
     for (i = 0; i < 64; i++) {
         ctx->tables.zigzag[i] = *zz++ * 4;
     }
-    ret = fn_8007FFAC(&marker, &ctx->stream);
+    ret = jpgdGetWord(&marker, &ctx->stream);
     if (ret < 0) {
         return ret;
     }
@@ -364,17 +364,17 @@ s32 fn_80081C6C(JPEGDecContext* ctx) {
         return -0x20;
     }
     marker = 0;
-    ret = fn_800822EC(&marker, ctx);
+    ret = jpgdNextMarker(&marker, ctx);
     if (ret < 0) {
         return ret;
     }
     if (marker != 0xFFC0) {
         return -0x10;
     }
-    return jpgdReadSOF(ctx);
+    return jpgdParseSOF(ctx);
 }
 
-s32 fn_80081DFC(JPEGDecContext* ctx) {
+s32 jpgdCheckEOI(JPEGDecContext* ctx) {
     u16 marker;
     s32 ret;
 
@@ -383,16 +383,16 @@ s32 fn_80081DFC(JPEGDecContext* ctx) {
     }
     if (ctx->frame.eoi == 0) {
         if (ctx->stream.bitsEnd == 0) {
-            ret = fn_80080774(&ctx->stream);
+            ret = jpgdUnreadBits(&ctx->stream);
             if (ret < 0) {
                 return ret;
             }
-            ret = fn_8007FFAC(&marker, &ctx->stream);
+            ret = jpgdGetWord(&marker, &ctx->stream);
             if (ret < 0) {
                 return ret;
             }
         } else {
-            ret = fn_8007FFAC(&marker, &ctx->stream);
+            ret = jpgdGetWord(&marker, &ctx->stream);
             if (ret < 0) {
                 return ret;
             }
@@ -405,12 +405,12 @@ s32 fn_80081DFC(JPEGDecContext* ctx) {
     return 0;
 }
 
-s32 fn_80081EB8(JPEGDecContext* ctx) {
+s32 jpgdStartScan(JPEGDecContext* ctx) {
     u16 marker;
     s32 ret;
 
     marker = 0;
-    ret = fn_800822EC(&marker, ctx);
+    ret = jpgdNextMarker(&marker, ctx);
     if (ret < 0) {
         return ret;
     }
@@ -420,11 +420,11 @@ s32 fn_80081EB8(JPEGDecContext* ctx) {
     if (marker != 0xFFDA) {
         return -0x22;
     }
-    ret = fn_80082C8C(ctx);
+    ret = jpgdReadSOS(ctx);
     if (ret < 0) {
         return ret;
     }
-    ret = fn_80081F88(ctx);
+    ret = jpgdSetupMcu(ctx);
     if (ret < 0) {
         return ret;
     }
@@ -433,7 +433,7 @@ s32 fn_80081EB8(JPEGDecContext* ctx) {
     ctx->scan.dcPred[2] = 0;
     ctx->scan.dcPred[3] = 0;
     ctx->scan.restartCount = 0;
-    ret = fn_80080764(&ctx->stream);
+    ret = jpgdResetBits(&ctx->stream);
     if (ret < 0) {
         return ret;
     }
@@ -450,7 +450,7 @@ static void jpgdCalcMcus(JPEGFrame* f) {
     f->numMcus = f->mcusX * f->mcusY;
 }
 
-s32 fn_80081F88(JPEGDecContext* ctx) {
+s32 jpgdSetupMcu(JPEGDecContext* ctx) {
     s32 i;
     JPEGFrame* f = &ctx->frame;
 
@@ -479,7 +479,7 @@ s32 fn_80081F88(JPEGDecContext* ctx) {
     return 0;
 }
 
-s32 fn_8008218C(JPEGDecContext* ctx, u32 x, u32 y) {
+s32 jpgdCheckRestart(JPEGDecContext* ctx, u32 x, u32 y) {
     JPEGDecHandle* h;
     u16 marker;
     u16 n;
@@ -492,16 +492,16 @@ s32 fn_8008218C(JPEGDecContext* ctx, u32 x, u32 y) {
     h = ctx->handle;
     ret = 0;
     if (ctx->scan.restartCount == ctx->frame.restartInterval) {
-        ret = fn_80080774(&ctx->stream);
+        ret = jpgdUnreadBits(&ctx->stream);
         if (ret < 0) {
             return ret;
         }
-        ret = fn_8007FFAC(&marker, &ctx->stream);
+        ret = jpgdGetWord(&marker, &ctx->stream);
         if (ret < 0) {
             return ret;
         }
         if (marker >= 0xFFC0 && (marker < 0xFFD0 || marker > 0xFFD7)) {
-            ret = fn_80080158(-2, &ctx->stream);
+            ret = jpgdSkipBytes(-2, &ctx->stream);
             if (ret < 0) {
                 return ret;
             }
@@ -519,13 +519,13 @@ s32 fn_8008218C(JPEGDecContext* ctx, u32 x, u32 y) {
         ctx->scan.dcPred[3] = 0;
         ctx->scan.restartCount = 0;
         ctx->scan.mcuPos = ((n % mcusX) << 16) + n / mcusX;
-        ret = fn_80080764(&ctx->stream);
+        ret = jpgdResetBits(&ctx->stream);
     }
     return ret;
 }
 
 static s32 jpgdSkip(s32 n, JPEGStream* s) {
-    s32 ret = fn_80080158(n, s);
+    s32 ret = jpgdSkipBytes(n, s);
     if (ret < 0) {
         return ret;
     }
@@ -534,7 +534,7 @@ static s32 jpgdSkip(s32 n, JPEGStream* s) {
 
 static s32 jpgdSkipAPP(JPEGDecContext* ctx) {
     u16 len;
-    s32 ret = fn_8007FFAC(&len, &ctx->stream);
+    s32 ret = jpgdGetWord(&len, &ctx->stream);
     if (ret < 0) {
         return ret;
     }
@@ -551,14 +551,14 @@ static s32 jpgdSkipAPP(JPEGDecContext* ctx) {
 
 static s32 jpgdReadDRI(JPEGDecContext* ctx) {
     u16 v;
-    s32 ret = fn_8007FFAC(&v, &ctx->stream);
+    s32 ret = jpgdGetWord(&v, &ctx->stream);
     if (ret < 0) {
         return ret;
     }
     if (v != 4) {
         return -0x42;
     }
-    ret = fn_8007FFAC(&v, &ctx->stream);
+    ret = jpgdGetWord(&v, &ctx->stream);
     if (ret < 0) {
         return ret;
     }
@@ -568,14 +568,14 @@ static s32 jpgdReadDRI(JPEGDecContext* ctx) {
 
 static s32 jpgdReadDNL(JPEGDecContext* ctx) {
     u16 v;
-    s32 ret = fn_8007FFAC(&v, &ctx->stream);
+    s32 ret = jpgdGetWord(&v, &ctx->stream);
     if (ret < 0) {
         return ret;
     }
     if (v != 4) {
         return -0x43;
     }
-    ret = fn_8007FFAC(&v, &ctx->stream);
+    ret = jpgdGetWord(&v, &ctx->stream);
     if (ret < 0) {
         return ret;
     }
@@ -585,7 +585,7 @@ static s32 jpgdReadDNL(JPEGDecContext* ctx) {
 
 static s32 jpgdSkipCOM(JPEGDecContext* ctx) {
     u16 len;
-    s32 ret = fn_8007FFAC(&len, &ctx->stream);
+    s32 ret = jpgdGetWord(&len, &ctx->stream);
     if (ret < 0) {
         return ret;
     }
@@ -600,7 +600,7 @@ static s32 jpgdSkipCOM(JPEGDecContext* ctx) {
     return 0;
 }
 
-s32 fn_800822EC(u16* outMarker, JPEGDecContext* ctx) {
+s32 jpgdNextMarker(u16* outMarker, JPEGDecContext* ctx) {
     u16 marker;
     u8 c;
     BOOL done;
@@ -610,12 +610,12 @@ s32 fn_800822EC(u16* outMarker, JPEGDecContext* ctx) {
     done = FALSE;
     first = *outMarker;
     do {
-        ret = fn_8007FFAC(&marker, &ctx->stream);
+        ret = jpgdGetWord(&marker, &ctx->stream);
         if (ret < 0) {
             return ret;
         }
         while (marker == 0xFFFF) {
-            ret = fn_8007FF3C(&c, &ctx->stream);
+            ret = jpgdGetByte(&c, &ctx->stream);
             if (ret < 0) {
                 return ret;
             }
@@ -629,10 +629,10 @@ s32 fn_800822EC(u16* outMarker, JPEGDecContext* ctx) {
         } else {
             switch (marker) {
             case 0xFFC4:
-                ret = fn_800825CC(first, ctx);
+                ret = jpgdReadDHT(first, ctx);
                 break;
             case 0xFFDB:
-                ret = fn_800827D8(ctx);
+                ret = jpgdReadDQT(ctx);
                 break;
             case 0xFFDD:
                 ret = jpgdReadDRI(ctx);
@@ -669,7 +669,7 @@ s32 fn_800822EC(u16* outMarker, JPEGDecContext* ctx) {
     return ret;
 }
 
-s32 fn_800825CC(u16 marker, JPEGDecContext* ctx) {
+s32 jpgdReadDHT(u16 marker, JPEGDecContext* ctx) {
     u8 vals[256];
     u8 count;
     u8* p;
@@ -685,14 +685,14 @@ s32 fn_800825CC(u16 marker, JPEGDecContext* ctx) {
 
     tables = &ctx->tables;
     memset(bits, 0, sizeof(bits));
-    ret = fn_8007FFAC(&len, &ctx->stream);
+    ret = jpgdGetWord(&len, &ctx->stream);
     if (ret < 0) {
         return ret;
     }
     len -= 2;
     do {
         len -= 17;
-        ret = fn_8007FF3C(&c, &ctx->stream);
+        ret = jpgdGetByte(&c, &ctx->stream);
         if (ret < 0) {
             return ret;
         }
@@ -704,7 +704,7 @@ s32 fn_800825CC(u16 marker, JPEGDecContext* ctx) {
         bits[0] = 0;
         p = &bits[1];
         for (i = 1; i <= 16; i++) {
-            ret = fn_8007FF3C(&c, &ctx->stream);
+            ret = jpgdGetByte(&c, &ctx->stream);
             if (ret < 0) {
                 return ret;
             }
@@ -715,13 +715,13 @@ s32 fn_800825CC(u16 marker, JPEGDecContext* ctx) {
         for (i = 1; i <= 16; i++) {
             count = count + bits[i];
         }
-        ret = fn_800800B0(vals, count, &ctx->stream);
+        ret = jpgdGetBytes(vals, count, &ctx->stream);
         if (ret < 0) {
             return ret;
         }
         table.count = count;
-        fn_800833A8(&table, cls, id, tables);
-        ret = fn_80083098(bits, vals, &table);
+        jpgdInitHuffTable(&table, cls, id, tables);
+        ret = jpgdBuildHuffTable(bits, vals, &table);
         if (ret < 0) {
             return ret;
         }
@@ -729,7 +729,7 @@ s32 fn_800825CC(u16 marker, JPEGDecContext* ctx) {
     return 0;
 }
 
-s32 fn_800827D8(JPEGDecContext* ctx) {
+s32 jpgdReadDQT(JPEGDecContext* ctx) {
     s32 scale[64] = {
         256, 185, 196, 218, 256, 326, 473, 928,
         185, 133, 141, 157, 185, 235, 341, 669,
@@ -751,14 +751,14 @@ s32 fn_800827D8(JPEGDecContext* ctx) {
     s32 ret;
 
     tables = &ctx->tables;
-    ret = fn_8007FFAC(&len, &ctx->stream);
+    ret = jpgdGetWord(&len, &ctx->stream);
     if (ret < 0) {
         return ret;
     }
     len -= 2;
     do {
         len -= 65;
-        ret = fn_8007FF3C(&id, &ctx->stream);
+        ret = jpgdGetByte(&id, &ctx->stream);
         if (ret < 0) {
             return ret;
         }
@@ -766,10 +766,10 @@ s32 fn_800827D8(JPEGDecContext* ctx) {
             return -0x41;
         }
         tables->quantDefined[id] = 1;
-        zz = lbl_801AAE18;
+        zz = jpgdZigzag;
         for (i = 0; i < 64; i++) {
             pos = *zz;
-            ret = fn_8007FF3C(&c, &ctx->stream);
+            ret = jpgdGetByte(&c, &ctx->stream);
             if (ret < 0) {
                 return ret;
             }
@@ -803,7 +803,7 @@ static s32 jpgdCheckComps(JPEGDecContext* ctx) {
     return 0;
 }
 
-s32 fn_80082910(JPEGDecContext* ctx) {
+s32 jpgdReadSOF(JPEGDecContext* ctx) {
     const u8* a;
     u16 v;
     const u8* pn;
@@ -823,31 +823,31 @@ s32 fn_80082910(JPEGDecContext* ctx) {
 
     f = &ctx->frame;
     sc = &ctx->scan;
-    ret = fn_8007FFAC(&v, &ctx->stream);
+    ret = jpgdGetWord(&v, &ctx->stream);
     if (ret < 0) {
         return ret;
     }
     if (v < 2) {
         return -0x50;
     }
-    ret = fn_8007FF3C(&c, &ctx->stream);
+    ret = jpgdGetByte(&c, &ctx->stream);
     if (ret < 0) {
         return ret;
     }
     if (c != 8) {
         return -0x50;
     }
-    ret = fn_8007FFAC(&v, &ctx->stream);
+    ret = jpgdGetWord(&v, &ctx->stream);
     if (ret < 0) {
         return ret;
     }
     f->height = v;
-    ret = fn_8007FFAC(&v, &ctx->stream);
+    ret = jpgdGetWord(&v, &ctx->stream);
     if (ret < 0) {
         return ret;
     }
     f->width = v;
-    ret = fn_8007FF3C(&c, &ctx->stream);
+    ret = jpgdGetByte(&c, &ctx->stream);
     if (ret < 0) {
         return ret;
     }
@@ -864,12 +864,12 @@ s32 fn_80082910(JPEGDecContext* ctx) {
     for (i = 0; i < f->numComps; i++) {
         u8 b;
         u8 h;
-        ret = fn_8007FF3C(&c, &ctx->stream);
+        ret = jpgdGetByte(&c, &ctx->stream);
         if (ret < 0) {
             return ret;
         }
         sc->compId[i] = c;
-        ret = fn_8007FF3C(&c, &ctx->stream);
+        ret = jpgdGetByte(&c, &ctx->stream);
         if (ret < 0) {
             return ret;
         }
@@ -883,7 +883,7 @@ s32 fn_80082910(JPEGDecContext* ctx) {
         if (f->vSamp[i] > maxV) {
             maxV = f->vSamp[i];
         }
-        ret = fn_8007FF3C(&c, &ctx->stream);
+        ret = jpgdGetByte(&c, &ctx->stream);
         if (ret < 0) {
             return ret;
         }
@@ -896,9 +896,9 @@ s32 fn_80082910(JPEGDecContext* ctx) {
     f->maxH = maxH;
     f->maxV = maxV;
     f->sampling = 5;
-    pn = lbl_80359068;
-    ph = lbl_801AADF0;
-    pv = lbl_801AAE04;
+    pn = jpgdSampComps;
+    ph = jpgdSampTableH;
+    pv = jpgdSampTableV;
     for (t = 0; t < 5; t++) {
         if (f->numComps == *pn) {
             a = ph;
@@ -929,14 +929,14 @@ s32 fn_80082910(JPEGDecContext* ctx) {
 }
 
 static s32 jpgdSkip3(JPEGStream* s) {
-    s32 ret = fn_80080158(3, s);
+    s32 ret = jpgdSkipBytes(3, s);
     if (ret < 0) {
         return ret;
     }
     return 0;
 }
 
-s32 fn_80082C8C(JPEGDecContext* ctx) {
+s32 jpgdReadSOS(JPEGDecContext* ctx) {
     s32 dc;
     u16 len;
     s32 i;
@@ -949,14 +949,14 @@ s32 fn_80082C8C(JPEGDecContext* ctx) {
 
     sc = &ctx->scan;
     tables = &ctx->tables;
-    ret = fn_8007FFAC(&len, &ctx->stream);
+    ret = jpgdGetWord(&len, &ctx->stream);
     if (ret < 0) {
         return ret;
     }
     if (len < 2) {
         return -0x51;
     }
-    ret = fn_8007FF3C(&c, &ctx->stream);
+    ret = jpgdGetByte(&c, &ctx->stream);
     if (ret < 0) {
         return ret;
     }
@@ -965,7 +965,7 @@ s32 fn_80082C8C(JPEGDecContext* ctx) {
         return -0x51;
     }
     for (i = 0; i < ctx->frame.scanComps; i++) {
-        ret = fn_8007FF3C(&c, &ctx->stream);
+        ret = jpgdGetByte(&c, &ctx->stream);
         if (ret < 0) {
             return ret;
         }
@@ -977,7 +977,7 @@ s32 fn_80082C8C(JPEGDecContext* ctx) {
         }
         return -0x51;
     found:
-        ret = fn_8007FF3C(&c, &ctx->stream);
+        ret = jpgdGetByte(&c, &ctx->stream);
         if (ret < 0) {
             return ret;
         }
@@ -1001,7 +1001,7 @@ s32 fn_80082C8C(JPEGDecContext* ctx) {
     return jpgdSkip3(&ctx->stream);
 }
 
-s32 fn_80082E4C(JPEGDecContext* ctx) {
+s32 jpgdResync(JPEGDecContext* ctx) {
     JPEGDecHandle* h;
     u8 c;
     u8 skip;
@@ -1013,14 +1013,14 @@ s32 fn_80082E4C(JPEGDecContext* ctx) {
     s32 ret;
 
     h = ctx->handle;
-    ret = fn_80080774(&ctx->stream);
+    ret = jpgdUnreadBits(&ctx->stream);
     if (ret < 0) {
         return ret;
     }
     c = *ctx->stream.cur;
     while (1) {
         while (c != 0xFF) {
-            ret = fn_8007FF3C(&c, &ctx->stream);
+            ret = jpgdGetByte(&c, &ctx->stream);
             if (ret < 0) {
                 return ret;
             }
@@ -1028,7 +1028,7 @@ s32 fn_80082E4C(JPEGDecContext* ctx) {
                 break;
             }
         }
-        ret = fn_8007FF3C(&c, &ctx->stream);
+        ret = jpgdGetByte(&c, &ctx->stream);
         if (ret < 0) {
             return ret;
         }
@@ -1059,18 +1059,18 @@ s32 fn_80082E4C(JPEGDecContext* ctx) {
         y = n / mcusX;
         x = n % mcusX;
         ctx->scan.mcuPos = (x << 16) + y;
-        ret = fn_80080764(&ctx->stream);
+        ret = jpgdResetBits(&ctx->stream);
         if (ret < 0) {
             return ret;
         }
         h->mcuX = x;
         h->mcuY = y;
-        h->readSize = fn_80080354(&ctx->stream);
+        h->readSize = jpgdGetReadSize(&ctx->stream);
         return h->numMcus - h->mcuY * h->mcusX - h->mcuX;
     }
 }
 
-void fn_80083000(JPEGTables* t, s32 dc, s32 ac) {
+void jpgdSelectHuffTables(JPEGTables* t, s32 dc, s32 ac) {
     switch (dc) {
     case 0:
         t->dc.lookup = t->dcLookup[0];
@@ -1097,7 +1097,7 @@ void fn_80083000(JPEGTables* t, s32 dc, s32 ac) {
     }
 }
 
-s32 fn_80083098(u8* bits, u8* vals, JPEGHuffTable* t) {
+s32 jpgdBuildHuffTable(u8* bits, u8* vals, JPEGHuffTable* t) {
     u32 huffsize[256];
     u32 huffcode[256];
     u32* ps;
@@ -1183,7 +1183,7 @@ s32 fn_80083098(u8* bits, u8* vals, JPEGHuffTable* t) {
     return 0;
 }
 
-void fn_800833A8(JPEGHuffTable* t, s32 cls, s32 id, JPEGTables* tables) {
+void jpgdInitHuffTable(JPEGHuffTable* t, s32 cls, s32 id, JPEGTables* tables) {
     if (cls == 0) {
         switch (id) {
         case 0:

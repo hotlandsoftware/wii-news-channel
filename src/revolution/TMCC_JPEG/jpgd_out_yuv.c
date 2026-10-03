@@ -1,14 +1,14 @@
 #include <string.h>
 #include "jpgd_internal.h"
 
-s32 fn_80083C60(JPEGDecContext* ctx) {
+s32 jpgdSetupOutputYUV(JPEGDecContext* ctx) {
     JPEGPixelBuffer* pix = &ctx->pix;
     JPEGDecHandle* h = ctx->handle;
 
     switch (ctx->frame.sampling) {
     case 0:
-        ctx->output = fn_80083F14;
-        ctx->outputEdge = fn_800844A4;
+        ctx->output = jpgdOutYUV411;
+        ctx->outputEdge = jpgdOutYUV411Edge;
         ctx->blockOut[0] = pix->y;
         ctx->blockOut[1] = ctx->blockOut[0] + ctx->blockSize;
         ctx->blockOut[2] = ctx->blockOut[1] + ctx->blockSize;
@@ -19,8 +19,8 @@ s32 fn_80083C60(JPEGDecContext* ctx) {
         ctx->unk19E0 = 0;
         break;
     case 1:
-        ctx->output = fn_80084AC0;
-        ctx->outputEdge = fn_8008522C;
+        ctx->output = jpgdOutYUV422;
+        ctx->outputEdge = jpgdOutYUV422Edge;
         ctx->blockOut[0] = pix->y;
         ctx->blockOut[1] = ctx->blockOut[0] + ctx->blockSize;
         ctx->blockOut[5] = pix->y + 0x80;
@@ -29,8 +29,8 @@ s32 fn_80083C60(JPEGDecContext* ctx) {
         ctx->unk19E0 = 0;
         break;
     case 2:
-        ctx->output = fn_80085848;
-        ctx->outputEdge = fn_80085FB0;
+        ctx->output = jpgdOutYUV420;
+        ctx->outputEdge = jpgdOutYUV420Edge;
         ctx->blockOut[0] = pix->y;
         ctx->blockOut[1] = ctx->blockOut[0] + ctx->blockSize;
         ctx->blockOut[2] = ctx->blockOut[0] + ctx->blockSize * 16;
@@ -41,8 +41,8 @@ s32 fn_80083C60(JPEGDecContext* ctx) {
         ctx->unk19E0 = 0;
         break;
     case 3:
-        ctx->output = fn_800865D8;
-        ctx->outputEdge = fn_80086764;
+        ctx->output = jpgdOutYUV444;
+        ctx->outputEdge = jpgdOutYUV444Edge;
         ctx->blockOut[0] = pix->y;
         ctx->blockOut[5] = pix->y + 0x40;
         ctx->blockOut[6] = pix->y + 0x80;
@@ -50,8 +50,8 @@ s32 fn_80083C60(JPEGDecContext* ctx) {
         ctx->unk19E0 = 0;
         break;
     case 4:
-        ctx->output = fn_80086924;
-        ctx->outputEdge = fn_80086BAC;
+        ctx->output = jpgdOutYUVGray;
+        ctx->outputEdge = jpgdOutYUVGrayEdge;
         ctx->blockOut[0] = pix->y;
         ctx->stride = 8;
         ctx->unk19E0 = 0;
@@ -79,7 +79,7 @@ s32 fn_80083C60(JPEGDecContext* ctx) {
     t = ((x) >> 3) + ((y) >> 2) * (tiles);              \
     (p)[(t << 5) + (((y) & 3) << 3) + ((x) & 7)] = (v)
 
-void fn_80083F14(JPEGDecContext* ctx, u32 x, u32 y) {
+void jpgdOutYUV411(JPEGDecContext* ctx, u32 x, u32 y) {
     s32 t;
     u8* scr = ctx->pix.cr;
     s32 j;
@@ -122,7 +122,7 @@ void fn_80083F14(JPEGDecContext* ctx, u32 x, u32 y) {
     }
 }
 
-void fn_800844A4(JPEGDecContext* ctx, u32 x, u32 y) {
+void jpgdOutYUV411Edge(JPEGDecContext* ctx, u32 x, u32 y) {
     JPEGDecHandle* h;
     u8* sy;
     u8* scb;
@@ -172,7 +172,7 @@ void fn_800844A4(JPEGDecContext* ctx, u32 x, u32 y) {
     }
 }
 
-void fn_80084AC0(JPEGDecContext* ctx, u32 x, u32 y) {
+void jpgdOutYUV422(JPEGDecContext* ctx, u32 x, u32 y) {
     JPEGDecHandle* h = ctx->handle;
     u8* sy = ctx->pix.y;
     u8* scb = ctx->pix.y + 0x80;
@@ -213,7 +213,7 @@ void fn_80084AC0(JPEGDecContext* ctx, u32 x, u32 y) {
     }
 }
 
-void fn_8008522C(JPEGDecContext* ctx, u32 x, u32 y) {
+void jpgdOutYUV422Edge(JPEGDecContext* ctx, u32 x, u32 y) {
     JPEGDecHandle* h;
     u8* sy;
     u8* scb;
@@ -263,7 +263,7 @@ void fn_8008522C(JPEGDecContext* ctx, u32 x, u32 y) {
     }
 }
 
-void fn_80085848(JPEGDecContext* ctx, u32 x, u32 y) {
+void jpgdOutYUV420(JPEGDecContext* ctx, u32 x, u32 y) {
     JPEGDecHandle* h = ctx->handle;
     u8* sy = ctx->pix.y;
     u8* scb = ctx->pix.cb;
@@ -305,7 +305,7 @@ void fn_80085848(JPEGDecContext* ctx, u32 x, u32 y) {
     }
 }
 
-void fn_80085FB0(JPEGDecContext* ctx, u32 x, u32 y) {
+void jpgdOutYUV420Edge(JPEGDecContext* ctx, u32 x, u32 y) {
     JPEGDecHandle* h;
     u8* sy;
     u8* scb;
@@ -359,7 +359,7 @@ void fn_80085FB0(JPEGDecContext* ctx, u32 x, u32 y) {
     }
 }
 
-void fn_800865D8(JPEGDecContext* ctx, u32 x, u32 y) {
+void jpgdOutYUV444(JPEGDecContext* ctx, u32 x, u32 y) {
     JPEGDecHandle* h;
     u8* sy;
     u8* scb;
@@ -387,7 +387,7 @@ void fn_800865D8(JPEGDecContext* ctx, u32 x, u32 y) {
     }
 }
 
-void fn_80086764(JPEGDecContext* ctx, u32 x, u32 y) {
+void jpgdOutYUV444Edge(JPEGDecContext* ctx, u32 x, u32 y) {
     JPEGDecHandle* h;
     u8* sy;
     u8* scb;
@@ -417,7 +417,7 @@ void fn_80086764(JPEGDecContext* ctx, u32 x, u32 y) {
     }
 }
 
-void fn_80086924(JPEGDecContext* ctx, u32 x, u32 y) {
+void jpgdOutYUVGray(JPEGDecContext* ctx, u32 x, u32 y) {
     JPEGDecHandle* h = ctx->handle;
     u8* sy = ctx->pix.y;
     s32 n = 8 / h->scale;
@@ -435,7 +435,7 @@ void fn_80086924(JPEGDecContext* ctx, u32 x, u32 y) {
     }
 }
 
-void fn_80086BAC(JPEGDecContext* ctx, u32 x, u32 y) {
+void jpgdOutYUVGrayEdge(JPEGDecContext* ctx, u32 x, u32 y) {
     JPEGDecHandle* h;
     u8* sy;
     u8* py;

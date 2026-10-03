@@ -1,7 +1,7 @@
 #include <string.h>
 #include "jpgd_internal.h"
 
-const u8 lbl_801AADF0[20] = {
+const u8 jpgdSampTableH[20] = {
     4, 1, 1, 0,
     2, 1, 1, 0,
     2, 1, 1, 0,
@@ -9,7 +9,7 @@ const u8 lbl_801AADF0[20] = {
     1, 0, 0, 0,
 };
 
-const u8 lbl_801AAE04[20] = {
+const u8 jpgdSampTableV[20] = {
     1, 1, 1, 0,
     1, 1, 1, 0,
     2, 1, 1, 0,
@@ -17,14 +17,14 @@ const u8 lbl_801AAE04[20] = {
     1, 0, 0, 0,
 };
 
-const u8 lbl_801AAE18[64] = {
+const u8 jpgdZigzag[64] = {
     0,  1,  8,  16, 9,  2,  3,  10, 17, 24, 32, 25, 18, 11, 4,  5,
     12, 19, 26, 33, 40, 48, 41, 34, 27, 20, 13, 6,  7,  14, 21, 28,
     35, 42, 49, 56, 57, 50, 43, 36, 29, 22, 15, 23, 30, 37, 44, 51,
     58, 59, 52, 45, 38, 31, 39, 46, 53, 60, 61, 54, 47, 55, 62, 63,
 };
 
-const s32 lbl_801AAE58[64] = {
+const s32 jpgdCoefExtent[64] = {
     0x11, 0x12, 0x22, 0x32, 0x32, 0x33, 0x34, 0x34,
     0x34, 0x44, 0x54, 0x54, 0x54, 0x54, 0x55, 0x56,
     0x56, 0x56, 0x56, 0x56, 0x66, 0x76, 0x76, 0x76,
@@ -35,17 +35,17 @@ const s32 lbl_801AAE58[64] = {
     0x88, 0x88, 0x88, 0x88, 0x88, 0x88, 0x88, 0x88,
 };
 
-const u8 lbl_80359068[5] = {3, 3, 3, 3, 1};
+const u8 jpgdSampComps[5] = {3, 3, 3, 3, 1};
 
 #define FILL_BITS(s, n)                     \
     if ((s)->numBits <= (n)) {              \
-        ret = fn_80080234(s);               \
+        ret = jpgdFillBits(s);               \
         if (ret < 0) {                      \
             return ret;                     \
         }                                   \
     }
 
-static inline s32 jpgdHuffDecodeSlow(JPEGHuffCode* codes, u8* vals, JPEGStream* s) {
+static inline s32 jpgdHuffDecodeSlowInline(JPEGHuffCode* codes, u8* vals, JPEGStream* s) {
     JPEGHuffCode* c;
     s32 ret;
     u32 code;
@@ -74,7 +74,7 @@ static inline s32 jpgdHuffDecodeSlow(JPEGHuffCode* codes, u8* vals, JPEGStream* 
     return vals[idx];
 }
 
-s32 fn_800898F4(s32* coef, s32* quant, s32* dcPred, JPEGDecContext* ctx) {
+s32 jpgdDecodeBlock(s32* coef, s32* quant, s32* dcPred, JPEGDecContext* ctx) {
     s32 n;
     s32 rs;
     const u8* zz;
@@ -97,7 +97,7 @@ s32 fn_800898F4(s32* coef, s32* quant, s32* dcPred, JPEGDecContext* ctx) {
         s->numBits -= e.len;
         rs = e.val;
     } else {
-        rs = jpgdHuffDecodeSlow(ctx->tables.dc.codes, ctx->tables.dc.vals, s);
+        rs = jpgdHuffDecodeSlowInline(ctx->tables.dc.codes, ctx->tables.dc.vals, s);
         if (rs < 0) {
             return rs;
         }
@@ -121,14 +121,14 @@ s32 fn_800898F4(s32* coef, s32* quant, s32* dcPred, JPEGDecContext* ctx) {
     memset(&coef[1], 0, 63 * sizeof(s32));
     k = 1;
     FILL_BITS(s, 8);
-    zz = lbl_801AAE18;
+    zz = jpgdZigzag;
     e = lk[(s->bits >> (s->numBits - 8)) & 0xFF];
     do {
         if (e.len != 0) {
             s->numBits -= e.len;
             rs = e.val;
         } else {
-            rs = jpgdHuffDecodeSlow(codes, vals, s);
+            rs = jpgdHuffDecodeSlowInline(codes, vals, s);
             if (rs < 0) {
                 return rs;
             }
@@ -160,10 +160,10 @@ s32 fn_800898F4(s32* coef, s32* quant, s32* dcPred, JPEGDecContext* ctx) {
             e = lk[(s->bits >> (s->numBits - 8)) & 0xFF];
         }
     } while (k < 64);
-    return lbl_801AAE58[(u32)(k - 1)];
+    return jpgdCoefExtent[(u32)(k - 1)];
 }
 
-s32 fn_80089D2C(s32* coef, s32* quant, s32* dcPred, JPEGDecContext* ctx) {
+s32 jpgdDecodeBlockScaled(s32* coef, s32* quant, s32* dcPred, JPEGDecContext* ctx) {
     s32 one;
     s32 sz;
     s32 rs;
@@ -186,7 +186,7 @@ s32 fn_80089D2C(s32* coef, s32* quant, s32* dcPred, JPEGDecContext* ctx) {
         rs = lk[idx].val;
         ctx->stream.numBits -= lk[idx].len;
     } else {
-        rs = fn_80089FB8(ctx->tables.dc.codes, ctx->tables.dc.vals, ctx);
+        rs = jpgdHuffDecodeSlow(ctx->tables.dc.codes, ctx->tables.dc.vals, ctx);
         if (rs < 0) {
             return rs;
         }
@@ -208,7 +208,7 @@ s32 fn_80089D2C(s32* coef, s32* quant, s32* dcPred, JPEGDecContext* ctx) {
     vals = ctx->tables.ac.vals;
     limit = ctx->coefLimit;
     memset(&coef[1], 0, ctx->coefLimit2);
-    zz = lbl_801AAE18;
+    zz = jpgdZigzag;
     k = 1;
     one = 1;
     do {
@@ -218,7 +218,7 @@ s32 fn_80089D2C(s32* coef, s32* quant, s32* dcPred, JPEGDecContext* ctx) {
             rs = lk[idx].val;
             ctx->stream.numBits -= lk[idx].len;
         } else {
-            rs = fn_80089FB8(codes, vals, ctx);
+            rs = jpgdHuffDecodeSlow(codes, vals, ctx);
             if (rs < 0) {
                 return rs;
             }
@@ -254,7 +254,7 @@ s32 fn_80089D2C(s32* coef, s32* quant, s32* dcPred, JPEGDecContext* ctx) {
     return 0;
 }
 
-s32 fn_80089FB8(JPEGHuffCode* codes, u8* vals, JPEGDecContext* ctx) {
+s32 jpgdHuffDecodeSlow(JPEGHuffCode* codes, u8* vals, JPEGDecContext* ctx) {
     JPEGHuffCode* c;
     JPEGStream* s = &ctx->stream;
     s32 ret;
