@@ -85,7 +85,7 @@ GlobePin::GlobePin(s32 arg1, s32 arg2, NewsArticle* article, f32 radius)
     math::VEC3 right;
     math::VEC3 up;
     math::VEC3 dir;
-    Vec pos = GetPos();
+    Vec pos = GlobePoint::GetPos();
     Mtx mtx;
     PSVECNormalize(&pos, &dir);
     if (0.0f == dir.x && 0.0f == dir.z) {
@@ -159,6 +159,10 @@ void GlobePin::Draw(u8 alpha) {
     } else {
         DrawCards(alpha);
     }
+}
+
+math::VEC2 GlobePin::GetPos() {
+    return mScreenPos;
 }
 
 static inline void SetTevColorAlpha(GXTevRegID reg, u8 a) {
@@ -445,7 +449,7 @@ void GlobePin::Update(Camera* camera) {
     mHover[2] = false;
     mHover[3] = false;
     CalcScreenPos(camera);
-    math::VEC3 pos = GetPos();
+    math::VEC3 pos = GlobePoint::GetPos();
     f32 minY = 63.0f;
     f32 maxY = 393.0f;
     math::VEC3 dir = camera->mDir;
