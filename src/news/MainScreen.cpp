@@ -3523,7 +3523,7 @@ void MainScreen::Hook1E758() {
         if (lbl_8020E4A0[i] != 0) {
             dragging = true;
         }
-        bool inArticle = !(IsState(&MainScreen::State1B134) || IsState(&MainScreen::State1AC60));
+        bool inArticle = !IsState(&MainScreen::State1B134) && !IsState(&MainScreen::State1AC60);
         if (inArticle && (y < minY || y > maxY)) {
             showButtons = true;
         }
