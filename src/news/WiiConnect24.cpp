@@ -656,12 +656,12 @@ s32 CWiiConnect24::setupDlTasks(BOOL first, BOOL second, u8 force, u16 interval,
     const char* url[2];
     NWC24DlTask dl[2];
     u8 dta[0x448];
+    s32 i;
     NWC24Err err;
     s32 result;
+    BOOL mounted = FALSE;
     BOOL add = force;
     BOOL recreate = force;
-    BOOL mounted = FALSE;
-    s32 i;
 
     if (first) {
         kind[0] = mKind[0];
