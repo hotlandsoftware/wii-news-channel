@@ -356,7 +356,7 @@ static void* ThreadMain(void* arg) {
                 err = NWC24GetDlTaskId(&dl, &id);
                 if (err != NWC24_OK) {
                     SetError(task, "NWC24GetDlId() failed.", NWC24GetErrorCode(), err);
-                result = ConvertError(err);
+                    result = ConvertError(err);
                 } else {
                     result = 0;
                 }
@@ -454,7 +454,7 @@ s32 CWiiConnect24::readFiles() {
         err = NWC24DeleteDlTask(&dl);
         if (err != NWC24_OK) {
             SetError(this, "NWC24DeleteDlTask() failed.", NWC24GetErrorCode(), err);
-        return ConvertError(err);
+            return ConvertError(err);
         }
         SetError(this, "NWC24GetDlId() failed. TaskId: 2", 0, 0);
         return -1;
@@ -696,12 +696,12 @@ s32 CWiiConnect24::setupDlTasks(BOOL first, BOOL second, u8 force, u16 interval,
         }
         if (err != NWC24_OK) {
             SetError(this, "NWC24GetDlTask() failed.", NWC24GetErrorCode(), err);
-        return ConvertError(err);
+            return ConvertError(err);
         }
         err = NWC24GetDlTaskId(&dl[i], &id);
         if (err != NWC24_OK) {
             SetError(this, "NWC24GetDlId() failed.", NWC24GetErrorCode(), err);
-        return ConvertError(err);
+            return ConvertError(err);
         }
         if (id == 2) {
             add = TRUE;
@@ -712,7 +712,7 @@ s32 CWiiConnect24::setupDlTasks(BOOL first, BOOL second, u8 force, u16 interval,
         err = NWC24GetDlVfPath(&dl[i], path, sizeof(path));
         if (err != NWC24_OK) {
             SetError(this, "NWC24GetDlVfName() failed.", NWC24GetErrorCode(), err);
-        return ConvertError(err);
+            return ConvertError(err);
         }
         if (!mounted) {
             result = VFMountDriveNANDFlash(WC24_DRIVE, path);
@@ -774,7 +774,7 @@ s32 CWiiConnect24::setupDlTasks(BOOL first, BOOL second, u8 force, u16 interval,
             err = NWC24GetDlUrl(&dl[i], buf, 0xFF);
             if (err != NWC24_OK) {
                 SetError(this, "NWC24GetDlUrl() failed.", NWC24GetErrorCode(), err);
-        return ConvertError(err);
+                return ConvertError(err);
             }
             for (u32 j = 0; j < 0xFF && buf[j] != '\0'; j++) {
                 if (buf[j] != url[i][j]) {
@@ -787,7 +787,7 @@ s32 CWiiConnect24::setupDlTasks(BOOL first, BOOL second, u8 force, u16 interval,
             err = NWC24GetDlInterval(&dl[i], &oldInterval);
             if (err != NWC24_OK) {
                 SetError(this, "NWC24GetDlInterval() failed.", NWC24GetErrorCode(), err);
-        return ConvertError(err);
+                return ConvertError(err);
             }
             if (interval != oldInterval) {
                 add = TRUE;
@@ -806,19 +806,19 @@ s32 CWiiConnect24::setupDlTasks(BOOL first, BOOL second, u8 force, u16 interval,
                     err = NWC24DeleteDlTask(&dl[i]);
                     if (err != NWC24_OK) {
                         SetError(this, "NWC24DeleteDlTask() failed.", NWC24GetErrorCode(), err);
-        return ConvertError(err);
+                        return ConvertError(err);
                     }
                 }
                 err = NWC24InitDlTask(&dl[i], NWC24_DLTYPE_OCTETSTREAM_V1);
                 if (err != NWC24_OK) {
                     SetError(this, "NWC24InitDlTask() failed.", NWC24GetErrorCode(), err);
-        return ConvertError(err);
+                    return ConvertError(err);
                 }
                 char path[0x50];
                 err = NWC24GetDlVfPath(&dl[i], path, sizeof(path));
                 if (err != NWC24_OK) {
                     SetError(this, "NWC24GetDlVfName() failed.", NWC24GetErrorCode(), err);
-        return ConvertError(err);
+                    return ConvertError(err);
                 }
                 if (!vfCreated) {
                     result = NANDDelete(path);
@@ -829,7 +829,7 @@ s32 CWiiConnect24::setupDlTasks(BOOL first, BOOL second, u8 force, u16 interval,
                     err = NWC24CreateDlVf(&dl[i], mVfSize);
                     if (err != NWC24_OK) {
                         SetError(this, "NWC24CreateDlVf() failed.", NWC24GetErrorCode(), err);
-        return ConvertError(err);
+                        return ConvertError(err);
                     }
                     vfCreated = TRUE;
                 }
@@ -837,48 +837,48 @@ s32 CWiiConnect24::setupDlTasks(BOOL first, BOOL second, u8 force, u16 interval,
             err = NWC24SetDlUrl(&dl[i], url[i]);
             if (err != NWC24_OK) {
                 SetError(this, "NWC24SetDlUrl() failed.", NWC24GetErrorCode(), err);
-        return ConvertError(err);
+                return ConvertError(err);
             }
             switch (kind[i]) {
             case 2:
                 err = NWC24SetDlServerInterval(&dl[i], 1440);
                 if (err != NWC24_OK) {
                     SetError(this, "NWC24SetDlServerInterval() failed.", NWC24GetErrorCode(), err);
-        return ConvertError(err);
+                    return ConvertError(err);
                 }
                 err = NWC24SetDlSubTask(&dl[i], NWC24_DL_STTYPE_TIME_HOUR, 0xFFFFFF, 0x103);
                 if (err != NWC24_OK) {
                     SetError(this, "NWC24SetDlSubtaskParameter() failed.", NWC24GetErrorCode(), err);
-        return ConvertError(err);
+                    return ConvertError(err);
                 }
                 break;
             }
             err = NWC24SetDlPriority(&dl[i], 100);
             if (err != NWC24_OK) {
                 SetError(this, "NWC24SetDlPriority() failed.", NWC24GetErrorCode(), err);
-        return ConvertError(err);
+                return ConvertError(err);
             }
             err = NWC24SetDlOption(&dl[i], 0x40000000);
             if (err != NWC24_OK) {
                 SetError(this, "NWC24SetDlFlags() failed.", NWC24GetErrorCode(), err);
-        return ConvertError(err);
+                return ConvertError(err);
             }
             err = NWC24SetDlInterval(&dl[i], interval);
             if (err != NWC24_OK) {
                 SetError(this, "NWC24SetDlInterval() failed.", NWC24GetErrorCode(), err);
-        return ConvertError(err);
+                return ConvertError(err);
             }
             err = NWC24SetDlMargin(&dl[i], 720);
             if (err != NWC24_OK) {
                 SetError(this, "NWC24SetDlRetryMargin() failed.", NWC24GetErrorCode(), err);
-        return ConvertError(err);
+                return ConvertError(err);
             }
             char name[16];
             sprintf(name, "%d.bin", kind[i]);
             err = NWC24SetDlFilename(&dl[i], name);
             if (err != NWC24_OK) {
                 SetError(this, "NWC24SetDlFilename() failed.", NWC24GetErrorCode(), err);
-        return ConvertError(err);
+                return ConvertError(err);
             }
         }
     }
@@ -890,26 +890,26 @@ s32 CWiiConnect24::setupDlTasks(BOOL first, BOOL second, u8 force, u16 interval,
         err = NWC24SetDlCount(&dl[i], count);
         if (err != NWC24_OK) {
             SetError(this, "NWC24SetDlCount() failed.", NWC24GetErrorCode(), err);
-        return ConvertError(err);
+            return ConvertError(err);
         }
         if (add) {
             err = NWC24AddDlTask(&dl[i]);
             if (err != NWC24_OK) {
                 SetError(this, "NWC24AddDlTask() failed.", NWC24GetErrorCode(), err);
-        return ConvertError(err);
+                return ConvertError(err);
             }
         } else {
             err = NWC24UpdateDlTask(&dl[i]);
             if (err != NWC24_OK) {
                 SetError(this, "NWC24UpdateDlTask() failed.", NWC24GetErrorCode(), err);
-        return ConvertError(err);
+                return ConvertError(err);
             }
         }
         if (idOut) {
             err = NWC24GetDlTaskId(&dl[i], idOut);
             if (err != NWC24_OK) {
                 SetError(this, "NWC24GetDlId() failed.", NWC24GetErrorCode(), err);
-        return ConvertError(err);
+                return ConvertError(err);
             }
         }
         NWC24CheckDlTask(&dl[i]);
@@ -979,20 +979,20 @@ s32 CWiiConnect24::deleteDlTasks(BOOL first, BOOL second) {
         }
         if (err != NWC24_OK) {
             SetError(this, "NWC24GetDl*() failed.", NWC24GetErrorCode(), err);
-        return ConvertError(err);
+            return ConvertError(err);
         }
         if (!gotPath) {
             gotPath = TRUE;
             err = NWC24GetDlVfPath(&dl, path, sizeof(path));
             if (err != NWC24_OK) {
                 SetError(this, "NWC24GetDlVfName() failed.", NWC24GetErrorCode(), err);
-        return ConvertError(err);
+                return ConvertError(err);
             }
         }
         err = NWC24DeleteDlTask(&dl);
         if (err != NWC24_OK) {
             SetError(this, "NWC24DeleteDlTask() failed.", NWC24GetErrorCode(), err);
-        return ConvertError(err);
+            return ConvertError(err);
         }
     }
     if (gotPath) {
