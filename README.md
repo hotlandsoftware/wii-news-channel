@@ -1,33 +1,34 @@
 # wii-news-channel
 
 ## STATUS
-- **99.36%** decompiled (85.76% byte-matching)
-- **74.92%** fully linked (567 / 626 files)
+- **99.39%** decompiled (88.95% byte-matching)
+- **77.86%** fully linked (581 / 626 files)
 
-Every part of the DOL now has C/C++ source except 24 bytes (three weak IOStream functions). The remaining work is making the decompiled files match byte for byte.
+Every byte of code in the DOL now has C/C++ source. The remaining work is making the decompiled files match byte for byte.
 
 Percentages are of the DOL's code bytes (1,626,960, including `.init`), as reported by `ninja`.
 
 | Area (code size) | Decompiled | Matching | Linked |
 | --- | --- | --- | --- |
-| News Channel game code (`0x80006FC0`–`0x80051D4C`, ~307 KB) | 99.1% | 59.3% | 32.3% |
-| HOME Menu, manual viewer, NW4R, RVL SDK (`0x80051D4C`–`0x80179F64`, ~1.21 MB) | 99.4% | 91.6% | 84.1% |
+| News Channel game code (`0x80006FC0`–`0x80051D4C`, ~307 KB) | 99.3% | 72.8% | 35.0% |
+| HOME Menu, manual viewer, NW4R, RVL SDK (`0x80051D4C`–`0x80179F64`, ~1.21 MB) | 99.4% | 92.5% | 87.3% |
 | Runtime / MSL (`0x80179F64`–`0x8018C7C0`, ~76 KB) | 100% | 94.9% | 91.9% |
 | MetroTRK (`0x8018C7C0`–`0x80191F00`, plus `.init`) | 100% | 100% | 100% |
 
 Each row is a share of that whole address range. `ninja`'s per-category summary is different: it only counts files that have been split so far.
 
 **Game code**
-- Fully linked: Bubbles, Camera, Connect, ConnectTips, d_scene, DrawUtil, ErrorScreen, Fader, FrameTextButton, GlobePoint, HeadlineList, IconTextButton, LanguageSelect, LayoutScreen, Locale, main, Mascot, PaneButton, PointerEffect, PointerHistory, ScreenBase, Scroller, SmallTextButton, SmoothValue, TextButton, TextChar, Thread, Ticker, plus the message text tables.
-- Decompiled, not yet matching: PaneLayout (99.95%), System (99.78%), WiiConnect24 (99.65%, the news download code), GlobePin (99.63%), PointerScroll (99.58%), MainScreen (99.56%), NewsArticle (99.55%), MathUtil (99.43%), Globe (99.41%), d_s_news (98.98%), SaveData (98.90%), Resource (98.87%), GlobeDots (97.39%), ArticleText (97.24%), sound_manager (97.02%), SlideShow (95.89%), Model (94.23%).
+- Fully linked: Bubbles, Camera, Connect, ConnectTips, d_scene, DrawUtil, ErrorScreen, Fader, FrameTextButton, GlobePoint, HeadlineList, IconTextButton, LanguageSelect, LayoutScreen, Locale, main, Mascot, MathUtil, Model, PaneButton, PaneLayout, PointerEffect, PointerHistory, PointerScroll, Resource, ScreenBase, Scroller, SmallTextButton, SmoothValue, TextButton, TextChar, Thread, Ticker, plus the message text tables.
+- Decompiled, not yet matching: GlobePin (99.92%), MainScreen (99.92%), GlobeDots (99.87%), System (99.84%), WiiConnect24 (99.65%), NewsArticle (99.56%), Globe (99.51%), d_s_news (99.24%), SaveData (98.90%), ArticleText (97.43%), sound_manager (97.02%), SlideShow (95.89%).
 
 **Platform layer**
-- RVL SDK, linked: OS and BASE, EXI, SI, DB, VI, MTX, GX, DVD, AI, AX, AXFX, MEM, DSP, CX, NAND, SC, WENC, ESP, IPC, FS, PAD, WPAD, KPAD, EUART, USB, WUD, TPL, NdevExi2AD, RSO, CNT, ARC, SO, NET, NWC24 (except `NWC24Download.c`, 99.89%), the Bluetooth stack (BTE), and the VF filesystem (except 4 files at 99.9%).
+- RVL SDK, linked: OS and BASE, EXI, SI, DB, VI, MTX, GX, DVD, AI, AX, AXFX, MEM, DSP, CX, NAND, SC, WENC, ESP, IPC, FS, PAD, WPAD, KPAD, EUART, USB, WUD, TPL, NdevExi2AD, RSO, CNT, ARC, SO, NET, NWC24 (except `NWC24Download.c`, 99.89%), the Bluetooth stack (BTE), and the VF filesystem.
 - NW4R, linked: `g3d`, `lyt` (except `lyt_window.cpp`, 99.7%), `snd` (except 3 files at 98.7–99.99%), `ut` and `math` (except `ut_ArchiveFontBase.cpp`, 99.87%), `ef` (except 7 files; `ef_animcurve` and `ef_drawstripestrategy` were written without reference source).
 - HOME Menu: all 6 files linked. It has no separate sound engine; it plays sounds through NW4R `snd`.
 - VC manual viewer (`vcmv`, the HOME Menu's HTML Operations Guide on top of Opera's web library, loaded as an RSO module from the channel's content): 2 of 6 files linked, 97% decompiled.
 - TMCC JPEG decoder (the channel's photo decoder, no public source): 4 of 9 files linked, 92% decompiled.
 - [docs/platform_layer_map.md](docs/platform_layer_map.md) has the full address map and plan.
+- [docs/pc_port_readiness.md](docs/pc_port_readiness.md) is an audit of what a native PC port would need.
 
 **Runtime, MSL and MetroTRK, linked:** C++ runtime and exceptions, `string`, `mem`, `printf`, `strtoul`, stdio/file I/O, `ansi_fp`, locale/ctype, the allocator, the fdlibm math library, `scanf`, `strtold`, `qsort`, `rand`, `signal`, wide printf, wchar I/O, and all of MetroTRK. Not linked yet: MSL `time.c` (98.94%).
 
