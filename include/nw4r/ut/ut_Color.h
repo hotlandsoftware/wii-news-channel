@@ -18,6 +18,9 @@ struct Color : public GXColor {
 #else
     Color() {}
 #endif
+#ifdef NW4R_UT_COLOR_WORD_COPY
+    Color(const Color& color) { *this = color.ToU32(); }
+#endif
     Color(u32 color) { *this = color; }
     Color(const GXColor& color) { *this = color; }
     Color(u8 red, u8 green, u8 blue, u8 alpha) { Set(red, green, blue, alpha); }

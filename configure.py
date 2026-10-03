@@ -560,6 +560,16 @@ config.libs = [
         ],
     },
     {
+        "lib": "news_8001F994",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_game,
+        "progress_category": "game",
+        "objects": [
+            Object(NonMatching, "news/SlideShow.cpp"),
+            Object(NonMatching, "news/ArticleText.cpp", extra_cflags=["-inline auto", "-ipa file"]),
+        ],
+    },
+    {
         "lib": "nw4r_ut",
         "mw_version": "GC/3.0a5.2",
         "cflags": cflags_nw4r_ut,

@@ -135,3 +135,28 @@ So each file ends with a `__sinit` that constructs it, and the `.ctors` table (`
 - **Argument load order.** `PSMTXTrans(m, eye.x, eye.y, eye.z)` from a stack `VEC3` loads x, y, z. The original loads z, y, x, which matched with `f32 ez = eye.z; f32 ey = eye.y; f32 ex = eye.x;`.
 - **Named locals for intermediate sums.** In `PointerEffect::SetState`, `VEC3(x + 3.0f, y + 3.0f, 0)` put the constant in the wrong register. `f32 sy = y + 3.0f; f32 sx = x + 3.0f;` matched.
 - **Indexing vs. post-increment.** In LanguageSelect's item loop, `language[i]` (instead of `*language++`) put the counter increment before the pointer increment.
+
+## More codegen patterns (SlideShow / ArticleText)
+
+- **Self-recursive members inline one level only when declared `inline`.** `ArticleText::Snap()` recurses on its caption (`mSub->Snap()`). The original inlines it into `Set` (two levels plus a call) and the out-of-line copy inlines itself once and tail-calls. With `-inline auto -ipa file` this needs `inline void ArticleText::Snap()` in the .cpp; the weak copy is then emitted at the definition, not after the first caller. Without `inline` MWCC neither inlines it into `Set` nor into itself. (`SetScale` self-inlines one level even without `inline`.)
+- **PTMF compares through an inline by value.** `mState == &SlideShow::StateShow` passes the constant straight to `__ptmf_cmpr`. The original copies the constant to a stack temp first: `bool IsState(StateFunc s) { return mState == s; }` reproduces that (+2.7% on SlideShow).
+- **Sub-state change without the second test.** SlideShow's sub-state machine calls the new state with no `__ptmf_test`: its `ChangeSubState` is `mSubState = s; mSubStateFrame = 0; (this->*mSubState)();`. The main machine keeps the test.
+- **`switch (frame) { case 0: ...; case -1: break; case 1: break; }`**: the extra (empty) `case 1` gives the dead `b` seen after the compare tree.
+- **A second `ut::Color` variant.** SlideShow (and, consistently, ArticleText) copy `ut::Color` lvalues word-wise (`lwz`/`stw`) and their out-of-line `Color()` stores white (`li -1; stw`, the weak copy at `0x80021808`). `ut_Color.h` now has two opt-in macros: `NW4R_UT_COLOR_DEFAULT_WHITE` (white default ctor) and `NW4R_UT_COLOR_WORD_COPY` (word-copy copy ctor). Defining both at the top of SlideShow.cpp gave +0.3%; other units are unaffected.
+- **Wide literals.** Comparisons of `wchar_t`/`u16` against `L'\n'`/`L'0'` compile to `cmplwi`; against `'\n'` to `cmpwi`. Text code uses `L'x'` everywhere except `case` labels (switches compare signed).
+- **`OSu16tof32` for angles.** `psq_l f1, 0x8(r1), 1, qr3` after `sth` is the SDK fast cast (`OSu16tof32`). SlideShow has a `SinIdx(u16)` helper doing `SinFIdx(0.00390625f * U16ToF32(&idx))` with the SDK `psq_l` intrinsic.
+- **Ternaries produce `frsp`.** `f32 w = c ? a[i] : b[i];` (both `lfsx`) shows up as `frsp f0, f4` before use. Arrays of size 2 (`f32 size[2]`) vs a `VEC2` changes register allocation (LayoutPicture matched much better with `math::VEC2 size`).
+- **`const f32&` in inlines.** Passing a spilled parameter to an inline helper as `const f32&` delays its load to the use site (`NeedsLineBreak` in `ArticleText::Layout`).
+- **Values from `.sdata` "constants".** Several float/colour constants in SlideShow are loaded with `lfs x@sda21` from `.sdata` (not `.sdata2`): `45.0f` (title y), zeros for some VEC3 z components and `mUnk288`, a `{1.0f, 0}` passed by address, and a `{255,255,255}` byte template. They are file statics (`#pragma explicit_zero_data on` for the zeros); the exact source form (aggregate template vs. static) is still open.
+
+## Game code map
+
+| Range | File | Contents |
+| --- | --- | --- |
+| `0x8002101C`–`0x80027674` | `SlideShow.cpp` | Slide show screen (`slide_main/slide/slide_belt.brlyt`): state machines (show, zoom, move, message, end), picture/globe animation, text scrolling, pointer drag/selection. Data `0x801B1A00`–`0x801B1C38`, `.sdata` `0x803568E8`–`0x80356948`, `.sbss` `0x803574E0`–`0x80357528`, `.bss` `0x801EDE90`–`0x801EDF08`, `.sdata2` `0x803588A8`–`0x80358990`. One `.ctors` entry. |
+| `0x80027674`–`0x8002A394` | `ArticleText.cpp` | `ArticleText`: article body laid out per character (`TextChar`, 0x70 bytes, code at `0x8000CA98`), Japanese line-break rules (kinsoku tables in `.data` `0x801B1C38`–`0x801B1D68`), picture + caption (`mSub`) + credit, reveal animation, selection. Built with `-inline auto -ipa file`. `.sdata` `0x80356948`–`0x80356960`, `.sbss` `0x80357528`–`0x80357538`, `.bss` `0x801EDF08`–`0x801EDF30`, `.sdata2` `0x80358990`–`0x803589F0`. |
+
+Notes:
+- `ArticleText` reads tables that live outside both files: the kinsoku table at `0x801920F0` (rodata before NewsArticle) and the picture size tables `0x801922F8`/`0x80192320`/`0x80192348` (part of an `extern const` table block at `0x801921B8`–`0x80192418`, probably its own file).
+- `fn_80040A48` is `operator new[](u32, MEMAllocator*)`; `fn_8000CA98`/`fn_8000CBEC` are `TextChar::TextChar()`/`~TextChar()`; `fn_800137A0` is the weak `VEC2::VEC2()`.
+- The 0x8002E7DC block is the "article view" module that owns the three global `ArticleText`s (`lbl_80357568`/`6C`/`70`) and the caption text (`lbl_80357574`); SlideShow drives it through `fn_8003300C` (set text) etc.
