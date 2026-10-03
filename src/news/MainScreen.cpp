@@ -1788,8 +1788,8 @@ void MainScreen::State17E6C(s32* arg) {
     default: {
         lbl_803575A8 = 1;
         UpdateGlobeCamera();
-        mUnk338 += mUnk33C;
         mUnk340++;
+        mUnk338 += mUnk33C;
         if (mUnk338 > 0x8000) {
             mUnk338 = 0x8000;
         }
