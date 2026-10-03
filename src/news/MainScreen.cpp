@@ -3444,8 +3444,9 @@ BOOL MainScreen::ExitGlobe(BOOL related) {
             globe->mUnk6C = sGlobe2X;
             globe->mUnk70 = sGlobe2Y;
             if (!related) {
+                f32 w = GetScreenWidth();
                 mScreenRect.right = 0.0f;
-                mUnk164.x = -(f32)GetScreenWidth();
+                mUnk164.x = -w;
             }
             mUnk234 = 0.0f;
             mUnk238 = (f32)GetCursorAreaRight();
