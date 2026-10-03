@@ -103,7 +103,7 @@ f32 fn_800449A0(u16 t);
 void fn_800329CC(void);
 BOOL fn_8003251C(void);
 void fn_80048D20(void* obj, s32 frames);
-void fn_800491EC(void* obj, ut::Color color, s32 arg);
+void fn_800491EC(void* obj, ut::Color color);
 void fn_80048C80(void* obj, s32 frames);
 void fn_80032658(u8 region);
 void fn_80032580(NewsArticle* article, s32 arg, f32 x, f32 y);
@@ -664,7 +664,7 @@ void MainScreen::Draw() {
     if (mActiveLayout) {
         bool inList = IsState(&MainScreen::State16960) || IsState(&MainScreen::StateList);
         if (inList && lbl_8035755C != NULL && lbl_8035755C->mNumItems == 0) {
-            mTextButton->SetAlpha((s32)(255.0f * mUnk240));
+            mTextButton->SetAlpha(255.0f * mUnk240);
         }
         fn_80048154(mActiveLayout);
     }
@@ -1273,7 +1273,7 @@ void MainScreen::ModeWait() {
         fn_80048D20(lbl_80357730, 30);
         ut::Color color(0, 0, 0, 0xA0);
         *(GXColor*)((u8*)lbl_80357730 + 0x10) = color;
-        fn_800491EC(lbl_80357730, color, 0);
+        fn_800491EC(lbl_80357730, color);
     }
     default:
         if (*(s32*)((u8*)lbl_80357730 + 0x50) == 0 && lbl_80357760 != 0) {
