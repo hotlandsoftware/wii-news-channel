@@ -1,3 +1,4 @@
+#include <news/Fader.h>
 #include <news/SaveData.h>
 #include <news/Draw2D.h>
 #include <news/PaneButton.h>
@@ -19,8 +20,6 @@ extern const wchar_t* lbl_801B26BC[]; // per-language message
 void OnExitRequested();
 
 extern "C" {
-void fn_80048C80(Fader* fader, s32 frames); // fade in
-void fn_80048D20(Fader* fader, s32 frames); // fade out
 u32 fn_80044F08(); // current time in minutes
 }
 
@@ -204,7 +203,7 @@ void SaveErrorDialog::Update() {
 
     switch (mState) {
     case STATE_FADE_IN:
-        fn_80048C80(mFader, 25);
+        mFader->FadeIn(25);
         mState = STATE_WAIT_FADE_IN;
         break;
     case STATE_WAIT_FADE_IN:
@@ -217,11 +216,11 @@ void SaveErrorDialog::Update() {
         case 1:
             fn_8004BD60(mQuestion, 0x23);
             if (fn_8004C13C("yes", 0x800) >= 0) {
-                fn_80048D20(mFader, 25);
+                mFader->FadeOut(25);
                 mState = STATE_WAIT_FADE_OUT;
                 PlaySE(0x1A);
             } else if (fn_8004C13C("no", 0x800) >= 0) {
-                fn_80048D20(mFader, 25);
+                mFader->FadeOut(25);
                 mState = STATE_WAIT_NO;
                 PlaySE(0x1B);
             }
@@ -230,7 +229,7 @@ void SaveErrorDialog::Update() {
         case 3:
             fn_8004BD60(mNotice, 0x23);
             if (fn_8004C13C("next", 0x800) >= 0) {
-                fn_80048D20(mFader, 25);
+                mFader->FadeOut(25);
                 mState = STATE_WAIT_FADE_OUT;
                 PlaySE(0x1A);
             }
@@ -264,14 +263,14 @@ void SaveErrorDialog::Update() {
         break;
     case STATE_WAIT_NO:
         if (mFader->mBusy == 0) {
-            fn_80048C80(mFader, 25);
+            mFader->FadeIn(25);
             mState = STATE_INPUT;
             mType = 7;
         }
         break;
     case STATE_WAIT_CLOSE:
         if (++mTimer >= 30) {
-            fn_80048D20(mFader, 25);
+            mFader->FadeOut(25);
             mState = STATE_WAIT_FADE_OUT;
         }
         break;

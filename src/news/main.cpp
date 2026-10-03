@@ -1,3 +1,4 @@
+#include <news/Fader.h>
 #include <news/HomeMenu.h>
 #include <news/Draw2D.h>
 #include <news/System.h>
@@ -17,7 +18,6 @@ using namespace nw4r;
 extern "C" {
 extern MEMHeapHandle lbl_80357640; // MEM1 heap
 extern void* lbl_80357664;         // external frame buffer
-extern void* lbl_8035772C;
 extern bool lbl_803576A5;
 extern KPADStatus lbl_801EE478[4][16];
 
@@ -28,7 +28,6 @@ void* fn_8003F7B4(u32 arc, const char* path, s32 align, u32* size, MEMHeapHandle
 void fn_8003FD24(bool progressive, bool widescreen, bool blackOut);
 void fn_800409EC(void* block);
 void fn_800409F8(void* block);
-void fn_80048C80(void* obj, s32 arg);
 BOOL fn_8004A074(void);
 void fn_8004A2D4(void);
 void fn_8004B960(void);
@@ -317,7 +316,7 @@ s32 HomeMenu::Calc() {
             if (fn_8004A074()) {
                 mResult = RESULT_ERROR;
             }
-            fn_80048C80(lbl_8035772C, 15);
+            lbl_8035772C->FadeIn(15);
             VISetBlack(FALSE);
             VIFlush();
             mOpenManual = false;

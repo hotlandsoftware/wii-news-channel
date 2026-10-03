@@ -1,3 +1,4 @@
+#include <news/Fader.h>
 #include <news/Connect.h>
 #include <news/Draw2D.h>
 #include <news/Mascot.h>
@@ -54,9 +55,6 @@ s32 fn_80040C0C(MEMHeapHandle heap, u32 arg, NewsHeader** files, u32* arg3, u32*
 s32 fn_80041090(MEMHeapHandle heap, u32 arg, NewsHeader** files, u32* arg3, u32* sizes, u32 mask);
 s32 fn_80041514(const char* url, u32 arg1, u32 arg2, u8 arg3, u16 arg4);
 s32 fn_80041964();
-void fn_80048C80(Fader* fader, s32 frames);
-void fn_80048D20(Fader* fader, s32 frames);
-void fn_80049148(Fader* fader);
 void fn_8004F8E0(u32 id, f32 volume, f32 pitch, f32 pan);
 void fn_8004FAB0(snd::SoundHandle* handle, s32 frames);
 void fn_8004FAD0(snd::SoundHandle* handle, u32 variation, s32 arg2);
@@ -271,9 +269,9 @@ void Connect::Update() {
     case STATE_FADE_IN:
         if (mFader->IsFadedOut()) {
             mAlpha = 1.0f;
-            fn_80048C80(mFader, 25);
+            mFader->FadeIn(25);
         } else {
-            fn_80049148(mFader);
+            mFader->SetClear();
         }
         mState = STATE_WAIT;
         break;
@@ -301,7 +299,7 @@ void Connect::Update() {
                     mDownloadState = DL_ERROR;
                 }
             }
-            fn_80048D20(mFader, 25);
+            mFader->FadeOut(25);
             if (mDownloadState == DL_DONE) {
                 mState = STATE_FADE_TO_NEWS;
                 PlaySE(0x18);
@@ -309,7 +307,7 @@ void Connect::Update() {
                 mState = STATE_FADE_TO_ERROR;
             }
         } else if (mDownloadState == DL_ERROR) {
-            fn_80048D20(mFader, 25);
+            mFader->FadeOut(25);
             mState = STATE_FADE_TO_ERROR;
         } else {
             for (s32 i = 0; i < 4; i++) {
@@ -334,7 +332,7 @@ void Connect::Update() {
         break;
     case STATE_FADE_TO_ERROR:
         if (mFader->mBusy == 0) {
-            fn_80048C80(mFader, 25);
+            mFader->FadeIn(25);
             mState = STATE_ERROR;
             PlaySE(0x19);
         }

@@ -1,4 +1,5 @@
 #define NW4R_UT_COLOR_WORD_COPY
+#include <news/Fader.h>
 #include <news/PointerHistory.h>
 #include <news/PaneLayout.h>
 #include <news/MainScreen.h>
@@ -27,7 +28,6 @@ extern u32 lbl_80357698;           // D-pad trigger
 extern u32 lbl_801F0908[4];        // held buttons
 extern s32 lbl_80356970;           // text zoom level (0-9)
 extern u8 lbl_8035697C;
-extern void* lbl_80357730;
 extern s32 lbl_80357760;
 extern const wchar_t* lbl_801B0D08[];
 extern const wchar_t* lbl_801B0E30[];
@@ -96,9 +96,6 @@ void fn_8004D170(Globe* globe);
 f32 fn_800449A0(u16 t);
 void fn_800329CC(void);
 BOOL fn_8003251C(void);
-void fn_80048D20(void* obj, s32 frames);
-void fn_800491EC(void* obj, ut::Color color, s32 arg);
-void fn_80048C80(void* obj, s32 frames);
 void fn_80032658(u8 region);
 void fn_80032580(NewsArticle* article, s32 arg, f32 x, f32 y);
 void fn_80030720(s32 arg);
@@ -1251,14 +1248,14 @@ void MainScreen::ModeWait() {
     switch (mModeStep) {
     case 0: {
         mModeStep++;
-        fn_80048D20(lbl_80357730, 30);
+        lbl_80357730->FadeOut(30);
         ut::Color color(0, 0, 0, 0xA0);
         *(GXColor*)((u8*)lbl_80357730 + 0x10) = color;
-        fn_800491EC(lbl_80357730, color, 0);
+        lbl_80357730->SetColor(color, 0);
     }
     default:
         if (*(s32*)((u8*)lbl_80357730 + 0x50) == 0 && lbl_80357760 != 0) {
-            fn_80048C80(lbl_80357730, 30);
+            lbl_80357730->FadeIn(30);
             OpenSelected();
             SetMode(&MainScreen::ModeMain);
         }

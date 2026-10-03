@@ -586,7 +586,7 @@ config.libs = [
         "objects": [
             Object(NonMatching, "news/PaneLayout.cpp", extra_cflags=["-inline auto", "-ipa file"]),
             Object(Matching, "news/PointerHistory.cpp"),
-            Object(NonMatching, "news/Fader.cpp"),
+            Object(Matching, "news/Fader.cpp"),
             Object(NonMatching, "news/Thread.cpp"),
             Object(NonMatching, "news/ScreenBase.cpp"),
             Object(NonMatching, "news/d_scene.cpp"),

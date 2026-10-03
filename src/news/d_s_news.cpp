@@ -5,6 +5,7 @@
 
 // System.h declares gSeparatorColor as a GXColor; here it is the ut::Color it really is.
 #define gSeparatorColor gSeparatorColor_GXColor
+#include <news/Fader.h>
 #include <news/System.h>
 #include <news/ArticleText.h>
 #include <news/Scene.h>
@@ -106,11 +107,6 @@ void fn_8003FB54(const math::VEC3& pos, const math::VEC3& size, const GXColor& c
 s32 fn_80044F08(void);
 
 // Faders (0x80048C80..)
-void fn_80048C80(void* fader, s32 frames);
-void fn_80048D20(void* fader, s32 frames);
-void fn_80049128(void* fader);
-void fn_80049148(void* fader);
-void fn_80049168(void* fader, const void* param, s32 alpha);
 
 // Scene (0x80049400..)
 void fn_80049D18(Scene* scene);
@@ -138,15 +134,6 @@ void fn_8004FAB0(snd::SoundHandle* handle, s32 frames);
 void fn_8004FB44(snd::SoundHandle* handle, f32 volume);
 }
 
-// Faders, HOME Menu, sound system and globe (other files)
-struct Fader {
-    u8 unk0[0x10];
-    ut::Color mColor;  // at 0x10
-    u8 unk14[0x50 - 0x14];
-    BOOL mBusy;      // at 0x50
-    u8 unk54[0x5C - 0x54];
-    f32 mAlpha;      // at 0x5C
-};
 
 struct HomeMenuInfo {
     u32 unk0;
@@ -163,8 +150,6 @@ struct Globe {
 };
 
 extern HomeMenuInfo* lbl_80357710;
-extern Fader* lbl_8035772C;
-extern Fader* lbl_80357730;
 extern void* lbl_80357754;     // sound system
 extern Globe* lbl_8035775C;
 extern BOOL lbl_80357760;
@@ -1227,7 +1212,7 @@ BOOL NewsScene::StateLanguageSelect() {
         lbl_80357598 = 2;
         mDraw = &NewsScene::DrawLanguageSelect;
         mLanguageSelect->Start();
-        fn_80048C80(lbl_8035772C, 25);
+        lbl_8035772C->FadeIn(25);
         lbl_803575BA = false;
         SetDPDAll(1);
         lbl_803575BB = false;
@@ -1238,7 +1223,7 @@ BOOL NewsScene::StateLanguageSelect() {
         case 1:
             if (lbl_80357598 == 0) {
                 mStep++;
-                fn_80048D20(lbl_8035772C, 25);
+                lbl_8035772C->FadeOut(25);
                 if (mSettings->mNewsLanguage != gSelectedNewsLanguage) {
                     snd::SoundHandle* handle = lbl_8021E8CC;
                     for (s32 i = 0; i < 4; i++, handle++) {
@@ -1405,7 +1390,7 @@ BOOL NewsScene::StateMain() {
         lbl_80357598 = 0;
         mDraw = &NewsScene::DrawMain;
         fn_800138F0(mMainView);
-        fn_80048C80(lbl_8035772C, 25);
+        lbl_8035772C->FadeIn(25);
         f32 h = TPL_GetHeight(gCursorTpl, 6);
         f32 w = TPL_GetWidth(gCursorTpl, 6);
 #pragma push
@@ -1452,13 +1437,13 @@ BOOL NewsScene::StateMain() {
                 mTimer = 40;
                 mLogoTargetAlpha = 255;
                 lbl_80357730->mColor.Set(0, 0, 0, 255);
-                fn_80049168(lbl_80357730, sFadeParam, 255);
-                fn_80048D20(lbl_80357730, 20);
+                lbl_80357730->SetColors((const ut::Color*)sFadeParam, 255);
+                lbl_80357730->FadeOut(20);
                 fn_8000C89C(sPointerEffect, 0.6f * GetScreenWidth(), 228.0f);
                 return TRUE;
             case 2:
                 mStep = 4;
-                fn_80048D20(lbl_8035772C, 25);
+                lbl_8035772C->FadeOut(25);
                 return TRUE;
             }
             break;
@@ -1468,7 +1453,7 @@ BOOL NewsScene::StateMain() {
                     mTimer--;
                 } else if (lbl_80357760) {
                     mLogoTargetAlpha = 0;
-                    fn_80048C80(lbl_80357730, 40);
+                    lbl_80357730->FadeIn(40);
                     ChangeState(&NewsScene::StateSlideshow);
                     return TRUE;
                 }
@@ -1535,7 +1520,7 @@ BOOL NewsScene::StateSlideshow() {
                 break;
             case 0:
                 mStep++;
-                fn_80048D20(lbl_8035772C, 25);
+                lbl_8035772C->FadeOut(25);
                 mTimer = 0;
                 return TRUE;
             }
@@ -1567,7 +1552,7 @@ BOOL NewsScene::StateStartup() {
     case -1:
         break;
     case 0:
-        fn_80049148(lbl_8035772C);
+        lbl_8035772C->SetClear();
         mDraw = &NewsScene::DrawStartup;
         mStep = 1;
         break;
@@ -1585,14 +1570,14 @@ BOOL NewsScene::StateStartup() {
                     mStep = 6;
                     gSelectedNewsLanguage = mSettings->mNewsLanguage;
                 } else {
-                    fn_80048D20(lbl_8035772C, 25);
+                    lbl_8035772C->FadeOut(25);
                     mStep = 4;
                 }
             } else {
                 mStep = 5;
             }
         } else {
-            fn_80048D20(lbl_8035772C, 25);
+            lbl_8035772C->FadeOut(25);
             mStep = 4;
         }
         break;
@@ -1719,7 +1704,7 @@ BOOL NewsScene::StateNoNews() {
         if (IsFadedOut()) {
             mStep = 2;
         } else {
-            fn_80048D20(lbl_8035772C, 25);
+            lbl_8035772C->FadeOut(25);
             mStep = 1;
         }
         break;
@@ -1767,7 +1752,7 @@ BOOL NewsScene::StateFatal() {
     case -1:
         break;
     case 0:
-        fn_80049128(lbl_8035772C);
+        lbl_8035772C->SetOpaque();
         mStep = 1;
         break;
     case 1:
@@ -2919,7 +2904,7 @@ BOOL NewsScene::CanOpenHomeMenu() {
 BOOL NewsScene::Shutdown() {
     switch (mStep) {
     case 0:
-        fn_80048D20(lbl_8035772C, 25);
+        lbl_8035772C->FadeOut(25);
         mStep = 1;
         break;
     case 1:

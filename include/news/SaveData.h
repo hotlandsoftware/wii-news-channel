@@ -1,6 +1,7 @@
 #ifndef NEWS_SAVE_DATA_H
 #define NEWS_SAVE_DATA_H
 
+#include <news/Fader.h>
 #include <types.h>
 #include <revolution/os/OSTime.h>
 
@@ -19,17 +20,6 @@ enum SaveResult {
 void SetSaveBuffer(void* buffer, u32 size);
 s32 LoadSaveData();
 s32 WriteSaveData();
-
-// Fader shared by the screens (code elsewhere). mBusy is nonzero while a fade
-// is running.
-struct Fader {
-    u8 unk0[0x50];
-    s32 mBusy;   // at 0x50
-    u8 unk54[0x5C - 0x54];
-    f32 mAlpha;  // at 0x5C (1.0 when faded out)
-
-    bool IsFadedOut() const { return mAlpha == 1.0f; }
-};
 
 extern Fader* lbl_8035772C;
 
