@@ -754,20 +754,19 @@ s32 CheckNewsFiles(NewsHeader** files, u32* sizes, s32* current, u32* mask) {
                 result = -1;
             }
             u32 logoSize = rec->logoSize;
-            if ((logoSize != 0 && logo == 0) || (logoSize == 0 && logo != 0)) {
+            if ((logoSize != 0 && logo != 0) || (logoSize == 0 && logo == 0)) {
                 result = -1;
             }
             u32 logoOfs = rec->logoOfs;
-            if ((logoOfs != 0 && logo == 0) || (logoOfs == 0 && logo != 0)) {
+            if ((logoOfs != 0 && logo != 0) || (logoOfs == 0 && logo == 0)) {
                 result = -1;
             }
-            u32 fileSize = file->fileSize;
-            if (logoOfs + logoSize > fileSize) {
+            if (logoOfs + logoSize > file->fileSize) {
                 result = -1;
             }
             u32 strSize = rec->nameSize;
             u32 strOfs = rec->nameOfs;
-            if (strOfs + strSize > fileSize) {
+            if (strOfs + strSize > file->fileSize) {
                 result = -1;
             }
             if (strOfs & 1) {
@@ -778,7 +777,7 @@ s32 CheckNewsFiles(NewsHeader** files, u32* sizes, s32* current, u32* mask) {
             }
             strSize = rec->unk14;
             strOfs = rec->copyrightOfs;
-            if (strOfs + strSize > fileSize) {
+            if (strOfs + strSize > file->fileSize) {
                 result = -1;
             }
             if (strOfs & 1) {
@@ -803,10 +802,9 @@ s32 CheckNewsFiles(NewsHeader** files, u32* sizes, s32* current, u32* mask) {
         }
         for (u32 n = 0; n < file->numPictures; n++) {
             NewsPictureRec* pic = &pictures[i][n];
-            u32 fileSize = file->fileSize;
             u32 strSize = pic->unk0;
             u32 strOfs = pic->captionOfs;
-            if (strOfs + strSize > fileSize) {
+            if (strOfs + strSize > file->fileSize) {
                 result = -1;
             }
             if (strOfs & 1) {
@@ -817,7 +815,7 @@ s32 CheckNewsFiles(NewsHeader** files, u32* sizes, s32* current, u32* mask) {
             }
             strSize = pic->unk8;
             strOfs = pic->creditOfs;
-            if (strOfs + strSize > fileSize) {
+            if (strOfs + strSize > file->fileSize) {
                 result = -1;
             }
             if (strOfs & 1) {
@@ -834,7 +832,7 @@ s32 CheckNewsFiles(NewsHeader** files, u32* sizes, s32* current, u32* mask) {
             if (dataOfs == 0) {
                 result = -1;
             }
-            if (dataOfs + dataSize > fileSize) {
+            if (dataOfs + dataSize > file->fileSize) {
                 result = -1;
             }
         }
