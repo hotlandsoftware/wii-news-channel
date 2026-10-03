@@ -44,19 +44,7 @@ void Bubbles::Update(BOOL spawn) {
         s32 time = Random() % 60 + 240;
         f32 size = GetScreenHeight() * (0.05f + RandomF(0.45f));
         s32 type = (Random() & 1) + 1;
-        for (s32 i = 0; i < NUM; i++) {
-            if (mTimer[i] == 0) {
-                mType[i] = type;
-                mX[i] = x;
-                mY[i] = y;
-                mVX[i] = vx;
-                mVY[i] = vy;
-                mSize[i] = size;
-                mTimer[i] = time;
-                mDuration[i] = time;
-                break;
-            }
-        }
+        Add(type, x, y, vx, vy, size, time);
         mSpawnTimer = Random() % 15 + 25;
     }
 
@@ -145,17 +133,5 @@ void Bubbles::Draw(u32 alpha, u32 height) {
 }
 
 void Bubbles::AddRing(f32 x, f32 y) {
-    for (s32 i = 0; i < NUM; i++) {
-        if (mTimer[i] == 0) {
-            mType[i] = TYPE_RING;
-            mX[i] = x;
-            mY[i] = y;
-            mVX[i] = 0.0f;
-            mVY[i] = 0.0f;
-            mSize[i] = 501.6f;
-            mTimer[i] = 60;
-            mDuration[i] = 60;
-            return;
-        }
-    }
+    Add(TYPE_RING, x, y, 0.0f, 0.0f, 501.6f, 60);
 }

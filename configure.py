@@ -1412,7 +1412,7 @@ config.libs = [
             Object(Matching, "news/msg/MsgUpdated.cpp"),
             Object(Matching, "news/msg/MsgLastUpdated.cpp"),
             Object(Matching, "news/msg/MsgToTop.cpp"),
-            Object(NonMatching, "news/Bubbles.cpp"),
+            Object(Matching, "news/Bubbles.cpp"),
             Object(Matching, "news/GlobePoint.cpp"),
             Object(Matching, "news/TextChar.cpp"),
             Object(NonMatching, "news/GlobePin.cpp"),
