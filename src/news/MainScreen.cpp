@@ -3384,26 +3384,35 @@ inline void MainScreen::UpdateLayoutAlpha() {
 }
 
 void MainScreen::Hook1E758() {
+    s32 i;
+    f32 minDist;
+    f32 x;
+    f32 y;
+    bool moved;
+    bool inside;
+    bool dragging;
+    bool showButtons;
     f32 left = -16.0f;
     f32 right = 16.0f + GetScreenWidth();
     f32 minY = 63.0f;
     f32 maxY = 393.0f;
     Globe* globe = gGlobe;
-    f32 minDist = 900.0f;
-    bool moved = false;
-    bool inside = false;
-    bool dragging = false;
-    bool held = false;
-    bool showButtons = false;
-    for (s32 i = 0; i < 4; i++) {
+    bool held;
+    minDist = 900.0f;
+    moved = false;
+    inside = false;
+    dragging = false;
+    held = false;
+    showButtons = false;
+    for (i = 0; i < 4; i++) {
         if (globe != NULL && globe->mGrab[i]) {
             continue;
         }
         if (!IsPointerValid(i)) {
             continue;
         }
-        f32 x = gCursorX[i][0];
-        f32 y = gCursorY[i][0];
+        x = gCursorX[i][0];
+        y = gCursorY[i][0];
         f32 prevX;
         f32 prevY;
         if (gPointerHistory.GetOldest(i, &prevX, &prevY)) {
