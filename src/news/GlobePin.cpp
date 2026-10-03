@@ -664,11 +664,14 @@ void GlobePin::TruncateHeadline(ut::CharWriter* writer) {
         if (gLanguage == 0) {
             while (*src != 0) {
                 *dst = *src++;
+                f32 cw;
                 if (n < mHeadlineLen) {
-                    width += scale * font->GetCharWidth(*dst);
+                    cw = scale * font->GetCharWidth(*dst);
                 } else {
-                    width = width + scale * font->GetCharWidth(*dst);
+                    f32 s = scale;
+                    cw = s * font->GetCharWidth(*dst);
                 }
+                width += cw;
                 *++dst = 0;
                 if (width > maxWidth) {
                     f32 ellipsis = scale * font->GetCharWidth(0x2026);
@@ -688,11 +691,14 @@ void GlobePin::TruncateHeadline(ut::CharWriter* writer) {
         } else {
             while (*src != 0) {
                 *dst = *src++;
+                f32 cw;
                 if (n < mHeadlineLen) {
-                    width += scale * font->GetCharWidth(*dst);
+                    cw = scale * font->GetCharWidth(*dst);
                 } else {
-                    width = width + scale * font->GetCharWidth(*dst);
+                    f32 s = scale;
+                    cw = s * font->GetCharWidth(*dst);
                 }
+                width += cw;
                 *++dst = 0;
                 if (width > maxWidth) {
                     f32 limit = 2.0f * space + scale * (3.0f * font->GetCharWidth(L'.'));
