@@ -2612,9 +2612,10 @@ s32 Article_GetLineAt(const f32& offset) {
     ArticleText* headline = lbl_80357568;
     ArticleText* body = sBodyView;
     ArticleText* credit = sCreditView;
-    f32 bodyStart = headline->mHeight + logoHeight * gTextScale;
-    f32 bodyY = body->mHeight;
-    f32 creditStart = bodyY + body->mLineHeight;
+    f32 bodyStart = headline->GetHeight();
+    bodyStart += logoHeight * gTextScale;
+    f32 bodyY = body->GetHeight();
+    f32 creditStart = body->GetHeight() + body->GetLineHeight();
     f32 creditY = credit->mHeight;
     f32 headlineLH = headline->mLineHeight;
     f32 bodyLH = body->mLineHeight;
