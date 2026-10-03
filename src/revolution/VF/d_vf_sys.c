@@ -497,6 +497,10 @@ static void VFSys_file_p_2_set_device_err_info(struct PF_FILE* i_file_p, s32 i_e
     VFSys_set_device_err_info(handle_p, i_err);
 }
 
+static struct VF_HANDLE_TYPE* VFSys_dta_p_2_handle_p(VFSysDTA* i_dta_p) {
+    return VFSysVol2HandleP(i_dta_p->p_vol);
+}
+
 s32 VFSysSetDeviceNANDFlash(s32* o_idx_p, void* i_cache_heap_p, u32 i_cache_size) {
     s32 idx;
     struct VF_HANDLE_TYPE* handle_p;
@@ -1019,7 +1023,7 @@ s32 VFSysFindNext(VFSysDTA* io_dta_p) {
     s32 err;
 
     if (io_dta_p != NULL) {
-        VFSys_set_device_err_info(VFSysVol2HandleP(io_dta_p->p_vol), 0);
+        VFSys_set_device_err_info(VFSys_dta_p_2_handle_p(io_dta_p), 0);
     }
     err = VFipf2_fsnext(io_dta_p);
     if (err == 0) {

@@ -22,9 +22,7 @@ So each file ends with a `__sinit` that constructs it, and the `.ctors` table (`
 - **No inline-asm fallbacks.** A C/C++ function that doesn't match must stay in C, and its file stays `NonMatching`. Never replace it with inline asm copied from the DOL, not even behind `NON_MATCHING`.
 - **What may be asm:** only functions that were originally written in assembly. That covers the runtime (`__save_gpr`, `ptmf`), `setjmp`, MetroTRK, and the SDK's low-level PPC/OS/GX/DB routines that are `asm` in every reference decomp.
 - The repo never contains `.s` files.
-- **Currently NonMatching under this rule:** VF `pf_dir.c` (99.97%), `d_vf_sys.c` (99.99%), `nand_drv.c` (99.99%) and `ram_drv.c` (99.88%). All are register-allocation differences. Also nw4r `snd_RemoteSpeaker.cpp` (99.2%, block layout of `Update`) and `NWC24Download.c` (99.89%, register allocation in three functions).
-
-- **Currently NonMatching under this rule:** VF `pf_dir.c` (99.97%), `d_vf_sys.c` (99.99%), `nand_drv.c` (99.99%) and `ram_drv.c` (99.88%). All are register-allocation differences. Also nw4r `snd_RemoteSpeaker.cpp` (99.2%, block layout of `Update`). Also `NCD/ncdsystem.c` (99.70%) and `NET/netcrc.c` (97.86%), both register allocation. Also nw4r ef `emform/ef_disc.cpp` (99.6%) and `emform/ef_cylinder.cpp` (99.7%) (random seed kept in a register across `sqrt`), `ef_drawfreestrategy.cpp` (99.7%), `ef_drawbillboardstrategy.cpp` (99.6%) and `ef_drawdirectionalstrategy.cpp` (96%) (register allocation and scheduling).
+- **Currently NonMatching under this rule** (examples): nw4r `snd_RemoteSpeaker.cpp` (99.2%, block layout of `Update`), `NWC24Download.c` (99.90%, register allocation in three functions), `NET/netcrc.c` (97.86%), nw4r ef `ef_drawfreestrategy.cpp` (99.97%), `ef_drawbillboardstrategy.cpp` (99.6%) and `ef_drawdirectionalstrategy.cpp` (96%). The VF files, `NCD/ncdsystem.c`, `GXDraw.c`, `ef_disc.cpp` and `ef_cylinder.cpp` were matched in C in wave 7 (see "Wave 7 polish" in `docs/platform_layer_map.md`).
 - **TMCC JPEG** (`src/revolution/TMCC_JPEG`): `jpgd_dec.c` (99.9%, `jpgdResync` branch layout and two register swaps), `jpgd_idct.c` (96%), `jpgd_out_rgb565.c` (95%), `jpgd_out_rgba8.c` (90%) and `jpgd_out_yuv.c` (82%) are NonMatching and still in progress; see `docs/platform_layer_map.md`.
 
 ## Compiler
@@ -201,6 +199,17 @@ Library details are in `docs/platform_layer_map.md` ("TMCC JPEG decoder").
 - **Reassigning a parameter.** `x >>= 1;` and then looping from `x` reuses `x`'s register (`srwi r4, r4, 1`), where `cx = x >> 1;` takes a new one. Look for this when a parameter register is overwritten in place.
 - **Local types.** Declaring the chroma locals `s8 cb, cr;` (assigned from `*scb++`) rather than `s32 cb = (s8)*scb++;` changes their registers.
 - **Search tools and statement order.** When automatically permuting the order of setup statements, keep every statement after the ones whose results it reads. A use-before-assignment order still compiles (MWCC does not warn) and can score higher than the correct code.
+
+## More codegen patterns (wave 7, library polish)
+
+Details and the per-file notes are in `docs/platform_layer_map.md` ("Wave 7 polish").
+- **`__attribute__((const))` on libm functions.** If the DOL keeps a memory value (a member, an address-taken local) in a register across `bl sqrt`/`cos`/`sin`, the function was declared without side effects. MWCC accepts `__attribute__((const))` and `((pure))`; the attribute has to be on the first declaration, so a file can declare the function itself above its includes. Without it MWCC reloads the value after the call.
+- **Absolute-address variables do not alias.** A store to `volatile T x : 0xCC008000;` cannot alias a local, a store through `*(volatile T*)0xCC008000` can. With the variable form MWCC promotes an address-taken local to a register for a whole loop.
+- **A one-line inline around a load changes its register.** `GetFlags(entry)` instead of `entry->flags` (or a wrapper inline around a call) swaps the value's register with a neighbour, in both the volatile and the callee-saved range. A `const T*` parameter on the inline can cancel the effect.
+- **Callee-saved registers follow the declaration order of plain locals**, but a search by single swaps can fail: in `VFiPFDIR_DoMakeDir` every single move scored lower than the start, and only the full order matched. Enumerate permutations with `variants.py` (about one second per compile).
+- **String literals are pooled when their function is compiled.** A helper that is only ever inlined still emits its literals first if it is not `static` (it is compiled on its own; the linker strips it). That fixes a `.data` order where a literal of the caller would otherwise come first.
+- **Locals for a member read twice.** `u16 maxTasks = h->maxTasks; if (maxTasks > N || id >= maxTasks)` and `if (h->maxTasks > N || id >= h->maxTasks)` (with a local `h`) allocate differently; the second keeps the pointer's register for the loaded value.
+- **No global CSE in one function.** `#pragma opt_common_subs off` (or `-opt nocse`) keeps local value numbering but reloads after a join (`DrawFreeStrategy::Draw`).
 
 ## Game code map
 

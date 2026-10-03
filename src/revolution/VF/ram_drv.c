@@ -173,6 +173,11 @@ s32 VFi_ramdrv_init_drv_tbl(struct PDM_DISK_TBL* p_disk_tbl, u32 ui_ext) {
     return 0;
 }
 
+// The buffer pointer is read through an inline; a direct member load swaps its register with `size`.
+static u8* ramdrv_get_memory(struct VF_HANDLE_DRIVE* drive_p) {
+    return drive_p->file_p;
+}
+
 s32 ramdrv_physical_read(u32 num_blocks, u8* buf, u32 block, u32 bps, u32* p_num_success, struct PDM_DISK* p_disk) {
     u32 fileSize;
     u32 size;
@@ -189,7 +194,7 @@ s32 ramdrv_physical_read(u32 num_blocks, u8* buf, u32 block, u32 bps, u32* p_num
         return -20;
     }
 
-    memory_p = drive_p->file_p;
+    memory_p = ramdrv_get_memory(drive_p);
 
     if (!dCommon_ReadDummyBPB(num_blocks, buf, block, p_num_success, p_disk, &err, ramdrv_BuildUpBootSector, ramdrv_BuildUpFSInfoSector)) {
         return err;
@@ -224,7 +229,7 @@ s32 ramdrv_physical_write(u32 num_blocks, const u8* buf, u32 block, u32 bps, u32
         return -20;
     }
 
-    memory_p = drive_p->file_p;
+    memory_p = ramdrv_get_memory(drive_p);
 
     if (!dCommon_WriteDummyBPB(num_blocks, block, p_num_success, p_disk, &err)) {
         return err;

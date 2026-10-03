@@ -387,21 +387,10 @@ s32 A32_NANDWrite(struct NANDFileInfo* i_fileInfo_p, void* i_buf, u32 i_size, st
     return i_size;
 }
 
-static inline s32 VFi_NandCreate2(const char* path, u8 perm, u8 attr) {
-    s32 error;
-    s32 challenge;
-
-    challenge = VF_nand_retry_max;
-    error = 0;
-    while (challenge-- > 0) {
-        error = NANDCreate(path, perm, attr);
-        if (error != NAND_RESULT_BUSY && error != NAND_RESULT_ALLOC_FAILED) {
-            return error;
-        } else {
-            _SleepAfewMiliSec();
-        }
-    }
-    return error;
+// The 0xFFFFFFF6 handle goes through one more inline level than the per-handle default:
+// calling VFi_NandCreate directly swaps the retry counter and error registers.
+static inline s32 VFi_NandCreateDefault(const char* path, u8 perm, u8 attr) {
+    return VFi_NandCreate(path, perm, attr);
 }
 
 static inline s32 VFi_NandCreateSp(const char* path, u8 perm, u8 attr, u32 i_handleIdx) {
@@ -414,7 +403,7 @@ static inline s32 VFi_NandCreateSp(const char* path, u8 perm, u8 attr, u32 i_han
         }
         return VFi_NandCreate(path, perm, attr);
     } else if (i_handleIdx == 0xFFFFFFF6) {
-        return VFi_NandCreate2(path, perm, attr);
+        return VFi_NandCreateDefault(path, perm, attr);
     } else {
         return VFi_NandPrivateCreate(path, perm, attr);
     }
