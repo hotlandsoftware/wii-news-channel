@@ -50,6 +50,11 @@ JPEGDecoder::~JPEGDecoder() {}
 
 NewsTexture* JPEGDecoder::Decode(const void* data, u32 size, MEMAllocator* allocator) {
     TMCCJPEGDecHandle handle;
+    PictureTexture* tex;
+    u16 w;
+    u16 h;
+    s32 ret;
+    s32 numMcus;
 
     mData = (const u8*)data;
     mParam.buffer = sStreamBuffer;
@@ -61,21 +66,21 @@ NewsTexture* JPEGDecoder::Decode(const void* data, u32 size, MEMAllocator* alloc
     mParam.work = mWork;
     mParam.format = 0;
 
-    s32 numMcus = TMCCJPEGDecInit(&handle, &mParam);
+    numMcus = TMCCJPEGDecInit(&handle, &mParam);
     if (numMcus < 0) {
         OSReport("TMCCJPEGDecInit() failed(%d).\n", numMcus);
         return NULL;
     }
 
-    s32 ret = TMCCJPEGDecSetResolution(&handle, 1);
+    ret = TMCCJPEGDecSetResolution(&handle, 1);
     if (ret < 0) {
         OSReport("TMCCJPEGDecSetResolution() failed(%d).\n", ret);
         return NULL;
     }
 
-    u16 w = ROUND_UP(handle.width, 8);
-    u16 h = ROUND_UP(handle.height, 8);
-    PictureTexture* tex = new (allocator) PictureTexture(allocator, handle.width, handle.height);
+    w = ROUND_UP(handle.width, 8);
+    h = ROUND_UP(handle.height, 8);
+    tex = new (allocator) PictureTexture(allocator, handle.width, handle.height);
     if (tex == NULL || tex->data == NULL) {
         if (tex != NULL) {
             tex = NULL;
@@ -101,9 +106,7 @@ s32 JPEGDecoder::Read(void* arg, void* dst, u32 size) {
     return 0;
 }
 
-static void* SoundAlloc(u32 size) {
-    return SubHeapAlloc(size, 32);
-}
+static void* SoundAlloc(u32 size);
 
 SoundResource::SoundResource(const char* path, const void* hbmData) {
     mData = LoadContentFile(gArchive, path, 32, NULL, gSubHeap);
@@ -112,6 +115,10 @@ SoundResource::SoundResource(const char* path, const void* hbmData) {
         InitSoundFromMemory(mData, hbmData, SoundAlloc, SubHeapFree);
         SetSoundMode(SCGetSoundMode());
     }
+}
+
+static void* SoundAlloc(u32 size) {
+    return SubHeapAlloc(size, 32);
 }
 
 SoundResource::~SoundResource() {
