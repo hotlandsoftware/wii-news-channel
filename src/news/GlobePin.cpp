@@ -446,6 +446,8 @@ void GlobePin::Update(Camera* camera) {
     mHover[3] = false;
     CalcScreenPos(camera);
     math::VEC3 pos = GetPos();
+    f32 minY = 63.0f;
+    f32 maxY = 393.0f;
     math::VEC3 dir = camera->mDir;
     PSVECNormalize(&pos, &pos);
     PSVECNormalize(&dir, &dir);
@@ -455,10 +457,13 @@ void GlobePin::Update(Camera* camera) {
             for (s32 i = 0; i < 4; i++) {
                 if (IsPointerValid(i)) {
                     math::VEC2 cursor(gCursorX[i][0], gCursorY[i][0]);
-                    if (cursor.y > 63.0f && cursor.y < 393.0f) {
+                    if (cursor.y > minY && cursor.y < maxY) {
                         math::VEC2 screen = GetScreenPos();
-                        math::VEC2 d(cursor.x - screen.x, cursor.y - screen.y);
-                        if (math::FSqrt(d.x * d.x + d.y * d.y) < 35.0f) {
+    f32 maxDist = 35.0f;
+                        math::VEC2 d;
+                        d.x = cursor.x - screen.x;
+                        d.y = cursor.y - screen.y;
+                        if (math::FSqrt(d.x * d.x + d.y * d.y) < maxDist) {
                             mHover[i] = true;
                             if (gTrig[i] & 0x800) {
                                 mPressedChan = i;
@@ -469,7 +474,8 @@ void GlobePin::Update(Camera* camera) {
                 }
             }
             if (mHover[0] || mHover[1] || mHover[2] || mHover[3]) {
-                if (++mHoverTime > 12) {
+                mHoverTime++;
+                if (mHoverTime > 12) {
                     mHoverTime = 12;
                 } else if (mHoverTime == 12) {
                     mOpened = true;
