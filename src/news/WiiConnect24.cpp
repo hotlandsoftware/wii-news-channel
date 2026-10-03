@@ -58,8 +58,14 @@ public:
     void** mFiles[WC24_NUM_FILES];       // at 0x014
     s64* mTimes[WC24_NUM_FILES];         // at 0x074
     u32* mSizes[WC24_NUM_FILES];         // at 0x0D4
-    s64 mNextTime;                       // at 0x138
-    s64 mUnk140;                         // at 0x140
+    union {
+        s64 mNextTime;                   // at 0x138
+        u32 mNextTimeWords[2];
+    };
+    union {
+        s64 mUnk140;                     // at 0x140
+        u32 mUnk140Words[2];
+    };
     const char* mUrl[2];                 // at 0x148
     u32 mVfSize;                         // at 0x150
     u32 mUnk154;                         // at 0x154
