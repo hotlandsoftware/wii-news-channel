@@ -99,8 +99,8 @@ void jpgdIdct8x8Y(s32* in, u8* out, u16 stride, s32 extent) {
             wp[3] = tmp3 + tmp4;
             wp[4] = tmp3 - tmp4;
         }
-        in = 8 + in;
-        wp = 8 + wp;
+        in += 8;
+        wp += 8;
     }
     for (; i <= 56; i += 8) {
         memset(&ws[i], 0, 32);
@@ -154,7 +154,7 @@ void jpgdIdct8x8Y(s32* in, u8* out, u16 stride, s32 extent) {
             tmp11 = DESCALE8((z11 - z13) * 181);
             z5 = DESCALE8((z12 + z10) * 98);
             tmp10 = DESCALE8(z12 * 334) - z5;
-            tmp12 = z5 + DESCALE8(139 * z10);
+            tmp12 = z5 + DESCALE8(z10 * 139);
 
             tmp6 = tmp11 + tmp10;
             tmp7 = z11 + (tmp10 + z13);
@@ -224,9 +224,9 @@ void jpgdIdct8x8C(s32* in, u8* out, u16 stride, s32 extent) {
         for (i = 0; i < rows; i += 8) {
             d1 = in[1];
             d0 = in[0];
-            tmp11 = DESCALE8(181 * d1);
+            tmp11 = DESCALE8(d1 * 181);
             z5 = DESCALE8(d1 * 98);
-            tmp10 = DESCALE8(334 * d1) - z5;
+            tmp10 = DESCALE8(d1 * 334) - z5;
             tmp7 = d1 + tmp10;
             tmp6 = tmp11 + tmp10;
             tmp5 = z5 + tmp11;
@@ -289,7 +289,7 @@ void jpgdIdct8x8C(s32* in, u8* out, u16 stride, s32 extent) {
                 tmp11 = DESCALE8((z11 - z13) * 181);
                 z5 = DESCALE8((z10 + z12) * 98);
                 tmp10 = DESCALE8(z12 * 334) - z5;
-                tmp12 = z5 + DESCALE8(139 * z10);
+                tmp12 = z5 + DESCALE8(z10 * 139);
 
                 tmp5 = tmp11 + tmp12;
                 tmp4 = tmp12;
@@ -306,7 +306,7 @@ void jpgdIdct8x8C(s32* in, u8* out, u16 stride, s32 extent) {
                 wp[4] = tmp3 - tmp4;
             }
             in += 8;
-            wp = 8 + wp;
+            wp += 8;
         }
         for (; i <= 56; i += 8) {
             memset(&ws[i], 0, 32);
@@ -360,7 +360,7 @@ void jpgdIdct8x8C(s32* in, u8* out, u16 stride, s32 extent) {
             tmp11 = DESCALE8((z11 - z13) * 181);
             z5 = DESCALE8((z12 + z10) * 98);
             tmp10 = DESCALE8(z12 * 334) - z5;
-            tmp12 = z5 + DESCALE8(139 * z10);
+            tmp12 = z5 + DESCALE8(z10 * 139);
 
             tmp7 = z11 + (tmp10 + z13);
             tmp5 = tmp12 + tmp11;

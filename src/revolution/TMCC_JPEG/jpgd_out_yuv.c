@@ -135,7 +135,7 @@ void jpgdOutYUV411(JPEGDecContext* ctx, u32 x, u32 y) {
     for (j = y; j < (s32)(y + cw); j++) {
         for (i = x; i < (s32)(x + cw); i++) {
             t = (i >> 3) + (j >> 2) * cstride;
-            pcb[(t << 5) + ((j & 3) << 3) + (7 & i)] = *scb++ + 0x80;
+            pcb[(t << 5) + ((j & 3) << 3) + (i & 7)] = *scb++ + 0x80;
             pcr[(t << 5) + ((j & 3) << 3) + (i & 7)] = *scr++ + 0x80;
         }
         scb += 8 - cw;
@@ -184,12 +184,12 @@ void jpgdOutYUV411Edge(JPEGDecContext* ctx, u32 x, u32 y) {
 
     x >>= 2;
     ctiles = h->strideC >> 3;
-    cw = (3 + w) >> 2;
+    cw = (w + 3) >> 2;
     for (j = y; j < (s32)(hh + y); j++) {
         for (i = x; i < (s32)(x + cw); i++) {
             t = (i >> 3) + (j >> 2) * ctiles;
-            pcb[(t << 5) + ((j & 3) << 3) + (7 & i)] = *scb++ + 0x80;
-            pcr[(t << 5) + ((j & 3) << 3) + (7 & i)] = *scr++ + 0x80;
+            pcb[(t << 5) + ((j & 3) << 3) + (i & 7)] = *scb++ + 0x80;
+            pcr[(t << 5) + ((j & 3) << 3) + (i & 7)] = *scr++ + 0x80;
         }
         scb += 8 - cw;
         scr += 8 - cw;
@@ -229,7 +229,7 @@ void jpgdOutYUV422(JPEGDecContext* ctx, u32 x, u32 y) {
         for (i = x; i < (s32)(x + w); i += 2) {
             jpgdPutI8(py, i, j, stride, sy[0]);
             jpgdPutI8(py, i + 1, j, stride, sy[1]);
-            sy = 2 + sy;
+            sy += 2;
         }
         sy += 16 - w;
     }
@@ -242,8 +242,8 @@ void jpgdOutYUV422(JPEGDecContext* ctx, u32 x, u32 y) {
     for (j = y; j < ye; j++) {
         for (i = x; i < xe; i++) {
             t = (i >> 3) + (j >> 2) * cstride;
-            pcb[(t << 5) + ((3 & j) << 3) + (7 & i)] = *scb++ + 0x80;
-            pcr[(t << 5) + ((j & 3) << 3) + (7 & i)] = *scr++ + 0x80;
+            pcb[(t << 5) + ((j & 3) << 3) + (i & 7)] = *scb++ + 0x80;
+            pcr[(t << 5) + ((j & 3) << 3) + (i & 7)] = *scr++ + 0x80;
         }
         scb += 8 - cw;
         scr += 8 - cw;
@@ -288,14 +288,14 @@ void jpgdOutYUV422Edge(JPEGDecContext* ctx, u32 x, u32 y) {
         sy += 16 - w;
     }
 
-    x = x >> 1;
+    x >>= 1;
     ctiles = h->strideC >> 3;
-    cw = (1 + w) >> 1;
+    cw = (w + 1) >> 1;
     for (j = y; j < (s32)(hh + y); j++) {
         for (i = x; i < (s32)(x + cw); i++) {
             t = (i >> 3) + (j >> 2) * ctiles;
             pcb[(t << 5) + ((j & 3) << 3) + (i & 7)] = *scb++ + 0x80;
-            pcr[(t << 5) + ((j & 3) << 3) + (7 & i)] = *scr++ + 0x80;
+            pcr[(t << 5) + ((j & 3) << 3) + (i & 7)] = *scr++ + 0x80;
         }
         scb += 8 - cw;
         scr += 8 - cw;
@@ -440,9 +440,9 @@ void jpgdOutYUV444(JPEGDecContext* ctx, u32 x, u32 y) {
     for (j = y; j < ye; j++) {
         for (i = x; i < xe; i++) {
             t = (i >> 3) + (j >> 2) * stride;
-            py[(t << 5) + ((3 & j) << 3) + (7 & i)] = *sy++;
+            py[(t << 5) + ((j & 3) << 3) + (i & 7)] = *sy++;
             pcb[(t << 5) + ((j & 3) << 3) + (i & 7)] = *scb++ + 0x80;
-            pcr[(t << 5) + ((j & 3) << 3) + (7 & i)] = *scr++ + 0x80;
+            pcr[(t << 5) + ((j & 3) << 3) + (i & 7)] = *scr++ + 0x80;
         }
         sy += 8 - n;
         scb += 8 - n;

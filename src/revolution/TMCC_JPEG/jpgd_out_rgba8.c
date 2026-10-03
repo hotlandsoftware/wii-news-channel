@@ -147,7 +147,7 @@ void jpgdOutRGBA8_411(JPEGDecContext* ctx, u32 x, u32 y) {
             cr = (s8)*scr++;
             cra = (cr * 0x167) >> 8;
             cga = -(cb * 0x58 + cr * 0xB7) >> 8;
-            cba = (0x1C6 * cb) >> 8;
+            cba = (cb * 0x1C6) >> 8;
             YCC_PIXEL(sy[0]);
             PUT_PIXEL(i, j);
             YCC_PIXEL(sy[1]);
@@ -255,12 +255,12 @@ void jpgdOutRGBA8_422(JPEGDecContext* ctx, u32 x, u32 y) {
             cr = (s8)*scr++;
             cba = (cb * 0x1C6) >> 8;
             cga = -(cb * 0x58 + cr * 0xB7) >> 8;
-            cra = (0x167 * cr) >> 8;
+            cra = (cr * 0x167) >> 8;
             YCC_PIXEL(sy[0]);
             PUT_PIXEL(i, j);
             YCC_PIXEL(sy[1]);
             PUT_PIXEL(i + 1, j);
-            sy = sy + 2;
+            sy += 2;
         }
         sy += 16 - w;
         scb += (16 - w) >> 1;
@@ -310,7 +310,7 @@ void jpgdOutRGBA8_422Edge(JPEGDecContext* ctx, u32 x, u32 y) {
                 cr = (s8)*scr++;
                 cra = (cr * 0x167) >> 8;
                 cga = -(cb * 0x58 + cr * 0xB7) >> 8;
-                cba = (0x1C6 * cb) >> 8;
+                cba = (cb * 0x1C6) >> 8;
             }
             YCC_PIXEL(*sy++);
             PUT_PIXEL(i, j);
@@ -357,7 +357,7 @@ void jpgdOutRGBA8_420(JPEGDecContext* ctx, u32 x, u32 y) {
         for (i = x; i < (s32)(x + w); i += 2) {
             cb = (s8)*scb++;
             cr = (s8)*scr++;
-            cra = (0x167 * cr) >> 8;
+            cra = (cr * 0x167) >> 8;
             cga = -(cb * 0x58 + cr * 0xB7) >> 8;
             cba = (cb * 0x1C6) >> 8;
             YCC_PIXEL(sy[0]);
@@ -367,12 +367,12 @@ void jpgdOutRGBA8_420(JPEGDecContext* ctx, u32 x, u32 y) {
             sy += 2;
         }
         sy += 16 - w;
-        if (1 & j) {
+        if (j & 1) {
             scb += (16 - w) >> 1;
             scr += (16 - w) >> 1;
         } else {
-            scb -= (1 + w) >> 1;
-            scr -= (1 + w) >> 1;
+            scb -= (w + 1) >> 1;
+            scr -= (w + 1) >> 1;
         }
     }
 }
@@ -473,9 +473,9 @@ void jpgdOutRGBA8_444(JPEGDecContext* ctx, u32 x, u32 y) {
             cr = (s8)*scr++;
             cga = -(cb * 0x58 + cr * 0xB7) >> 8;
             yy = *sy++;
-            cra = (0x167 * cr) >> 8;
+            cra = (cr * 0x167) >> 8;
             g = cga + yy;
-            cba = (0x1C6 * cb) >> 8;
+            cba = (cb * 0x1C6) >> 8;
             r = cra + yy;
             b = yy + cba;
             if ((b | r | g) >> 8) {
@@ -532,7 +532,7 @@ void jpgdOutRGBA8_444Edge(JPEGDecContext* ctx, u32 x, u32 y) {
             cb = (s8)*scb++;
             cr = (s8)*scr++;
             cba = (cb * 0x1C6) >> 8;
-            cra = (0x167 * cr) >> 8;
+            cra = (cr * 0x167) >> 8;
             yy = *sy++;
             cga = -(cb * 0x58 + cr * 0xB7) >> 8;
             g = cga + yy;

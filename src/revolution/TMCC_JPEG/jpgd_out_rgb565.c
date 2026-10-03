@@ -202,14 +202,14 @@ void jpgdOutRGB565_411Edge(JPEGDecContext* ctx, u32 x, u32 y) {
                 cr = (s8)*scr++;
                 cra = (cr * 0x167) >> 8;
                 cga = -(cb * 0x58 + cr * 0xB7) >> 8;
-                cba = (0x1C6 * cb) >> 8;
+                cba = (cb * 0x1C6) >> 8;
             }
             YCC_PIXEL(*sy++);
             PUT_PIXEL(i, j);
         }
         scb += 8 - (w + 3) / 4;
         sy += 32 - w;
-        scr += 8 - (3 + w) / 4;
+        scr += 8 - (w + 3) / 4;
     }
 }
 
@@ -253,14 +253,14 @@ void jpgdOutRGB565_422(JPEGDecContext* ctx, u32 x, u32 y) {
         for (i = x; i < xe; i += 2) {
             cb = (s8)*scb++;
             cr = (s8)*scr++;
-            cra = (0x167 * cr) >> 8;
+            cra = (cr * 0x167) >> 8;
             cga = -(cb * 0x58 + cr * 0xB7) >> 8;
-            cba = (0x1C6 * cb) >> 8;
+            cba = (cb * 0x1C6) >> 8;
             YCC_PIXEL(sy[0]);
             PUT_PIXEL(i, j);
             YCC_PIXEL(sy[1]);
             PUT_PIXEL(i + 1, j);
-            sy = sy + 2;
+            sy += 2;
         }
         sy += 16 - w;
         scb += (16 - w) >> 1;
@@ -309,9 +309,9 @@ void jpgdOutRGB565_422Edge(JPEGDecContext* ctx, u32 x, u32 y) {
             if (((i - x) & 1) == 0) {
                 cb = (s8)*scb++;
                 cr = (s8)*scr++;
-                cra = (0x167 * cr) >> 8;
+                cra = (cr * 0x167) >> 8;
                 cga = -(cb * 0x58 + cr * 0xB7) >> 8;
-                cba = (0x1C6 * cb) >> 8;
+                cba = (cb * 0x1C6) >> 8;
             }
             YCC_PIXEL(*sy++);
             PUT_PIXEL(i, j);
@@ -476,9 +476,9 @@ void jpgdOutRGB565_444(JPEGDecContext* ctx, u32 x, u32 y) {
         for (i = x; i < xe; i++) {
             cr = (s8)*scr++;
             cb = (s8)*scb++;
-            cra = (0x167 * cr) >> 8;
+            cra = (cr * 0x167) >> 8;
             yy = *sy++;
-            cba = (0x1C6 * cb) >> 8;
+            cba = (cb * 0x1C6) >> 8;
             cga = -(cb * 0x58 + cr * 0xB7) >> 8;
             g = yy + cga;
             r = yy + cra;
@@ -488,7 +488,7 @@ void jpgdOutRGB565_444(JPEGDecContext* ctx, u32 x, u32 y) {
                 CLAMP255(g);
                 CLAMP255(r);
             }
-            ((u16*)(out + ((j & 3) << 3)))[(3 & i) + ((i >> 2) + (j >> 2) * tiles) * 16] =
+            ((u16*)(out + ((j & 3) << 3)))[(i & 3) + ((i >> 2) + (j >> 2) * tiles) * 16] =
                 ((g << 3) & 0x7E0) + (((b & 0xF8) >> 3) + ((r << 8) & 0xF800));
         }
         sy += 8 - w;
