@@ -94,24 +94,16 @@ static volatile s32 sTaskCount;
 static void* sSOHeapMem;
 static MEMHeapHandle sSOHeap;
 
-// Records an NWC24 error (with NWC24GetErrorCode()) in the request.
-#define WC24_ERROR(task, msg, err)                                                    \
-    do {                                                                              \
-        s32 code_ = (task)->mErrorCode = NWC24GetErrorCode();                         \
-        (task)->mDetail = (err);                                                      \
-        sprintf((task)->mMessage, "%s %d %d", msg, code_, (err));                     \
-    } while (0)
+static s32 ConvertError(NWC24Err err);
 
-// Records another error in the request.
-#define WC24_ERROR_DETAIL(task, msg, detail)                                          \
-    do {                                                                              \
-        (task)->mErrorCode = 0;                                                       \
-        (task)->mDetail = (detail);                                                   \
-        sprintf((task)->mMessage, "%s %d %d", msg, 0, (detail));                      \
-    } while (0)
+// Records an error in the request.
+static inline void SetError(CWiiConnect24* task, const char* msg, s32 code, s32 detail) {
+    task->mErrorCode = code;
+    task->mDetail = detail;
+    sprintf(task->mMessage, "%s %d %d", msg, code, detail);
+}
 
 static void* ThreadMain(void* arg);
-static s32 ConvertError(NWC24Err err);
 static void* SOAllocFunc(u32 name, s32 size);
 static void SOFreeFunc(u32 name, void* ptr, s32 size);
 
@@ -239,12 +231,15 @@ s32 WC24RequestUnregister() {
 
 static inline s32 OpenLib(CWiiConnect24* task) {
     NWC24Err err;
-    while ((err = NWC24OpenLib(gWC24Work)) == NWC24_ERR_MUTEX || err == NWC24_ERR_BUSY ||
-           err == NWC24_ERR_INPROGRESS) {
+    for (;;) {
+        err = NWC24OpenLib(gWC24Work);
+        if (err != NWC24_ERR_MUTEX && err != NWC24_ERR_BUSY && err != NWC24_ERR_INPROGRESS) {
+            break;
+        }
         OSSleepTicks(OSMillisecondsToTicks((OSTime)100));
     }
     if (err != NWC24_OK) {
-        WC24_ERROR(task, "NWC24OpenLib() failed.", err);
+        SetError(task, "NWC24OpenLib() failed.", NWC24GetErrorCode(), err);
         return ConvertError(err);
     }
     sLibOpen = true;
@@ -254,7 +249,7 @@ static inline s32 OpenLib(CWiiConnect24* task) {
 static inline s32 CheckLib(CWiiConnect24* task) {
     NWC24Err err = NWC24Check(2);
     if (err != NWC24_OK) {
-        WC24_ERROR(task, "NWC24Check() failed.", err);
+        SetError(task, "NWC24Check() failed.", NWC24GetErrorCode(), err);
         return ConvertError(err);
     }
     SCIdleModeInfo idle;
@@ -267,7 +262,7 @@ static inline s32 CheckLib(CWiiConnect24* task) {
 static inline s32 CloseLib(CWiiConnect24* task) {
     NWC24Err err = NWC24CloseLib();
     if (err != NWC24_OK) {
-        WC24_ERROR(task, "NWC24CloseLib() failed.", err);
+        SetError(task, "NWC24CloseLib() failed.", NWC24GetErrorCode(), err);
         return ConvertError(err);
     }
     sLibOpen = false;
@@ -349,12 +344,12 @@ static void* ThreadMain(void* arg) {
             s32 result;
             NWC24Err err = NWC24GetMyDlTask(&dl);
             if (err != NWC24_OK) {
-                WC24_ERROR(task, "NWC24GetDlTaskMine() failed.", err);
+                SetError(task, "NWC24GetDlTaskMine() failed.", NWC24GetErrorCode(), err);
                 result = ConvertError(err);
             } else {
                 err = NWC24GetDlTaskId(&dl, &id);
                 if (err != NWC24_OK) {
-                    WC24_ERROR(task, "NWC24GetDlId() failed.", err);
+                    SetError(task, "NWC24GetDlId() failed.", NWC24GetErrorCode(), err);
                 result = ConvertError(err);
                 } else {
                     result = 0;
@@ -444,38 +439,38 @@ s32 CWiiConnect24::readFiles() {
 
     err = NWC24GetMyDlTask(&dl);
     if (err == NWC24_ERR_NOT_FOUND) {
-        WC24_ERROR(this, "NWC24GetDlTaskMine() failed.", err);
+        SetError(this, "NWC24GetDlTaskMine() failed.", NWC24GetErrorCode(), err);
         return -1;
     }
     if (err != NWC24_OK) {
-        WC24_ERROR(this, "NWC24GetDlTaskMine() failed.", err);
+        SetError(this, "NWC24GetDlTaskMine() failed.", NWC24GetErrorCode(), err);
         return ConvertError(err);
     }
     err = NWC24GetDlTaskId(&dl, &id);
     if (err != NWC24_OK) {
-        WC24_ERROR(this, "NWC24GetDlId() failed.", err);
+        SetError(this, "NWC24GetDlId() failed.", NWC24GetErrorCode(), err);
         return ConvertError(err);
     }
     if (id == 2) {
         err = NWC24DeleteDlTask(&dl);
         if (err != NWC24_OK) {
-            WC24_ERROR(this, "NWC24DeleteDlTask() failed.", err);
+            SetError(this, "NWC24DeleteDlTask() failed.", NWC24GetErrorCode(), err);
         return ConvertError(err);
         }
-        WC24_ERROR_DETAIL(this, "NWC24GetDlId() failed. TaskId: 2", 0);
+        SetError(this, "NWC24GetDlId() failed. TaskId: 2", 0, 0);
         return -1;
     }
 
     char url[0x100];
     err = NWC24GetDlUrl(&dl, url, 0xFF);
     if (err != NWC24_OK) {
-        WC24_ERROR(this, "NWC24GetDlUrl() failed.", err);
+        SetError(this, "NWC24GetDlUrl() failed.", NWC24GetErrorCode(), err);
         return ConvertError(err);
     }
     if (mUrl[0]) {
         for (u32 i = 0; i < 0xFF && url[i] != '\0'; i++) {
             if (url[i] != mUrl[0][i]) {
-                WC24_ERROR_DETAIL(this, "URL is not same.", 0);
+                SetError(this, "URL is not same.", 0, 0);
                 return -1;
             }
         }
@@ -484,37 +479,37 @@ s32 CWiiConnect24::readFiles() {
     char path[0x50];
     err = NWC24GetDlVfPath(&dl, path, sizeof(path));
     if (err != NWC24_OK) {
-        WC24_ERROR(this, "NWC24GetDlVfName() failed.", err);
+        SetError(this, "NWC24GetDlVfName() failed.", NWC24GetErrorCode(), err);
         return ConvertError(err);
     }
 
     NANDFileInfo info;
     s32 result = NANDOpen(path, &info, NAND_ACCESS_READ);
     if (result != NAND_RESULT_OK) {
-        WC24_ERROR_DETAIL(this, "NANDOpen() failed.", result);
+        SetError(this, "NANDOpen() failed.", 0, result);
         return -1;
     }
     u32 length;
     result = NANDGetLength(&info, &length);
     if (result != NAND_RESULT_OK) {
-        WC24_ERROR_DETAIL(this, "NANDGetLength() failed.", result);
+        SetError(this, "NANDGetLength() failed.", 0, result);
         NANDClose(&info);
         return -8;
     }
     if (length < 0x400) {
-        WC24_ERROR_DETAIL(this, "NANDGetLength size < 1024.", 0);
+        SetError(this, "NANDGetLength size < 1024.", 0, 0);
         NANDClose(&info);
         return -1;
     }
     void* mem = MEMAllocFromExpHeapEx(mTmpHeap, length, 32);
     if (mem == NULL) {
-        WC24_ERROR_DETAIL(this, "TmpHeapHandle Memory Error.", 0);
+        SetError(this, "TmpHeapHandle Memory Error.", 0, 0);
         NANDClose(&info);
         return -10;
     }
     result = VFCreateSystemFileRAM(mem, length);
     if (result != 0) {
-        WC24_ERROR_DETAIL(this, "VFCreateSystemFileRam() failed.", result);
+        SetError(this, "VFCreateSystemFileRam() failed.", 0, result);
         NANDClose(&info);
         if (mem) {
             MEMFreeToExpHeap(mTmpHeap, mem);
@@ -523,7 +518,7 @@ s32 CWiiConnect24::readFiles() {
     }
     result = VFMountDriveRAM(WC24_DRIVE, mem);
     if (result != 0) {
-        WC24_ERROR_DETAIL(this, "VFMountDriveRam() failed.", result);
+        SetError(this, "VFMountDriveRam() failed.", 0, result);
         NANDClose(&info);
         if (mem) {
             MEMFreeToExpHeap(mTmpHeap, mem);
@@ -532,7 +527,7 @@ s32 CWiiConnect24::readFiles() {
     }
     result = VFSyncDrive(WC24_DRIVE, 1);
     if (result != 0) {
-        WC24_ERROR_DETAIL(this, "VFSync() failed.", result);
+        SetError(this, "VFSync() failed.", 0, result);
         NANDClose(&info);
         VFUnmountDrive(WC24_DRIVE);
         if (mem) {
@@ -541,7 +536,7 @@ s32 CWiiConnect24::readFiles() {
         return -7;
     }
     if (NANDRead(&info, mem, length) != length) {
-        WC24_ERROR_DETAIL(this, "NANDRead() failed.", 0);
+        SetError(this, "NANDRead() failed.", 0, 0);
         NANDClose(&info);
         VFUnmountDrive(WC24_DRIVE);
         if (mem) {
@@ -551,7 +546,7 @@ s32 CWiiConnect24::readFiles() {
     }
     result = NANDClose(&info);
     if (result != NAND_RESULT_OK) {
-        WC24_ERROR_DETAIL(this, "NANDClose() failed.", result);
+        SetError(this, "NANDClose() failed.", 0, result);
         VFUnmountDrive(WC24_DRIVE);
         if (mem) {
             MEMFreeToExpHeap(mTmpHeap, mem);
@@ -566,7 +561,7 @@ s32 CWiiConnect24::readFiles() {
     for (u8 i = 0; i < WC24_NUM_FILES; i++) {
         err = NWC24GetDlSubTaskLastUpdate(&dl, i, mTimes[i]);
         if (err != NWC24_OK) {
-            WC24_ERROR(this, "NWC24GetDlLastUpdateSubTask() failed.", err);
+            SetError(this, "NWC24GetDlLastUpdateSubTask() failed.", NWC24GetErrorCode(), err);
             VFUnmountDrive(WC24_DRIVE);
             if (mem) {
                 MEMFreeToExpHeap(mTmpHeap, mem);
@@ -582,7 +577,7 @@ s32 CWiiConnect24::readFiles() {
         char name[16];
         err = NWC24GetDlFilename(&dl, name, sizeof(name), hour);
         if (err != NWC24_OK) {
-            WC24_ERROR(this, "NWC24GetDlFilenameSubTask() failed.", err);
+            SetError(this, "NWC24GetDlFilenameSubTask() failed.", NWC24GetErrorCode(), err);
             VFUnmountDrive(WC24_DRIVE);
             if (mem) {
                 MEMFreeToExpHeap(mTmpHeap, mem);
@@ -591,13 +586,13 @@ s32 CWiiConnect24::readFiles() {
         }
         VFFile file = VFOpenFile(name, "r", 0);
         if (file == NULL) {
-            WC24_ERROR_DETAIL(this, "VFOpenFile() failed.", 0);
+            SetError(this, "VFOpenFile() failed.", 0, 0);
             result = VFUnmountDrive(WC24_DRIVE);
             if (mem) {
                 MEMFreeToExpHeap(mTmpHeap, mem);
             }
             if (result != 0) {
-                WC24_ERROR_DETAIL(this, "VFUnmountDrive() failed.", result);
+                SetError(this, "VFUnmountDrive() failed.", 0, result);
                 return -7;
             }
             return -1;
@@ -614,7 +609,7 @@ s32 CWiiConnect24::readFiles() {
         *mSizes[hour] = size;
         result = VFCloseFile(file);
         if (result != 0) {
-            WC24_ERROR_DETAIL(this, "VFCloseFile() failed.", result);
+            SetError(this, "VFCloseFile() failed.", 0, result);
             VFUnmountDrive(WC24_DRIVE);
             if (mem) {
                 MEMFreeToExpHeap(mTmpHeap, mem);
@@ -633,7 +628,7 @@ s32 CWiiConnect24::readFiles() {
 
     err = NWC24GetDlNextTime(&dl, &mNextTime);
     if (err != NWC24_OK) {
-        WC24_ERROR(this, "NWC24GetDlNextTime() failed.", err);
+        SetError(this, "NWC24GetDlNextTime() failed.", NWC24GetErrorCode(), err);
         VFUnmountDrive(WC24_DRIVE);
         if (mem) {
             MEMFreeToExpHeap(mTmpHeap, mem);
@@ -645,7 +640,7 @@ s32 CWiiConnect24::readFiles() {
         MEMFreeToExpHeap(mTmpHeap, mem);
     }
     if (result != 0) {
-        WC24_ERROR_DETAIL(this, "VFUnmoundDrive() failed.", result);
+        SetError(this, "VFUnmoundDrive() failed.", 0, result);
         return -7;
     }
     return 0;
@@ -691,12 +686,12 @@ s32 CWiiConnect24::setupDlTasks(BOOL first, BOOL second, u8 force, u16 interval,
             break;
         }
         if (err != NWC24_OK) {
-            WC24_ERROR(this, "NWC24GetDlTask() failed.", err);
+            SetError(this, "NWC24GetDlTask() failed.", NWC24GetErrorCode(), err);
         return ConvertError(err);
         }
         err = NWC24GetDlTaskId(&dl[i], &id);
         if (err != NWC24_OK) {
-            WC24_ERROR(this, "NWC24GetDlId() failed.", err);
+            SetError(this, "NWC24GetDlId() failed.", NWC24GetErrorCode(), err);
         return ConvertError(err);
         }
         if (id == 2) {
@@ -707,7 +702,7 @@ s32 CWiiConnect24::setupDlTasks(BOOL first, BOOL second, u8 force, u16 interval,
         char path[0x50];
         err = NWC24GetDlVfPath(&dl[i], path, sizeof(path));
         if (err != NWC24_OK) {
-            WC24_ERROR(this, "NWC24GetDlVfName() failed.", err);
+            SetError(this, "NWC24GetDlVfName() failed.", NWC24GetErrorCode(), err);
         return ConvertError(err);
         }
         if (!mounted) {
@@ -718,7 +713,7 @@ s32 CWiiConnect24::setupDlTasks(BOOL first, BOOL second, u8 force, u16 interval,
                 break;
             }
             if (result != 0) {
-                WC24_ERROR_DETAIL(this, "VFMountDriveNANDFlash() failed.", result);
+                SetError(this, "VFMountDriveNANDFlash() failed.", 0, result);
                 return -7;
             }
             mounted = TRUE;
@@ -733,7 +728,7 @@ s32 CWiiConnect24::setupDlTasks(BOOL first, BOOL second, u8 force, u16 interval,
                     char name[16];
                     err = NWC24GetDlFilename(&dl[i], name, sizeof(name), j);
                     if (err != NWC24_OK) {
-                        WC24_ERROR(this, "NWC24GetDlFilenameSubTask() failed.", err);
+                        SetError(this, "NWC24GetDlFilenameSubTask() failed.", NWC24GetErrorCode(), err);
                         VFUnmountDrive(WC24_DRIVE);
                         return -7;
                     }
@@ -743,7 +738,7 @@ s32 CWiiConnect24::setupDlTasks(BOOL first, BOOL second, u8 force, u16 interval,
                     }
                     result = VFCloseFile(file);
                     if (result != 0) {
-                        WC24_ERROR_DETAIL(this, "VFCloseFile() failed.", result);
+                        SetError(this, "VFCloseFile() failed.", 0, result);
                         VFUnmountDrive(WC24_DRIVE);
                         return -7;
                     }
@@ -756,7 +751,7 @@ s32 CWiiConnect24::setupDlTasks(BOOL first, BOOL second, u8 force, u16 interval,
     if (mounted) {
         result = VFUnmountDrive(WC24_DRIVE);
         if (result != 0) {
-            WC24_ERROR_DETAIL(this, "VFUnmountDrive() failed.", result);
+            SetError(this, "VFUnmountDrive() failed.", 0, result);
             return -7;
         }
     }
@@ -769,7 +764,7 @@ s32 CWiiConnect24::setupDlTasks(BOOL first, BOOL second, u8 force, u16 interval,
             char buf[0x100];
             err = NWC24GetDlUrl(&dl[i], buf, 0xFF);
             if (err != NWC24_OK) {
-                WC24_ERROR(this, "NWC24GetDlUrl() failed.", err);
+                SetError(this, "NWC24GetDlUrl() failed.", NWC24GetErrorCode(), err);
         return ConvertError(err);
             }
             for (u32 j = 0; j < 0xFF && buf[j] != '\0'; j++) {
@@ -782,7 +777,7 @@ s32 CWiiConnect24::setupDlTasks(BOOL first, BOOL second, u8 force, u16 interval,
             u16 oldInterval;
             err = NWC24GetDlInterval(&dl[i], &oldInterval);
             if (err != NWC24_OK) {
-                WC24_ERROR(this, "NWC24GetDlInterval() failed.", err);
+                SetError(this, "NWC24GetDlInterval() failed.", NWC24GetErrorCode(), err);
         return ConvertError(err);
             }
             if (interval != oldInterval) {
@@ -801,30 +796,30 @@ s32 CWiiConnect24::setupDlTasks(BOOL first, BOOL second, u8 force, u16 interval,
                 if (id != 0xFFFF) {
                     err = NWC24DeleteDlTask(&dl[i]);
                     if (err != NWC24_OK) {
-                        WC24_ERROR(this, "NWC24DeleteDlTask() failed.", err);
+                        SetError(this, "NWC24DeleteDlTask() failed.", NWC24GetErrorCode(), err);
         return ConvertError(err);
                     }
                 }
                 err = NWC24InitDlTask(&dl[i], NWC24_DLTYPE_MULTIPART_V1);
                 if (err != NWC24_OK) {
-                    WC24_ERROR(this, "NWC24InitDlTask() failed.", err);
+                    SetError(this, "NWC24InitDlTask() failed.", NWC24GetErrorCode(), err);
         return ConvertError(err);
                 }
                 char path[0x50];
                 err = NWC24GetDlVfPath(&dl[i], path, sizeof(path));
                 if (err != NWC24_OK) {
-                    WC24_ERROR(this, "NWC24GetDlVfName() failed.", err);
+                    SetError(this, "NWC24GetDlVfName() failed.", NWC24GetErrorCode(), err);
         return ConvertError(err);
                 }
                 if (!vfCreated) {
                     result = NANDDelete(path);
                     if (result != NAND_RESULT_NOEXISTS && result != NAND_RESULT_OK) {
-                        WC24_ERROR_DETAIL(this, "NANDDelete() failed.", result);
+                        SetError(this, "NANDDelete() failed.", 0, result);
                         return -8;
                     }
                     err = NWC24CreateDlVf(&dl[i], mVfSize);
                     if (err != NWC24_OK) {
-                        WC24_ERROR(this, "NWC24CreateDlVf() failed.", err);
+                        SetError(this, "NWC24CreateDlVf() failed.", NWC24GetErrorCode(), err);
         return ConvertError(err);
                     }
                     vfCreated = TRUE;
@@ -832,48 +827,48 @@ s32 CWiiConnect24::setupDlTasks(BOOL first, BOOL second, u8 force, u16 interval,
             }
             err = NWC24SetDlUrl(&dl[i], url[i]);
             if (err != NWC24_OK) {
-                WC24_ERROR(this, "NWC24SetDlUrl() failed.", err);
+                SetError(this, "NWC24SetDlUrl() failed.", NWC24GetErrorCode(), err);
         return ConvertError(err);
             }
             switch (kind[i]) {
             case 2:
                 err = NWC24SetDlServerInterval(&dl[i], 1440);
                 if (err != NWC24_OK) {
-                    WC24_ERROR(this, "NWC24SetDlServerInterval() failed.", err);
+                    SetError(this, "NWC24SetDlServerInterval() failed.", NWC24GetErrorCode(), err);
         return ConvertError(err);
                 }
                 err = NWC24SetDlSubTask(&dl[i], NWC24_DL_STTYPE_TIME_HOUR, 0xFFFFFF, 0x103);
                 if (err != NWC24_OK) {
-                    WC24_ERROR(this, "NWC24SetDlSubtaskParameter() failed.", err);
+                    SetError(this, "NWC24SetDlSubtaskParameter() failed.", NWC24GetErrorCode(), err);
         return ConvertError(err);
                 }
                 break;
             }
             err = NWC24SetDlPriority(&dl[i], 100);
             if (err != NWC24_OK) {
-                WC24_ERROR(this, "NWC24SetDlPriority() failed.", err);
+                SetError(this, "NWC24SetDlPriority() failed.", NWC24GetErrorCode(), err);
         return ConvertError(err);
             }
             err = NWC24SetDlOption(&dl[i], 0x40000000);
             if (err != NWC24_OK) {
-                WC24_ERROR(this, "NWC24SetDlFlags() failed.", err);
+                SetError(this, "NWC24SetDlFlags() failed.", NWC24GetErrorCode(), err);
         return ConvertError(err);
             }
             err = NWC24SetDlInterval(&dl[i], interval);
             if (err != NWC24_OK) {
-                WC24_ERROR(this, "NWC24SetDlInterval() failed.", err);
+                SetError(this, "NWC24SetDlInterval() failed.", NWC24GetErrorCode(), err);
         return ConvertError(err);
             }
             err = NWC24SetDlMargin(&dl[i], 720);
             if (err != NWC24_OK) {
-                WC24_ERROR(this, "NWC24SetDlRetryMargin() failed.", err);
+                SetError(this, "NWC24SetDlRetryMargin() failed.", NWC24GetErrorCode(), err);
         return ConvertError(err);
             }
             char name[16];
             sprintf(name, "%d.bin", kind[i]);
             err = NWC24SetDlFilename(&dl[i], name);
             if (err != NWC24_OK) {
-                WC24_ERROR(this, "NWC24SetDlFilename() failed.", err);
+                SetError(this, "NWC24SetDlFilename() failed.", NWC24GetErrorCode(), err);
         return ConvertError(err);
             }
         }
@@ -885,26 +880,26 @@ s32 CWiiConnect24::setupDlTasks(BOOL first, BOOL second, u8 force, u16 interval,
         }
         err = NWC24SetDlCount(&dl[i], count);
         if (err != NWC24_OK) {
-            WC24_ERROR(this, "NWC24SetDlCount() failed.", err);
+            SetError(this, "NWC24SetDlCount() failed.", NWC24GetErrorCode(), err);
         return ConvertError(err);
         }
         if (add) {
             err = NWC24AddDlTask(&dl[i]);
             if (err != NWC24_OK) {
-                WC24_ERROR(this, "NWC24AddDlTask() failed.", err);
+                SetError(this, "NWC24AddDlTask() failed.", NWC24GetErrorCode(), err);
         return ConvertError(err);
             }
         } else {
             err = NWC24UpdateDlTask(&dl[i]);
             if (err != NWC24_OK) {
-                WC24_ERROR(this, "NWC24UpdateDlTask() failed.", err);
+                SetError(this, "NWC24UpdateDlTask() failed.", NWC24GetErrorCode(), err);
         return ConvertError(err);
             }
         }
         if (idOut) {
             err = NWC24GetDlTaskId(&dl[i], idOut);
             if (err != NWC24_OK) {
-                WC24_ERROR(this, "NWC24GetDlId() failed.", err);
+                SetError(this, "NWC24GetDlId() failed.", NWC24GetErrorCode(), err);
         return ConvertError(err);
             }
         }
@@ -923,15 +918,13 @@ s32 CWiiConnect24::execDownload(s32 index, u32 mask, u16 id) {
         config.free = SOFreeFunc;
         s32 result = SOInit(&config);
         if (result < 0) {
-            WC24_ERROR_DETAIL(this, "SOInit() failed.", result);
+            SetError(this, "SOInit() failed.", 0, result);
             sSOStarting = false;
             return -9;
         }
         result = SOStartup();
         if (result < 0) {
-            s32 code = mErrorCode = NETGetStartupErrorCode(result);
-            mDetail = result;
-            sprintf(mMessage, "%s %d %d", "SOStartup() failed.", code, result);
+            SetError(this, "SOStartup() failed.", NETGetStartupErrorCode(result), result);
             sSOStarting = false;
             return -9;
         }
@@ -944,7 +937,7 @@ s32 CWiiConnect24::execDownload(s32 index, u32 mask, u16 id) {
         NWC24Err err = NWC24ExecDownloadTask(6, id, mask);
         sDownloading = false;
         if (err != NWC24_OK) {
-            WC24_ERROR(this, "NWC24ExecDownloadTask() failed.", err);
+            SetError(this, "NWC24ExecDownloadTask() failed.", NWC24GetErrorCode(), err);
         return ConvertError(err);
         }
         break;
@@ -971,27 +964,27 @@ s32 CWiiConnect24::deleteDlTasks(BOOL first, BOOL second) {
             continue;
         }
         if (err != NWC24_OK) {
-            WC24_ERROR(this, "NWC24GetDl*() failed.", err);
+            SetError(this, "NWC24GetDl*() failed.", NWC24GetErrorCode(), err);
         return ConvertError(err);
         }
         if (!gotPath) {
             gotPath = TRUE;
             err = NWC24GetDlVfPath(&dl, path, sizeof(path));
             if (err != NWC24_OK) {
-                WC24_ERROR(this, "NWC24GetDlVfName() failed.", err);
+                SetError(this, "NWC24GetDlVfName() failed.", NWC24GetErrorCode(), err);
         return ConvertError(err);
             }
         }
         err = NWC24DeleteDlTask(&dl);
         if (err != NWC24_OK) {
-            WC24_ERROR(this, "NWC24DeleteDlTask() failed.", err);
+            SetError(this, "NWC24DeleteDlTask() failed.", NWC24GetErrorCode(), err);
         return ConvertError(err);
         }
     }
     if (gotPath) {
         s32 result = NANDDelete(path);
         if (result != NAND_RESULT_NOEXISTS && result != NAND_RESULT_OK) {
-            WC24_ERROR_DETAIL(this, "NANDDelete() failed.", result);
+            SetError(this, "NANDDelete() failed.", 0, result);
             return -8;
         }
     }
@@ -1040,17 +1033,17 @@ s32 CWiiConnect24::readLZ77FileEx(VFFile file, MEMHeapHandle heap, void** dst, u
         }
         s32 result = VFReadFile(file, gWC24ReadBuf, len, NULL);
         if (result != 0) {
-            WC24_ERROR_DETAIL(this, "VFReadFile() failed.", result);
+            SetError(this, "VFReadFile() failed.", 0, result);
             return -7;
         }
         if (ofs == 0) {
             if ((gWC24ReadBuf[0] & 0xF0) != 0x10) {
-                WC24_ERROR_DETAIL(this, "CXGetCompressionType() data is not LZ.", 0);
+                SetError(this, "CXGetCompressionType() data is not LZ.", 0, 0);
                 return -5;
             }
             outSize = CXGetUncompressedSize(gWC24ReadBuf);
             if (outSize > avail) {
-                WC24_ERROR_DETAIL(this, "CXGetUncompressedSize() overflow.", 0);
+                SetError(this, "CXGetUncompressedSize() overflow.", 0, 0);
                 *dst = NULL;
                 *size = 0;
                 return 1;
@@ -1065,7 +1058,7 @@ s32 CWiiConnect24::readLZ77FileEx(VFFile file, MEMHeapHandle heap, void** dst, u
         CXReadUncompLZ(&ctx, gWC24ReadBuf, len);
     }
     if (IsUncompUnfinished(&ctx)) {
-        WC24_ERROR_DETAIL(this, "CXIsFinisiedUncompLZ() is false.", 0);
+        SetError(this, "CXIsFinisiedUncompLZ() is false.", 0, 0);
         return -10;
     }
     *size = outSize;
