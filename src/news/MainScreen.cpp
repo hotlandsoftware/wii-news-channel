@@ -605,11 +605,9 @@ void MainScreen::LayoutSectionButtons() {
         }
     } else {
         pos.x = mUnk164.x + mUnk14C.x + GetScreenWidth() / 2;
-        s32 y = 0;
         for (s32 i = 0; i < count; i++, button++) {
-            pos.y = top + y;
+            pos.y = top + i * 60;
             (*button)->Update(pos);
-            y += 60;
         }
     }
 }
@@ -685,8 +683,9 @@ void MainScreen::Draw() {
 inline void MainScreen::DrawGlobeInline() {
     math::VEC2 pos(mUnk16C.x, 123.0f + mUnk224);
     Draw2D_SetScissor(0, 0, mScreenRect.right, 456);
-    fn_80033FFC(&pos, mUnk334, 1, mUnk244,
-                1.0f + 0.05f * math::SinRad(1.5707964f * (mUnk350 * 0.125f)));
+    f32 scale = 1.0f + 0.05f * math::SinRad(1.5707964f * (mUnk350 / 8.0f));
+    f32 alpha = mUnk244;
+    fn_80033FFC(&pos, mUnk334, 1, alpha, scale);
     Draw2D_SetScissor(0, 0, GetScreenWidth(), 456);
     DrawRelated();
 }
@@ -937,8 +936,8 @@ void MainScreen::DrawButtons() {
     fn_800323F8(&mUnk164, mUnk23C, mUnk240);
     if (lbl_8035755C != NULL && lbl_8035755C->mMode != HeadlineList::MODE_SECTION) {
         s32 i;
-        FrameTextButton** button = &mButtons[1];
         s32 count = lbl_803575E0 - 1;
+        FrameTextButton** button = &mButtons[1];
         for (i = 0; i < count; i++, button++) {
             (*button)->Draw(mUnk23C);
         }
@@ -960,8 +959,8 @@ void MainScreen::DrawCursor() {
     fn_80035CD0(255.0f * s);
     ut::Rect r0(0.0f, 0.0f, 0.0f, 0.0f);
     ut::Rect r1(0.0f, 0.0f, 0.0f, 0.0f);
-    if (fn_8003567C(&r0, mUnk16C.x, 123.0f + mUnk224,
-                    1.0f + 0.05f * math::SinRad(1.5707964f * (mUnk350 * 0.125f))) &&
+    f32 scale = 1.0f + 0.05f * math::SinRad(1.5707964f * (mUnk350 / 8.0f));
+    if (fn_8003567C(&r0, mUnk16C.x, 123.0f + mUnk224, scale) &&
         fn_80035764(&r1))
     {
         fn_80035A3C(&r0, &r1, s);
@@ -3335,8 +3334,9 @@ void MainScreen::Globe1DFD0() {
         fn_8004DD8C(globe, 0);
         fn_8004CBE0(globe);
         fn_8004CE00(globe);
-        globe->mX = globe->mCamera->mX;
-        globe->mY = globe->mCamera->mY;
+        GlobeCamera* camera = globe->mCamera;
+        globe->mX = camera->mX;
+        globe->mY = camera->mY;
         fn_8004CC20(globe);
         break;
     case -1:

@@ -200,9 +200,10 @@ public:
     void DrawButtonsInline() {
         fn_800323F8(&mUnk164, mUnk23C, mUnk240);
         if (lbl_8035755C != NULL && lbl_8035755C->mMode != 2) {
-            FrameTextButton** button = &mButtons[1];
+            s32 i;
             s32 count = lbl_803575E0 - 1;
-            for (s32 i = 0; i < count; i++, button++) {
+            FrameTextButton** button = &mButtons[1];
+            for (i = 0; i < count; i++, button++) {
                 (*button)->Draw(mUnk23C);
             }
         }
