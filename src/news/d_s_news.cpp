@@ -2771,18 +2771,19 @@ f32 Article_GetMaxScrollOffset() {
               sLinesPerPage[lbl_80356970];
     f32 line = max & ~(max >> 31);
     if (line > creditStart) {
+        f32 h = GetLogoHeight();
         return -(sBodyView->mLineHeight * sBodyView->mNumLines +
-                 (lbl_80357568->mLineHeight * lbl_80357568->mNumLines +
-                  GetLogoHeight() * gTextScale) +
+                 (lbl_80357568->mLineHeight * lbl_80357568->mNumLines + h * gTextScale) +
                  (line - creditStart) * sCreditView->mLineHeight);
     }
     if (line > bodyStart) {
-        return -(lbl_80357568->mLineHeight * lbl_80357568->mNumLines +
-                 GetLogoHeight() * gTextScale + (line - bodyStart) * sBodyView->mLineHeight);
+        f32 h = GetLogoHeight();
+        return -(lbl_80357568->mLineHeight * lbl_80357568->mNumLines + h * gTextScale +
+                 (line - bodyStart) * sBodyView->mLineHeight);
     }
     if (line > headlineLines) {
-        return -(lbl_80357568->mLineHeight * lbl_80357568->mNumLines +
-                 GetLogoHeight() * gTextScale);
+        f32 h = GetLogoHeight();
+        return -(lbl_80357568->mLineHeight * lbl_80357568->mNumLines + h * gTextScale);
     }
     return -(line * (headlineLines * lbl_80357568->mLineHeight));
 }
