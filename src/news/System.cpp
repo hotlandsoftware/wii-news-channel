@@ -129,7 +129,7 @@ NewsScene* gNewsScene;
 ErrorScreen* gErrorScreen;
 TPLPalette* gCommonTpl;
 
-bool gVIBlackPending = true;
+extern bool gVIBlackPending;
 
 void PowerCallback();
 void ResetCallback();
@@ -169,16 +169,16 @@ void SystemInit() {
         KPADEnableAimingMode(i);
         KPADSetPosParam(i, 0.05f, 1.0f);
         KPADSetDistParam(i, 0.03f, 1.0f);
-        gCursorHorizon[i].x = 0.0f;
         gRepeatSlowOn[i] = false;
         gRepeatFastOn[i] = false;
         gZoomStarted[i] = false;
+        gPointerX[i] = GetScreenWidth() / 2;
         gPointerY[i] = 228.0f;
         gKPADLatest[i] = -1;
         gHold[i] = 0;
-        gPointerX[i] = GetScreenWidth() / 2;
         gTrig[i] = 0;
         gRelease[i] = 0;
+        gCursorHorizon[i].x = 0.0f;
         gCursorHorizon[i].y = 0.0f;
         gHoldFrames[i] = 0;
         gZoomArmed[i] = false;
@@ -340,7 +340,7 @@ void SystemCalc() {
             gPointerValid[i][j] = false;
         }
 
-        f32 t = 0.002f * __fabs(gCursorX[i][0] - gPointerX[i]);
+        f32 t = 0.002f * __fabsf(gCursorX[i][0] - gPointerX[i]);
         if (t < 0.1f) {
             t = 0.1f;
         }
@@ -348,7 +348,7 @@ void SystemCalc() {
             t = 1.0f;
         }
         gPointerX[i] = (1.0f - t) * gPointerX[i] + t * gCursorX[i][0];
-        t = 0.002f * __fabs(gCursorY[i][0] - gPointerY[i]);
+        t = 0.002f * __fabsf(gCursorY[i][0] - gPointerY[i]);
         if (t < 0.1f) {
             t = 0.1f;
         }
@@ -563,7 +563,7 @@ void SystemDraw() {
     }
 
     if (gFadeType != 0) {
-        f32 s = math::SinRad(1.5707964f * gFadeTimer / gFadeFrames);
+        f32 s = math::SinRad(1.5708f * gFadeTimer / gFadeFrames);
         u8 alpha = 255.0f * s;
         f32 w = GetScreenWidth();
         f32 h = 456.0f;
@@ -1268,3 +1268,5 @@ s32 gRumbleCooldown[4];
 const char* gRumblePattern[4];
 s32 gRumblePos[4];
 CNTHandle gContentHandles[10];
+
+bool gVIBlackPending = true;
