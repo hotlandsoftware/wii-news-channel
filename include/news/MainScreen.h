@@ -136,6 +136,7 @@ public:
     void Hook1ED20();
 
     BOOL IsState(StateFunc state) { return mState == state; }
+    bool IsStateB(StateFunc state) { return mState == state; }
     bool IsListState() {
         return IsState(&MainScreen::State16960) || IsState(&MainScreen::StateList);
     }
@@ -164,6 +165,7 @@ public:
     void SetButtonsEnabled(bool enabled);
     void OpenGlobe();
     void OpenSelected();
+    void SwitchArticle(s32* arg);
     void SetListHook();
     void EaseZoom();
     void ReturnToTop();

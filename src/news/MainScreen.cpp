@@ -1279,6 +1279,17 @@ s32 MainScreen::OpenArticle(s32* arg) {
     return 0;
 }
 
+inline void MainScreen::SwitchArticle(s32* arg) {
+    switch (OpenArticle(arg)) {
+    case 1:
+        ChangeState(&MainScreen::State18770, NULL);
+        break;
+    case 2:
+        ChangeState(&MainScreen::State18770, arg);
+        break;
+    }
+}
+
 void MainScreen::OpenSelected() {
     switch (OpenArticle(NULL)) {
     case 1:
@@ -2145,22 +2156,11 @@ void MainScreen::State195B8(s32* arg) {
             return;
         }
 
-        bool canSwitch = false;
         if (IsState(&MainScreen::State195B8) && count > 1) {
-            canSwitch = true;
-        }
-        if (canSwitch) {
             s32 hasLocation = location != NULL;
             if (mUnk2B7 && mSelected < count - 1) {
                 mSelected++;
-                switch (OpenArticle(&hasLocation)) {
-                case 1:
-                    ChangeState(&MainScreen::State18770, NULL);
-                    break;
-                case 2:
-                    ChangeState(&MainScreen::State18770, &hasLocation);
-                    break;
-                }
+                SwitchArticle(&hasLocation);
                 Article_Arrange(gTextScale);
                 Article_Reset();
                 PlaySE(0x38);
@@ -2168,14 +2168,7 @@ void MainScreen::State195B8(s32* arg) {
             }
             if (mUnk2B6 && mSelected > 0) {
                 mSelected--;
-                switch (OpenArticle(&hasLocation)) {
-                case 1:
-                    ChangeState(&MainScreen::State18770, NULL);
-                    break;
-                case 2:
-                    ChangeState(&MainScreen::State18770, &hasLocation);
-                    break;
-                }
+                SwitchArticle(&hasLocation);
                 Article_Arrange(gTextScale);
                 Article_Reset();
                 PlaySE(0x39);
@@ -2228,7 +2221,7 @@ void MainScreen::State195B8(s32* arg) {
                         if (y > 83.0f && y < 373.0f && (gTrig[i] & 0x800)) {
                             if (hit) {
                                 mUnk354 = gHideClock;
-                                mUnk355 = IsState(&MainScreen::State195A0);
+                                mUnk355 = IsStateB(&MainScreen::State195A0);
                                 ChangeState(&MainScreen::State1C600, NULL);
                                 return;
                             }
