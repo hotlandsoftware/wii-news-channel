@@ -38,8 +38,8 @@ inline void Mtx_RotateDegXZ(math::MTX34* mtx, f32 x, f32 z) {
     Mtx_RotateDeg(mtx, x, 0.0f, z);
 }
 
-math::MTX34 Model::CalcMtx(const math::VEC3& rotate) {
-    math::MTX34RotXYZFIdx(&gWorkMtx, 0.0f, (256.0f / 360.0f) * rotate.y, 0.0f);
+math::MTX34 Model::CalcMtx(math::VEC3& rotate) {
+    math::MTX34RotXYZDeg(&gWorkMtx, 0.0f, rotate.y, 0.0f);
     Mtx_RotateDegXZ(&gWorkMtx, rotate.x, rotate.z);
     Mtx_Translate(&gWorkMtx, mPos.x, mPos.y, mPos.z);
     return gWorkMtx;

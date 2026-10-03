@@ -565,7 +565,7 @@ config.libs = [
             Object(Matching, "news/Locale.cpp"),
             Object(Matching, "news/PointerEffect.cpp"),
             Object(Matching, "news/ErrorScreen.cpp"),
-            Object(NonMatching, "news/Model.cpp"),
+            Object(Matching, "news/Model.cpp"),
             Object(Matching, "news/main.cpp"),
             Object(Matching, "news/DrawUtil.cpp"),
             Object(Matching, "news/SmoothValue.cpp"),
