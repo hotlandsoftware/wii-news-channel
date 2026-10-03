@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Random local search over semantics-preserving source edits of one C function.
 
-Usage: srcsearch.py <src> <function> [iterations] [--restarts N]
+Usage: srcsearch.py <src> <function>[=<symbol>] [iterations] [--restarts N]
+
+For C++ give the name as written in the source and the mangled symbol, e.g.
+PitchUp=PitchUp__7FxVoiceFPPl.
 
 <src> is a path like src/revolution/TMCC_JPEG/jpgd_dec.c. The unit is derived from it.
 Each candidate is compiled directly with the unit's ninja compile command (ninja itself is
@@ -222,12 +225,16 @@ def main():
     ap.add_argument("--restarts", type=int, default=0)
     a = ap.parse_args()
     src, func, iters, restarts = a.src, a.func, a.iterations, a.restarts
+    # C++: "SourceName=MangledSymbol", e.g. "PitchUp=PitchUp__7FxVoiceFPPl"
+    sym = func
+    if "=" in func:
+        func, sym = func.split("=", 1)
     s0 = open(src).read()
     a0, b0 = span(s0, func)
 
     def run(t):
         open(src, "w").write(s0[:a0] + t + s0[b0:])
-        return score(src, func)
+        return score(src, sym)
 
     best = s0[a0:b0]
     base = bs = run(best)
