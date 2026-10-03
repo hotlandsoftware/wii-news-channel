@@ -7,7 +7,7 @@ Project-specific findings. Read this before decompiling a file.
 | Range | Contents |
 | --- | --- |
 | `0x80006FC0`–`0x80051D4C` | News Channel game code (C++). |
-| `0x80051D4C`–`0x800FB9EC` | HOME Menu (HBM), RSO, NW4R (`lyt`, `snd`, `g3d`, `ut`, `math`). |
+| `0x80051D4C`–`0x800FB9EC` | HOME Menu (HBM), RSO, NW4R (`lyt`, `snd`, `g3d`, `ut`, `math`), and the TMCC JPEG decoder (`0x8007FE28`–`0x8008A0A4`). |
 | `0x800FB9EC`–`0x80179F64` | RVL SDK (May–June 2007 builds). |
 | `0x80179F64`–`0x8018C7C0` | MSL / Runtime.PPCEABI.H. |
 | `0x8018C7C0`–`0x80191F00` | MetroTRK. |
@@ -25,6 +25,7 @@ So each file ends with a `__sinit` that constructs it, and the `.ctors` table (`
 - **Currently NonMatching under this rule:** VF `pf_dir.c` (99.97%), `d_vf_sys.c` (99.99%), `nand_drv.c` (99.99%) and `ram_drv.c` (99.88%). All are register-allocation differences. Also nw4r `snd_RemoteSpeaker.cpp` (99.2%, block layout of `Update`) and `NWC24Download.c` (99.89%, register allocation in three functions).
 
 - **Currently NonMatching under this rule:** VF `pf_dir.c` (99.97%), `d_vf_sys.c` (99.99%), `nand_drv.c` (99.99%) and `ram_drv.c` (99.88%). All are register-allocation differences. Also nw4r `snd_RemoteSpeaker.cpp` (99.2%, block layout of `Update`). Also `NCD/ncdsystem.c` (99.70%) and `NET/netcrc.c` (97.86%), both register allocation. Also nw4r ef `emform/ef_disc.cpp` (99.6%) and `emform/ef_cylinder.cpp` (99.7%) (random seed kept in a register across `sqrt`), `ef_drawfreestrategy.cpp` (99.7%), `ef_drawbillboardstrategy.cpp` (99.6%) and `ef_drawdirectionalstrategy.cpp` (96%) (register allocation and scheduling).
+- **TMCC JPEG** (`src/revolution/TMCC_JPEG`): `jpgd_dec.c` (99.9%, `jpgdResync` branch layout and two register swaps), `jpgd_idct.c` (96%), `jpgd_out_rgb565.c` (95%), `jpgd_out_rgba8.c` (90%) and `jpgd_out_yuv.c` (82%) are NonMatching and still in progress; see `docs/platform_layer_map.md`.
 
 ## Compiler
 
@@ -65,7 +66,7 @@ So each file ends with a `__sinit` that constructs it, and the `.ctors` table (`
 1. Find the file range from `.ctors`/`__sinit`, then run `tools/decomp/refs.py START END` to get its data ranges.
 2. Add the split to `config/HAGE/splits.txt` and `Object(NonMatching, ...)` to `configure.py`.
 3. Write the source, `ninja`, then rename symbols with `tools/decomp/ren.py` (mangled names from `build/binutils/powerpc-eabi-nm`).
-4. Iterate with `tools/decomp/od.py` and `tools/decomp/variants.py`.
+4. Iterate with `tools/decomp/od.py` and `tools/decomp/variants.py`. For remaining register swaps, `tools/decomp/srcsearch.py <src> <function> 500` searches declaration orders, statement orders and operand orders automatically.
 5. When every function is 100%, switch to `Matching` and check that `ninja` still prints `build/HAGE/main.dol: OK`.
 
 ## Known non-matching
@@ -173,6 +174,22 @@ So each file ends with a `__sinit` that constructs it, and the `.ctors` table (`
 - **Group loads into named locals.** `Article_GetLineAt` loads every `mHeight`/`mLineHeight` up front. Local `ArticleText*` copies of the three globals and named line-height locals gave +8%. The same trick fixed `StateMain`'s icon position: compute `y2`/`x2` before storing `z`, `y`, `x`.
 - **Declaration order sets the stack slots.** In `Article_DrawSourceAndDate`, `f32 w = logo->width; f32 h = logo->height;` (not the reverse) puts the two int-to-float temps in the original slots. In `Article_DrawDate`, `math::VEC2 p(...)` has to come before `f32 maxWidth`.
 - **`GlobePin::GetPos()`** (`0x8000D6A0`, renamed `GetPos__8GlobePinFv`) returns a `VEC2` by value: hidden result pointer in `r3`, `this` in `r4`. `math::VEC2 a; a = pin->GetPos();` gives the float-wise copy (`lfs`/`stfs`) from a temporary, which is what `Pins_Sort` does.
+
+## More codegen patterns (TMCC JPEG, `0x8007FE28–0x8008A0A4`)
+
+Library details are in `docs/platform_layer_map.md` ("TMCC JPEG decoder").
+- **Compound assignment inside an expression.** `v = mask & (s->bits >> (s->numBits -= n));` and `s->numBits -= n; v = mask & (s->bits >> s->numBits);` give the same instructions with two registers swapped. Try the compound form when a store and a dependent load swap registers.
+- **Array indexing over pointer walking.** `out[comp + 4]`, `&sc->dcPred[i]`, `jpgdZigzag[k]` and 2-D tables (`const u8 t[5][4]`, read as `t[i][j]`) matched where pointer locals walking the same arrays did not. MWCC's strength reduction then creates the pointers itself, and the registers it picks differ from those of hand-written pointer locals.
+- **A local scoped to the branch.** `{ u16 len = lk[idx].len; if (len != 0) ... }` loads `len` into its own register before the address add (DC table lookup in `jpgdDecodeBlockScaled`), where `lk[idx].len` in the condition does not.
+- **Inline helpers change loop unrolling.** A two-line `static inline` pixel writer called twice in a loop body makes MWCC unroll the loop 8× behind its signed-overflow guard (the `li rN, 0 ... cmpwi rN, 0` chain) and compute the loop invariants after the guard, separately for the unrolled and the remainder loop. The same expression written inline (or as a macro) is unrolled 4× without the guard, with the invariants hoisted above it. If the original recomputes invariants in front of both loop copies, look for an inline helper.
+- **Inline helpers and auto-inlining of the caller.** Moving a function's only loop into an inline helper can make the function itself small enough for `-inline auto` to inline it into its callers (`jpgdReadHeader` into `TMCCJPEGDecInit`). If the original calls it out of line, the caller is probably in another file.
+- **`#pragma dont_inline on` around a function** stops both inlining of that function and inlining inside it. It is not a way to keep one callee out of line.
+- **Loop bounds.** `for (i = x; i < (s32)(x + w); i++)` and `xe = x + w; for (i = x; i < xe; i++)` hoist the bound into different registers; both forms occur in this library.
+- **Commutative operand order follows evaluation order, not source order.** MWCC prints `add rD, rA, rB` with the operand it evaluated (allocated) first in `rA`. In `(w + s - 1) / s` the divisor `s` is shared, so it is evaluated first and the add comes out as `add rD, s, w` whichever way the source is written. A cast or a temporary on the sum (`((s32)(w + s) - 1) / s`, or `v = w + s; (v - 1) / s`) puts `w` first (`jpgdSetupScale`).
+- **Explicit casts change OR/ADD chains.** `nz = d2 | nz` gives `or rD, nz, d2`; `nz = (u32)d2 | nz` gives `or rD, d2, nz`. A single expression `d4 | d6 | d2 | ...` is also rebalanced into two parallel chains, while statement-per-OR keeps one chain (`jpgdIdct8x8*`).
+- **Reassigning a parameter.** `x >>= 1;` and then looping from `x` reuses `x`'s register (`srwi r4, r4, 1`), where `cx = x >> 1;` takes a new one. Look for this when a parameter register is overwritten in place.
+- **Local types.** Declaring the chroma locals `s8 cb, cr;` (assigned from `*scb++`) rather than `s32 cb = (s8)*scb++;` changes their registers.
+- **Search tools and statement order.** When automatically permuting the order of setup statements, keep every statement after the ones whose results it reads. A use-before-assignment order still compiles (MWCC does not warn) and can score higher than the correct code.
 
 ## Game code map
 

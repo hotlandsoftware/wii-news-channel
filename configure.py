@@ -1113,6 +1113,23 @@ config.libs = [
         ],
     },
     {
+        "lib": "tmcc_jpeg",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": [*cflags_rvl, "-use_lmw_stmw on", "-i src/revolution/TMCC_JPEG"],
+        "progress_category": "sdk",
+        "objects": [
+            Object(Matching, "revolution/TMCC_JPEG/jpgd_stream.c"),
+            Object(NonMatching, "revolution/TMCC_JPEG/jpgd_idct.c"),
+            Object(Matching, "revolution/TMCC_JPEG/jpegdec.c"),
+            Object(NonMatching, "revolution/TMCC_JPEG/jpgd_dec.c"),
+            Object(Matching, "revolution/TMCC_JPEG/jpgd_idct_scaled.c"),
+            Object(NonMatching, "revolution/TMCC_JPEG/jpgd_out_yuv.c"),
+            Object(NonMatching, "revolution/TMCC_JPEG/jpgd_out_rgb565.c"),
+            Object(NonMatching, "revolution/TMCC_JPEG/jpgd_out_rgba8.c"),
+            Object(Matching, "revolution/TMCC_JPEG/jpgd_huff.c"),
+        ],
+    },
+    {
         "lib": "base",
         "mw_version": "GC/3.0a5.2",
         "cflags": cflags_rvl,

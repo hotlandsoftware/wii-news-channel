@@ -43,7 +43,7 @@ Anything matched there can be reused directly.
 
 | `0x80074AE0–0x800767C8` | 0x1CE8 | SO + NCD + NET (task 3: 5/7 files Matching) | Jun 28 2007 (both), REX 2.0.4.0 | mkw `rvl/so/soCommon.c` | 100% (SO) |
 | `0x800767C8–0x8007FE28` | 0x9660 | NWC24 | Jun 28 2007 | smg (Dec 2007) + ogws | 50% / 39% |
-| `0x8007FE28–0x8008A0A4` | 0xA27C | **Unidentified** self-contained lib (big unrolled functions, tables at `.rodata 0x801AACF0`) | — | none | — |
+| `0x8007FE28–0x8008A0A4` | 0xA27C | TMCC JPEG decoder (`TMCCJPEGDecInit`, `TMCCJPEGDecodeRGB565`, `TMCCJPEGDecSetResolution`; Task 5) | — | none (no public source) | see "TMCC JPEG decoder" below |
 | `0x8008A0A4–0x8008AA44` | 0x9A0 | ARC (`arc.c`, **done**) | — | **smg** | 100% |
 | `0x8008AA44–0x80096D2C` | 0xC2E8 | HBM core (`homebutton::*`, task 6 **done**: 6/6 Matching) | HBM May 16 2007 (0x4199_60726) | **ogws `homebuttonMiniLib`** (May 7 2007, same revision); tp `homebuttonLib` for the sound API | ogws: 70–100% per file before porting; tp: Base 22% |
 | `0x80096D2C–0x8009C720` | 0x59F4 | HBM sound (HBMAxSound / `mix`/`syn*`/`seq`; contains `vcmv_main.cpp`) | (HBM) | none (ss has the file list only) | — |
@@ -152,10 +152,7 @@ Exact ends from `.ctors`/`__sinit` are marked †.
   - **`NWC24Download.c` is NonMatching (99.89%)**, register allocation only: `NWC24InitDlTask` (98.9%, the zero/header/title-id registers are permuted), `NWC24UpdateDlTask` and its inlined copy (99.8%/99.6%, group-id temp and the permission flag swap `r29`/`r30`), `WriteDlTask` (99.7%, the entry id lands in `r4` instead of `r0`). Tried: declaration orders, `u64` title id, local header pointers, wrapping checks in extra inlines, other compilers (3.0a3–3.0a5), `-O3`, `-inline deferred`.
   - **Game calls** (`0x80040B7C–0x80043FA0`): `NWC24iRequestShutdownSync` (`fn_80040B7C`); `NWC24OpenLib`, `NWC24CloseLib`, `NWC24Check`, `NWC24GetErrorCode`, `NWC24GetDlTaskId`, `NWC24GetMyDlTask` (`fn_80041D70`); `NWC24GetDlUrl`, `NWC24GetDlFilename`, `NWC24GetDlSubTaskLastUpdate`, `NWC24DeleteDlTask`, `NWC24GetDlNextTime`, `NWC24GetDlVfPath` (`fn_800427E4`); the task setup in `fn_80043178`: `NWC24InitDlTask`, `NWC24SetDlPriority`, `NWC24SetDlInterval`, `NWC24GetDlInterval`, `NWC24SetDlServerInterval`, `NWC24SetDlMargin`, `NWC24SetDlUrl`, `NWC24SetDlOption`, `NWC24SetDlFilename`, `NWC24SetDlCount`, `NWC24SetDlSubTask`, `NWC24CheckDlTask`, `NWC24UpdateDlTask`, `NWC24AddDlTask`, `NWC24CreateDlVf`; `NWC24ExecDownloadTask` (`fn_80043C44`); `NWC24GetMyDlTask`/`NWC24DeleteDlTask`/`NWC24GetDlVfPath` (`fn_80043DC4`); `NWC24GetErrorCode` (`fn_80043FA0`). SO/NCD call `NWC24iStartupSocket`, `NWC24iCleanupSocket`, `NWC24iLockSocket`, `NWC24iUnlockSocket`, and NCD (`fn_80076138`) calls `NWC24iEpochSecondsToDate`, `NWC24iDateToOSCalendarTime`, `NWC24iGetUniversalTime`, `NWC24iSynchronizeRtcCounter`.
   - **Renamed outside the range:** `fn_80075D38` → `NCDiGetEnabledConfigList` (called by `NWC24Check`).
-- **Unidentified** `0x8007FE28–0x8008A0A4` (41 KB).
-  It is self-contained (only `memcpy`/`memset` and one `OSPanic`-like call out), and only game code calls it: `fn_8004E794` calls `fn_80081348`, `fn_80081554`, `fn_800816B4`.
-  It has many large near-duplicate functions (0x590–0x76C) and `.rodata` tables `0x801AACF0` (0x100), `0x801AADF0`/`0x801AAE04` (0x14), `0x801AAE18` (0x40), `0x801AAE58` (0x100).
-  This is probably a decompression or crypto library used on downloaded news data. Identify it before porting.
+- **TMCC JPEG decoder** `0x8007FE28–0x8008A0A4` (41 KB, Task 5): see the "TMCC JPEG decoder" section below.
 - **ARC** `0x8008A0A4` (`ARCInitHandle`) to `0x8008AA44`. Petari's `arc.c` is 100%.
 - **Task 3 (RSO, CNT, ARC, SO/NCD/NET): done.** 10 files, 8 `Matching`, all `GC/3.0a5.2` + `cflags_rvl` (libs `rso`, `cnt`, `arc`, `so`, `ncd`, `net`).
 
@@ -179,6 +176,33 @@ Exact ends from `.ctors`/`__sinit` are marked †.
   - **NCD** `ncdsystem.c` (name from the `OSPanic` string): `NCDGetLinkStatus`, `NCDiGetEnabledConfigList` (inlined version, 0x17C), static `ExecConfigCommand(funcName, buf, cmd)` and `LockRight` (names from MKW's map). The config buffer is 0x1B60 bytes taken from the IPC arena (`NCDiConfig`: 8-byte header + 3 × 0x91C entries, in `ncd.h`). `.bss` is mutex, result[8], vec[4] (each 32-byte aligned, in that order); MWCC places `.bss` statics in order of first use, and `LockRight` is the last function in `.text`, so an unreferenced `NCDiClearWork` before `NCDGetLinkStatus` reproduces the order (`.sbss` follows reverse declaration order instead). `NCDiGetEnabledConfigList` is 99% (the config pointer and the flags byte swap `r4`/`r5`).
   - **NET** (RevoEX): `nettime.c` (ogws), `netcrc.c` (`NETCalcCRC32`, nibble table at `.rodata 0x801AAC88`; 97.86%, `crc`/byte registers swapped, every loop form tried), `neterror.c` (`NETiGetConnectionTypeFromConfigList`, `NETGetStartupErrorCode`, static `GetStartupErrorCode`, "Unknown SOStartup Error"), `NETVersion.c` (`NETGetRexPPCVersionPrintable`, unreferenced but kept: `#pragma force_active on`). In MKW these sit in the same order except that `NETCalcCRC32` moved after `NETMemSet`. `neterror.c` needs `-inline noauto`: with `-inline auto` `NETiGetConnectionTypeFromConfigList` gets inlined into `NETGetStartupErrorCode`, while MKW and our DOL keep the call.
   - Names given outside the range: `NWC24iStartupSocket`/`NWC24iCleanupSocket`/`NWC24iLockSocket`/`NWC24iUnlockSocket` (`0x8007AD18`–`0x8007AD48`), `NWC24iGetUniversalTime` (`0x8007BC58`), `NWC24iEpochSecondsToDate` (`0x8007B430`), `NWC24iDateToOSCalendarTime` (`0x8007B56C`).
+
+### TMCC JPEG decoder (`0x8007FE28–0x8008A0A4`) — Task 5
+
+- **Identification.** A baseline (sequential, Huffman) JPEG decoder. The game's error strings name its API: `TMCCJPEGDecInit() failed(%d).`, `TMCCJPEGDecSetResolution() failed(%d).`, `TMCCJPEGDecodeRGB565() failed(%d).` (the API is called from `fn_8004E794`, next to the `fn_8004E748`/`fn_8004E754` helpers that `NewsArticle.cpp` uses as a `JPEGDecoder` object). No source, SDK header or other decomp of TMCC JPEG was found, so everything is written from the disassembly and all internal names (`jpgd*`, `JPEGDecContext` …) are guesses.
+- **What it does.** Parses SOI/DQT/DHT/SOF0/SOS/DRI/APPn/COM, builds 256-entry Huffman lookup tables plus slow-path code tables, decodes one MCU at a time into 8×8 blocks with an AAN-style integer IDCT (`181/256 = √2`, constants 98/334/139), and writes each MCU straight into a GX texture layout: I8 tiles for Y/Cb/Cr planes (`YUV` output, format 2), RGB565 tiles (format 0) or RGBA8 tiles (format 1, AR/GB halves). Supported sampling: 4:1:1, 4:2:2, 4:2:0, 4:4:4 and grayscale, selected through the 2-D tables `jpgdSampTableH/V[5][4]` and `jpgdSampComps[5]`. `TMCCJPEGDecSetResolution` picks a 1/1, 1/2, 1/4 or 1/8 scale: scaled IDCTs (4×4, 2×2, 1×1) and a coefficient decoder that skips coefficients past `coefLimit`. Restart markers are handled, with resynchronisation on corrupt data (`jpgdResync`).
+- **Lib entry** `tmcc_jpeg`: `GC/3.0a5.2`, `cflags_rvl` + `-use_lmw_stmw on` (the large output functions save with `stmw`). Context structs are in `src/revolution/TMCC_JPEG/jpgd_internal.h` (`JPEGDecHandle` 0x6D0 bytes, `JPEGDecContext` 0x19E8 bytes, the caller supplies both).
+
+| File | Range | Contents | Status |
+| --- | --- | --- | --- |
+| `jpgd_stream.c` | `0x8007FE28–0x8008082C` | Input stream: buffered reads through a callback, `jpgdGetByte/Word/Bytes`, bit buffer fill/unread | Matching |
+| `jpgd_idct.c` | `0x8008082C–0x80081348` | 8×8 IDCT for luma (`jpgdIdct8x8Y`) and chroma (`jpgdIdct8x8C`, signed output) | NonMatching (96.1%) |
+| `jpegdec.c` | `0x80081348–0x80081794` | Public API: `TMCCJPEGDecInit`, `TMCCJPEGDecodeRGB565`, `TMCCJPEGDecSetResolution` | Matching |
+| `jpgd_dec.c` | `0x80081794–0x80083554` | Scale setup, MCU decode, marker parsing (DQT/DHT/SOF/SOS/DRI), restart handling, Huffman table builder | NonMatching (99.9%: only `jpgdResync` is left, 98.4%) |
+| `jpgd_idct_scaled.c` | `0x80083554–0x80083C60` | 4×4, 2×2, 1×1 IDCTs (Y and C) | Matching |
+| `jpgd_out_yuv.c` | `0x80083C60–0x80086E68` | Output setup + I8 plane writers for each sampling (normal and edge-MCU variants) | NonMatching (81.7%) |
+| `jpgd_out_rgb565.c` | `0x80086E68–0x800882F8` | YCbCr→RGB565 tile writers | NonMatching (95.4%) |
+| `jpgd_out_rgba8.c` | `0x800882F8–0x800898F4` | YCbCr→RGBA8 tile writers | NonMatching (89.9%) |
+| `jpgd_huff.c` | `0x800898F4–0x8008A0A4` | Block decoders (full and scaled), slow Huffman path; tables (`jpgdZigzag`, `jpgdCoefExtent`, sampling tables) | Matching |
+
+- **File boundaries.** `jpegdec.c` must be its own file: `TMCCJPEGDecInit` inlines the static helpers that check the parameters, parse the header and start the scan, but calls `jpgdReadHeader`, `jpgdSetupScale` etc. out of line. In one file with `-ipa file`, MWCC inlines `jpgdReadHeader` (which has no loop of its own once its zigzag loop is an inline helper) into `TMCCJPEGDecInit`.
+- **Codegen findings** (see also `docs/news_decomp_notes.md`):
+  - The code is plain C with array indexing (`out[comp + 4]`, `&sc->dcPred[i]`, `jpgdZigzag[k]`, `jpgdSampTableH[t][j]`); pointer-walking rewrites of the same loops give the right instructions but permuted registers.
+  - Bit extraction is written `v = (n - 1) & (s->bits >> (s->numBits -= rs));`. Splitting the compound assignment into its own statement swaps two registers.
+  - Small `static inline` helpers matter for loop unrolling. A pixel writer `jpgdPutI8(p, x, y, tiles, v)` called twice per iteration makes MWCC unroll the YUV luma loops 8× behind its overflow guard and recompute the loop invariants (row base, `(y >> 2) * tiles`) separately for the unrolled and remainder loops, as in the original; the same expression written inline is unrolled 4× without a guard.
+  - The clamp is branchless on the low side: `v > 255 ? 255 : (v < 0 ? 0 : v)` gives the original `srawi/andc`. For grayscale RGB output the original copies Y into r/g/b in both arms of `if (yy >> 8)`.
+- **Status.** 41,596 bytes of code; 4/9 files Matching (7,436 bytes linked from `Matching` units, 14,616 bytes in 100% functions), 92.1% fuzzy overall.
+- **Remaining work.** The 8×8 IDCTs (96%, register allocation and scheduling in the column pass), the YUV 4:1:1/4:2:2/4:2:0 writers (74–79%: register pressure; the original spills `h` and keeps the overflow-guard constant `0x80000000` in `r31`, ours rematerializes it), the RGBA8/RGB565 4:1:1/4:2:2/4:2:0 writers (register allocation), the three `jpgdSetupOutput*` functions (94%: the original keeps `&ctx->pix` in a register instead of folding it into the offsets; no source form tried reproduces this), and `jpgdResync` (the loop exit is `ble; b` instead of `bgt`, plus two register swaps). `tools/decomp/srcsearch.py` was used for most of the register-order fixes and is the first thing to try on the remaining functions.
 
 ### HBM (`0x8008AA44–0x8009C720`)
 
@@ -851,7 +875,7 @@ MetroTRK is handled by another agent.
   For each file, try both with `refcmp.py` and take the better one.
 - **SC.** SC matches the Forecast Channel's `May 8 2007` build exactly.
 - **NWC24 and KPAD.** These are newer than ogws and older than Petari, with real code changes: NWC24 ~50% drop-in, KPAD ~49%.
-- **Unidentified library.** The 41 KB library at `0x8007FE28` has no reference at all.
+- **TMCC JPEG.** The 41 KB library at `0x8007FE28` is a baseline JPEG decoder (TMCC JPEG, named by the game's error strings). No source or other decomp of it was found; it was written from the disassembly.
 
 ## Headers
 
@@ -956,7 +980,7 @@ Difficulty: E = mostly drop-in, M = drop-in plus version fixes, H = little or no
 
 | 3 | RSO + CNT + ARC + SO/NCD (**done**, 8/10 Matching; SO starts `0x80074AE0`) | `0x80051D4C–0x80053274`, `0x8008A0A4–0x8008AA44`, `0x80074AE0–0x800767C8` | 15 KB | smg, ogws/fc, mkw | E–M |
 | 4 | NWC24 | `0x800767C8–0x8007FE28` | 38 KB | smg + ogws | M |
-| 5 | Identify and decompile the unknown library | `0x8007FE28–0x8008A0A4` | 41 KB | none | H |
+| 5 | TMCC JPEG decoder (identified; in progress: 4/9 files Matching, 92% fuzzy, see "TMCC JPEG decoder") | `0x8007FE28–0x8008A0A4` | 41 KB | none (from disassembly) | H |
 | 6 | HBM core (**done**, 6/6 Matching; ogws `homebuttonMiniLib` is the reference) | `0x8008AA44–0x80096D2C` | 49 KB | ogws `homebuttonMiniLib`, tp `homebuttonLib` | M–H |
 | 7 | HBM sound | `0x80096D2C–0x8009C720` | 23 KB | none | H |
 | 8 | ef part 1: draworder … resource (**done**, 7/8 Matching; ef starts `0x8009D694`, animcurve WIP) | `0x8009C720–0x800ABAE0` | 62 KB | ogws | M |
