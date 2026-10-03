@@ -57,7 +57,7 @@ public:
         return &history[((mFrame + f + FX_HISTORY_FRAMES) % FX_HISTORY_FRAMES) * FX_FRAME_SAMPLES + pos];
     }
 
-    void Read(s32* dst, s32* history, s32 frame, s32 pos, s32 count);
+    void Read(s32 count, s32* dst, s32 frame, s32* history, s32 pos);
 
     bool mEnabled;                        // at 0xC
     bool mPitchUp;                        // at 0xD
@@ -612,7 +612,7 @@ FxVoice::FxVoice() {
     MakeWindow(mWindowB, FX_WINDOW_SIZE, 0);
 }
 
-inline void FxVoice::Read(s32* dst, s32* history, s32 frame, s32 pos, s32 count) {
+inline void FxVoice::Read(s32 count, s32* dst, s32 frame, s32* history, s32 pos) {
     frame += pos / FX_FRAME_SAMPLES;
     pos %= FX_FRAME_SAMPLES;
     if (pos < 0) {
@@ -650,8 +650,8 @@ void FxVoice::UpdateBuffer(int channels, void** ppBuffer, u32 size, snd::SampleF
             for (ch = 0; ch < 2; ch++) {
                 s32 echo[FX_FRAME_SAMPLES + 11];
                 s32 work[FX_FRAME_SAMPLES + 11];
-                Read(work, mInput[ch], 0, -11, FX_FRAME_SAMPLES + 11);
-                Read(echo, mOutput[ch], -60, -11, FX_FRAME_SAMPLES + 11);
+                Read(FX_FRAME_SAMPLES + 11, work, 0, mInput[ch], -11);
+                Read(FX_FRAME_SAMPLES + 11, echo, -60, mOutput[ch], -11);
                 for (s32 i = 0; i < FX_FRAME_SAMPLES + 11; i++) {
                     work[i] = ((work[i] << 12) + echo[i] * 0x999) / 4096;
                 }
@@ -736,8 +736,8 @@ void FxVoice::Radio(s32** buffers) {
     s32 ch;
     s32* p = &work[21];
 
-    Read(work, mInput[0], 0, -21, FX_FRAME_SAMPLES + 21);
-    Read(work2, mInput[1], 0, -21, FX_FRAME_SAMPLES + 21);
+    Read(FX_FRAME_SAMPLES + 21, work, 0, mInput[0], -21);
+    Read(FX_FRAME_SAMPLES + 21, work2, 0, mInput[1], -21);
     for (s32 i = 0; i < FX_FRAME_SAMPLES + 21; i++) {
         work[i] = ((work[i] + work2[i]) << 12) / 4096;
     }
