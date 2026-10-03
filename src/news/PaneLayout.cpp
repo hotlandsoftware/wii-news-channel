@@ -71,7 +71,7 @@ void Layout::Reset() {
 
 inline void Layout::SetSlide(f32 step) {
     for (int i = 0; i < mButtonCount; i++) {
-        mButtons[i]->SetSlide(step);
+        mButtons[i]->mOffsetY = step * mButtons[i]->GetSlideDir();
     }
 }
 
@@ -95,10 +95,7 @@ void Layout::Calc() {
         height = 0.0f;
     }
 
-    f32 step = height * mSlideFrame / mSlideLength;
-    for (int i = 0; i < mButtonCount; i++) {
-        mButtons[i]->SetSlide(step);
-    }
+    SetSlide(height * mSlideFrame / mSlideLength);
 
     if (mFadeOut) {
         if (mFadeFrame < mFadeLength) {

@@ -610,7 +610,7 @@ config.libs = [
         "cflags": cflags_game,
         "progress_category": "game",
         "objects": [
-            Object(NonMatching, "news/PaneLayout.cpp", extra_cflags=["-inline auto", "-ipa file"]),
+            Object(Matching, "news/PaneLayout.cpp", extra_cflags=["-inline auto", "-ipa file"]),
             Object(Matching, "news/PointerHistory.cpp"),
             Object(Matching, "news/Fader.cpp"),
             Object(Matching, "news/Thread.cpp"),
