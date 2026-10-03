@@ -817,7 +817,7 @@ BOOL VCMVCreateSurface(s32 width, s32 height) {
     return vcmvCreateSurface(width, height);
 }
 
-void VCMVSetFontSize(s32 size) {
+void VCMVSetFontSize(u16 size) {
     vcmvSetFontSize(size);
 }
 

@@ -10,11 +10,13 @@ detect_objects: true
 detect_strings: true
 write_asm: true
 
-# Unreferenced .sbss words that the original link kept (vcmv_cursor.cpp)
+# Unreferenced data that the original link kept (vcmv_cursor.cpp, vcmv_draw.cpp)
 force_active:
   - vcmvCursorUnused1
   - vcmvCursorUnused2
   - vcmvCursorUnused3
+  - vcmvUnusedBss238
+  - vcmvUnusedBss2F8
 
 block_relocations:
   # Random table data that happens to look like a pointer into OSFont's HankakuToCode

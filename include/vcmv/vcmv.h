@@ -31,6 +31,13 @@ void vcmvLoadCursorTextures(HBMDataInfo* info);
 void vcmvDrawCursor(s32 chan);
 
 // vcmv_draw.cpp
+typedef struct vcmvRect {
+    s32 x; // 0x0
+    s32 y; // 0x4
+    s32 w; // 0x8
+    s32 h; // 0xC
+} vcmvRect;
+
 typedef struct vcmvQuad {
     f32 x[4]; // 0x00
     f32 y[4]; // 0x10
@@ -58,17 +65,17 @@ extern f32 vcmvHalfHeight;                  // 0x80356EBC
 extern f32 vcmvAspectScale;                 // 0x80356EC0
 extern s32 vcmvLoadDone;                    // 0x80356EC4
 
-void vcmvFlushCallback(void);
-void vcmvBrowserCallback(void);
+void vcmvFlushCallback(vcmvRect* rect, int arg);
+int vcmvBrowserCallback(void* browser, void* window, u32 event, void** data);
 void vcmvSetArchive(void* arc);
 void vcmvSetRenderMode(GXRenderModeObj* rmode1, GXRenderModeObj* rmode2, u8 flag);
 void vcmvSetupViewport(void);
-void vcmvSetFontSize(s32 size);
+void vcmvSetFontSize(u16 size);
 BOOL vcmvCreateSurface(s32 width, s32 height);
 void vcmvDestroySurface(void);
 void vcmvOpenWindow(s32 mode);
 void vcmvUpdate(void);
-void vcmvDrawScreen(f32 alpha);
+void vcmvDrawScreen(f32 shift);
 void vcmvOpenStartPage(void);
 void vcmvDrawQuad(vcmvQuad* quad);
 
@@ -193,7 +200,7 @@ s32 VCMVLoadLibrary(void);
 void VCMVUnloadLibrary(void);
 void VCMVSetRenderMode(GXRenderModeObj* rmode1, GXRenderModeObj* rmode2, BOOL flag);
 BOOL VCMVCreateSurface(s32 width, s32 height);
-void VCMVSetFontSize(s32 size);
+void VCMVSetFontSize(u16 size);
 void VCMVDestroySurface(void);
 BOOL VCMVCreateHeap(u32 size);
 void VCMVDestroyHeap(void);
@@ -244,33 +251,33 @@ extern void* WWWSurfaceNewScreen;
 extern void* WWWSurfaceDeleteScreen;
 extern void* WWWSurfaceResize;
 extern void (*WWWSurfaceShutdown)(void);
-extern s32 (*WWWSurfaceSetFlushCallback)(void (*callback)(void), int arg);
+extern s32 (*WWWSurfaceSetFlushCallback)(void (*callback)(struct vcmvRect* rect, int arg), int arg);
 extern void* WWWSurfaceInvalidate;
-extern void* WWWSurfaceUpdateScreen;
+extern void (*WWWSurfaceUpdateScreen)(int arg);
 extern void* WWWSurfaceLockArea;
 extern void* WWWSurfaceUnlockArea;
 extern void (*WWWSurfaceMouseEvt)(int type, int x, int y, int button, int arg4, int arg5);
 extern void (*WWWSurfaceWheelEvt)(int type, int x, int y, int delta, int arg4);
 extern void* WWWSurfaceKeyboardEvt;
 extern void (*WWWSurfaceAddFont)(const char* name);
-extern s32 (*WWWCreateBrowser)(void** browser, void (*callback)(void), const char** fonts, const char* path);
+extern s32 (*WWWCreateBrowser)(void** browser, int (*callback)(void* browser, void* window, u32 event, void** data), const char** fonts, const char* path);
 extern void* WWWTerminateBrowser;
-extern void* WWWRunSlice;
-extern void* WWWCreateBrowserWindow;
-extern void* WWWCloseBrowserWindow;
+extern int (*WWWRunSlice)(void* browser);
+extern int (*WWWCreateBrowserWindow)(void* browser, void** window, int arg);
+extern void (*WWWCloseBrowserWindow)(void* browser, void* window);
 extern void* WWWSetBrowserWindowTransparent;
 extern void* WWWGetBrowserWindowRect;
-extern void* WWWSetBrowserWindowRect;
-extern void* WWWRaiseBrowserWindow;
+extern void (*WWWSetBrowserWindowRect)(void* window, struct vcmvRect* rect);
+extern void (*WWWRaiseBrowserWindow)(void* window);
 extern void* WWWLowerBrowserWindow;
-extern void* WWWShowBrowserWindow;
+extern void (*WWWShowBrowserWindow)(void* window);
 extern void* WWWHideBrowserWindow;
 extern void* WWWCommitIme;
 extern void* WWWUpdateIme;
 extern void* WWWPostUrl;
-extern void* WWWOpenUrl;
+extern void (*WWWOpenUrl)(void* window, const char* url);
 extern void* WWWGetHistoryCount;
-extern void* WWWNextPage;
+extern void (*WWWNextPage)(void* window);
 extern void (*WWWPrevPage)(void* window);
 extern void* WWWMoveInHistory;
 extern void* WWWStop;
@@ -278,7 +285,7 @@ extern void* WWWReload;
 extern void* WWWReflow;
 extern void* WWWSearch;
 extern void* WWWResetSearch;
-extern void* WWWSetFocus;
+extern void (*WWWSetFocus)(void* window);
 extern void* WWWLoseFocus;
 extern void* WWWHistory;
 extern void* WWWClearHistory;
@@ -289,9 +296,9 @@ extern void* WWWSetZoom;
 extern void* WWWGetSecurityMode;
 extern void* WWWGetScroll;
 extern void* WWWSetScroll;
-extern void* WWWSetRenderingMode;
+extern void (*WWWSetRenderingMode)(void* window, int mode);
 extern void* WWWGetRenderingMode;
-extern void* WWWSetImageMode;
+extern void (*WWWSetImageMode)(void* window, int mode);
 extern void* WWWCreateCertificateManager;
 extern void* WWWCloseCertificateManager;
 extern void* WWWGetNumberOfCertificates;
@@ -346,10 +353,10 @@ extern void* WWWHTTPRemoveProxy;
 extern void* WWWHTTPEndLoading;
 extern void (*WWWAddJSPlugin)(const char* name, jsplugin_capabilities* caps, jsplugin_callbacks** callbacks);
 extern void* WWWAddNSPlugin;
-extern void* WWWProtocolWrite;
-extern void* WWWProtocolSetMimeType;
-extern void* WWWProtocolFinished;
-extern void* WWWProtocolFailed;
+extern int (*WWWProtocolWrite)(void* stream, const void* data, int size);
+extern int (*WWWProtocolSetMimeType)(void* stream, const char* type);
+extern int (*WWWProtocolFinished)(void* stream);
+extern void (*WWWProtocolFailed)(void* stream);
 extern void (*WWWAddProtocol)(const char* name);
 
 #ifdef __cplusplus
