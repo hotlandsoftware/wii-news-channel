@@ -130,8 +130,9 @@ void GlobeDots::Draw() {
     camera->mCamera.GetCameraMtx(&view);
     math::MTX44 proj;
     camera->mCamera.GetProjectionMtx(&proj);
-    C_MTXPerspective(proj, 40.0f, (f32)GetScreenWidth() / 456.0f, 1.0f, 1000.0f);
-    view._03 = view._13 = view._23 = 0.0f;
+    f32 aspect = (f32)GetScreenWidth() / 456.0f;
+    C_MTXPerspective(proj, 40.0f, aspect, 1.0f, 1000.0f);
+    view._23 = view._13 = view._03 = 0.0f;
     GXLoadPosMtxImm(view, GX_PNMTX0);
     GXSetCurrentMtx(GX_PNMTX0);
     GXSetProjection(proj, GX_PERSPECTIVE);
@@ -155,21 +156,19 @@ void GlobeDots::Draw() {
     GXSetTevOrder(GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLOR0A0);
     GXSetTevColorIn(GX_TEVSTAGE0, GX_CC_RASC, GX_CC_ONE, GX_CC_TEXC, GX_CC_ZERO);
     GXSetTevAlphaIn(GX_TEVSTAGE0, GX_CA_ZERO, GX_CA_TEXA, GX_CA_A0, GX_CA_ZERO);
-    GXColor color = {0, 0, 0, mAlpha};
-    GXSetTevColor(GX_TEVREG0, color);
+    GXSetTevColor(GX_TEVREG0, (GXColor){0, 0, 0, mAlpha});
 
     GXBegin(GX_TRIANGLES, GX_VTXFMT0, GLOBE_DOT_COUNT * 3);
-    u16 index = 0;
+    const u8* colors = sGlobeDotColorIdx;
     for (s32 i = 0; i < GLOBE_DOT_COUNT; i++) {
-        u8 c = sGlobeDotColorIdx[i];
-        GXPosition1x16(index++);
-        GXColor1x8(c);
+        GXPosition1x16(i * 3);
+        GXColor1x8(colors[i]);
         GXTexCoord1x8(0);
-        GXPosition1x16(index++);
-        GXColor1x8(c);
+        GXPosition1x16(i * 3 + 1);
+        GXColor1x8(colors[i]);
         GXTexCoord1x8(1);
-        GXPosition1x16(index++);
-        GXColor1x8(c);
+        GXPosition1x16(i * 3 + 2);
+        GXColor1x8(colors[i]);
         GXTexCoord1x8(2);
     }
     GXEnd();
