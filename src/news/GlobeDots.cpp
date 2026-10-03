@@ -130,17 +130,20 @@ void GlobeDots::Draw() {
     GXSetTevColor(GX_TEVREG0, (GXColor){0, 0, 0, mAlpha});
 
     GXBegin(GX_TRIANGLES, GX_VTXFMT0, GLOBE_DOT_COUNT * 3);
+    s32 pos = 0;
     const u8* colors = gGlobeDotColorIdx;
     for (s32 i = 0; i < GLOBE_DOT_COUNT; i++) {
-        GXPosition1x16(i * 3);
-        GXColor1x8(colors[i]);
+        const u8* c = colors + i;
+        GXPosition1x16(pos);
+        GXColor1x8(*c);
         GXTexCoord1x8(0);
-        GXPosition1x16(i * 3 + 1);
-        GXColor1x8(colors[i]);
+        GXPosition1x16(pos + 1);
+        GXColor1x8(*c);
         GXTexCoord1x8(1);
-        GXPosition1x16(i * 3 + 2);
-        GXColor1x8(colors[i]);
+        GXPosition1x16(pos + 2);
+        GXColor1x8(*c);
         GXTexCoord1x8(2);
+        pos += 3;
     }
     GXEnd();
 }
