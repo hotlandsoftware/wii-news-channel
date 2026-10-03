@@ -579,6 +579,20 @@ config.libs = [
         ],
     },
     {
+        "lib": "news_80047B50",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_game,
+        "progress_category": "game",
+        "objects": [
+            Object(NonMatching, "news/PaneLayout.cpp", extra_cflags=["-inline auto", "-ipa file"]),
+            Object(Matching, "news/PointerHistory.cpp"),
+            Object(Matching, "news/Fader.cpp"),
+            Object(Matching, "news/Thread.cpp"),
+            Object(Matching, "news/ScreenBase.cpp"),
+            Object(Matching, "news/d_scene.cpp", extra_cflags=["-inline auto", "-ipa file"]),
+        ],
+    },
+    {
         "lib": "nw4r_ut",
         "mw_version": "GC/3.0a5.2",
         "cflags": cflags_nw4r_ut,

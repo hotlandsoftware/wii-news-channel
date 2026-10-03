@@ -9,7 +9,7 @@ GlobePoint::GlobePoint(NewsLocationRec* location, f32 radius)
     if (IsErrorState()) {
         return;
     }
-    fn_8004C240(mLocation->latitude, mLocation->longitude, &mLatLon);
+    LatLonToDegrees(mLocation->latitude, mLocation->longitude, &mLatLon);
     f32 sinLat = nw4r::math::SinDeg(mLatLon.x);
     f32 cosLat = nw4r::math::CosDeg(mLatLon.x);
     f32 sinLon = nw4r::math::SinDeg(mLatLon.y);

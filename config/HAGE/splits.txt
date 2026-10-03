@@ -274,6 +274,39 @@ news/PaneButton.cpp:
 	.sdata      start:0x80356C60 end:0x80356C90
 	.sdata2     start:0x80358EE0 end:0x80358F18
 
+news/PaneLayout.cpp:
+	.text       start:0x80047B50 end:0x8004857C
+	.sdata      start:0x80356C90 end:0x80356C98
+	.sdata2     start:0x80358F18 end:0x80358F30
+
+news/PointerHistory.cpp:
+	.text       start:0x8004857C end:0x800488B0
+	.sdata2     start:0x80358F30 end:0x80358F38
+
+news/Fader.cpp:
+	.text       start:0x800488B0 end:0x800492A0
+	.ctors      start:0x80191F4C end:0x80191F50
+	.data       start:0x801B3020 end:0x801B3060
+	.bss        start:0x8020DE08 end:0x8020DE18
+	.sbss       start:0x80357708 end:0x80357710
+	.sdata2     start:0x80358F38 end:0x80358F58
+
+news/Thread.cpp:
+	.text       start:0x800492A0 end:0x800493A8
+
+news/ScreenBase.cpp:
+	.text       start:0x800493A8 end:0x80049400
+
+news/d_scene.cpp:
+	.text       start:0x80049400 end:0x8004C43C
+	.ctors      start:0x80191F50 end:0x80191F54
+	.rodata     start:0x801A64B8 end:0x801A6620
+	.data       start:0x801B3060 end:0x801B3508
+	.bss        start:0x8020DE18 end:0x8020E850
+	.sdata      start:0x80356C98 end:0x80356CB8
+	.sbss       start:0x80357710 end:0x80357798
+	.sdata2     start:0x80358F58 end:0x80358F98
+
 revolution/RSO/RSOLink.c:
 	.text       start:0x80051D4C end:0x80052D5C
 	.data       start:0x801CABC0 end:0x801CACD8

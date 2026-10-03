@@ -5,6 +5,7 @@
 
 // System.h declares gSeparatorColor as a GXColor; here it is the ut::Color it really is.
 #define gSeparatorColor gSeparatorColor_GXColor
+#include <news/Fader.h>
 #include <news/System.h>
 #include <news/ArticleText.h>
 #include <news/Scene.h>
@@ -106,21 +107,9 @@ void fn_8003FB54(const math::VEC3& pos, const math::VEC3& size, const GXColor& c
 s32 fn_80044F08(void);
 
 // Faders (0x80048C80..)
-void fn_80048C80(void* fader, s32 frames);
-void fn_80048D20(void* fader, s32 frames);
-void fn_80049128(void* fader);
-void fn_80049148(void* fader);
-void fn_80049168(void* fader, const void* param, s32 alpha);
 
-// Scene (0x80049400..)
-void fn_80049D18(Scene* scene);
-void fn_8004A3A0(void);
-void fn_8004B960(void);
-void fn_8004BFE0(s32 type);
-void fn_8004C294(void);
 
 // Globe (0x8004C240..)
-void fn_8004C240(u16 x, u16 y, math::VEC2* out);
 void fn_8004C69C(void* globe, math::VEC3* pos, u8 zoom);
 void fn_8004C890(void* globe, math::VEC3* rot);
 void fn_8004CA10(void* globe);
@@ -138,15 +127,6 @@ void fn_8004FAB0(snd::SoundHandle* handle, s32 frames);
 void fn_8004FB44(snd::SoundHandle* handle, f32 volume);
 }
 
-// Faders, HOME Menu, sound system and globe (other files)
-struct Fader {
-    u8 unk0[0x10];
-    ut::Color mColor;  // at 0x10
-    u8 unk14[0x50 - 0x14];
-    BOOL mBusy;      // at 0x50
-    u8 unk54[0x5C - 0x54];
-    f32 mAlpha;      // at 0x5C
-};
 
 struct HomeMenuInfo {
     u32 unk0;
@@ -162,21 +142,19 @@ struct Globe {
     math::VEC2 mOffset;  // at 0x74
 };
 
-extern HomeMenuInfo* lbl_80357710;
-extern Fader* lbl_8035772C;
-extern Fader* lbl_80357730;
-extern void* lbl_80357754;     // sound system
-extern Globe* lbl_8035775C;
-extern BOOL lbl_80357760;
+extern HomeMenuInfo* gHomeMenu;
+extern void* gSoundPlayer;     // sound system
+extern Globe* gGlobe;
+extern BOOL gEarthModel;
 extern MEMHeapHandle lbl_80357640;
 extern u32 lbl_80357658;       // frame buffer size
 extern void* lbl_80357664;     // external frame buffer
 extern u32 lbl_803576A8;
-extern bool lbl_80357729;
-extern bool lbl_80356CA0;
+extern bool gExitRequested;
+extern bool gHideClock;
 extern f32 gModelDepth;
-extern OSCalendarTime lbl_8020E008;
-extern ut::TextWriterBase<wchar_t> lbl_8020E4C0;
+extern OSCalendarTime gClockTime;
+extern ut::TextWriterBase<wchar_t> gTextWriter;
 extern snd::SoundHandle lbl_8021E8CC[4];
 extern const f32 lbl_801A6648[];
 extern const wchar_t* lbl_801B04EC[];
@@ -480,7 +458,7 @@ inline BOOL IsOutOfMemory() {
 void SetDPDAll(s32 value);
 
 static inline bool IsFadedOut() {
-    return 1.0f == lbl_8035772C->mAlpha;
+    return 1.0f == gFader->mAlpha;
 }
 
 static inline bool IsArrowVisible() {
@@ -515,14 +493,14 @@ NewsScene::NewsScene()
     }
 
     SetDPDAll(1);
-    sIsNight = !(lbl_8020E008.hour >= 5 && lbl_8020E008.hour < 22);
+    sIsNight = !(gClockTime.hour >= 5 && gClockTime.hour < 22);
 
     void* sound = operator new(8);
     if (sound) {
-        sound = fn_8004E9A4(sound, "rev_news.brsar", lbl_80357710->mHeap);
+        sound = fn_8004E9A4(sound, "rev_news.brsar", gHomeMenu->mHeap);
     }
-    lbl_80357754 = sound;
-    if (lbl_80357754 == NULL) {
+    gSoundPlayer = sound;
+    if (gSoundPlayer == NULL) {
         gAllocFailed = true;
         return;
     }
@@ -530,7 +508,7 @@ NewsScene::NewsScene()
     sHeaderFontData = LoadArcFile(gArchive, "/font_news_date.brfnt.LZ", 32, NULL, lbl_80357640);
     if (sHeaderFontData == NULL) {
         OSReport("%s[%d]\n", "d_s_news.cpp", 413);
-        fn_80049D18(this);
+        SetFatalError();
         return;
     }
 
@@ -547,7 +525,7 @@ NewsScene::NewsScene()
     Camera::sHomeRot.y = 0.0f;
     Camera::sHomeRot.z = 0.0f;
     lbl_803575A0 = 0;
-    lbl_80356CA0 = true;
+    gHideClock = true;
     lbl_8035755C = NULL;
     lbl_80357560 = NULL;
     lbl_80357568 = NULL;
@@ -637,7 +615,7 @@ NewsScene::NewsScene()
     mLayoutArc = LoadArcFile(gArchive, "news_layout.arc.LZ", 32, &size, gSubHeap);
     if (mLayoutArc == NULL) {
         OSReport("%s[%d]:news_layout.arc.LZ size(%d)\n", "d_s_news.cpp", 538, size);
-        fn_80049D18(this);
+        SetFatalError();
         return;
     }
 
@@ -810,19 +788,19 @@ NewsScene::~NewsScene() {
 }
 
 void NewsScene::Exit(BOOL toMenu, s32 arg) {
-    fn_8004EA2C(lbl_80357754, 1);
+    fn_8004EA2C(gSoundPlayer, 1);
     Scene::Exit(toMenu, arg);
 }
 
 void NewsScene::OnHomeMenuClose() {
     if (!gFatalError) {
-        if (lbl_8035775C) {
+        if (gGlobe) {
             math::VEC3 rot(0.0f, 0.0f, 0.0f);
-            fn_8004C890(lbl_8035775C, &rot);
+            fn_8004C890(gGlobe, &rot);
             fn_8003D168(sGlobeRenderer);
         }
-        if (lbl_8035775C) {
-            fn_8004DB4C(lbl_8035775C, 5);
+        if (gGlobe) {
+            fn_8004DB4C(gGlobe, 5);
         }
         fn_8000BE74(sPointerEffect);
         RestoreDPD();
@@ -830,7 +808,7 @@ void NewsScene::OnHomeMenuClose() {
 }
 
 void NewsScene::RestoreDPD() {
-    fn_8004A3A0();
+    Scene::Execute();
     s32 i = 0;
     s32* dpd = lbl_801EDFD0;
     for (; i < 4; i++, dpd++) {
@@ -849,10 +827,10 @@ void NewsScene::Draw() {
     if (!gFatalError) {
         mArticleWriter.SetDrawFlag(0);
         if (mDraw) {
-            if (lbl_8035775C != NULL && !lbl_8035697C) {
-                fn_8003D178(sGlobeRenderer, lbl_8035775C->mCenterX, lbl_8035775C->mCenterY);
+            if (gGlobe != NULL && !lbl_8035697C) {
+                fn_8003D178(sGlobeRenderer, gGlobe->mCenterX, gGlobe->mCenterY);
                 fn_8003D21C(sGlobeRenderer);
-                fn_8004CA10(lbl_8035775C);
+                fn_8004CA10(gGlobe);
                 if (!lbl_803575BC) {
                     u8 alpha = 255.0f * sPinAlpha;
                     if (lbl_80357580) {
@@ -894,7 +872,7 @@ void NewsScene::Draw() {
                     Draw2D_FillRect(&rect, &lbl_803575FC);
                 }
                 math::VEC3 pos(lbl_801EDF70.x, lbl_801EDF70.y + lbl_803575C8, lbl_801EDF70.z);
-                fn_8004CAE4(lbl_8035775C, &pos, 0, 1.0f);
+                fn_8004CAE4(gGlobe, &pos, 0, 1.0f);
                 if (gNewsData->mHeader->unk2C[1] && lbl_803575B9) {
                     pos.x = lbl_801EDF88.x;
                     pos.y -= TPL_GetHeight(gCommonTpl, 0x3E);
@@ -996,7 +974,7 @@ void NewsScene::Calc() {
         return;
     }
 
-    fn_8004C294();
+    UpdatePointerScroll();
     if (mLogoAlpha > mLogoTargetAlpha) {
         mLogoAlpha -= 12;
         if (mLogoAlpha < mLogoTargetAlpha) {
@@ -1054,8 +1032,8 @@ void NewsScene::OnHomeMenuOpen() {
 }
 
 BOOL NewsScene::InitNews() {
-    lbl_80356CA0 = gUpdateMsgType == 1;
-    fn_8004BFE0(gUpdateMsgType);
+    gHideClock = gUpdateMsgType == 1;
+    ClearButtonHover();
 
     NewsData* data = gNewsData;
     u32 numCategories = 14;
@@ -1206,7 +1184,7 @@ BOOL NewsScene::InitNews() {
     }
 
     mSlideshow->Start();
-    fn_8004B960();
+    LoadEarth();
     sSettingsReady = true;
     BOOL selectLanguage = FALSE;
     if (!selectLanguage) {
@@ -1227,7 +1205,7 @@ BOOL NewsScene::StateLanguageSelect() {
         lbl_80357598 = 2;
         mDraw = &NewsScene::DrawLanguageSelect;
         mLanguageSelect->Start();
-        fn_80048C80(lbl_8035772C, 25);
+        gFader->FadeIn(25);
         lbl_803575BA = false;
         SetDPDAll(1);
         lbl_803575BB = false;
@@ -1238,7 +1216,7 @@ BOOL NewsScene::StateLanguageSelect() {
         case 1:
             if (lbl_80357598 == 0) {
                 mStep++;
-                fn_80048D20(lbl_8035772C, 25);
+                gFader->FadeOut(25);
                 if (mSettings->mNewsLanguage != gSelectedNewsLanguage) {
                     snd::SoundHandle* handle = lbl_8021E8CC;
                     for (s32 i = 0; i < 4; i++, handle++) {
@@ -1250,7 +1228,7 @@ BOOL NewsScene::StateLanguageSelect() {
             }
             break;
         case 2:
-            if (!lbl_8035772C->mBusy) {
+            if (!gFader->mBusy) {
                 mLanguageSelect->Reset();
                 if (mSettings->mNewsLanguage != gSelectedNewsLanguage) {
                     mSettings->mNewsLanguage = gSelectedNewsLanguage;
@@ -1405,7 +1383,7 @@ BOOL NewsScene::StateMain() {
         lbl_80357598 = 0;
         mDraw = &NewsScene::DrawMain;
         fn_800138F0(mMainView);
-        fn_80048C80(lbl_8035772C, 25);
+        gFader->FadeIn(25);
         f32 h = TPL_GetHeight(gCursorTpl, 6);
         f32 w = TPL_GetWidth(gCursorTpl, 6);
 #pragma push
@@ -1425,8 +1403,8 @@ BOOL NewsScene::StateMain() {
         lbl_801EDF88.z = lbl_801EDF70.z;
         lbl_801EDF88.y = y2;
         lbl_801EDF88.x = x2;
-        if (lbl_8035775C) {
-            fn_8004DB4C(lbl_8035775C, 5);
+        if (gGlobe) {
+            fn_8004DB4C(gGlobe, 5);
         }
         if (!mInitialized) {
             sBgmVolume[0].mValue = sBgmVolume[0].mTarget;
@@ -1437,7 +1415,7 @@ BOOL NewsScene::StateMain() {
     default:
         switch (mStep) {
         case 1:
-            if (!lbl_8035772C->mBusy) {
+            if (!gFader->mBusy) {
                 mStep++;
             }
             break;
@@ -1451,24 +1429,24 @@ BOOL NewsScene::StateMain() {
                 Bgm_PlaySlideshow();
                 mTimer = 40;
                 mLogoTargetAlpha = 255;
-                lbl_80357730->mColor.Set(0, 0, 0, 255);
-                fn_80049168(lbl_80357730, sFadeParam, 255);
-                fn_80048D20(lbl_80357730, 20);
+                gFader2->mColor.Set(0, 0, 0, 255);
+                gFader2->SetColors((const ut::Color*)sFadeParam, 255);
+                gFader2->FadeOut(20);
                 fn_8000C89C(sPointerEffect, 0.6f * GetScreenWidth(), 228.0f);
                 return TRUE;
             case 2:
                 mStep = 4;
-                fn_80048D20(lbl_8035772C, 25);
+                gFader->FadeOut(25);
                 return TRUE;
             }
             break;
         case 3:
-            if (!lbl_80357730->mBusy) {
+            if (!gFader2->mBusy) {
                 if (mTimer) {
                     mTimer--;
-                } else if (lbl_80357760) {
+                } else if (gEarthModel) {
                     mLogoTargetAlpha = 0;
-                    fn_80048C80(lbl_80357730, 40);
+                    gFader2->FadeIn(40);
                     ChangeState(&NewsScene::StateSlideshow);
                     return TRUE;
                 }
@@ -1476,7 +1454,7 @@ BOOL NewsScene::StateMain() {
             break;
         case 4:
         default:
-            if (!lbl_8035772C->mBusy) {
+            if (!gFader->mBusy) {
                 mLanguageSelect->SetBackEnabled(TRUE);
                 ChangeState(&NewsScene::StateLanguageSelect);
                 return TRUE;
@@ -1535,7 +1513,7 @@ BOOL NewsScene::StateSlideshow() {
                 break;
             case 0:
                 mStep++;
-                fn_80048D20(lbl_8035772C, 25);
+                gFader->FadeOut(25);
                 mTimer = 0;
                 return TRUE;
             }
@@ -1545,7 +1523,7 @@ BOOL NewsScene::StateSlideshow() {
             if (++mTimer >= 12) {
                 mSlideshow->mShowMain = false;
             }
-            if (!lbl_8035772C->mBusy) {
+            if (!gFader->mBusy) {
                 mSlideshow->mShowMain = true;
                 gLargeFont = false;
                 SetDPDAll(1);
@@ -1567,7 +1545,7 @@ BOOL NewsScene::StateStartup() {
     case -1:
         break;
     case 0:
-        fn_80049148(lbl_8035772C);
+        gFader->SetClear();
         mDraw = &NewsScene::DrawStartup;
         mStep = 1;
         break;
@@ -1585,19 +1563,19 @@ BOOL NewsScene::StateStartup() {
                     mStep = 6;
                     gSelectedNewsLanguage = mSettings->mNewsLanguage;
                 } else {
-                    fn_80048D20(lbl_8035772C, 25);
+                    gFader->FadeOut(25);
                     mStep = 4;
                 }
             } else {
                 mStep = 5;
             }
         } else {
-            fn_80048D20(lbl_8035772C, 25);
+            gFader->FadeOut(25);
             mStep = 4;
         }
         break;
     case 4:
-        if (!lbl_8035772C->mBusy) {
+        if (!gFader->mBusy) {
             switch (mLoadResult) {
             case 0:
                 fn_8000A694(mDialog, 2);
@@ -1719,12 +1697,12 @@ BOOL NewsScene::StateNoNews() {
         if (IsFadedOut()) {
             mStep = 2;
         } else {
-            fn_80048D20(lbl_8035772C, 25);
+            gFader->FadeOut(25);
             mStep = 1;
         }
         break;
     case 1:
-        if (!lbl_8035772C->mBusy) {
+        if (!gFader->mBusy) {
             mStep = 2;
         }
         break;
@@ -1767,7 +1745,7 @@ BOOL NewsScene::StateFatal() {
     case -1:
         break;
     case 0:
-        fn_80049128(lbl_8035772C);
+        gFader->SetOpaque();
         mStep = 1;
         break;
     case 1:
@@ -2038,35 +2016,35 @@ void HeadlineList_SetIndex(const s32& index) {
 
 void GetArticleLocation(math::VEC2* out, NewsArticle* article) {
     NewsLocationRec* loc = article->mLocation;
-    fn_8004C240(*(u16*)&loc->unk4[0], *(u16*)&loc->unk4[2], out);
+    LatLonToDegrees(*(u16*)&loc->unk4[0], *(u16*)&loc->unk4[2], out);
 }
 
 void Globe_FocusArticle(NewsArticle* article, s32 arg, f32 x, f32 y) {
     math::VEC2 ofs(x, y);
-    if (lbl_8035775C) {
+    if (gGlobe) {
         math::VEC2 loc;
         NewsLocationRec* rec = article->mLocation;
-        fn_8004C240(*(u16*)&rec->unk4[0], *(u16*)&rec->unk4[2], &loc);
+        LatLonToDegrees(*(u16*)&rec->unk4[0], *(u16*)&rec->unk4[2], &loc);
         f32 py = loc.y;
         f32 px = loc.x;
         math::VEC3 pos(px, py, 0.0f);
-        lbl_8035775C->mOffset = ofs;
-        fn_8004C69C(lbl_8035775C, &pos, article->mLocation->unk4[8]);
-        fn_8004DA8C(lbl_8035775C, 5, 0);
-        fn_8004DB4C(lbl_8035775C, arg);
-        fn_8004E0D4(lbl_8035775C, 0.0f);
+        gGlobe->mOffset = ofs;
+        fn_8004C69C(gGlobe, &pos, article->mLocation->unk4[8]);
+        fn_8004DA8C(gGlobe, 5, 0);
+        fn_8004DB4C(gGlobe, arg);
+        fn_8004E0D4(gGlobe, 0.0f);
     }
 }
 
 void Globe_ResetFocus() {
-    if (lbl_8035775C) {
-        fn_8004CB38(lbl_8035775C);
+    if (gGlobe) {
+        fn_8004CB38(gGlobe);
     }
 }
 
 void Globe_SetZoom(s32 level) {
-    if (lbl_8035775C) {
-        fn_8004E0B8(lbl_8035775C, level);
+    if (gGlobe) {
+        fn_8004E0B8(gGlobe, level);
     }
 }
 
@@ -2185,8 +2163,8 @@ void Pins_UpdateFade() {
             sPinAlpha = 1.0f;
         }
     }
-    if (lbl_8035775C) {
-        s32 focus = lbl_8035775C->mFocus;
+    if (gGlobe) {
+        s32 focus = gGlobe->mFocus;
         if (focus) {
             GlobePin** pin = sPins;
             for (u32 i = 0; i < sNumPins; i++, pin++) {
@@ -2321,11 +2299,11 @@ BOOL Article_Set(NewsArticle* article, const wchar_t* title, BOOL withPicture,
     sIsLatest = latest;
     sArticleSize = size;
 
-    lbl_8020E4C0.SetFont(*gSysFont);
-    lbl_8020E4C0.SetScale(0.6f);
-    lbl_8020E4C0.SetCharSpace(0.6f * gCharSpaceScale);
+    gTextWriter.SetFont(*gSysFont);
+    gTextWriter.SetScale(0.6f);
+    gTextWriter.SetCharSpace(0.6f * gCharSpaceScale);
     if (lbl_80357564) {
-        sTitleWidth = lbl_8020E4C0.CalcStringWidth(lbl_80357564);
+        sTitleWidth = gTextWriter.CalcStringWidth(lbl_80357564);
     }
     if (lbl_80357560) {
         s32 time = *(s32*)&lbl_80357560->mText->unk14[4];
@@ -2347,7 +2325,7 @@ BOOL Article_Set(NewsArticle* article, const wchar_t* title, BOOL withPicture,
             FormatElapsedTime(time);
             break;
         }
-        sDateWidth = lbl_8020E4C0.CalcStringWidth(sDateBuf);
+        sDateWidth = gTextWriter.CalcStringWidth(sDateBuf);
     } else {
         sDateBuf[0] = 0;
     }
@@ -2515,8 +2493,8 @@ void Article_DrawFrame(const math::VEC2& pos, s32 type, f32 alpha) {
 void Article_DrawDate(const math::VEC2& pos, s32 alpha) {
     math::VEC2 p(10.0f + pos.x, pos.y - 20.0f);
     f32 maxWidth = sArticleSize.x - 20.0f;
-    lbl_8020E4C0.SetFont(*gSysFont);
-    lbl_8020E4C0.SetTextColor(ut::Color(70, 70, 70, alpha));
+    gTextWriter.SetFont(*gSysFont);
+    gTextWriter.SetTextColor(ut::Color(70, 70, 70, alpha));
     if (lbl_80357560) {
         f32 scale;
         if (sDateWidth > maxWidth) {
@@ -2525,12 +2503,12 @@ void Article_DrawDate(const math::VEC2& pos, s32 alpha) {
             scale = 0.6f;
         }
         p.x = (pos.x + sArticleSize.x) - 10.0f;
-        lbl_8020E4C0.SetDrawFlag(0x222);
-        lbl_8020E4C0.SetupGX();
-        lbl_8020E4C0.SetCursor(p.x, p.y);
-        lbl_8020E4C0.SetScale(scale, 0.6f);
-        lbl_8020E4C0.SetCharSpace(scale * gCharSpaceScale);
-        lbl_8020E4C0.Print(sDateBuf);
+        gTextWriter.SetDrawFlag(0x222);
+        gTextWriter.SetupGX();
+        gTextWriter.SetCursor(p.x, p.y);
+        gTextWriter.SetScale(scale, 0.6f);
+        gTextWriter.SetCharSpace(scale * gCharSpaceScale);
+        gTextWriter.Print(sDateBuf);
     }
 }
 
@@ -2562,8 +2540,8 @@ void Article_DrawSourceAndDate(const math::VEC2& pos, s32 alpha) {
             maxWidth = p.x - (lp.x + w);
         }
     }
-    lbl_8020E4C0.SetFont(*gSysFont);
-    lbl_8020E4C0.SetTextColor(ut::Color(70, 70, 70, alpha));
+    gTextWriter.SetFont(*gSysFont);
+    gTextWriter.SetTextColor(ut::Color(70, 70, 70, alpha));
     if (lbl_80357560) {
         f32 scale;
         f32 dw = sDateWidth;
@@ -2573,12 +2551,12 @@ void Article_DrawSourceAndDate(const math::VEC2& pos, s32 alpha) {
         } else {
             scale = 0.6f;
         }
-        lbl_8020E4C0.SetDrawFlag(0x222);
-        lbl_8020E4C0.SetupGX();
-        lbl_8020E4C0.SetCursor(p.x, p.y);
-        lbl_8020E4C0.SetScale(scale, 0.6f);
-        lbl_8020E4C0.SetCharSpace(scale * gCharSpaceScale);
-        lbl_8020E4C0.Print(sDateBuf);
+        gTextWriter.SetDrawFlag(0x222);
+        gTextWriter.SetupGX();
+        gTextWriter.SetCursor(p.x, p.y);
+        gTextWriter.SetScale(scale, 0.6f);
+        gTextWriter.SetCharSpace(scale * gCharSpaceScale);
+        gTextWriter.Print(sDateBuf);
     }
 }
 
@@ -2919,12 +2897,12 @@ BOOL NewsScene::CanOpenHomeMenu() {
 BOOL NewsScene::Shutdown() {
     switch (mStep) {
     case 0:
-        fn_80048D20(lbl_8035772C, 25);
+        gFader->FadeOut(25);
         mStep = 1;
         break;
     case 1:
-        if (!lbl_8035772C->mBusy) {
-            lbl_80356CA0 = true;
+        if (!gFader->mBusy) {
+            gHideClock = true;
             if (mSaveResult == 3) {
                 fn_8000A694(mDialog, 4);
             } else {
@@ -3230,7 +3208,7 @@ void SetupTexGX() {
 
 void OnExitRequested() {
     sSettingsReady = false;
-    lbl_80357729 = true;
+    gExitRequested = true;
 }
 
 u32 GetSourceIconIndex() {

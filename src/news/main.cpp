@@ -1,4 +1,6 @@
+#include <news/Fader.h>
 #include <news/HomeMenu.h>
+#include <news/Scene.h>
 #include <news/Draw2D.h>
 #include <news/System.h>
 #include <revolution/gx.h>
@@ -17,7 +19,6 @@ using namespace nw4r;
 extern "C" {
 extern MEMHeapHandle lbl_80357640; // MEM1 heap
 extern void* lbl_80357664;         // external frame buffer
-extern void* lbl_8035772C;
 extern bool lbl_803576A5;
 extern KPADStatus lbl_801EE478[4][16];
 
@@ -28,11 +29,6 @@ void* fn_8003F7B4(u32 arc, const char* path, s32 align, u32* size, MEMHeapHandle
 void fn_8003FD24(bool progressive, bool widescreen, bool blackOut);
 void fn_800409EC(void* block);
 void fn_800409F8(void* block);
-void fn_80048C80(void* obj, s32 arg);
-BOOL fn_8004A074(void);
-void fn_8004A2D4(void);
-void fn_8004B960(void);
-void fn_8004BC70(void);
 
 // Browser (Opera) library
 void fn_8009C504(MEMAllocator* allocator1, MEMAllocator* allocator2);
@@ -303,21 +299,21 @@ s32 HomeMenu::Calc() {
     }
 
     if (mOpenManual && mManualEnabled) {
-        fn_8004A2D4();
+        FreeFonts();
         if (mSuspendMusic) {
-            fn_8004BC70();
+            UnloadEarth();
         }
 
         if (!RunManual()) {
             mResult = RESULT_ERROR;
         } else {
             if (mSuspendMusic) {
-                fn_8004B960();
+                LoadEarth();
             }
-            if (fn_8004A074()) {
+            if (LoadFonts()) {
                 mResult = RESULT_ERROR;
             }
-            fn_80048C80(lbl_8035772C, 15);
+            gFader->FadeIn(15);
             VISetBlack(FALSE);
             VIFlush();
             mOpenManual = false;

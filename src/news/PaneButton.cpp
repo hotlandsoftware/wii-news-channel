@@ -587,7 +587,7 @@ void PaneButton::Hide() {
     mPane->SetTranslate(mBasePos);
 }
 
-void PaneButton::SetAlpha(u8 alpha) {
+void PaneButton::SetAlpha(s32 alpha) {
     mPane->SetAlpha(alpha);
 }
 

@@ -113,6 +113,9 @@ private:
 
 class ArchiveFontBase : public ResFontBase {
 public:
+    // Glyph group string that loads every glyph ("", in .sbss2 at 0x8035A6B0).
+    static const char LOAD_GLYPH_ALL[1];
+
     enum ConstructResult {
         CONSTRUCT_MORE_DATA,
         CONSTRUCT_FINISH,

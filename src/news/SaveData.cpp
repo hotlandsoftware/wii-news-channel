@@ -1,3 +1,4 @@
+#include <news/Fader.h>
 #include <news/SaveData.h>
 #include <news/Draw2D.h>
 #include <news/PaneButton.h>
@@ -19,8 +20,6 @@ extern const wchar_t* lbl_801B26BC[]; // per-language message
 void OnExitRequested();
 
 extern "C" {
-void fn_80048C80(Fader* fader, s32 frames); // fade in
-void fn_80048D20(Fader* fader, s32 frames); // fade out
 u32 fn_80044F08(); // current time in minutes
 }
 
@@ -34,7 +33,7 @@ static void* sSaveBuffer;
 static u32 sSaveSize;
 
 static inline void PressButton(Layout* layout, const char* name) {
-    PaneButton* button = fn_80048364(layout, name);
+    PaneButton* button = layout->FindButton(name);
     button->mToggle = true;
 }
 
@@ -156,51 +155,39 @@ s32 WriteSaveData() {
 }
 
 SaveErrorDialog::SaveErrorDialog(u32 arc) {
-    mFader = lbl_8035772C;
+    mFader = gFader;
 
-    Layout* layout = (Layout*)operator new(0x434);
-    if (layout != NULL) {
-        layout = fn_80047B50(layout, arc, "error3.brlyt", lbl_801EE270, 0);
-    }
+    Layout* layout = new Layout((void*)arc, "error3.brlyt", (PaneButtonColors*)lbl_801EE270, false);
     mQuestion = layout;
 
-    layout = (Layout*)operator new(0x434);
-    if (layout != NULL) {
-        layout = fn_80047B50(layout, arc, "error4.brlyt", lbl_801EE270, 0);
-    }
+    layout = new Layout((void*)arc, "error4.brlyt", (PaneButtonColors*)lbl_801EE270, false);
     mNotice = layout;
 
-    layout = (Layout*)operator new(0x434);
-    if (layout != NULL) {
-        layout = fn_80047B50(layout, arc, "error2.brlyt", lbl_801EE270, 0);
-    }
+    layout = new Layout((void*)arc, "error2.brlyt", (PaneButtonColors*)lbl_801EE270, false);
     mError = layout;
 
-    layout = (Layout*)operator new(0x434);
-    if (layout != NULL) {
-        layout = fn_80047B50(layout, arc, "error5.brlyt", lbl_801EE270, 0);
-    }
+    layout = new Layout((void*)arc, "error5.brlyt", (PaneButtonColors*)lbl_801EE270, false);
     mNotice2 = layout;
 
     Open(0);
 }
 
 SaveErrorDialog::~SaveErrorDialog() {
-    fn_80047DE8(mNotice2, 1);
-    fn_80047DE8(mError, 1);
-    fn_80047DE8(mNotice, 1);
-    fn_80047DE8(mQuestion, 1);
+    delete mNotice2;
+    delete mError;
+    delete mNotice;
+    delete mQuestion;
 }
 
 void SaveErrorDialog::Open(s32 type) {
     mState = STATE_FADE_IN;
     mType = type;
     mTimer = 0;
-    fn_80047EFC(mQuestion);
-    fn_80047EFC(mNotice);
-    fn_80047EFC(mError);
-    fn_80047EFC(mNotice2);
-    fn_8004BFE0();
+    mQuestion->Reset();
+    mNotice->Reset();
+    mError->Reset();
+    mNotice2->Reset();
+    ClearButtonHover();
     PressButton(mQuestion, "yes");
     PressButton(mQuestion, "no");
     PressButton(mNotice, "next");
@@ -209,14 +196,14 @@ void SaveErrorDialog::Open(s32 type) {
 }
 
 void SaveErrorDialog::Update() {
-    fn_80047F70(mQuestion);
-    fn_80047F70(mNotice);
-    fn_80047F70(mError);
-    fn_80047F70(mNotice2);
+    mQuestion->Calc();
+    mNotice->Calc();
+    mError->Calc();
+    mNotice2->Calc();
 
     switch (mState) {
     case STATE_FADE_IN:
-        fn_80048C80(mFader, 25);
+        mFader->FadeIn(25);
         mState = STATE_WAIT_FADE_IN;
         break;
     case STATE_WAIT_FADE_IN:
@@ -227,22 +214,22 @@ void SaveErrorDialog::Update() {
     case STATE_INPUT:
         switch (mType) {
         case 1:
-            fn_8004BD60(mQuestion, 0x23);
-            if (fn_8004C13C("yes", 0x800) >= 0) {
-                fn_80048D20(mFader, 25);
+            UpdateLayoutButtons(mQuestion, 0x23);
+            if (CheckButtonTrig("yes", 0x800) >= 0) {
+                mFader->FadeOut(25);
                 mState = STATE_WAIT_FADE_OUT;
                 PlaySE(0x1A);
-            } else if (fn_8004C13C("no", 0x800) >= 0) {
-                fn_80048D20(mFader, 25);
+            } else if (CheckButtonTrig("no", 0x800) >= 0) {
+                mFader->FadeOut(25);
                 mState = STATE_WAIT_NO;
                 PlaySE(0x1B);
             }
             break;
         case 2:
         case 3:
-            fn_8004BD60(mNotice, 0x23);
-            if (fn_8004C13C("next", 0x800) >= 0) {
-                fn_80048D20(mFader, 25);
+            UpdateLayoutButtons(mNotice, 0x23);
+            if (CheckButtonTrig("next", 0x800) >= 0) {
+                mFader->FadeOut(25);
                 mState = STATE_WAIT_FADE_OUT;
                 PlaySE(0x1A);
             }
@@ -251,16 +238,16 @@ void SaveErrorDialog::Update() {
         case 5:
         case 7:
         case 8:
-            fn_8004BD60(mError, 0x23);
-            if (fn_8004C13C("next", 0x800) >= 0) {
+            UpdateLayoutButtons(mError, 0x23);
+            if (CheckButtonTrig("next", 0x800) >= 0) {
                 mTimer = 0;
                 mState = STATE_WAIT_RETURN;
                 PlaySE(0x1A);
             }
             break;
         case 6:
-            fn_8004BD60(mNotice2, 0x23);
-            if (fn_8004C13C("next", 0x800) >= 0) {
+            UpdateLayoutButtons(mNotice2, 0x23);
+            if (CheckButtonTrig("next", 0x800) >= 0) {
                 mTimer = 0;
                 mState = STATE_WAIT_CLOSE;
                 PlaySE(0x1A);
@@ -276,14 +263,14 @@ void SaveErrorDialog::Update() {
         break;
     case STATE_WAIT_NO:
         if (mFader->mBusy == 0) {
-            fn_80048C80(mFader, 25);
+            mFader->FadeIn(25);
             mState = STATE_INPUT;
             mType = 7;
         }
         break;
     case STATE_WAIT_CLOSE:
         if (++mTimer >= 30) {
-            fn_80048D20(mFader, 25);
+            mFader->FadeOut(25);
             mState = STATE_WAIT_FADE_OUT;
         }
         break;
@@ -306,8 +293,8 @@ void SaveErrorDialog::Draw() {
 
     switch (mType) {
     case 1: {
-        fn_80048154(mQuestion);
-        PaneButton* button = fn_80048364(mQuestion, "message");
+        mQuestion->Draw();
+        PaneButton* button = mQuestion->FindButton("message");
         s32 w = GetScreenWidth();
         f32 cx = (button->mRect.right + button->mRect.left) / 2.0f;
         f32 cy = (button->mRect.top + button->mRect.bottom) / 2.0f;
@@ -328,7 +315,7 @@ void SaveErrorDialog::Draw() {
     }
     case 2:
     case 3: {
-        PaneButton* button = fn_80048364(mNotice, "text");
+        PaneButton* button = mNotice->FindButton("text");
         switch (mType) {
         case 2:
             button->SetSelIndex(0);
@@ -337,14 +324,14 @@ void SaveErrorDialog::Draw() {
             button->SetSelIndex(1);
             break;
         }
-        fn_80048154(mNotice);
+        mNotice->Draw();
         break;
     }
     case 4:
     case 5:
     case 7:
     case 8: {
-        PaneButton* button = fn_80048364(mError, "text");
+        PaneButton* button = mError->FindButton("text");
         switch (mType) {
         case 4:
             button->SetSelIndex(1);
@@ -359,12 +346,12 @@ void SaveErrorDialog::Draw() {
             button->SetSelIndex(3);
             break;
         }
-        fn_80048154(mError);
+        mError->Draw();
         break;
     }
     case 6: {
-        fn_80048154(mNotice2);
-        PaneButton* button = fn_80048364(mQuestion, "message");
+        mNotice2->Draw();
+        PaneButton* button = mQuestion->FindButton("message");
         s32 w = GetScreenWidth();
         f32 cx = (button->mRect.right + button->mRect.left) / 2.0f;
         f32 cy = (button->mRect.top + button->mRect.bottom) / 2.0f;

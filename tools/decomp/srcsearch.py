@@ -220,14 +220,16 @@ def main():
     ap.add_argument("func")
     ap.add_argument("iterations", nargs="?", type=int, default=300)
     ap.add_argument("--restarts", type=int, default=0)
+    ap.add_argument("--symbol", help="symbol name to score (mangled C++ name); default: func")
     a = ap.parse_args()
     src, func, iters, restarts = a.src, a.func, a.iterations, a.restarts
+    sym = a.symbol or func
     s0 = open(src).read()
     a0, b0 = span(s0, func)
 
     def run(t):
         open(src, "w").write(s0[:a0] + t + s0[b0:])
-        return score(src, func)
+        return score(src, sym)
 
     best = s0[a0:b0]
     base = bs = run(best)
@@ -265,7 +267,7 @@ def main():
     finally:
         keep = bs > base
         open(src, "w").write(s0[:a0] + (best if keep else s0[a0:b0]) + s0[b0:])
-        score(src, func)
+        score(src, sym)
         print("best", bs if keep else base)
 
 

@@ -289,4 +289,34 @@ New globals named from this block: `gRandSeed` (`0x803576A0`, `include/news/Rand
 - **Open issues (NonMatching):** register allocation of a few pointer pairs (`list`/`article` in `OpenArticle`/`ExitGlobe`, `list`/`globe` in `ModeMain`), float constant registers in `Hook1E758`, the `ModeWait` fade colour (the third argument `0` shares the colour's zero register in the original), the `PaneButton::SetAlpha(u8)` argument in `Draw` (original passes the `fctiwz` word without `clrlwi`), and stack layouts in `Draw`, `DrawRelated`, `State17E6C` (original frame 16 bytes larger; two floats at `0x40`/`0x0C`) and `State195B8`.
 
 - The 0x8002E7DC block (`d_s_news.cpp`) is the module that owns the three global `ArticleText`s (`lbl_80357568`/`6C`/`70`) and the caption text (`lbl_80357574`); SlideShow drives it through `fn_8003300C` (set text) etc.
-- The base class `Scene` (vtable `0x801B34B8`, ctor `0x80049400`) is in the not yet split block `0x80047B50`–`0x80051D4C`. Its virtual slots are named in `symbols.txt` (`Exit__5SceneFil`, `Calc__5SceneFv`, ...).
+- The base class `Scene` (vtable `0x801B34B8`, ctor `0x80049400`) is in `d_scene.cpp` (block `0x80047B50`–`0x8004C43C`, below).
+
+### Block 0x80047B50–0x8004C43C (lib `news_80047B50`)
+
+| File | `.text` | Data | Contents |
+| --- | --- | --- | --- |
+| `PaneLayout.cpp` | `0x80047B50`–`0x8004857C` | `.sdata 0x80356C90`, `.sdata2 0x80358F18` | `Layout`: a `.brlyt` whose top-level panes are `PaneButton`s (slide/fade in and out, hit test, find by name, draw). Built with `-inline auto -ipa file`. NonMatching, 99.95%: only `Layout::Calc` (99.71%) is left, a counter/button-pointer register swap in the slide loop. |
+| `PointerHistory.cpp` | `0x8004857C`–`0x800488B0` | `.sdata2 0x80358F30` | `PointerHistory`: ring buffer of the last 10 pointer positions per channel (`gPointerHistory`, defined in `d_scene.cpp`). Matching. |
+| `Fader.cpp` | `0x800488B0`–`0x800492A0` | `.ctors 0x80191F4C`, `.data 0x801B3020`, `.bss 0x8020DE08`, `.sbss 0x80357708`, `.sdata2 0x80358F38` | `Fader`: full-screen gradient fade (`gFader`/`gFader2`, "m_pFade"/"m_pFade2"). Matching. |
+| `Thread.cpp` | `0x800492A0`–`0x800493A8` | – | `Thread`: `OSThread` with a 16 KB stack, started on construction, joined on destruction; `Restart`. Matching. |
+| `ScreenBase.cpp` | `0x800493A8`–`0x80049400` | – | `ScreenBase`: base of `MainScreen` (text writer + rectangle). Matching. |
+| `d_scene.cpp` | `0x80049400`–`0x8004C43C` | `.ctors 0x80191F50`, `.rodata 0x801A64B8`, `.data 0x801B3060`, `.bss 0x8020DE18`, `.sdata 0x80356C98`, `.sbss 0x80357710`, `.sdata2 0x80358F58` | `Scene` (base of `NewsScene`, file name from `__FILE__`): loads the shared resources (heaps and allocators, HOME Menu `gHomeMenu`, time/city fonts, `LoadFonts`/`FreeFonts` for the `wbf1`/`wbf2` system fonts, `TPLCommon.tpl` cursor textures, faders, simple globe), state machine (`StateMain`/`StateReset`/`StateExit`/`StateFatal`), per-language clock drawing (`DrawClock*`), `UpdateClock`, earth model streaming from NAND on a `Thread` (`LoadEarth`, `EarthLoadThread`, `UnloadEarth`), the shared button input helpers (`UpdateLayoutButtons`, `ClearButtonHover`, `CheckButtonHold`, `CheckButtonTrig`), `LatLonToDegrees`, `UpdatePointerScroll`, `__sinit` (`gPointerHistory`, `gPointerScroll`, `gTextWriter`, `gHighlightColor`), then the weak `~PointerHistory`/`~PointerScroll`. Built with `-inline auto -ipa file`. Matching. |
+
+Globals named from this block: `gHomeMenu`, `gFader`/`gFader2`, `gGlobe` (the simple globe, `0x8035775C`), `gEarthModel`, `gSoundPlayer`, `gCityFont`, `gClockTime` (current `OSCalendarTime`), `gTextWriter`, `gTextBuf`, `gHoverButtons`, `gPointerScroll`, `gPointerOverClock`, `gExitRequested`, `gHideClock`, `gTopLayoutAlpha`. Functions outside the block renamed: `fn_80040A14` = `operator new(size_t, s32 align)` (`__nw__FUll`); `LOAD_GLYPH_ALL` is `nw4r::ut::detail::ArchiveFontBase::LOAD_GLYPH_ALL`.
+
+## More codegen patterns (block 0x80047B50–0x8004C43C)
+
+- **Inline helpers with a `const f32&` parameter fix loop registers.** `Scene::Execute`'s "is a pointer above the clock" loop only got the original counter/pointer registers as `static inline void CheckPointerOverClock(const f32& bottom)` (by value: 85%; written in place: 99.5%). The cursor texture loop in the ctor likewise matched only inside a parameterless `static inline void InitCursorTex()`.
+- **Unmerged identical tail stores.** `if (lang == 0) g = LoadArcFile(A); else g = LoadArcFile(B);` makes MWCC merge the two `stw`s into one after the join. The original keeps one store per branch with a plain `bne`; that is `g = LoadFont(A)` / `g = LoadFont(B)` through a one-line inline `LoadFont(name)`. A `switch` keeps both stores but adds a `beq`/`b` pair.
+- **`switch` instead of `if` for error checks.** `if (result == 0) { ... } else { error }` gives `bne else`; the original's `beq ok; b error` (LoadEarth, EarthLoadThread) is `switch (result) { case 0: ...; break; default: error }`.
+- **State switch with `case 2: default:`.** `StateExit`'s compare tree (`cmpwi 1` root) needs `case -1: break; case 2: default:` after `case 0`/`case 1`.
+- **Redundant inner test.** `UnloadEarth` tests `gEarthModel != NULL` twice (`beq` on the same `cr0`): an outer `if (model) { if (model) { ... } ...; return TRUE; } return FALSE;`.
+- **`(u16)` casts on a `u32` parameter.** `CheckButtonHold/Trig(const char*, u32 button)` mask with `(u16)button & trig` at each use (`clrlwi` per use).
+- **Bool-returning member inline.** `HomeMenu::IsOpen() { return mActive || mOpenManual; }` gives the original `li r3,0 ... li r3,1` materialisation; the same expression written on the global pointer in a static inline gives `li r3,1` first.
+- **Signed conversion of a `u16`.** `0.5f * (s32)gRenderMode.efbHeight` shares the signed int→float constant; without the cast MWCC uses the unsigned one.
+- **Unfolded constant products.** `f32 baseWidth = 608.0f; halfWidth = 0.5f * baseWidth;` keeps the runtime `fmuls`; declaration order (`width`, `centerX`, `baseWidth`, `halfWidth`, `scale`, `halfHeight`) sets both the FPRs and the `.sdata2` pool order (0.5 before 608).
+- **`ArchiveFontBase::LOAD_GLYPH_ALL`** must be declared with a size (`[1]`) to be addressed with `li rX, sym@sda21` (`.sbss2`); an unsized array is addressed with `lis`/`addi`.
+- **Header globals with another type.** System.h declares `gSysFont`/`gArticleFont` as `ut::Font*` and `gHighlightColor` as `GXColor`; `d_scene.cpp` defines them as `ut::ArchiveFont*` and `ut::Color` (CodeWarrior does not mangle variable names) by renaming the header declarations with a `#define` around the includes.
+- **`.data` symbols.** dtk's string blobs in `.data` were split at the offsets of our `@NNNN` objects so objdiff pairs each literal; the `GXColor` clear-colour template in `.sdata2` (`lbl_80358F58`) is one 4-byte symbol.
+- `tools/decomp/srcsearch.py` takes `--symbol MANGLED` for C++ functions (the function argument is still the source name, e.g. `Calc` for `Layout::Calc`).
+

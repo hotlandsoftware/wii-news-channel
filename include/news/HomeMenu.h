@@ -28,6 +28,7 @@ public:
     BOOL RunManual();
     inline void PrintHeapInfo();
     void Quit();
+    BOOL IsOpen() { return mActive || mOpenManual; } // HOME Menu or manual shown
 
     static void BrowserDrawCallback(BOOL fade, GXRenderModeObj* rmode);
 

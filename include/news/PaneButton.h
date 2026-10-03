@@ -63,8 +63,17 @@ public:
     void SetSelIndex(s32 idx);
     void SetText(const wchar_t* text);
     void Hide();
-    void SetAlpha(u8 alpha);
+    void SetAlpha(s32 alpha);
     nw4r::lyt::Pane* FindPane(const char* name);
+
+    void SetSlide(f32 step) { mOffsetY = step * (mPane->GetTranslate().y > 0.0f ? 1 : -1); }
+    void SetBaseAlpha(s32 alpha) { mAlpha = alpha; }
+
+    void SetBlend(s32 alpha, s32 blend, s32 blendMax) {
+        mFadeAlpha = alpha;
+        mBlend = blend;
+        mBlendMax = blendMax;
+    }
 
     s32 mUnk00;                              // at 0x00
     PaneButtonColors* mColors;               // at 0x04

@@ -3,6 +3,8 @@
 #define NW4R_UT_COLOR_DEFAULT_WHITE
 #define NW4R_UT_COLOR_WORD_COPY
 
+#include <news/PointerHistory.h>
+#include <news/PaneLayout.h>
 #include <news/SlideShow.h>
 #include <news/ArticleText.h>
 #include <news/Common.h>
@@ -21,12 +23,11 @@ using namespace nw4r;
 // Not yet decompiled: layouts (0x80047B50), the article view (0x8002E7DC),
 // the globe (0x8004BD60) and input globals.
 extern u8 lbl_801EE270[];         // layout resource accessor
-extern "C" u8 lbl_8020DE24[];     // pointer history
-extern "C" s32 lbl_8020E4A0[4];   // per-channel "pointer used" flags
+extern "C" s32 gHoverButtons[4];   // per-channel "pointer used" flags
 extern "C" f32 lbl_801F0888[4];   // pointer x per channel
 extern "C" f32 lbl_801F0898[4];   // pointer y per channel (stride 0xC)
 extern "C" u32 lbl_801F0908[4];   // held buttons
-extern "C" f32 lbl_8020E468[];    // pointer movement
+extern "C" f32 gPointerScroll[];    // pointer movement
 extern "C" s32 lbl_801EDFD0[4];
 extern "C" f32 lbl_801EDFA0[6];
 extern "C" f32 lbl_801EDFB8[6];
@@ -41,8 +42,8 @@ extern "C" s32 lbl_80357598;
 extern "C" s32 lbl_803575E0;      // number of categories
 extern "C" u8 lbl_8035697C;
 extern "C" s32 lbl_80356970;      // text size setting
-extern "C" bool lbl_80356CA0;
-extern "C" u8 lbl_8035772A;
+extern "C" bool gHideClock;
+extern "C" u8 gPointerOverClock;
 extern "C" const wchar_t* lbl_80357564; // title text
 extern "C" ArticleText* lbl_80357568;
 extern "C" f32 lbl_80356940[2];
@@ -69,26 +70,17 @@ struct Globe {
     u8 unk10[0x74 - 0x10];
     f32 mZoom;            // at 0x74
 };
-extern "C" Globe* lbl_8035775C;
+extern "C" Globe* gGlobe;
 
 void DrawScreenFade(s32 alpha);
 
+// The original calls Layout::SetBlend(s32, s32, s32) with only the first
+// argument set (r5/r6 are left as they are), as if through an older
+// one-argument declaration. Declaring the mangled name with C linkage
+// reproduces that call.
+extern "C" void SetBlend__6LayoutFlll(Layout* layout, s32 alpha);
+
 extern "C" {
-Layout* fn_80047B50(void* mem, u32 arc, const char* name, void* resAccessor, u32 arg);
-void fn_80047DE8(Layout* layout, s32 flags);
-void fn_80047EFC(Layout* layout);
-void fn_80047F70(Layout* layout);
-void fn_80048154(Layout* layout);
-PaneButton* fn_80048364(Layout* layout, const char* name);
-void fn_800483EC(Layout* layout, s32 frames);
-void fn_80048418(Layout* layout, s32 frames);
-void fn_80048444(Layout* layout, s32 frames);
-void fn_80048470(Layout* layout, s32 alpha);
-void fn_800484A4(Layout* layout, s32 alpha);
-BOOL fn_80048854(void* history, s32 chan, f32* x, f32* y);
-void fn_8004BD60(Layout* layout, u32 arg);
-s32 fn_8004C000(const char* name, u32 button);
-s32 fn_8004C13C(const char* name, u32 button);
 
 void fn_8004CBE0(Globe* globe);
 void fn_8004CC20(Globe* globe, GlobeCamera* camera);
@@ -304,65 +296,56 @@ SlideShow::SlideShow(u32 arc)
     mDragging[2] = false;
     mDragging[3] = false;
 
-    Layout* layout = (Layout*)operator new(0x434);
-    if (layout != NULL) {
-        layout = fn_80047B50(layout, arc, "slide_main.brlyt", lbl_801EE270, 0);
-    }
+    Layout* layout = new Layout((void*)arc, "slide_main.brlyt", (PaneButtonColors*)lbl_801EE270, false);
     mMainLayout = layout;
     if (mMainLayout == NULL) {
         gAllocFailed = true;
         return;
     }
 
-    layout = (Layout*)operator new(0x434);
-    if (layout != NULL) {
-        layout = fn_80047B50(layout, arc, "slide.brlyt", lbl_801EE270, 0);
-    }
+    layout = new Layout((void*)arc, "slide.brlyt", (PaneButtonColors*)lbl_801EE270, false);
     mSlideLayout = layout;
     if (mMainLayout == NULL) {
         gAllocFailed = true;
         return;
     }
 
-    layout = (Layout*)operator new(0x434);
-    if (layout != NULL) {
-        layout = fn_80047B50(layout, arc, "slide_belt.brlyt", lbl_801EE270, 0);
-    }
+    layout = new Layout((void*)arc, "slide_belt.brlyt", (PaneButtonColors*)lbl_801EE270, false);
     mBeltLayout = layout;
     if (mMainLayout == NULL) {
         gAllocFailed = true;
         return;
     }
 
-    mUpButton = fn_80048364(mMainLayout, "up");
+    mUpButton = mMainLayout->FindButton("up");
     if (mUpButton == NULL) {
         gFatalError = true;
         return;
     }
     mUpButton->mUnk91 = true;
 
-    mDownButton = fn_80048364(mMainLayout, "down");
+    mDownButton = mMainLayout->FindButton("down");
     if (mDownButton == NULL) {
         gFatalError = true;
         return;
     }
     mDownButton->mUnk91 = true;
 
-    mBackButton = fn_80048364(mMainLayout, "back");
+    mBackButton = mMainLayout->FindButton("back");
     if (mBackButton == NULL) {
         gFatalError = true;
         return;
     }
     mBackButton->mUnk91 = true;
 
-    mZoomInButton = fn_80048364(mMainLayout, "zoom_in");
+    mZoomInButton = mMainLayout->FindButton("zoom_in");
     if (mZoomInButton == NULL) {
         gFatalError = true;
         return;
     }
     mZoomInButton->mUnk91 = true;
 
-    mZoomOutButton = fn_80048364(mMainLayout, "zoom_out");
+    mZoomOutButton = mMainLayout->FindButton("zoom_out");
     if (mZoomOutButton == NULL) {
         gFatalError = true;
         return;
@@ -370,7 +353,7 @@ SlideShow::SlideShow(u32 arc)
     mZoomOutButton->mUnk91 = true;
     mZoomOutButton->mTextColorCallback = (PaneButton::TextColorCallback)fn_8001F730;
 
-    mEndButton = fn_80048364(mMainLayout, "end");
+    mEndButton = mMainLayout->FindButton("end");
     if (mEndButton == NULL) {
         gFatalError = true;
         return;
@@ -416,9 +399,9 @@ SlideShow::SlideShow(u32 arc)
 }
 
 SlideShow::~SlideShow() {
-    fn_80047DE8(mBeltLayout, 1);
-    fn_80047DE8(mSlideLayout, 1);
-    fn_80047DE8(mMainLayout, 1);
+    delete mBeltLayout;
+    delete mSlideLayout;
+    delete mMainLayout;
 }
 
 static inline void ApplyView(SlideShow* s) {
@@ -538,9 +521,9 @@ void SlideShow::LoadArticle() {
 }
 
 void SlideShow::Start() {
-    fn_80047EFC(mMainLayout);
-    fn_80047EFC(mSlideLayout);
-    fn_80047EFC(mBeltLayout);
+    mMainLayout->Reset();
+    mSlideLayout->Reset();
+    mBeltLayout->Reset();
     mArticleIdx = 0;
     mTextVisible = true;
     mTextMoving = false;
@@ -562,7 +545,7 @@ void SlideShow::Start() {
     mTimerFade = 0;
     LoadArticle();
     ChangeState(&SlideShow::StateShow);
-    if (lbl_8035775C != NULL) {
+    if (gGlobe != NULL) {
         fn_8004DB4C(7);
     }
     Calc();
@@ -658,7 +641,7 @@ void SlideShow::Calc() {
 
     CalcArrows();
 
-    Globe* globe = lbl_8035775C;
+    Globe* globe = gGlobe;
     if (globe != NULL) {
         mGlobeAngle += 0x200;
         f32 range = mGlobeZoomTo - mGlobeZoomFrom;
@@ -670,7 +653,7 @@ void SlideShow::Calc() {
         globe->mZoom = mGlobeZoom;
         fn_8004D1D4(globe, lbl_80192370, t);
 
-        Globe* g = lbl_8035775C;
+        Globe* g = gGlobe;
         if (g != NULL) {
             GlobeCamera* camera = g->mCamera;
             if (camera != NULL) {
@@ -729,7 +712,7 @@ void SlideShow::Calc() {
     }
     if (active) {
         fn_8003633C(0);
-        lbl_8035772A = 0;
+        gPointerOverClock = 0;
     }
 
     if (mBeltVisible) {
@@ -749,8 +732,8 @@ void SlideShow::Calc() {
 
 void SlideShow::Draw() {
     if (mAlpha != 0) {
-        fn_800484A4(mSlideLayout, mAlpha);
-        fn_80048154(mSlideLayout);
+        mSlideLayout->SetAlpha(mAlpha);
+        mSlideLayout->Draw();
         fn_80036328(mAlpha, mView.top);
         if (mFooterAlpha != 0 && mDrawFooter) {
             Draw2D_SetupGX();
@@ -782,14 +765,14 @@ void SlideShow::Draw() {
     DrawPictures();
 
     if (IsState(&SlideShow::StateShow) || IsState(&SlideShow::StateMove)) {
-        fn_80048154(mMainLayout);
+        mMainLayout->Draw();
     }
 
     if (mBeltFade > 0) {
         f32 t = 1.0f - math::CosFIdx(FIdxRad((1.5707964f * mBeltFade) / 15.0f));
         s32 alpha = 255.0f * t;
-        fn_800484A4(mBeltLayout, alpha);
-        fn_80048154(mBeltLayout);
+        mBeltLayout->SetAlpha(alpha);
+        mBeltLayout->Draw();
 
         if (mHasTitle) {
             Draw2D_SetupGX();
@@ -957,19 +940,19 @@ BOOL SlideShow::CheckInput() {
         return FALSE;
     }
 
-    fn_80048444(mMainLayout, 15);
+    mMainLayout->FadeIn(15);
     if (mShowMain) {
-        fn_80047F70(mMainLayout);
+        mMainLayout->Calc();
     }
-    fn_80047F70(mSlideLayout);
-    fn_80047F70(mBeltLayout);
+    mSlideLayout->Calc();
+    mBeltLayout->Calc();
 
     if (lbl_80357598 != 1) {
         return TRUE;
     }
 
     if (!IsState(&SlideShow::StateMessage)) {
-        fn_8004BD60(mCurLayout, 0x23);
+        UpdateLayoutButtons(mCurLayout, 0x23);
         if (lbl_801F0908[0] & 0x400) {
             mDragging[0] = true;
             dragging = true;
@@ -989,35 +972,35 @@ BOOL SlideShow::CheckInput() {
 
         CheckPointer();
 
-        if (fn_8004C000("zoom_out", 0x800) >= 0) {
+        if (CheckButtonHold("zoom_out", 0x800) >= 0) {
             mZoomOutPressed = true;
         } else if (lbl_80357698 & 0x1000) {
             mZoomOutPressed = true;
             mZoomOutButton->SetPressed(true);
         }
 
-        if (fn_8004C000("zoom_in", 0x800) >= 0) {
+        if (CheckButtonHold("zoom_in", 0x800) >= 0) {
             mZoomInPressed = true;
         } else if (lbl_80357698 & 0x10) {
             mZoomInPressed = true;
             mZoomInButton->SetPressed(true);
         }
 
-        if (fn_8004C000("prev", 0x800) >= 0 || (gTrigAll & 1)) {
+        if (CheckButtonHold("prev", 0x800) >= 0 || (gTrigAll & 1)) {
             mPrevPressed = true;
         }
-        if (fn_8004C000("next", 0x800) >= 0 || (gTrigAll & 2)) {
+        if (CheckButtonHold("next", 0x800) >= 0 || (gTrigAll & 2)) {
             mNextPressed = true;
         }
 
         if (!dragging) {
-            if (fn_8004C000("up", 0x800) >= 0) {
+            if (CheckButtonHold("up", 0x800) >= 0) {
                 mUpPressed = true;
             } else if (lbl_80357698 & 8) {
                 mUpPressed = true;
                 mUpButton->SetPressed(true);
             }
-            if (fn_8004C000("down", 0x800) >= 0) {
+            if (CheckButtonHold("down", 0x800) >= 0) {
                 mDownPressed = true;
             } else if (lbl_80357698 & 4) {
                 mDownPressed = true;
@@ -1025,16 +1008,16 @@ BOOL SlideShow::CheckInput() {
             }
         }
 
-        if (fn_8004C13C("main", 0x800) >= 0) {
+        if (CheckButtonTrig("main", 0x800) >= 0) {
             mMainPressed = true;
         }
-        if (fn_8004C13C("end", 0x800) >= 0) {
+        if (CheckButtonTrig("end", 0x800) >= 0) {
             mEndButton->mToggle = true;
             PlaySE(0x22);
             lbl_80357598 = 0;
             return TRUE;
         }
-        if (fn_8004C13C("back", 0x800) >= 0) {
+        if (CheckButtonTrig("back", 0x800) >= 0) {
             mBackPressed = true;
         }
     }
@@ -1147,7 +1130,7 @@ BOOL SlideShow::StateZoom(const s32* arg) {
     case -1:
         mZoomed = false;
         mTextVisible = true;
-        lbl_80356CA0 = gUpdateMsgType == 1;
+        gHideClock = gUpdateMsgType == 1;
         ChangeSubState(&SlideShow::SubStateWait);
         mBounceTimer = 0;
         mQuickMove = false;
@@ -1205,10 +1188,10 @@ BOOL SlideShow::StateZoom(const s32* arg) {
                         f32 x = gCursorX[i][0];
                         f32 y = gCursorY[i][0];
                         bool in;
-                        if (lbl_8020E4A0[i] == 0 && x >= rect.left && x < rect.right &&
+                        if (gHoverButtons[i] == 0 && x >= rect.left && x < rect.right &&
                             y >= rect.top && y < rect.bottom) {
                             if (gTrig[i] & 0x800) {
-                                mMessageFlag = lbl_80356CA0;
+                                mMessageFlag = gHideClock;
                                 ChangeState(&SlideShow::StateMessage);
                                 return TRUE;
                             }
@@ -1351,7 +1334,7 @@ BOOL SlideShow::StateZoom(const s32* arg) {
 }
 
 BOOL SlideShow::StateMove(const s32* arg) {
-    if (lbl_8035775C == NULL) {
+    if (gGlobe == NULL) {
         return TRUE;
     }
 
@@ -1460,7 +1443,7 @@ BOOL SlideShow::StateMessage(const s32* arg) {
         break;
     case 0:
         PlaySE(0x40);
-        lbl_80356CA0 = 1;
+        gHideClock = 1;
         mMessageFade = 0;
         mZoomed = true;
         mTextVisible = false;
@@ -1477,7 +1460,7 @@ BOOL SlideShow::StateMessage(const s32* arg) {
             if (gUpdateMsgType != 1) {
                 flag = mMessageFlag;
             }
-            lbl_80356CA0 = flag;
+            gHideClock = flag;
             mStateFrame = 2;
         }
         break;
@@ -1566,18 +1549,18 @@ void SlideShow::SubStateScroll() {
         }
 
         if (fn_80034770()) {
-            PaneButton* button = fn_80048364(mMainLayout, "up");
+            PaneButton* button = mMainLayout->FindButton("up");
             button->mDisabled = true;
             button->Press();
         } else {
-            fn_80048364(mMainLayout, "up")->mDisabled = false;
+            mMainLayout->FindButton("up")->mDisabled = false;
         }
         if (fn_80034780()) {
-            PaneButton* button = fn_80048364(mMainLayout, "down");
+            PaneButton* button = mMainLayout->FindButton("down");
             button->mDisabled = true;
             button->Press();
         } else {
-            fn_80048364(mMainLayout, "down")->mDisabled = false;
+            mMainLayout->FindButton("down")->mDisabled = false;
         }
 
         if (mDownPressed && !fn_80034780()) {
@@ -1643,7 +1626,7 @@ void SlideShow::SubStateDrag() {
             if (lbl_801F0908[i] & 0x400) {
                 count++;
                 lbl_801EDFD0[i] = 5;
-                move += 0.1f * lbl_8020E468[i];
+                move += 0.1f * gPointerScroll[i];
             }
         }
         if (count != 0) {
@@ -1885,8 +1868,8 @@ void SlideShow::LayoutArticle() {
         } else {
             mGlobeZoomTo = 0.0f;
         }
-        if (lbl_8035775C != NULL) {
-            mGlobeZoomFrom = lbl_8035775C->mZoom;
+        if (gGlobe != NULL) {
+            mGlobeZoomFrom = gGlobe->mZoom;
         } else {
             mGlobeZoomFrom = mGlobeZoomTo;
         }
@@ -1894,8 +1877,8 @@ void SlideShow::LayoutArticle() {
         fn_8003256C(&mGlobeTo.x, mArticle);
         mUnk288.x = sGlobeOfsX;
         mUnk288.y = sGlobeOfsY;
-        if (lbl_8035775C != NULL) {
-            GlobeCamera* camera = lbl_8035775C->mCamera;
+        if (gGlobe != NULL) {
+            GlobeCamera* camera = gGlobe->mCamera;
             if (camera != NULL) {
                 mGlobeFrom.x = camera->mLon;
                 mGlobeFrom.y = camera->mLat;
@@ -1914,7 +1897,7 @@ void SlideShow::LayoutArticle() {
             fn_80032580(mArticle, 7, mGlobeZoomTo, -0.3f);
             lbl_8035697C = 0;
         } else {
-            fn_8004E0B8(lbl_8035775C, ((u8*)mArticle->mLocation)[0xC]);
+            fn_8004E0B8(gGlobe, ((u8*)mArticle->mLocation)[0xC]);
         }
         mShowPicture = false;
     } else {
@@ -1953,7 +1936,7 @@ void SlideShow::CheckPointer() {
             f32 x = gCursorX[i][0];
             f32 y = gCursorY[i][0];
             f32 px, py;
-            if (fn_80048854(lbl_8020DE24, i, &px, &py)) {
+            if (gPointerHistory.GetOldest(i, &px, &py)) {
                 if (x >= -16.0f && x < right && px >= -16.0f && px < right) {
                     f32 dx = x - px;
                     f32 dy = y - py;
@@ -1967,7 +1950,7 @@ void SlideShow::CheckPointer() {
             if (x >= -16.0f && x < right) {
                 inside = true;
             }
-            if (lbl_8020E4A0[i] != 0) {
+            if (gHoverButtons[i] != 0) {
                 used = true;
             }
             if (y < 63.0f || y > 393.0f) {
@@ -2006,12 +1989,12 @@ void SlideShow::CheckPointer() {
     }
 
     if (dragging) {
-        fn_80048418(mCurLayout, 10);
+        mCurLayout->SlideOut(10);
         outside = true;
     } else if (mPointerOutTimer < 10 && mIdleTimer < 90) {
-        fn_800483EC(mCurLayout, 15);
+        mCurLayout->SlideIn(15);
     } else {
-        fn_80048418(mCurLayout, 30);
+        mCurLayout->SlideOut(30);
         outside = true;
     }
 
@@ -2027,10 +2010,10 @@ void SlideShow::CheckPointer() {
     if (gUpdateMsgType != 1) {
         flag = outside;
     }
-    lbl_80356CA0 = flag;
+    gHideClock = flag;
 
     s32 lo = 32;
-    fn_80048470(mCurLayout,
+    SetBlend__6LayoutFlll(mCurLayout,
                 lo + (s32)(255.0f - lo) *
                          math::SinFIdx(FIdxRad((1.5708f * (15 - mFooterFade)) / 15.0f)));
 }

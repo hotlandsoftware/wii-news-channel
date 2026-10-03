@@ -27,6 +27,6 @@ public:
 };
 
 // Converts a location's latitude/longitude to degrees.
-extern "C" void fn_8004C240(u16 latitude, u16 longitude, nw4r::math::VEC2* out);
+void LatLonToDegrees(u16 latitude, u16 longitude, nw4r::math::VEC2* out);
 
 #endif

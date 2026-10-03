@@ -1,3 +1,4 @@
+#include <news/Fader.h>
 #include <news/Connect.h>
 #include <news/Draw2D.h>
 #include <news/Mascot.h>
@@ -37,7 +38,7 @@ struct DownloadTask {
 extern u8 lbl_801EE270[];         // layout resource accessor
 extern u32 lbl_801F0908[4];       // held buttons
 extern DownloadTask lbl_8020CEB8[8];
-extern u8 lbl_80357729;
+extern u8 gExitRequested;
 extern u32 lbl_80357688;          // pointer button hold
 
 void AdvanceLoadingFrame();
@@ -54,11 +55,6 @@ s32 fn_80040C0C(MEMHeapHandle heap, u32 arg, NewsHeader** files, u32* arg3, u32*
 s32 fn_80041090(MEMHeapHandle heap, u32 arg, NewsHeader** files, u32* arg3, u32* sizes, u32 mask);
 s32 fn_80041514(const char* url, u32 arg1, u32 arg2, u8 arg3, u16 arg4);
 s32 fn_80041964();
-void fn_800484A4(Layout* layout, s32 alpha);
-void fn_80048514(Layout* layout, Mtx mtx);
-void fn_80048C80(Fader* fader, s32 frames);
-void fn_80048D20(Fader* fader, s32 frames);
-void fn_80049148(Fader* fader);
 void fn_8004F8E0(u32 id, f32 volume, f32 pitch, f32 pan);
 void fn_8004FAB0(snd::SoundHandle* handle, s32 frames);
 void fn_8004FAD0(snd::SoundHandle* handle, u32 variation, s32 arg2);
@@ -80,7 +76,7 @@ static const u32 sDotTex[6] = {0x10, 0x16, 0x1C, 0x19, 0x25, 0x22};
 static const u32 sDotTexHover[6] = {0x12, 0x18, 0x1E, 0x1B, 0x27, 0x24};
 
 static inline void PressButton(Layout* layout, const char* name) {
-    PaneButton* button = fn_80048364(layout, name);
+    PaneButton* button = layout->FindButton(name);
     button->mToggle = true;
 }
 
@@ -105,7 +101,7 @@ Connect::Connect(u32 arg, u32 arc, NewsData* newsData) {
     m00C = arg;
     mArc = arc;
     mNewsData = newsData;
-    mFader = lbl_8035772C;
+    mFader = gFader;
     mHeapMem = fn_80040994(0x800000, 0x20);
     if (mHeapMem == NULL) {
         OSPanic("Connect.cpp", 41, "MEMORY ERROR");
@@ -115,16 +111,10 @@ Connect::Connect(u32 arg, u32 arc, NewsData* newsData) {
         mFiles[i] = NULL;
     }
 
-    Layout* layout = (Layout*)operator new(0x434);
-    if (layout != NULL) {
-        layout = fn_80047B50(layout, mArc, "error1.brlyt", lbl_801EE270, 0);
-    }
+    Layout* layout = new Layout((void*)mArc, "error1.brlyt", (PaneButtonColors*)lbl_801EE270, false);
     mLayout = layout;
 
-    layout = (Layout*)operator new(0x434);
-    if (layout != NULL) {
-        layout = fn_80047B50(layout, mArc, "error0.brlyt", lbl_801EE270, 0);
-    }
+    layout = new Layout((void*)mArc, "error0.brlyt", (PaneButtonColors*)lbl_801EE270, false);
     mErrorLayout = layout;
 
     mTipsLayout = NULL;
@@ -137,13 +127,13 @@ Connect::~Connect() {
         mTips = NULL;
     }
     if (mTipsLayout != NULL) {
-        fn_80047DE8(mTipsLayout, 1);
+        delete mTipsLayout;
         mTipsLayout = NULL;
-        fn_8004BFE0();
+        ClearButtonHover();
     }
     delete mMascot;
-    fn_80047DE8(mErrorLayout, 1);
-    fn_80047DE8(mLayout, 1);
+    delete mErrorLayout;
+    delete mLayout;
     for (s32 i = 0; i < 24; i++) {
         if (mFiles[i] != NULL) {
             MEMFreeToExpHeap(mHeap, mFiles[i]);
@@ -184,17 +174,17 @@ void Connect::Reset(s32 country, s32 language) {
     mAlpha = 0.0f;
     mTimer = 0;
     mDone = false;
-    fn_80047EFC(mLayout);
-    fn_80047EFC(mErrorLayout);
+    mLayout->Reset();
+    mErrorLayout->Reset();
     PressButton(mErrorLayout, "next");
-    fn_8004BFE0();
+    ClearButtonHover();
     mMascot->Reset();
 }
 
 void Connect::Update() {
     AdvanceLoadingFrame();
-    fn_80047F70(mLayout);
-    fn_80047F70(mErrorLayout);
+    mLayout->Calc();
+    mErrorLayout->Calc();
 
     switch (mDownloadState) {
     case DL_START: {
@@ -279,9 +269,9 @@ void Connect::Update() {
     case STATE_FADE_IN:
         if (mFader->IsFadedOut()) {
             mAlpha = 1.0f;
-            fn_80048C80(mFader, 25);
+            mFader->FadeIn(25);
         } else {
-            fn_80049148(mFader);
+            mFader->SetClear();
         }
         mState = STATE_WAIT;
         break;
@@ -294,7 +284,7 @@ void Connect::Update() {
         }
         if (mDownloadState == DL_TEST) {
             if (mTaskStatus == 0) {
-                lbl_80357729 = 1;
+                gExitRequested = 1;
             }
         } else if (mDownloadState == DL_DONE) {
             s32 cur = mCurrentFile;
@@ -309,7 +299,7 @@ void Connect::Update() {
                     mDownloadState = DL_ERROR;
                 }
             }
-            fn_80048D20(mFader, 25);
+            mFader->FadeOut(25);
             if (mDownloadState == DL_DONE) {
                 mState = STATE_FADE_TO_NEWS;
                 PlaySE(0x18);
@@ -317,19 +307,16 @@ void Connect::Update() {
                 mState = STATE_FADE_TO_ERROR;
             }
         } else if (mDownloadState == DL_ERROR) {
-            fn_80048D20(mFader, 25);
+            mFader->FadeOut(25);
             mState = STATE_FADE_TO_ERROR;
         } else {
             for (s32 i = 0; i < 4; i++) {
                 if ((gTrig[i] & 0x800) && mHover[i]) {
                     mMascot->Talk();
-                    Layout* layout = (Layout*)operator new(0x434);
-                    if (layout != NULL) {
-                        layout = fn_80047B50(layout, mArc, "tips_window.brlyt", lbl_801EE270, 0);
-                    }
+                    Layout* layout = new Layout((void*)mArc, "tips_window.brlyt", (PaneButtonColors*)lbl_801EE270, false);
                     mTipsLayout = layout;
-                    fn_80047EFC(mTipsLayout);
-                    lyt::Pane* pane = fn_80048364(mTipsLayout, "text")->FindPane("textM");
+                    mTipsLayout->Reset();
+                    lyt::Pane* pane = mTipsLayout->FindButton("text")->FindPane("textM");
                     mTips = new ConnectTips(pane);
                     s32 rand = (u16)Random();
                     mTips->SetTip((rand >> 3) % mTips->GetNumTips());
@@ -345,7 +332,7 @@ void Connect::Update() {
         break;
     case STATE_FADE_TO_ERROR:
         if (mFader->mBusy == 0) {
-            fn_80048C80(mFader, 25);
+            mFader->FadeIn(25);
             mState = STATE_ERROR;
             PlaySE(0x19);
         }
@@ -361,9 +348,9 @@ void Connect::Update() {
         }
         break;
     case STATE_TIPS: {
-        PaneButton* button = fn_80048364(mTipsLayout, "next");
-        fn_80047F70(mTipsLayout);
-        fn_8004BD60(mTipsLayout, 0x23);
+        PaneButton* button = mTipsLayout->FindButton("next");
+        mTipsLayout->Calc();
+        UpdateLayoutButtons(mTipsLayout, 0x23);
         if (mTipsTimer > 0) {
             mTipsTimer--;
         } else if (mTipsOpen < 20) {
@@ -403,7 +390,7 @@ void Connect::Update() {
                 button->mToggle = false;
             }
             button->mDisabled = false;
-            if (fn_8004C13C("next", 0x800) >= 0) {
+            if (CheckButtonTrig("next", 0x800) >= 0) {
                 PlaySE(0x1A);
                 if (mTips->IsLastPage()) {
                     mTipsTimer = 15;
@@ -421,7 +408,7 @@ void Connect::Update() {
         break;
     }
     case STATE_CLOSE_TIPS:
-        fn_80047F70(mTipsLayout);
+        mTipsLayout->Calc();
         if (mTipsTimer > 0) {
             mTipsTimer--;
         } else {
@@ -436,16 +423,16 @@ void Connect::Update() {
                     mTips = NULL;
                 }
                 if (mTipsLayout != NULL) {
-                    fn_80047DE8(mTipsLayout, 1);
+                    delete mTipsLayout;
                     mTipsLayout = NULL;
-                    fn_8004BFE0();
+                    ClearButtonHover();
                 }
             }
         }
         break;
     case STATE_ERROR:
-        fn_8004BD60(mErrorLayout, 0x23);
-        if (mFader->mBusy == 0 && fn_8004C13C("next", 0x800) >= 0) {
+        UpdateLayoutButtons(mErrorLayout, 0x23);
+        if (mFader->mBusy == 0 && CheckButtonTrig("next", 0x800) >= 0) {
             PlaySE(0x1A);
             mTimer = 0;
             mState = STATE_RETURN;
@@ -564,9 +551,9 @@ void Connect::Draw() {
     case STATE_FADE_TO_NEWS:
     case STATE_TIPS:
     case STATE_CLOSE_TIPS: {
-        fn_80048364(mLayout, "text")->SetSelIndex(mDone);
-        fn_800484A4(mLayout, 255.0f * mAlpha);
-        fn_80048154(mLayout);
+        mLayout->FindButton("text")->SetSelIndex(mDone);
+        mLayout->SetAlpha(255.0f * mAlpha);
+        mLayout->Draw();
         switch (mState) {
         case STATE_TIPS:
         case STATE_CLOSE_TIPS: {
@@ -588,9 +575,9 @@ void Connect::Draw() {
             PSMTXIdentity(mtx);
             PSMTXScaleApply(mtx, mtx, scale.x, scale.y, scale.z);
             PSMTXTransApply(mtx, mtx, trans.x, trans.y, trans.z);
-            fn_80048514(mTipsLayout, mtx);
-            fn_800484A4(mTipsLayout, alpha);
-            fn_80048154(mTipsLayout);
+            mTipsLayout->SetViewMtx(mtx);
+            mTipsLayout->SetAlpha(alpha);
+            mTipsLayout->Draw();
 
             Draw2D_SetupGX();
             Draw2D_SetOrtho();
@@ -623,7 +610,7 @@ void Connect::Draw() {
     case STATE_RETURN: {
         PaneButton* button;
         s32 code = 0;
-        button = fn_80048364(mErrorLayout, "text");
+        button = mErrorLayout->FindButton("text");
         switch (mTaskResult) {
         case -11:
             button->SetSelIndex(0);
@@ -646,7 +633,7 @@ void Connect::Draw() {
             break;
         case 0:
             if (mMessage != NULL) {
-                PaneButton* server = fn_80048364(mErrorLayout, "error_server");
+                PaneButton* server = mErrorLayout->FindButton("error_server");
                 server->SetText(mMessage);
                 button->SetSelIndex(-1);
             } else if (mCheckResult == -3) {
@@ -679,7 +666,7 @@ void Connect::Draw() {
             button->SetSelIndex(5);
         }
         ShowErrorCode(lbl_8020CEB8[mTask].mErrorCode, code);
-        fn_80048154(mErrorLayout);
+        mErrorLayout->Draw();
         break;
     }
     }
@@ -776,7 +763,7 @@ void Connect::ShowErrorCode(s32 errorCode, s32 code) {
         label = L"Fout:";
         break;
     }
-    button = fn_80048364(mErrorLayout, "error_code");
+    button = mErrorLayout->FindButton("error_code");
     wchar_t buf[128];
     swprintf(buf, 128, L"%ls %ls%06d", label, prefix, value);
     button->SetText(buf);
