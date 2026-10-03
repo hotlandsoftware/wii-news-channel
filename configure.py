@@ -1398,7 +1398,7 @@ config.libs = [
         "cflags": cflags_game,
         "progress_category": "game",
         "objects": [
-            Object(NonMatching, "news/Connect.cpp"),
+            Object(Matching, "news/Connect.cpp"),
             Object(Matching, "news/msg/MsgToSectionSelect.cpp"),
             Object(Matching, "news/msg/MsgSectionSelect.cpp"),
             Object(Matching, "news/PunctuationTable.cpp"),

@@ -86,7 +86,7 @@ static inline void PressButton(Layout* layout, const char* name) {
 static inline f32 GetCursorX(s32 chan) { return gCursorX[chan][0]; }
 static inline f32 GetCursorY(s32 chan) { return gCursorY[chan][0]; }
 
-static inline const wchar_t* GetServerMessage(NewsHeader* file, const u32& size) {
+static inline const wchar_t* GetServerMessage(NewsHeader* const& file, const u32& size) {
     if (file->messageOfs == 0) {
         return NULL;
     }
