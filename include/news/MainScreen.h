@@ -197,6 +197,8 @@ public:
     bool IsSelectable();
     void SetLocation(NewsArticle* article);
 
+    f32 GetRowHeight() const { return mUnk24C * mUnk250; }
+    f32 GetCharSpace() const { return mUnk250 * gCharSpaceScale; }
     void DrawButtonsInline() {
         fn_800323F8(&mUnk164, mUnk23C, mUnk240);
         if (lbl_8035755C != NULL && lbl_8035755C->mMode != 2) {

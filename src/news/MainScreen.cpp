@@ -3589,8 +3589,10 @@ void MainScreen::Hook1ED20() {
 }
 
 void MainScreen::LayoutRelated() {
-    f32 rowHeight = mUnk24C * mUnk250;
-    f32 charSpace = mUnk250 * gCharSpaceScale;
+    f32 h = mUnk24C;
+    f32 scale = mUnk250;
+    f32 rowHeight = h * scale;
+    f32 charSpace = scale * gCharSpaceScale;
     RelatedItem* item = mRelated;
     ut::TextWriterBase<wchar_t> writer;
     writer.SetFont(*gSysFont);
@@ -3697,28 +3699,28 @@ BOOL MainScreen::StartDrag(s32 chan, const ut::Rect* rect) {
 s32 MainScreen::UpdateDrag(s32 chan, const ut::Rect* rect) {
     f32 x = lbl_801F0888[chan];
     f32 y = lbl_801F0898[chan];
-    if (!mDragging[chan]) {
-        return 0;
-    }
-    if (!(lbl_80357688 & 0xFDFF) && (lbl_801F0908[chan] & 0x200) && y > rect->top &&
-        y < rect->bottom)
-    {
-        mDragPos[chan].x = x;
-        if (x < rect->left) {
-            mDragPos[chan].x = rect->left;
-        } else if (mDragPos[chan].x > rect->right) {
-            mDragPos[chan].x = rect->right;
+    if (mDragging[chan]) {
+        if (!(lbl_80357688 & 0xFDFF) && (lbl_801F0908[chan] & 0x200) && y > rect->top &&
+            y < rect->bottom)
+        {
+            mDragPos[chan].x = x;
+            if (x < rect->left) {
+                mDragPos[chan].x = rect->left;
+            } else if (mDragPos[chan].x > rect->right) {
+                mDragPos[chan].x = rect->right;
+            }
+            mDragPos[chan].y = y;
+            if (y < rect->top) {
+                mDragPos[chan].y = rect->top;
+            } else if (mDragPos[chan].y > rect->bottom) {
+                mDragPos[chan].y = rect->bottom;
+            }
+            return 1;
         }
-        mDragPos[chan].y = y;
-        if (y < rect->top) {
-            mDragPos[chan].y = rect->top;
-        } else if (mDragPos[chan].y > rect->bottom) {
-            mDragPos[chan].y = rect->bottom;
-        }
-        return 1;
+        mDragging[chan] = false;
+        return 2;
     }
-    mDragging[chan] = false;
-    return 2;
+    return 0;
 }
 
 void MainScreen::SetLocation(NewsArticle* article) {
