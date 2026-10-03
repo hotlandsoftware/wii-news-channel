@@ -2325,6 +2325,19 @@ BOOL Pins_IsHovered(s32 chan) {
     return FALSE;
 }
 
+// Unused (dead-stripped by the linker): its date format literal is what puts
+// the Japanese format string ahead of FormatElapsedTime's strings in .data.
+void FormatArticleDate(s32 time) {
+    if (gLanguage == 0) {
+        OSCalendarTime cal;
+        MinutesToCalendarTime(time + 540, &cal);
+        swprintf(sDateBuf, 256, L"%d\x6708%d\x65E5(%ls) %d\x6642%02d\x5206\x66F4\x65B0", cal.mon + 1,
+                 cal.mday, lbl_801B2958[gLanguage][cal.wday], cal.hour, cal.min);
+    } else {
+        FormatElapsedTime(time);
+    }
+}
+
 void FormatElapsedTime(s32 time) {
     s32 elapsed = gCurrentTime - time;
     if (elapsed < 0) {
