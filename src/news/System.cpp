@@ -52,34 +52,34 @@ public:
 #define SCENE_NEWS 'NWS2'
 #define SCENE_FATAL 'FATL'
 
-MEMAllocator gLytAllocator;     // MEM1, 4-byte aligned
-MEMAllocator gContentAllocator; // MEM1, 32-byte aligned
-MEMAllocator gSubAllocator;     // MEM2, 4-byte aligned
-MEMAllocator gMdlAllocator;     // MEM2, 32-byte aligned
-GXRenderModeObj gRenderMode;
-s32 gKPADLatest[4];
-KPADStatus gKPADStatus[4][16];
-s32 gKPADCount[4];
-f32 gCursorX[4][16];
-f32 gCursorY[4][16];
-f32 gCursorDist[4][16];
-f32 gPointerX[4];
-f32 gPointerY[4];
-f32 gPointerZoom[4];
-f32 gPointerDistBase[4];
-bool gPointerValid[4][16];
-u32 gHold[4];
-u32 gTrig[4];
-u32 gRelease[4];
-Vec2 gCursorHorizon[4];
-u32 gRepeatSlow[4];
-u32 gRepeatFast[4];
-s32 gHoldFrames[4];
-s32 gRumbleFrames[4];
-s32 gRumbleCooldown[4];
-const char* gRumblePattern[4];
-s32 gRumblePos[4];
-CNTHandle gContentHandles[10];
+extern MEMAllocator gLytAllocator;
+extern MEMAllocator gContentAllocator;
+extern MEMAllocator gSubAllocator;
+extern MEMAllocator gMdlAllocator;
+extern GXRenderModeObj gRenderMode;
+extern s32 gKPADLatest[4];
+extern KPADStatus gKPADStatus[4][16];
+extern s32 gKPADCount[4];
+extern f32 gCursorX[4][16];
+extern f32 gCursorY[4][16];
+extern f32 gCursorDist[4][16];
+extern f32 gPointerX[4];
+extern f32 gPointerY[4];
+extern f32 gPointerZoom[4];
+extern f32 gPointerDistBase[4];
+extern bool gPointerValid[4][16];
+extern u32 gHold[4];
+extern u32 gTrig[4];
+extern u32 gRelease[4];
+extern Vec2 gCursorHorizon[4];
+extern u32 gRepeatSlow[4];
+extern u32 gRepeatFast[4];
+extern s32 gHoldFrames[4];
+extern s32 gRumbleFrames[4];
+extern s32 gRumbleCooldown[4];
+extern const char* gRumblePattern[4];
+extern s32 gRumblePos[4];
+extern CNTHandle gContentHandles[10];
 
 MEMHeapHandle gMainHeap;
 u32 gMainHeapFree;
@@ -1225,3 +1225,32 @@ void operator delete(void* ptr) {
 void operator delete[](void* ptr) {
     MEMFreeToExpHeap(gMainHeap, ptr);
 }
+
+MEMAllocator gLytAllocator;     // MEM1, 4-byte aligned
+MEMAllocator gContentAllocator; // MEM1, 32-byte aligned
+MEMAllocator gSubAllocator;     // MEM2, 4-byte aligned
+MEMAllocator gMdlAllocator;     // MEM2, 32-byte aligned
+GXRenderModeObj gRenderMode;
+s32 gKPADLatest[4];
+KPADStatus gKPADStatus[4][16];
+s32 gKPADCount[4];
+f32 gCursorX[4][16];
+f32 gCursorY[4][16];
+f32 gCursorDist[4][16];
+f32 gPointerX[4];
+f32 gPointerY[4];
+f32 gPointerZoom[4];
+f32 gPointerDistBase[4];
+bool gPointerValid[4][16];
+u32 gHold[4];
+u32 gTrig[4];
+u32 gRelease[4];
+Vec2 gCursorHorizon[4];
+u32 gRepeatSlow[4];
+u32 gRepeatFast[4];
+s32 gHoldFrames[4];
+s32 gRumbleFrames[4];
+s32 gRumbleCooldown[4];
+const char* gRumblePattern[4];
+s32 gRumblePos[4];
+CNTHandle gContentHandles[10];

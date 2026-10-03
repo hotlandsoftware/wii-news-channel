@@ -74,22 +74,23 @@ public:
     char mMessage[0x40];                 // at 0x174
 };
 
-static u8 sNWC24Work[0x4000] ATTRIBUTE_ALIGN(32);
-static OSMessageQueue sQueue;
-static OSMessage sMessages[16];
-static OSThread sThread;
-static u8 sStack[0x8000];
-static u8 sReadBuf[0x10000];
-CWiiConnect24 gWC24Tasks[8];
+extern u8 gWC24Work[0x4000];
+extern OSMessageQueue gWC24Queue;
+extern OSMessage gWC24Messages[16];
+extern OSThread gWC24Thread;
+extern u8 gWC24Stack[0x8000];
+extern u8 gWC24ReadBuf[0x10000];
+
+extern CWiiConnect24 gWC24Tasks[8];
 
 static bool sLibOpen;
 static bool sTasksReady;
 static bool sDownloading;
 static bool sSOReady;
 static bool sSOStarting;
-static s32 sTaskHead;
-static s32 sTaskTail;
-static s32 sTaskCount;
+static volatile s32 sTaskHead;
+static volatile s32 sTaskTail;
+static volatile s32 sTaskCount;
 static void* sSOHeapMem;
 static MEMHeapHandle sSOHeap;
 
@@ -117,9 +118,9 @@ static void SOFreeFunc(u32 name, void* ptr, s32 size);
 void WC24Init() {
     sSOHeapMem = SubHeapAlloc(0x10000, 32);
     sSOHeap = MEMCreateExpHeapEx(sSOHeapMem, 0x10000, 4);
-    OSInitMessageQueue(&sQueue, sMessages, 16);
-    OSCreateThread(&sThread, ThreadMain, NULL, sStack + sizeof(sStack), sizeof(sStack), 8, 1);
-    OSResumeThread(&sThread);
+    OSInitMessageQueue(&gWC24Queue, gWC24Messages, 16);
+    OSCreateThread(&gWC24Thread, ThreadMain, NULL, gWC24Stack + sizeof(gWC24Stack), sizeof(gWC24Stack), 8, 1);
+    OSResumeThread(&gWC24Thread);
     sTaskHead = 0;
     sTaskTail = 0;
     sTaskCount = 0;
@@ -140,7 +141,7 @@ void WC24Shutdown(u32 event) {
         NWC24iRequestShutdownSync(event);
         OSSleepTicks(OSSecondsToTicks((OSTime)1));
     }
-    OSJoinThread(&sThread, NULL);
+    OSJoinThread(&gWC24Thread, NULL);
 }
 
 static inline s32 PushTask(CWiiConnect24& task) {
@@ -150,7 +151,7 @@ static inline s32 PushTask(CWiiConnect24& task) {
         gWC24Tasks[sTaskTail].mStatus = WC24_STATUS_QUEUED;
         gWC24Tasks[sTaskTail].mErrorCode = 0;
         gWC24Tasks[sTaskTail].mMessage[0] = '\0';
-        if (OSSendMessage(&sQueue, &gWC24Tasks[sTaskTail], OS_MESSAGE_NOBLOCK)) {
+        if (OSSendMessage(&gWC24Queue, &gWC24Tasks[sTaskTail], OS_MESSAGE_NOBLOCK)) {
             id = sTaskTail;
             sTaskTail++;
             sTaskCount++;
@@ -238,7 +239,7 @@ s32 WC24RequestUnregister() {
 
 static inline s32 OpenLib(CWiiConnect24* task) {
     NWC24Err err;
-    while ((err = NWC24OpenLib(sNWC24Work)) == NWC24_ERR_MUTEX || err == NWC24_ERR_BUSY ||
+    while ((err = NWC24OpenLib(gWC24Work)) == NWC24_ERR_MUTEX || err == NWC24_ERR_BUSY ||
            err == NWC24_ERR_INPROGRESS) {
         OSSleepTicks(OSMillisecondsToTicks((OSTime)100));
     }
@@ -278,7 +279,7 @@ static void* ThreadMain(void* arg) {
     do {
         quit = false;
         OSMessage msg;
-        OSReceiveMessage(&sQueue, &msg, OS_MESSAGE_BLOCK);
+        OSReceiveMessage(&gWC24Queue, &msg, OS_MESSAGE_BLOCK);
         CWiiConnect24* task = (CWiiConnect24*)msg;
         if (task == NULL) {
             break;
@@ -1032,22 +1033,22 @@ s32 CWiiConnect24::readLZ77FileEx(VFFile file, MEMHeapHandle heap, void** dst, u
     u32 fileSize = VFGetFileSizeByFd(file);
     u32 outSize = 0;
     u32 avail = MEMGetAllocatableSizeForExpHeapEx(heap, 4);
-    for (u32 ofs = 0; ofs < fileSize; ofs += sizeof(sReadBuf)) {
+    for (u32 ofs = 0; ofs < fileSize; ofs += sizeof(gWC24ReadBuf)) {
         u32 len = fileSize - ofs;
-        if (len > sizeof(sReadBuf)) {
-            len = sizeof(sReadBuf);
+        if (len > sizeof(gWC24ReadBuf)) {
+            len = sizeof(gWC24ReadBuf);
         }
-        s32 result = VFReadFile(file, sReadBuf, len, NULL);
+        s32 result = VFReadFile(file, gWC24ReadBuf, len, NULL);
         if (result != 0) {
             WC24_ERROR_DETAIL(this, "VFReadFile() failed.", result);
             return -7;
         }
         if (ofs == 0) {
-            if ((sReadBuf[0] & 0xF0) != 0x10) {
+            if ((gWC24ReadBuf[0] & 0xF0) != 0x10) {
                 WC24_ERROR_DETAIL(this, "CXGetCompressionType() data is not LZ.", 0);
                 return -5;
             }
-            outSize = CXGetUncompressedSize(sReadBuf);
+            outSize = CXGetUncompressedSize(gWC24ReadBuf);
             if (outSize > avail) {
                 WC24_ERROR_DETAIL(this, "CXGetUncompressedSize() overflow.", 0);
                 *dst = NULL;
@@ -1061,7 +1062,7 @@ s32 CWiiConnect24::readLZ77FileEx(VFFile file, MEMHeapHandle heap, void** dst, u
             *dst = MEMAllocFromExpHeapEx(heap, outSize, 4);
             CXInitUncompContextLZ(&ctx, *dst);
         }
-        CXReadUncompLZ(&ctx, sReadBuf, len);
+        CXReadUncompLZ(&ctx, gWC24ReadBuf, len);
     }
     if (IsUncompUnfinished(&ctx)) {
         WC24_ERROR_DETAIL(this, "CXIsFinisiedUncompLZ() is false.", 0);
@@ -1072,15 +1073,22 @@ s32 CWiiConnect24::readLZ77FileEx(VFFile file, MEMHeapHandle heap, void** dst, u
 }
 
 static void* SOAllocFunc(u32 name, s32 size) {
-    if (size <= 0) {
-        return NULL;
+    if (size > 0) {
+        return MEMAllocFromExpHeapEx(sSOHeap, size, 32);
     }
-    return MEMAllocFromExpHeapEx(sSOHeap, size, 32);
+    return NULL;
 }
 
 static void SOFreeFunc(u32 name, void* ptr, s32 size) {
-    if (ptr == NULL || size <= 0) {
-        return;
+    if (ptr != NULL && size > 0) {
+        MEMFreeToExpHeap(sSOHeap, ptr);
     }
-    MEMFreeToExpHeap(sSOHeap, ptr);
 }
+
+u8 gWC24Work[0x4000] ATTRIBUTE_ALIGN(32);
+OSMessageQueue gWC24Queue;
+OSMessage gWC24Messages[16];
+OSThread gWC24Thread;
+u8 gWC24Stack[0x8000];
+u8 gWC24ReadBuf[0x10000];
+CWiiConnect24 gWC24Tasks[8];
