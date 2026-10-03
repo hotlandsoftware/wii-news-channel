@@ -5,6 +5,7 @@
 #include <news/PaneLayout.h>
 #include <news/NewsData.h>
 #include <news/System.h>
+#include <news/MathUtil.h>
 #include <nw4r/math/math_types.h>
 #include <nw4r/ut/ut_TextWriterBase.h>
 #include <revolution/nand.h>
@@ -19,9 +20,6 @@ extern u8 lbl_801EE270[];             // layout resource accessor
 extern const wchar_t* lbl_801B26BC[]; // per-language message
 void OnExitRequested();
 
-extern "C" {
-u32 fn_80044F08(); // current time in minutes
-}
 
 #define SAVE_PERM (NAND_PERM_RUSR | NAND_PERM_WUSR | NAND_PERM_RGRP | NAND_PERM_WGRP | NAND_PERM_ROTH)
 
@@ -419,7 +417,7 @@ void FormatSaveTime(wchar_t* buf, u32 size, OSTime time, s32 msgType, u8 languag
 s32 CheckNewsFiles(NewsHeader** files, u32* sizes, s32* current, u32* mask) {
     s32 result = 0;
     u32 bad = 0;
-    u32 now = fn_80044F08();
+    u32 now = GetCurrentMinutes();
     OSGetTick();
 
     NewsHeader* headers[NEWS_FILE_MAX];
@@ -697,8 +695,8 @@ s32 CheckNewsFiles(NewsHeader** files, u32* sizes, s32* current, u32* mask) {
                 if (textSize == 0 && textOfs != 0) {
                     result = -1;
                 }
-                textSize = text->unk24;
                 textOfs = text->bodyOfs;
+                textSize = text->unk24;
                 if (textOfs + textSize > fileSize) {
                     result = -1;
                 }

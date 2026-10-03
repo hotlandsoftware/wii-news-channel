@@ -16,8 +16,6 @@ extern u8 lbl_801EE270[];          // layout resource accessor
 extern const wchar_t* lbl_801B26BC[]; // language names
 extern u8 gSelectedNewsLanguage;            // selected language
 extern s32 lbl_80357598;
-extern u32 lbl_80357688;           // pointer button hold
-extern u32 lbl_80357698;           // D-pad trigger
 extern u8 lbl_803575BA;
 extern u8 lbl_803575BB;
 extern s32 lbl_801EDFD0[4];
@@ -25,11 +23,7 @@ extern f32 lbl_801EDFA0[6];
 extern f32 lbl_801EDFB8[6];
 extern f32 lbl_803575D8;
 extern GXColor lbl_80357600;
-extern u32 lbl_801F0908[4];        // held buttons
 extern f32 gPointerScroll[];         // pointer movement
-
-extern "C" {
-}
 
 static ut::Color sFillColor(255, 255, 255, 64);
 static ut::Color sTextColor(0, 0, 0, 255);
@@ -370,18 +364,18 @@ void LanguageSelect::StateConfirm(Item* item) {
 
 void LanguageSelect::CheckInput() {
     UpdateLayoutButtons(mActiveLayout, 0x23);
-    if (lbl_80357688 & 0x400) {
+    if (gHoldAll & 0x400) {
         mDragHeld = true;
     } else {
         if (CheckButtonHold("down", 0x800) >= 0) {
             mDownPressed = true;
-        } else if (lbl_80357698 & 4) {
+        } else if (gRepeatFastAll & 4) {
             mDownPressed = true;
             mDownButton->SetPressed(true);
         }
         if (CheckButtonHold("up", 0x800) >= 0) {
             mUpPressed = true;
-        } else if (lbl_80357698 & 8) {
+        } else if (gRepeatFastAll & 8) {
             mUpPressed = true;
             mUpButton->SetPressed(true);
         }
@@ -487,7 +481,7 @@ void LanguageSelect::ScrollDrag() {
 
     for (s32 i = 0; i < 4; i++) {
         lbl_801EDFD0[i] = 1;
-        if (lbl_801F0908[i] & 0x400) {
+        if (gHold[i] & 0x400) {
             lbl_801EDFD0[i] = 5;
             f32 v = gPointerScroll[i];
             mDragVelocity = 0.1f * v;

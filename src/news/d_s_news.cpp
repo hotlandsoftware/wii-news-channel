@@ -7,10 +7,12 @@
 #define gSeparatorColor gSeparatorColor_GXColor
 #include <news/Fader.h>
 #include <news/System.h>
+#include <news/d_s_news.h>
 #include <news/ArticleText.h>
 #include <news/Scene.h>
 #include <news/Camera.h>
 #include <news/Draw2D.h>
+#include <news/GlobeDots.h>
 #include <news/HeadlineList.h>
 #include <news/LanguageSelect.h>
 #include <news/Message.h>
@@ -19,6 +21,8 @@
 #include <news/PaneButton.h>
 #include <news/SlideShow.h>
 #include <news/SmoothValue.h>
+#include <news/Resource.h>
+#include <news/SoundManager.h>
 #undef gSeparatorColor
 #include <news/Common.h>
 #include <nw4r/math/math_arithmetic.h>
@@ -41,14 +45,10 @@ using namespace nw4r;
 
 class GlobePin;
 
+u32 GetCurrentMinutes(); // MathUtil.h
+
 extern "C" {
 // Heap helpers (0x80040764..)
-void fn_80040764(s32 chan, s32 dpd);
-void fn_80040960(void);
-void* fn_80040994(u32 size, s32 align);
-void fn_800409EC(void* block);
-void fn_800409F8(void* block);
-void* fn_80040A28(size_t size, MEMAllocator* allocator);
 
 // Opening animation (0x80007F58..)
 void* fn_80007F58(void* mem, MEMHeapHandle heap, void* arc, NewsData* data);
@@ -97,34 +97,12 @@ void fn_80013C2C(void* view);
 void fn_80015054(void* view);
 void fn_80015200(void* view);
 
-// Globe renderer (0x8003CECC..)
-void* fn_8003CECC(void* mem);
-void fn_8003D128(void* obj, s32 flag);
-void fn_8003D168(void* obj);
-void fn_8003D178(void* obj, f32 x, f32 y);
-void fn_8003D21C(void* obj);
-void fn_8003FB54(const math::VEC3& pos, const math::VEC3& size, const GXColor& color);
-s32 fn_80044F08(void);
 
 // Faders (0x80048C80..)
 
 
 // Globe (0x8004C240..)
-void fn_8004C69C(void* globe, math::VEC3* pos, u8 zoom);
-void fn_8004C890(void* globe, math::VEC3* rot);
-void fn_8004CA10(void* globe);
-void fn_8004CAE4(void* globe, math::VEC3* pos, s32 arg, f32 scale);
-void fn_8004CB38(void* globe);
-void fn_8004DA8C(void* globe, s32 arg0, s32 arg1);
-void fn_8004DB4C(void* globe, s32 arg);
-void fn_8004E0B8(void* globe, s32 level);
-void fn_8004E0D4(void* globe, f32 arg);
 
-// Sound (0x8004E9A4..)
-void* fn_8004E9A4(void* mem, const char* path, void* heap);
-void fn_8004EA2C(void* sound, s32 arg);
-void fn_8004FAB0(snd::SoundHandle* handle, s32 frames);
-void fn_8004FB44(snd::SoundHandle* handle, f32 volume);
 }
 
 
@@ -133,7 +111,18 @@ struct HomeMenuInfo {
     void* mHeap;     // at 0x04
 };
 
+// Globe view (Globe.cpp, include/news/Globe.h)
 struct Globe {
+    void Init(const math::VEC3* rot, s32 zoom);
+    void Reset(const math::VEC3* rot);
+    void Draw();
+    void DrawCursor(const Vec* pos, s32 unused, f32 scale);
+    void ResetScene();
+    void SetTilt(s32 level, bool level0);
+    void SetTiltNow(s32 level);
+    void SetZoom(s32 level);
+    void SetTwist(f32 twist);
+
     u8 unk0[0x4];
     s32 mFocus;      // at 0x04
     u8 unk8[0x6C - 0x8];
@@ -143,20 +132,15 @@ struct Globe {
 };
 
 extern HomeMenuInfo* gHomeMenu;
-extern void* gSoundPlayer;     // sound system
+extern SoundResource* gSoundPlayer; // sound system
 extern Globe* gGlobe;
 extern BOOL gEarthModel;
-extern MEMHeapHandle lbl_80357640;
-extern u32 lbl_80357658;       // frame buffer size
-extern void* lbl_80357664;     // external frame buffer
-extern u32 lbl_803576A8;
 extern bool gExitRequested;
 extern bool gHideClock;
 extern f32 gModelDepth;
 extern OSCalendarTime gClockTime;
 extern ut::TextWriterBase<wchar_t> gTextWriter;
-extern snd::SoundHandle lbl_8021E8CC[4];
-extern const f32 lbl_801A6648[];
+extern const f32 gGlobeTiltAngle[];
 extern const wchar_t* lbl_801B04EC[];
 extern const wchar_t* lbl_801B05E8[];
 extern const wchar_t* lbl_801B0F38[];
@@ -164,11 +148,9 @@ extern const wchar_t* lbl_801B1050[];
 extern const wchar_t* lbl_801B1100[];
 extern const wchar_t* lbl_801B2958[][7];
 
-inline void* operator new(size_t size, MEMAllocator* allocator) {
-    return fn_80040A28(size, allocator);
-}
-
+void* operator new(size_t size, MEMAllocator* allocator);
 void* operator new[](size_t size, MEMAllocator* allocator);
+
 
 // A pin on the globe, one per article that has a location.
 class GlobePin {
@@ -351,7 +333,7 @@ MEMAllocator gPictureAllocator;
 SmoothValue sBgmVolume[4];            // 0x801EE210
 ut::Color lbl_803575FC(0, 0, 0, 0);    // 0x803575FC
 ut::Color lbl_80357600(255, 255, 255, 255);
-void* sGlobeRenderer;                 // 0x80357604
+GlobeDots* sGlobeRenderer;            // 0x80357604
 void* sPointerEffect;                 // 0x80357608
 bool gAllocFailed;
 s32 sLoadFrame;                       // 0x80357610
@@ -487,7 +469,7 @@ NewsScene::NewsScene()
       mLogoPos(0.0f, 0.0f, 0.0f), mLogoAlpha(0), mLogoTargetAlpha(0), mStep(0) {
     u32 size;
 
-    gCurrentTime = fn_80044F08();
+    gCurrentTime = GetCurrentMinutes();
     if (gFatalError) {
         return;
     }
@@ -495,17 +477,13 @@ NewsScene::NewsScene()
     SetDPDAll(1);
     sIsNight = !(gClockTime.hour >= 5 && gClockTime.hour < 22);
 
-    void* sound = operator new(8);
-    if (sound) {
-        sound = fn_8004E9A4(sound, "rev_news.brsar", gHomeMenu->mHeap);
-    }
-    gSoundPlayer = sound;
+    gSoundPlayer = new SoundResource("rev_news.brsar", gHomeMenu->mHeap);
     if (gSoundPlayer == NULL) {
         gAllocFailed = true;
         return;
     }
 
-    sHeaderFontData = LoadArcFile(gArchive, "/font_news_date.brfnt.LZ", 32, NULL, lbl_80357640);
+    sHeaderFontData = LoadArcFile(gArchive, "/font_news_date.brfnt.LZ", 32, NULL, gMainHeap);
     if (sHeaderFontData == NULL) {
         OSReport("%s[%d]\n", "d_s_news.cpp", 413);
         SetFatalError();
@@ -521,7 +499,7 @@ NewsScene::NewsScene()
     font->SetResource(sHeaderFontData);
     gHeaderFont->SetAlternateChar(0xE06B);
 
-    Camera::sHomeRot.x = lbl_801A6648[5];
+    Camera::sHomeRot.x = gGlobeTiltAngle[5];
     Camera::sHomeRot.y = 0.0f;
     Camera::sHomeRot.z = 0.0f;
     lbl_803575A0 = 0;
@@ -628,7 +606,7 @@ NewsScene::NewsScene()
     mArticleWriter.SetScale(0.8f);
     mArticleWriter.SetCharSpace(gCharSpaceScale);
 
-    sHeapBlock1 = fn_80040994(0x280000, 0);
+    sHeapBlock1 = MainHeapAlloc(0x280000, 0);
     if (sHeapBlock1 == NULL) {
         gAllocFailed = true;
         return;
@@ -672,11 +650,7 @@ NewsScene::NewsScene()
     mSettings = (Settings*)SubHeapAlloc(0x20, 32);
     fn_8000A0F8(mSettings, 0x20);
 
-    void* renderer = operator new(0x4FF24);
-    if (renderer) {
-        renderer = fn_8003CECC(renderer);
-    }
-    sGlobeRenderer = renderer;
+    sGlobeRenderer = new GlobeDots;
     if (sGlobeRenderer == NULL) {
         gAllocFailed = true;
         return;
@@ -701,7 +675,7 @@ NewsScene::~NewsScene() {
         sPointerEffect = NULL;
     }
     if (sGlobeRenderer) {
-        fn_8003D128(sGlobeRenderer, 1);
+        delete sGlobeRenderer;
         sGlobeRenderer = NULL;
     }
     if (mSlideshow) {
@@ -749,15 +723,15 @@ NewsScene::~NewsScene() {
         MEMDestroyExpHeap(sHeap1);
     }
     if (sHeapBlock2) {
-        fn_800409F8(sHeapBlock2);
+        SubHeapFree(sHeapBlock2);
         sHeapBlock2 = NULL;
     }
     if (sHeapBlock1) {
-        fn_800409EC(sHeapBlock1);
+        MainHeapFree(sHeapBlock1);
         sHeapBlock1 = NULL;
     }
     if (mSettings) {
-        fn_800409F8(mSettings);
+        SubHeapFree(mSettings);
     }
     if (mDialog) {
         fn_8000A614(mDialog, 1);
@@ -766,17 +740,17 @@ NewsScene::~NewsScene() {
         fn_800080CC(mIntro, 1);
     }
     if (mLayoutArc) {
-        fn_800409F8(mLayoutArc);
+        SubHeapFree(mLayoutArc);
     }
     if (sNewsTpl) {
-        fn_800409F8(sNewsTpl);
+        SubHeapFree(sNewsTpl);
     }
     if (gHeaderFont) {
         delete gHeaderFont;
         gHeaderFont = NULL;
     }
     if (sHeaderFontData) {
-        fn_800409EC(sHeaderFontData);
+        MainHeapFree(sHeaderFontData);
         sHeaderFontData = NULL;
     }
     lbl_803575E0 = 0;
@@ -788,7 +762,7 @@ NewsScene::~NewsScene() {
 }
 
 void NewsScene::Exit(BOOL toMenu, s32 arg) {
-    fn_8004EA2C(gSoundPlayer, 1);
+    delete gSoundPlayer;
     Scene::Exit(toMenu, arg);
 }
 
@@ -796,11 +770,11 @@ void NewsScene::OnHomeMenuClose() {
     if (!gFatalError) {
         if (gGlobe) {
             math::VEC3 rot(0.0f, 0.0f, 0.0f);
-            fn_8004C890(gGlobe, &rot);
-            fn_8003D168(sGlobeRenderer);
+            gGlobe->Reset(&rot);
+            sGlobeRenderer->ResetAlpha();
         }
         if (gGlobe) {
-            fn_8004DB4C(gGlobe, 5);
+            gGlobe->SetTiltNow(5);
         }
         fn_8000BE74(sPointerEffect);
         RestoreDPD();
@@ -828,9 +802,9 @@ void NewsScene::Draw() {
         mArticleWriter.SetDrawFlag(0);
         if (mDraw) {
             if (gGlobe != NULL && !lbl_8035697C) {
-                fn_8003D178(sGlobeRenderer, gGlobe->mCenterX, gGlobe->mCenterY);
-                fn_8003D21C(sGlobeRenderer);
-                fn_8004CA10(gGlobe);
+                sGlobeRenderer->UpdateAlpha(gGlobe->mCenterX, gGlobe->mCenterY);
+                sGlobeRenderer->Draw();
+                gGlobe->Draw();
                 if (!lbl_803575BC) {
                     u8 alpha = 255.0f * sPinAlpha;
                     if (lbl_80357580) {
@@ -872,7 +846,7 @@ void NewsScene::Draw() {
                     Draw2D_FillRect(&rect, &lbl_803575FC);
                 }
                 math::VEC3 pos(lbl_801EDF70.x, lbl_801EDF70.y + lbl_803575C8, lbl_801EDF70.z);
-                fn_8004CAE4(gGlobe, &pos, 0, 1.0f);
+                gGlobe->DrawCursor(&pos, 0, 1.0f);
                 if (gNewsData->mHeader->unk2C[1] && lbl_803575B9) {
                     pos.x = lbl_801EDF88.x;
                     pos.y -= TPL_GetHeight(gCommonTpl, 0x3E);
@@ -927,7 +901,7 @@ void NewsScene::DrawDialog() {
 void NewsScene::UpdatePointers() {
     for (s32 i = 0; i < 4; i++) {
         if (IsPointerValid(i)) {
-            fn_80040764(i, lbl_801EDFD0[i]);
+            SetPointerState(i, lbl_801EDFD0[i]);
         }
     }
 }
@@ -954,12 +928,12 @@ static inline void PlayPinHoverSE() {
 }
 
 static inline void UpdateBgmVolume() {
-    snd::SoundHandle* handle = lbl_8021E8CC;
+    snd::SoundHandle* handle = gBgmHandles;
     SmoothValue* volume = sBgmVolume;
     for (s32 i = 0; i < 4; i++, volume++, handle++) {
         if (IsSoundPlaying(handle)) {
             volume->Update();
-            fn_8004FB44(handle, volume->mValue);
+            SetSoundVolume(handle, volume->mValue);
         }
     }
 }
@@ -996,12 +970,12 @@ void NewsScene::Calc() {
             PlayPinHoverSE();
         }
         SmoothValue* volume = sBgmVolume;
-        snd::SoundHandle* handle = lbl_8021E8CC;
+        snd::SoundHandle* handle = gBgmHandles;
         s32 i = 0;
         for (; i < 4; i++, handle++, volume++) {
             if (IsSoundPlaying(handle)) {
                 volume->Update();
-                fn_8004FB44(handle, volume->mValue);
+                SetSoundVolume(handle, volume->mValue);
             }
         }
         if (++sBlinkTimer >= 40) {
@@ -1013,9 +987,9 @@ void NewsScene::Calc() {
 
 void NewsScene::OnHomeMenuOpen() {
     s32 i = 0;
-    snd::SoundHandle* handle = lbl_8021E8CC;
+    snd::SoundHandle* handle = gBgmHandles;
     for (; i < 4; i++, handle++) {
-        fn_8004FB44(handle, 0.0f);
+        SetSoundVolume(handle, 0.0f);
     }
     if (mIntro) {
         fn_800096B0(mIntro, 1);
@@ -1107,7 +1081,7 @@ BOOL NewsScene::InitNews() {
         u32 num = category->mNumArticles;
         for (u32 j = 0; j < num; j++, article++) {
             if (*article && (*article)->mLocationName) {
-                void* mem = fn_80040A28(0x170, &gNewsAllocator);
+                void* mem = operator new(0x170, &gNewsAllocator);
                 if (mem) {
                     mem = fn_8000D01C(mem, i, j, *article, gModelDepth);
                 }
@@ -1218,10 +1192,10 @@ BOOL NewsScene::StateLanguageSelect() {
                 mStep++;
                 gFader->FadeOut(25);
                 if (mSettings->mNewsLanguage != gSelectedNewsLanguage) {
-                    snd::SoundHandle* handle = lbl_8021E8CC;
+                    snd::SoundHandle* handle = gBgmHandles;
                     for (s32 i = 0; i < 4; i++, handle++) {
                         if (IsSoundPlaying(handle)) {
-                            fn_8004FAB0(handle, 25);
+                            StopSound(handle, 25);
                         }
                     }
                 }
@@ -1269,11 +1243,11 @@ static inline void SetBgmTargetP(SmoothValue* v, f32 target, f32 frames) {
 }
 
 void Bgm_MuteMain() {
-    if (!IsSoundPlaying(&lbl_8021E8CC[0])) {
-        PlaySound(&lbl_8021E8CC[0], 0x1C);
+    if (!IsSoundPlaying(&gBgmHandles[0])) {
+        PlaySound(&gBgmHandles[0], 0x1C);
     }
-    if (!IsSoundPlaying(&lbl_8021E8CC[1])) {
-        PlaySound(&lbl_8021E8CC[1], 0x1D);
+    if (!IsSoundPlaying(&gBgmHandles[1])) {
+        PlaySound(&gBgmHandles[1], 0x1D);
     }
     sBgmVolume[0].mTarget = 0.0f;
     sBgmVolume[1].mTarget = 0.0f;
@@ -1281,26 +1255,26 @@ void Bgm_MuteMain() {
     sBgmVolume[3].mTarget = 0.0f;
     sBgmVolume[0].mStep = Abs(sBgmVolume[0].mTarget - sBgmVolume[0].mValue) / 120.0f;
     sBgmVolume[1].mStep = Abs(sBgmVolume[1].mTarget - sBgmVolume[1].mValue) / 120.0f;
-    if (IsSoundPlaying(&lbl_8021E8CC[2])) {
-        fn_8004FAB0(&lbl_8021E8CC[2], 120);
+    if (IsSoundPlaying(&gBgmHandles[2])) {
+        StopSound(&gBgmHandles[2], 120);
     }
-    if (IsSoundPlaying(&lbl_8021E8CC[3])) {
-        fn_8004FAB0(&lbl_8021E8CC[3], 120);
+    if (IsSoundPlaying(&gBgmHandles[3])) {
+        StopSound(&gBgmHandles[3], 120);
     }
     sBgmVolume[2].mStep = 1.0f / 120.0f;
     sBgmVolume[3].mStep = 1.0f / 120.0f;
 }
 
 void Bgm_PlayArticle() {
-    PlaySound(&lbl_8021E8CC[2], 0x1E);
-    if (!IsSoundPlaying(&lbl_8021E8CC[0])) {
-        PlaySound(&lbl_8021E8CC[0], 0x1C);
+    PlaySound(&gBgmHandles[2], 0x1E);
+    if (!IsSoundPlaying(&gBgmHandles[0])) {
+        PlaySound(&gBgmHandles[0], 0x1C);
     }
-    if (!IsSoundPlaying(&lbl_8021E8CC[1])) {
-        PlaySound(&lbl_8021E8CC[1], 0x1D);
+    if (!IsSoundPlaying(&gBgmHandles[1])) {
+        PlaySound(&gBgmHandles[1], 0x1D);
     }
-    if (IsSoundPlaying(&lbl_8021E8CC[3])) {
-        fn_8004FAB0(&lbl_8021E8CC[3], 120);
+    if (IsSoundPlaying(&gBgmHandles[3])) {
+        StopSound(&gBgmHandles[3], 120);
     }
     sBgmVolume[0].mTarget = 1.0f;
     sBgmVolume[1].mTarget = 0.0f;
@@ -1314,21 +1288,21 @@ void Bgm_PlayArticle() {
 
 void Bgm_PlayMain(BOOL restart) {
     if (restart) {
-        PlaySound(&lbl_8021E8CC[0], 0x1C);
-        PlaySound(&lbl_8021E8CC[1], 0x1D);
+        PlaySound(&gBgmHandles[0], 0x1C);
+        PlaySound(&gBgmHandles[1], 0x1D);
     } else {
-        if (!IsSoundPlaying(&lbl_8021E8CC[0])) {
-            PlaySound(&lbl_8021E8CC[0], 0x1C);
+        if (!IsSoundPlaying(&gBgmHandles[0])) {
+            PlaySound(&gBgmHandles[0], 0x1C);
         }
-        if (!IsSoundPlaying(&lbl_8021E8CC[1])) {
-            PlaySound(&lbl_8021E8CC[1], 0x1D);
+        if (!IsSoundPlaying(&gBgmHandles[1])) {
+            PlaySound(&gBgmHandles[1], 0x1D);
         }
     }
-    if (IsSoundPlaying(&lbl_8021E8CC[2])) {
-        fn_8004FAB0(&lbl_8021E8CC[2], 60);
+    if (IsSoundPlaying(&gBgmHandles[2])) {
+        StopSound(&gBgmHandles[2], 60);
     }
-    if (IsSoundPlaying(&lbl_8021E8CC[3])) {
-        fn_8004FAB0(&lbl_8021E8CC[3], 60);
+    if (IsSoundPlaying(&gBgmHandles[3])) {
+        StopSound(&gBgmHandles[3], 60);
     }
     sBgmVolume[0].mTarget = 1.0f;
     sBgmVolume[1].mTarget = 1.0f;
@@ -1342,18 +1316,18 @@ void Bgm_PlayMain(BOOL restart) {
 
 void Bgm_PlaySlideshow() {
     if (!sIsNight) {
-        PlaySound(&lbl_8021E8CC[3], 0x1F);
+        PlaySound(&gBgmHandles[3], 0x1F);
     } else {
-        PlaySound(&lbl_8021E8CC[3], 0x20);
+        PlaySound(&gBgmHandles[3], 0x20);
     }
-    if (IsSoundPlaying(&lbl_8021E8CC[0])) {
-        fn_8004FAB0(&lbl_8021E8CC[0], 60);
+    if (IsSoundPlaying(&gBgmHandles[0])) {
+        StopSound(&gBgmHandles[0], 60);
     }
-    if (IsSoundPlaying(&lbl_8021E8CC[1])) {
-        fn_8004FAB0(&lbl_8021E8CC[1], 60);
+    if (IsSoundPlaying(&gBgmHandles[1])) {
+        StopSound(&gBgmHandles[1], 60);
     }
-    if (IsSoundPlaying(&lbl_8021E8CC[2])) {
-        fn_8004FAB0(&lbl_8021E8CC[2], 60);
+    if (IsSoundPlaying(&gBgmHandles[2])) {
+        StopSound(&gBgmHandles[2], 60);
     }
     sBgmVolume[0].mTarget = 0.0f;
     sBgmVolume[0].mStep = 1.0f / 60.0f;
@@ -1404,7 +1378,7 @@ BOOL NewsScene::StateMain() {
         lbl_801EDF88.y = y2;
         lbl_801EDF88.x = x2;
         if (gGlobe) {
-            fn_8004DB4C(gGlobe, 5);
+            gGlobe->SetTiltNow(5);
         }
         if (!mInitialized) {
             sBgmVolume[0].mValue = sBgmVolume[0].mTarget;
@@ -1621,7 +1595,7 @@ BOOL NewsScene::StateStartup() {
         }
         break;
     case 6:
-        fn_800081D4(mIntro, lbl_803576A8 >> 24, mSettings->mNewsLanguage);
+        fn_800081D4(mIntro, gAddressID >> 24, mSettings->mNewsLanguage);
         mDraw = &NewsScene::DrawIntro;
         mStep = 7;
         break;
@@ -1731,7 +1705,7 @@ BOOL NewsScene::StateSaveSettings() {
         mSaveResult = fn_8000A2FC();
         if (mSaveResult == 0) {
             Exit(TRUE, 4);
-            fn_80040960();
+            Restart();
         } else {
             ChangeState(&NewsScene::StateNoNews);
         }
@@ -1852,13 +1826,13 @@ BOOL LoadCommonResources() {
             ut::Color color(0, 0, 0, 255.0f * (n / 6.0f));
             math::VEC3 size(GetScreenWidth(), 456.0f, 0.0f);
             math::VEC3 pos(0.0f, 0.0f, 0.0f);
-            fn_8003FB54(pos, size, color);
+            Draw2D_FillBox(pos, size, color);
         }
         GXSetZMode(GX_TRUE, GX_LEQUAL, GX_TRUE);
         GXSetColorUpdate(GX_TRUE);
-        GXCopyDisp(lbl_80357664, GX_TRUE);
+        GXCopyDisp(gCurXfb, GX_TRUE);
         GXDrawDone();
-        VISetNextFrameBuffer(lbl_80357664);
+        VISetNextFrameBuffer(gCurXfb);
         VISetBlack(FALSE);
         VIFlush();
         VIWaitForRetrace();
@@ -1895,10 +1869,10 @@ void PostRetraceCallback(u32 retraceCount) {
         sLoadCounter = 0;
     }
     s32 counter = sLoadCounter;
-    u32 size = lbl_80357658;
+    u32 size = gXfbSize;
     u16 width = gRenderMode.fbWidth;
     u16 height = gRenderMode.xfbHeight;
-    u8* xfb = (u8*)lbl_80357664;
+    u8* xfb = (u8*)gCurXfb;
     s32 w = (width * 10) / GetScreenWidth();
     s32 h = (height * 10) / 456;
     s32 gap = (width * 6) / GetScreenWidth();
@@ -2029,22 +2003,22 @@ void Globe_FocusArticle(NewsArticle* article, s32 arg, f32 x, f32 y) {
         f32 px = loc.x;
         math::VEC3 pos(px, py, 0.0f);
         gGlobe->mOffset = ofs;
-        fn_8004C69C(gGlobe, &pos, article->mLocation->unk4[8]);
-        fn_8004DA8C(gGlobe, 5, 0);
-        fn_8004DB4C(gGlobe, arg);
-        fn_8004E0D4(gGlobe, 0.0f);
+        gGlobe->Init(&pos, article->mLocation->unk4[8]);
+        gGlobe->SetTilt(5, 0);
+        gGlobe->SetTiltNow(arg);
+        gGlobe->SetTwist(0.0f);
     }
 }
 
 void Globe_ResetFocus() {
     if (gGlobe) {
-        fn_8004CB38(gGlobe);
+        gGlobe->ResetScene();
     }
 }
 
 void Globe_SetZoom(s32 level) {
     if (gGlobe) {
-        fn_8004E0B8(gGlobe, level);
+        gGlobe->SetZoom(level);
     }
 }
 
@@ -2379,23 +2353,24 @@ void Article_ArrangeHeadline(f32 scale) {
 
 static inline f32 GetIconScale() {
     f32 scale = 1.0f;
-    switch (sSourceIconType) {
-    case 0:
+    if (sSourceIconType != 0) {
+        switch (sSourceIconType) {
+        case 3:
+        case 4:
+        case 5:
+        case 6:
+            scale = 0.5f;
+            break;
+        }
+    } else {
         scale = 0.5f;
-        break;
-    case 3:
-    case 4:
-    case 5:
-    case 6:
-        scale = 0.5f;
-        break;
     }
     return scale;
 }
 
 static inline f32 GetLogoHeight() {
     f32 h;
-    f32 height = 4.0f;
+    f32 height = 30.0f;
     if ((u32)(sSourceLayout - 3) <= 3) {
         h = 0.0f;
         if (sSourceIconType == 0) {
@@ -2409,19 +2384,7 @@ static inline f32 GetLogoHeight() {
             }
         }
         if (h > 0.0f) {
-            f32 scale = 1.0f;
-            switch (sSourceIconType) {
-            case 0:
-                scale = 0.5f;
-                break;
-            case 3:
-            case 4:
-            case 5:
-            case 6:
-                scale = 0.5f;
-                break;
-            }
-            height = 20.0f + h * scale;
+            height = 20.0f + h * GetIconScale();
         }
     }
     return height;
@@ -2560,18 +2523,24 @@ void Article_DrawSourceAndDate(const math::VEC2& pos, s32 alpha) {
     }
 }
 
+static inline f32 GetBodyCharWidth() {
+    f32 w = sBodyView->mFont->GetWidth();
+    return w * gTextScale;
+}
+
 void Article_DrawSourceIcon(const math::VEC2& pos, BOOL right, f32 alpha) {
     u32 index = GetSourceIconIndex();
     f32 scale = gTextScale * GetIconScale();
     if (index != -1) {
         ut::Color color(255, 255, 255, 255.0f * alpha);
-        f32 w = scale * TPL_GetWidth(gCommonTpl, index);
-        f32 y = (pos.y - scale * TPL_GetHeight(gCommonTpl, index)) - 5.0f;
+        f32 y;
         f32 x;
+        f32 w = scale * TPL_GetWidth(gCommonTpl, index);
+        y = (pos.y - scale * TPL_GetHeight(gCommonTpl, index)) - 5.0f;
         if (right) {
             x = (sArticleSize.x - 10.0f) - w;
         } else {
-            x = 0.5f * (sBodyView->mFont->GetWidth() * gTextScale);
+            x = 0.5f * GetBodyCharWidth();
         }
         math::VEC3 p(pos.x + x, y, 0.0f);
         SetupTexGX();
@@ -2587,13 +2556,14 @@ void Article_DrawSourceLogo(const math::VEC2& pos, BOOL right, f32 alpha) {
         ut::Color color(255, 255, 255, 255.0f * alpha);
         f32 lw = logo->width;
         f32 lh = logo->height;
-        f32 y = (pos.y - scale * lh) - 5.0f;
         f32 w = scale * lw;
+        f32 h = scale * lh;
+        f32 y = (pos.y - h) - 5.0f;
         f32 x;
         if (right) {
             x = (sArticleSize.x - 10.0f) - w;
         } else {
-            x = 0.5f * (sBodyView->mFont->GetWidth() * gTextScale);
+            x = 0.5f * GetBodyCharWidth();
         }
         math::VEC3 p(pos.x + x, y, 0.0f);
         SetupTexGX();
@@ -2630,15 +2600,16 @@ bool Article_IsBodyScrolling() {
 }
 
 f32 Article_GetScrollOffset() {
-    f32 y = 0.0f;
     s32 headlineLines = lbl_80357568->mNumLines;
     s32 bodyStart = headlineLines + 1;
     s32 creditStart = bodyStart + sBodyView->mNumLines;
+    f32 y = 0.0f;
     for (s32 i = 0; i < sScrollLine; i++) {
         if (i < headlineLines) {
             y += lbl_80357568->mLineHeight;
         } else if (i < bodyStart) {
-            y += GetLogoHeight() * gTextScale;
+            f32 h = GetLogoHeight();
+            y += h * gTextScale;
         } else if (i < creditStart) {
             y += sBodyView->mLineHeight;
         } else {
@@ -2752,20 +2723,21 @@ f32 Article_GetMaxScrollOffset() {
               sLinesPerPage[lbl_80356970];
     f32 line = max & ~(max >> 31);
     if (line > creditStart) {
+        f32 h = GetLogoHeight();
         return -(sBodyView->mLineHeight * sBodyView->mNumLines +
-                 (lbl_80357568->mLineHeight * lbl_80357568->mNumLines +
-                  GetLogoHeight() * gTextScale) +
+                 (lbl_80357568->mLineHeight * lbl_80357568->mNumLines + h * gTextScale) +
                  (line - creditStart) * sCreditView->mLineHeight);
     }
     if (line > bodyStart) {
-        return -(lbl_80357568->mLineHeight * lbl_80357568->mNumLines +
-                 GetLogoHeight() * gTextScale + (line - bodyStart) * sBodyView->mLineHeight);
+        f32 h = GetLogoHeight();
+        return -(lbl_80357568->mLineHeight * lbl_80357568->mNumLines + h * gTextScale +
+                 (line - bodyStart) * sBodyView->mLineHeight);
     }
     if (line > headlineLines) {
-        return -(lbl_80357568->mLineHeight * lbl_80357568->mNumLines +
-                 GetLogoHeight() * gTextScale);
+        f32 h = GetLogoHeight();
+        return -(lbl_80357568->mLineHeight * lbl_80357568->mNumLines + h * gTextScale);
     }
-    return -(line * (lbl_80357568->mLineHeight * headlineLines));
+    return -(line * (headlineLines * lbl_80357568->mLineHeight));
 }
 
 void Article_SetHeight(f32 width) {
@@ -2782,19 +2754,20 @@ void Article_ClampScroll() {
     }
 }
 
-void Article_ScrollTo(f32 offset, f32 dir) {
-    s32 line = 0;
+f32 Article_ScrollTo(f32 offset, f32 dir) {
     s32 headlineLines = lbl_80357568->mNumLines;
     s32 bodyLines = sBodyView->mNumLines;
     f32 y = 0.0f;
     s32 bodyStart = headlineLines + 1;
     s32 total = headlineLines + bodyLines + sCreditView->mNumLines + 1;
     s32 creditStart = bodyStart + bodyLines;
+    s32 line = 0;
     for (; line < total; line++) {
         if (line < headlineLines) {
             y -= lbl_80357568->mLineHeight;
         } else if (line < bodyStart) {
-            y -= GetLogoHeight() * gTextScale;
+            f32 h = GetLogoHeight();
+            y -= h * gTextScale;
         } else if (line < creditStart) {
             y -= sBodyView->mLineHeight;
         } else {
@@ -2808,7 +2781,7 @@ void Article_ScrollTo(f32 offset, f32 dir) {
         line++;
     }
     sScrollLine = line;
-    Article_GetScrollOffset();
+    return Article_GetScrollOffset();
 }
 
 BOOL Article_HitTest(const ut::Rect* rect) {
@@ -2850,8 +2823,8 @@ f32 GetTextScale(s32 size) {
 
 #include <news/MathUtil.h>
 
-BOOL UpdateTextSize(BOOL up, BOOL down) {
-    BOOL changed = FALSE;
+bool UpdateTextSize(BOOL up, BOOL down) {
+    bool changed = false;
     s32 se[10] = {0x2C, 0x2D, 0x2E, 0x2F, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35};
     s32 prev = lbl_80356970;
     if (up) {
@@ -2865,7 +2838,7 @@ BOOL UpdateTextSize(BOOL up, BOOL down) {
     }
     if (prev != lbl_80356970) {
         PlaySE(se[lbl_80356970]);
-        changed = TRUE;
+        changed = true;
     }
     Ease(&gTextScale, lbl_801922D0[lbl_80356970], 0.12f, 1.0f, 0.01f);
     return changed;
@@ -3071,7 +3044,7 @@ void DrawScreenFade(s32 alpha) {
         pos.x = 0.0f;
         pos.y = 0.0f;
         pos.z = 0.0f;
-        fn_8003FB54(pos, size, color);
+        Draw2D_FillBox(pos, size, color);
     }
 }
 

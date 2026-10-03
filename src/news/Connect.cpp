@@ -7,7 +7,9 @@
 #include <news/PaneLayout.h>
 #include <news/Random.h>
 #include <news/SaveData.h>
+#include <news/SoundManager.h>
 #include <news/System.h>
+#include <news/WiiConnect24.h>
 #include <nw4r/lyt/lyt_pane.h>
 #include <nw4r/lyt/lyt_textBox.h>
 #include <nw4r/math/math_triangular.h>
@@ -36,10 +38,8 @@ struct DownloadTask {
 
 // Not yet decompiled: data and code in other files.
 extern u8 lbl_801EE270[];         // layout resource accessor
-extern u32 lbl_801F0908[4];       // held buttons
-extern DownloadTask lbl_8020CEB8[8];
+extern DownloadTask gWC24Tasks[8];
 extern u8 gExitRequested;
-extern u32 lbl_80357688;          // pointer button hold
 
 void AdvanceLoadingFrame();
 void DrawLoadingScreen();
@@ -47,18 +47,6 @@ void DrawScreenFade(s32 alpha);
 void OnExitRequested();
 
 extern "C" {
-void* fn_80040994(u32 size, s32 align);
-void fn_800409EC(void* p);
-void fn_80040778(s32 chan, s32 arg1, s32 arg2);
-s32 fn_80040C0C(MEMHeapHandle heap, u32 arg, NewsHeader** files, u32* arg3, u32* sizes,
-                const char* url, u32 arg6);
-s32 fn_80041090(MEMHeapHandle heap, u32 arg, NewsHeader** files, u32* arg3, u32* sizes, u32 mask);
-s32 fn_80041514(const char* url, u32 arg1, u32 arg2, u8 arg3, u16 arg4);
-s32 fn_80041964();
-void fn_8004F8E0(u32 id, f32 volume, f32 pitch, f32 pan);
-void fn_8004FAB0(snd::SoundHandle* handle, s32 frames);
-void fn_8004FAD0(snd::SoundHandle* handle, u32 variation, s32 arg2);
-u32 fn_8004FAF0(snd::SoundHandle* handle);
 }
 
 const char* GetLanguageSuffix();
@@ -102,7 +90,7 @@ Connect::Connect(u32 arg, u32 arc, NewsData* newsData) {
     mArc = arc;
     mNewsData = newsData;
     mFader = gFader;
-    mHeapMem = fn_80040994(0x800000, 0x20);
+    mHeapMem = MainHeapAlloc(0x800000, 0x20);
     if (mHeapMem == NULL) {
         OSPanic("Connect.cpp", 41, "MEMORY ERROR");
     }
@@ -140,7 +128,7 @@ Connect::~Connect() {
         }
     }
     MEMDestroyExpHeap(mHeap);
-    fn_800409EC(mHeapMem);
+    MainHeapFree(mHeapMem);
 }
 
 void Connect::Reset(s32 country, s32 language) {
@@ -190,31 +178,31 @@ void Connect::Update() {
     case DL_START: {
         BOOL test = FALSE;
         for (s32 i = 0; i < 4; i++) {
-            if ((lbl_801F0908[i] & 0x1310) == 0x1310) {
+            if ((gHold[i] & 0x1310) == 0x1310) {
                 test = TRUE;
                 break;
             }
         }
         if (test) {
-            mTask = fn_80041964();
+            mTask = WC24RequestUnregister();
             mDownloadState = DL_TEST;
         } else {
-            mTask = fn_80040C0C(mHeap, m00C, mFiles, m0F0, mFileSizes, mURL, 0x3A0000);
+            mTask = WC24RequestDownload(mHeap, m00C, mFiles, m0F0, mFileSizes, mURL, 0x3A0000);
             mDownloadState = DL_LIST;
         }
         break;
     }
     case DL_TEST:
-        mTaskStatus = lbl_8020CEB8[mTask].mStatus;
+        mTaskStatus = gWC24Tasks[mTask].mStatus;
         break;
     case DL_LIST: {
-        DownloadTask* task = &lbl_8020CEB8[mTask];
+        DownloadTask* task = &gWC24Tasks[mTask];
         if ((mTaskStatus = task->mStatus) == 0) {
             if ((mTaskResult = task->mResult) == 0) {
                 mCheckResult = CheckNewsFiles(mFiles, mFileSizes, &mCurrentFile, &mFileMask);
                 if (mCheckResult == 0) {
                     NewsHeader* file = mFiles[mCurrentFile];
-                    mTask = fn_80041514(mURL, 0x3A0000, 0, file->unk2F, file->unk5C);
+                    mTask = WC24RequestRegister(mURL, 0x3A0000, 0, file->unk2F, file->unk5C);
                     mDownloadState = DL_CONFIG;
                 } else if (mCheckResult == -3) {
                     mDownloadState = DL_ERROR;
@@ -222,7 +210,7 @@ void Connect::Update() {
                     if (mCheckResult != -2) {
                         mFileMask = 0xFFFFFF;
                     }
-                    mTask = fn_80041090(mHeap, m00C, mFiles, m0F0, mFileSizes, mFileMask);
+                    mTask = WC24RequestUpdate(mHeap, m00C, mFiles, m0F0, mFileSizes, mFileMask);
                     mDownloadState = DL_FILES;
                 }
             } else {
@@ -232,13 +220,13 @@ void Connect::Update() {
         break;
     }
     case DL_FILES: {
-        DownloadTask* task = &lbl_8020CEB8[mTask];
+        DownloadTask* task = &gWC24Tasks[mTask];
         if ((mTaskStatus = task->mStatus) == 0) {
             if ((mTaskResult = task->mResult) == 0) {
                 mCheckResult = CheckNewsFiles(mFiles, mFileSizes, &mCurrentFile, &mFileMask);
                 if (mCheckResult == 0 || mCheckResult == -2) {
                     NewsHeader* file = mFiles[mCurrentFile];
-                    mTask = fn_80041514(mURL, 0x3A0000, 0, file->unk2F, file->unk5C);
+                    mTask = WC24RequestRegister(mURL, 0x3A0000, 0, file->unk2F, file->unk5C);
                     mDownloadState = DL_CONFIG;
                 } else {
                     mDownloadState = DL_ERROR;
@@ -250,7 +238,7 @@ void Connect::Update() {
         break;
     }
     case DL_CONFIG: {
-        DownloadTask* task = &lbl_8020CEB8[mTask];
+        DownloadTask* task = &gWC24Tasks[mTask];
         if ((mTaskStatus = task->mStatus) == 0) {
             if ((mTaskResult = task->mResult) == 0) {
                 mDownloadState = DL_DONE;
@@ -470,7 +458,7 @@ void Connect::Update() {
             for (s32 i = 0; i < 4; i++) {
                 if (IsPointerValid(i) && mMascot->HitTest(GetCursorX(i), GetCursorY(i))) {
                     if (!mHover[i]) {
-                        fn_80040778(i, 3, 20);
+                        StartRumble(i, 3, 20);
                     }
                     mHover[i] = true;
                 } else {
@@ -485,7 +473,7 @@ void Connect::Update() {
                         continue;
                     }
                     for (s32 chan = 0; chan < 4; chan++) {
-                        if (IsPointerValid(chan) && (lbl_80357688 & 0x800)) {
+                        if (IsPointerValid(chan) && (gHoldAll & 0x800)) {
                             f32 dx = GetCursorX(chan) - x;
                             f32 dy = GetCursorY(chan) - 280.0f;
                             if (dx >= -15.0f && dx < 15.0f && dy >= -10.0f && dy < 30.0f) {
@@ -496,7 +484,7 @@ void Connect::Update() {
                                 } else if (pan > 1.0f) {
                                     pan = 1.0f;
                                 }
-                                fn_8004F8E0(0x46, 1.0f, 1.0f, pan);
+                                PlaySE(0x46, 1.0f, 1.0f, pan);
                                 mDotWait[i] = 10;
                                 break;
                             }
@@ -521,11 +509,11 @@ void Connect::Update() {
             PlaySound(&mSound, 0x17);
             mSoundPlaying = true;
         }
-        if (mSoundPlaying && fn_8004FAF0(&mSound) != 0) {
-            fn_8004FAD0(&mSound, 0, 0);
+        if (mSoundPlaying && IsSoundPaused(&mSound)) {
+            PauseSound(&mSound, false, 0);
         }
     } else if (mSoundPlaying) {
-        fn_8004FAB0(&mSound, 0);
+        StopSound(&mSound, 0);
         mSoundPlaying = false;
     }
 
@@ -643,7 +631,7 @@ void Connect::Draw() {
             }
             break;
         case -8:
-            if (lbl_8020CEB8[mTask].mDetail == -4) {
+            if (gWC24Tasks[mTask].mDetail == -4) {
                 button->SetSelIndex(4);
             } else {
                 code = 1;
@@ -665,7 +653,7 @@ void Connect::Draw() {
         if (code != 0) {
             button->SetSelIndex(5);
         }
-        ShowErrorCode(lbl_8020CEB8[mTask].mErrorCode, code);
+        ShowErrorCode(gWC24Tasks[mTask].mErrorCode, code);
         mErrorLayout->Draw();
         break;
     }
@@ -676,9 +664,9 @@ BOOL Connect::IsDone() {
     return mState == STATE_DONE && mFader->mBusy == 0;
 }
 
-void Connect::SetSoundVariation(u32 variation) {
-    if (mSoundPlaying && variation != fn_8004FAF0(&mSound)) {
-        fn_8004FAD0(&mSound, variation, 0);
+void Connect::SetSoundPaused(bool pause) {
+    if (mSoundPlaying && pause != IsSoundPaused(&mSound)) {
+        PauseSound(&mSound, pause, 0);
     }
 }
 

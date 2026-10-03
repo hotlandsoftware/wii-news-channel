@@ -12,6 +12,7 @@ void* NETMemSet(void*, int, u32);
 
 u32 NETCalcCRC32(const void* data, u32 size);
 BOOL NETGetUniversalCalendar(OSCalendarTime* pTime);
+int NETGetStartupErrorCode(int err);
 
 #ifdef __cplusplus
 }

@@ -32,6 +32,7 @@ public:
     void Draw();
     void SetState(s32 chan, s32 state);
     void SetParticleColor(nw4r::ef::Effect* effect, f32 rotate, f32 alpha);
+    bool IsLoaded() const { return mLoaded; }
 
 private:
     void* mHeap;                          // at 0x00

@@ -18,7 +18,7 @@ class DrawInfo;
 
 class ColorTagProcessor;
 
-extern "C" void fn_800409EC(void* p);
+void MainHeapFree(void* ptr);
 
 // One button of a LayoutScreen, built from a top-level pane of the layout.
 // Child panes are looked up by name suffix: "B" (base), "R" (hit rect),
@@ -30,10 +30,10 @@ public:
 
     ~LayoutScreenItem() {
         if (mUnk88 != NULL) {
-            fn_800409EC(mUnk88);
+            MainHeapFree(mUnk88);
         }
         if (mUnk84 != NULL) {
-            fn_800409EC(mUnk84);
+            MainHeapFree(mUnk84);
         }
     }
 

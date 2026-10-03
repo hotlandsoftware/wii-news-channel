@@ -9,6 +9,7 @@
 #include <news/MathUtil.h>
 #include <news/NewsArticle.h>
 #include <news/PaneButton.h>
+#include <news/SoundManager.h>
 #include <news/System.h>
 #include <news/TextButton.h>
 #include <news/Ticker.h>
@@ -24,8 +25,6 @@ extern u8 lbl_801EE270[];          // layout resource accessor
 extern f32 lbl_803575DC;
 extern u8 lbl_803575BF;
 extern s32 lbl_80357598;
-extern u32 lbl_80357698;           // D-pad trigger
-extern u32 lbl_801F0908[4];        // held buttons
 extern s32 lbl_80356970;           // text zoom level (0-9)
 extern u8 lbl_8035697C;
 extern s32 gEarthModel;
@@ -46,9 +45,6 @@ extern f32 lbl_803575C8;
 extern s32 lbl_801EDFD0[4];        // pointer cursor shape per channel
 extern s32 lbl_80357580;
 extern s32 gHoverButtons[4];
-extern f32 lbl_801F0888[4];        // pointer x per channel
-extern f32 lbl_801F0898[4];        // pointer y per channel
-extern u32 lbl_80357688;           // pointer button hold
 extern u8 lbl_803575B9;
 extern u8 lbl_803575BA;
 extern f32 lbl_801EDFA0[6];
@@ -76,84 +72,18 @@ struct LayoutScroll {
 void DrawScreenFade(s32 alpha);
 
 extern "C" {
-void fn_800323D8(f32* scale, s32 arg);
-void fn_80032414(math::VEC2* pos, const bool* held, f32 scale, f32 delta);
-void fn_80032464(f32 x);
-f32 fn_80035188(s32 zoom);
 void fn_8001F730(nw4r::lyt::Pane* pane, const nw4r::ut::Color& color);
 void fn_8000E180(RelatedItem* item, ut::TextWriterBase<wchar_t>* writer);
-void fn_80033FFC(math::VEC2* pos, s32 arg1, s32 arg2, f32 arg3, f32 scale);
-BOOL fn_8003567C(ut::Rect* rect, f32 x, f32 y, f32 scale);
-BOOL fn_80035764(ut::Rect* rect);
-void fn_80035A3C(ut::Rect* r0, ut::Rect* r1, f32 alpha);
-void fn_80032644(void);
-BOOL fn_8004DABC(Globe* globe);
-void fn_8004D0B0(Globe* globe);
-void fn_8004D170(Globe* globe);
-f32 fn_800449A0(u16 t);
-void fn_800329CC(void);
-BOOL fn_8003251C(void);
-void fn_80032658(u8 region);
-void fn_80032580(NewsArticle* article, s32 arg, f32 x, f32 y);
-void fn_80030720(s32 arg);
-void fn_80032554(s32* arg);
-f32 fn_80034844(void);
-void fn_80034CDC(void);
-void fn_800332B4(math::VEC2* pos, f32 delta);
-void fn_800323BC(f32* scale);
-BOOL fn_80034158(void);
-void fn_8003481C(f32 width);
-void fn_8003356C(math::VEC2* pos, math::VEC2* origin, math::VEC2* thumbPos, f32* thumbScale);
-void fn_80032A94(s32 arg);
-bool fn_8003519C(bool zoomIn, bool zoomOut);
-s32* fn_80032538(void);
-void fn_80030544(void);
 math::VEC2 fn_8000D6A0(RelatedItem* item);
-void fn_80032B04(s32 section, s32 index, s32 arg);
-void fn_800333C4(f32 scale);
-void fn_80033374(f32 scale);
-void fn_80032AC0(s32 section, s32 index, s32 arg);
-void fn_80033538(void);
-f32 fn_80034164(void);
-void fn_80030650(void);
-BOOL fn_80034F6C(ut::Rect* rect);
-void fn_80034FD4(void);
-void fn_80040778(s32 chan, s32 arg1, s32 arg2);
-void fn_8004D2E8(Globe* globe);
-BOOL fn_80032BE0(s32 chan);
-void fn_8004DA8C(Globe* globe, s32 arg1, s32 arg2);
-BOOL fn_80034598(void);
-BOOL fn_80034770(void);
-BOOL fn_80034780(void);
-void fn_80034690(s32 zoom, f32* scroll);
-void fn_800345E4(s32 zoom, f32* scroll);
-f32 fn_80034D34(f32 scroll, f32 velocity);
-BOOL fn_800324A0(void);
-BOOL fn_80032478(void);
-void fn_80032450(void);
-void fn_8003243C(void);
-void fn_80032508(void);
-void fn_800324F4(f32 velocity);
-void fn_8004D1D4(Globe* globe, const s32* table);
-void fn_8004DB80(Globe* globe, s32 arg, const s32* table);
-void fn_8004DD8C(Globe* globe, s32 arg);
-void fn_8004CBE0(Globe* globe);
-void fn_8004CE00(Globe* globe);
-void fn_8004CC20(Globe* globe);
-s32 fn_8004D628(Globe* globe, s32 chan);
-BOOL fn_8004D300(Globe* globe, s32 chan);
-void fn_8004E0E8(Globe* globe, s32 arg);
-void fn_8004F8E0(u32 id, f32 pitch, f32 volume, f32 pan);
-RelatedItem* fn_80032B60(s32* section, s32* index);
+// The original calls Fader::SetColor(ut::Color, u8) with only the color set (r5
+// is left as it is), as if through an older one-argument declaration.
+void SetColor__5FaderFQ34nw4r2ut5ColorUc(Fader* fader, ut::Color color);
 f32 fn_8000F73C(RelatedItem* item, const wchar_t* text, ut::Font* font, f32 scale, f32 space);
 void fn_8000F8A8(RelatedItem* item, f32 rowHeight);
 void fn_8000EFFC(RelatedItem* item, ut::TextWriterBase<wchar_t>* writer);
 void fn_8000F3F0(RelatedItem* item, ut::TextWriterBase<wchar_t>* writer);
-void fn_8003256C(math::VEC2* pos, NewsArticle* article);
-void fn_8003300C(NewsArticle* article, const wchar_t* name, NewsTexture* texture, math::VEC2* origin,
-                 math::VEC2* thumbPos, const f32& thumbScale, math::VEC2* size, s32 arg7,
-                 BOOL hasLocation, f32 scale);
 }
+
 
 static math::VEC2 sShadowOffset(2.0f, 2.0f);
 static ut::Color sGrayColor(180, 180, 180, 255);
@@ -545,7 +475,7 @@ void MainScreen::Start() {
     mUnk23C = 1.0f;
     mUnk154.x = mUnk230;
     mScreenRect.right = mUnk238;
-    fn_80032464(mUnk14C.x + GetSideMargin());
+    HeadlineList_SetX(mUnk14C.x + GetSideMargin());
     mUnk34C = 0;
     mUnk350 = 0;
     mUnk354 = false;
@@ -639,7 +569,7 @@ void MainScreen::Draw() {
     if (mActiveLayout) {
         bool inList = IsState(&MainScreen::State16960) || IsState(&MainScreen::StateList);
         if (inList && lbl_8035755C != NULL && lbl_8035755C->mNumItems == 0) {
-            mTextButton->SetAlpha((s32)(255.0f * mUnk240));
+            mTextButton->SetAlpha(255.0f * mUnk240);
         }
         mActiveLayout->Draw();
     }
@@ -653,7 +583,7 @@ inline void MainScreen::DrawGlobeInline() {
     Draw2D_SetScissor(0, 0, mScreenRect.right, 456);
     f32 scale = 1.0f + 0.05f * math::SinRad(1.5707964f * (mUnk350 / 8.0f));
     f32 alpha = mUnk244;
-    fn_80033FFC(&pos, mUnk334, 1, alpha, scale);
+    Article_Draw(pos, mUnk334, 1, alpha, scale);
     Draw2D_SetScissor(0, 0, GetScreenWidth(), 456);
     DrawRelated();
 }
@@ -694,7 +624,7 @@ void MainScreen::DrawRelated() {
     } else {
         fontScale = gDefaultFontScale;
     }
-    f32 rowHeight = mUnk24C * fontScale * fn_80035188(lbl_80356970);
+    f32 rowHeight = mUnk24C * fontScale * GetTextScale(lbl_80356970);
     f32 scrollY = mUnk254;
     highlight.a = highlight.a * mUnk25C;
     sep.a = sep.a * mUnk25C;
@@ -900,7 +830,7 @@ void MainScreen::DrawRelated() {
 }
 
 void MainScreen::DrawButtons() {
-    fn_800323F8(&mUnk164, mUnk23C, mUnk240);
+    HeadlineList_Draw(mUnk164.x, mUnk23C, mUnk240);
     if (lbl_8035755C != NULL && lbl_8035755C->mMode != HeadlineList::MODE_SECTION) {
         s32 i;
         s32 count = lbl_803575E0 - 1;
@@ -927,10 +857,10 @@ void MainScreen::DrawCursor() {
     ut::Rect r0(0.0f, 0.0f, 0.0f, 0.0f);
     ut::Rect r1(0.0f, 0.0f, 0.0f, 0.0f);
     f32 scale = 1.0f + 0.05f * math::SinRad(1.5707964f * (mUnk350 / 8.0f));
-    if (fn_8003567C(&r0, mUnk16C.x, 123.0f + mUnk224, scale) &&
-        fn_80035764(&r1))
+    if (Article_GetPictureRect(&r0, mUnk16C.x, 123.0f + mUnk224, scale) &&
+        Article_GetZoomedPictureRect(&r1))
     {
-        fn_80035A3C(&r0, &r1, s);
+        Article_DrawZoomedPicture(r0, r1, s);
     }
 }
 
@@ -945,14 +875,14 @@ void MainScreen::Update() {
 }
 
 inline void MainScreen::ResetListPos() {
-    fn_800323D8(&gTextScale, 0);
+    HeadlineList_SetIndexAndScale(gTextScale, 0);
     mUnk154.x = mUnk230 = mUnk23C = 0.0f;
-    fn_80032464(mUnk14C.x + GetSideMargin());
+    HeadlineList_SetX(mUnk14C.x + GetSideMargin());
 }
 
 inline void MainScreen::LayoutTicker(const bool* held) {
-    f32 zoom = fn_80035188(lbl_80356970);
-    fn_80032414(&mUnk164, held, gTextScale, gTextScale - zoom);
+    f32 zoom = GetTextScale(lbl_80356970);
+    HeadlineList_Update(mUnk164.x, held, gTextScale, gTextScale - zoom);
 }
 
 void MainScreen::ResetZoom() {
@@ -996,7 +926,7 @@ void MainScreen::ModeMain() {
     case 0:
         mModeStep++;
     default:
-        fn_80032644();
+        Globe_ResetFocus();
         mHeld[0] = false;
         mHeld[1] = false;
         mHeld[2] = false;
@@ -1026,7 +956,7 @@ void MainScreen::ModeMain() {
             }
         }
 
-        if (fn_8004DABC(gGlobe)) {
+        if (gGlobe->IsRotating()) {
             EnableButton(mResetButton);
         } else {
             DisableButton(mResetButton);
@@ -1109,7 +1039,7 @@ void MainScreen::ModeMain() {
                 UpdateLayoutButtons(mActiveLayout, 0x23);
             }
             for (s32 i = 0; i < 4; i++) {
-                if (lbl_801F0908[i] & 0x400) {
+                if (gHold[i] & 0x400) {
                     mHeld[i] = true;
                     held = TRUE;
                 }
@@ -1129,7 +1059,7 @@ void MainScreen::ModeMain() {
             if (!held) {
                 if (CheckButtonHold("up", 0x800) >= 0) {
                     mUpPressed = true;
-                } else if (lbl_80357698 & 8) {
+                } else if (gRepeatFastAll & 8) {
                     mUpPressed = true;
                     if (mActiveLayout == mMainLayout) {
                         mUpButton->SetPressed(true);
@@ -1139,7 +1069,7 @@ void MainScreen::ModeMain() {
                 }
                 if (CheckButtonHold("down", 0x800) >= 0) {
                     mDownPressed = true;
-                } else if (lbl_80357698 & 4) {
+                } else if (gRepeatFastAll & 4) {
                     mDownPressed = true;
                     if (mActiveLayout == mMainLayout) {
                         mDownButton->SetPressed(true);
@@ -1150,7 +1080,7 @@ void MainScreen::ModeMain() {
             }
             if (CheckButtonHold("zoom_out", 0x800) >= 0) {
                 mZoomOutPressed = true;
-            } else if (lbl_80357698 & 0x1000) {
+            } else if (gRepeatFastAll & 0x1000) {
                 mZoomOutPressed = true;
                 if (mActiveLayout == mMainLayout) {
                     mZoomOutButton->SetPressed(true);
@@ -1162,7 +1092,7 @@ void MainScreen::ModeMain() {
             }
             if (CheckButtonHold("zoom_in", 0x800) >= 0) {
                 mZoomInPressed = true;
-            } else if (lbl_80357698 & 0x10) {
+            } else if (gRepeatFastAll & 0x10) {
                 mZoomInPressed = true;
                 if (mActiveLayout == mMainLayout) {
                     mZoomInButton->SetPressed(true);
@@ -1180,23 +1110,23 @@ void MainScreen::ModeMain() {
             }
             if (CheckButtonHold("rot_a", 0x800) >= 0) {
                 mRotAPressed = true;
-            } else if (lbl_80357698 & 8) {
+            } else if (gRepeatFastAll & 8) {
                 mRotAPressed = true;
                 mRotAButton->SetPressed(true);
             }
             if (CheckButtonHold("rot_b", 0x800) >= 0) {
                 mRotBPressed = true;
-            } else if (lbl_80357698 & 4) {
+            } else if (gRepeatFastAll & 4) {
                 mRotBPressed = true;
                 mRotBButton->SetPressed(true);
             }
             if (CheckButtonTrig("reset", 0x800) >= 0) {
                 mResetPressed = true;
             }
-            if (lbl_80357698 & 1) {
+            if (gRepeatFastAll & 1) {
                 mUnk2B6 = true;
             }
-            if (lbl_80357698 & 2) {
+            if (gRepeatFastAll & 2) {
                 mUnk2B7 = true;
             }
         }
@@ -1204,7 +1134,7 @@ void MainScreen::ModeMain() {
         if (mState) {
             (this->*mState)(NULL);
         }
-        if (IsState(&MainScreen::StateList) && fn_8003251C()) {
+        if (IsState(&MainScreen::StateList) && HeadlineList_IsLanguagePressed()) {
             lbl_80357598 = 2;
             return;
         }
@@ -1221,16 +1151,16 @@ void MainScreen::ModeMain() {
             if (mUnk32C > 0x8000) {
                 mUnk32C = 0x8000;
             }
-            g->mHeight = mUnk270 = mUnk274 + range * fn_800449A0(mUnk32C);
+            g->mHeight = mUnk270 = mUnk274 + range * CosineEase(mUnk32C);
             if (gGlobe != NULL && mUnk11C) {
                 (this->*mUnk11C)();
             }
-            fn_800329CC();
+            Pins_UpdateFade();
             if (gGlobe != NULL && mUnk128) {
                 (this->*mUnk128)();
             }
-            fn_8004D0B0(g);
-            fn_8004D170(g);
+            g->UpdateLights();
+            g->CalcScene();
             if (mSoundId != 0xFFFFFFFF) {
                 PlaySE(mSoundId);
             }
@@ -1248,7 +1178,7 @@ void MainScreen::ModeWait() {
         gFader2->FadeOut(30);
         ut::Color color(0, 0, 0, 0xA0);
         *(GXColor*)((u8*)gFader2 + 0x10) = color;
-        gFader2->SetColor(color, 0);
+        SetColor__5FaderFQ34nw4r2ut5ColorUc(gFader2, color);
     }
     default:
         if (*(s32*)((u8*)gFader2 + 0x50) == 0 && gEarthModel != 0) {
@@ -1303,13 +1233,13 @@ s32 MainScreen::OpenArticle(s32* arg) {
     if (ticker != NULL) {
         NewsArticle* article = ticker->mArticle;
         math::VEC2 thumbPos = ticker->GetThumbPos();
-        s32 noLocation;
+        bool noLocation;
         s32 result;
         math::VEC2 origin;
         math::VEC2 size;
         if (article->mLocationName == NULL) {
             result = 1;
-            noLocation = 1;
+            noLocation = true;
             mUnk164.x = mUnk234 = 0.0f;
             mUnk238 = GetScreenWidth();
             mUnk16C.x = mUnk164.x + GetSideMargin();
@@ -1318,7 +1248,7 @@ s32 MainScreen::OpenArticle(s32* arg) {
             size.y = h;
         } else {
             result = 2;
-            noLocation = 0;
+            noLocation = false;
             mUnk234 = 0.0f;
             mUnk238 = (f32)GetCursorAreaRight();
             mUnk16C.x = mUnk164.x + GetSideMargin();
@@ -1327,9 +1257,9 @@ s32 MainScreen::OpenArticle(s32* arg) {
             size.y = h;
             PlaySE(sRegionSE[((u8*)article->mLocation)[0xC]]);
             if (arg != NULL && *arg == 1) {
-                fn_80032658(((u8*)article->mLocation)[0xC]);
+                Globe_SetZoom(((u8*)article->mLocation)[0xC]);
             } else {
-                fn_80032580(article, 5, gWidescreen ? -0.7125f : -0.625f, 0.0f);
+                Globe_FocusArticle(article, 5, gWidescreen ? -0.7125f : -0.625f, 0.0f);
             }
             lbl_8035697C = 0;
             SetLocation(article);
@@ -1340,10 +1270,10 @@ s32 MainScreen::OpenArticle(s32* arg) {
         mUnk224 = 0.0f;
         mUnk228 = 0.0f;
         NewsTexture* texture = ticker->mArticle->GetTexture();
-        BOOL hasLocation = article->mLocationName != NULL;
-        fn_8003300C(article, list->mCategory->mName, texture, &origin, &thumbPos,
-                    ticker->GetThumbScale(), &size, noLocation, hasLocation,
-                    gTextScale);
+        bool hasLocation = article->mLocationName != NULL;
+        f32 thumbScale = ticker->GetThumbScale();
+        Article_Set(article, list->mCategory->mName, (BOOL)texture, &origin, &thumbPos,
+                    &thumbScale, size, noLocation, gTextScale, hasLocation);
         mUnk2E4 = mUnk2C4;
         mUnk2E8 = mSelected;
         return result;
@@ -1403,31 +1333,31 @@ inline void MainScreen::SetInputHook(Func func) {
 }
 
 inline void MainScreen::ScrollArticle() {
-    f32 delta = gTextScale - fn_80035188(lbl_80356970);
-    f32 min = fn_80034844();
+    f32 delta = gTextScale - GetTextScale(lbl_80356970);
+    f32 min = Article_GetMaxScrollOffset();
     if (mUnk224 > 0.0f) {
         mUnk228 = mUnk224 = 0.0f;
     } else if (mUnk224 < min) {
         mUnk228 = mUnk224 = min;
     }
-    fn_80034CDC();
+    Article_ClampScroll();
     math::VEC2 pos(mUnk16C.x, 123.0f + mUnk224);
-    fn_800332B4(&pos, delta);
+    Article_Layout(&pos, delta);
 }
 
 inline void MainScreen::SetArticleWidth() {
-    fn_8003481C(fn_80034158() ? GetContentRight() - GetSideMargin()
+    Article_SetX(Article_IsBodyScrolling() ? GetContentRight() - GetSideMargin()
                               : mUnk238 - GetSideMargin() - 5.0f);
 }
 
 inline void MainScreen::LayoutArticle() {
-    mUnk16C.x = fn_80034158() ? mUnk164.x + GetSideMargin() : mUnk164.x + GetSideMargin();
+    mUnk16C.x = Article_IsBodyScrolling() ? mUnk164.x + GetSideMargin() : mUnk164.x + GetSideMargin();
     SetArticleWidth();
     ScrollArticle();
 }
 
 inline void MainScreen::LayoutList() {
-    fn_80032464(mUnk14C.x + GetSideMargin());
+    HeadlineList_SetX(mUnk14C.x + GetSideMargin());
     LayoutTicker(NULL);
 }
 
@@ -1468,16 +1398,16 @@ void MainScreen::State16960(s32* arg) {
         lbl_803575BC = false;
         break;
     case 0: {
-        fn_80030720(0);
+        Bgm_PlayMain(0);
         lbl_803575BC = true;
         mActiveLayout = mHeadLayout;
         SetSubState(NULL);
         SetInputHook(&MainScreen::Hook1ED20);
         if (list != NULL && list->mMode != HeadlineList::MODE_SECTION) {
-            fn_80032554(&mUnk330);
+            HeadlineList_SetIndex(mUnk330);
         }
         ScrollArticle();
-        fn_800323BC(&gTextScale);
+        HeadlineList_SetScale(gTextScale);
         LayoutTicker(NULL);
         mUnk2A4 = 1.0f / 15.0f;
         mUnk23C = 0.0f;
@@ -1526,14 +1456,14 @@ void MainScreen::State16960(s32* arg) {
                     origin.y += dy;
                     thumbPos.y += dy;
                     f32 thumbScale = ticker->mThumbScale;
-                    fn_8003356C(&pos, &origin, &thumbPos, &thumbScale);
+                    Article_SetSelection(&pos, &origin, &thumbPos, &thumbScale);
                 }
                 if (list->mNumItems == 0) {
                     mTextButton->mHidden = false;
                 }
             }
         }
-        fn_80032464(mUnk14C.x + GetSideMargin());
+        HeadlineList_SetX(mUnk14C.x + GetSideMargin());
         mUnk238 = GetScreenWidth();
         mUnk290 = mScreenRect.right;
         mUnk294 = mUnk238 - mUnk290;
@@ -1561,7 +1491,7 @@ void MainScreen::State16960(s32* arg) {
         if (mUnk338 > 0x8000) {
             mUnk338 = 0x8000;
         }
-        f32 t = fn_800449A0(mUnk338);
+        f32 t = CosineEase(mUnk338);
         mScreenRect.right = mUnk290 + mUnk294 * t;
         mUnk23C += 1.0f / 18.0f;
         if (mUnk23C > 1.0f) {
@@ -1627,17 +1557,17 @@ void MainScreen::StateList(s32* arg) {
         mPrevState = mState;
         mTextButton->Hide();
         SetButtonsEnabled(false);
-        fn_80032A94(0);
+        Pins_SetStateAll(0);
         lbl_803575BC = false;
         break;
     case 0:
         mStateStep++;
-        fn_80030720(0);
+        Bgm_PlayMain(0);
         lbl_803575BC = true;
         mUnk23C = 1.0f;
         mUnk244 = 0.0f;
         mActiveLayout = mHeadLayout;
-        fn_800323BC(&gTextScale);
+        HeadlineList_SetScale(gTextScale);
         SetSubState(&MainScreen::Sub1D9DC);
         SetListHook();
         mDraw = &MainScreen::DrawButtons;
@@ -1645,7 +1575,7 @@ void MainScreen::StateList(s32* arg) {
         mUnk14C.x = 0.0f;
         mUnk164.x = 0.0f;
         lbl_8035697C = true;
-        fn_80032464(mUnk14C.x + GetSideMargin());
+        HeadlineList_SetX(mUnk14C.x + GetSideMargin());
         UpdateHeadButtons();
         EnableButton(mHeadBackButton);
         if (list != NULL && list->mMode != HeadlineList::MODE_SECTION) {
@@ -1679,11 +1609,11 @@ void MainScreen::StateList(s32* arg) {
                 return;
             }
             if (list != NULL && list->mNumItems != 0) {
-                if (fn_8003519C(mZoomInPressed, mZoomOutPressed) && list != NULL) {
+                if (UpdateTextSize(mZoomInPressed, mZoomOutPressed) && list != NULL) {
                     list->ResetItems();
                 }
             } else {
-                fn_8003519C(false, false);
+                UpdateTextSize(false, false);
             }
             if (mUnk104) {
                 (this->*mUnk104)();
@@ -1740,7 +1670,7 @@ BOOL MainScreen::CheckSectionButtons() {
     for (s32 i = 0; i < count; i++, button++) {
         if ((*button)->GetPressedChan() >= 0) {
             s32 dir = 1;
-            mUnk330 = *fn_80032538();
+            mUnk330 = *HeadlineList_GetIndexPtr();
             s32 section = i + 1;
             mUnk2C4 = section;
             lbl_8035755C = mLists[section];
@@ -1770,7 +1700,7 @@ inline void MainScreen::UpdateGlobeCamera() {
     if (globe != NULL) {
         GlobeCamera* camera = globe->mCamera;
         if (camera != NULL) {
-            f32 t = fn_800449A0(mUnk32C);
+            f32 t = CosineEase(mUnk32C);
             f32 dx = mUnk194.x - mUnk18C.x;
             camera->mX = mUnk18C.x + dx * t;
             f32 dy = mUnk194.y - mUnk18C.y;
@@ -1798,7 +1728,7 @@ void MainScreen::State17E6C(s32* arg) {
         break;
     case 0: {
         mStateStep++;
-        fn_80030544();
+        Bgm_MuteMain();
         lbl_803575BD = true;
         lbl_803575A8 = 1;
         mUnk334 = 1;
@@ -1809,10 +1739,10 @@ void MainScreen::State17E6C(s32* arg) {
         SetSubState(NULL);
         SetInputHook(&MainScreen::Hook1E758);
         mUnk230 = -(GetScreenWidth() * 2);
-        fn_80032464(mUnk14C.x + GetSideMargin());
+        HeadlineList_SetX(mUnk14C.x + GetSideMargin());
         mUnk164.x = mUnk234;
         mScreenRect.right = mUnk238;
-        mUnk16C.x = fn_80034158() ? mUnk164.x + GetSideMargin() : mUnk164.x + GetSideMargin();
+        mUnk16C.x = Article_IsBodyScrolling() ? mUnk164.x + GetSideMargin() : mUnk164.x + GetSideMargin();
         if (arg != NULL) {
             mUnk244 = mUnk248 = 1.0f;
             mUnk338 = 0x8000;
@@ -1839,8 +1769,8 @@ void MainScreen::State17E6C(s32* arg) {
             mUnk29C = 456.0f - mUnk28C;
         }
         mDraw = &MainScreen::DrawGlobe;
-        fn_80032A94(1);
-        fn_80032B04(mUnk2C4, mSelected, 1);
+        Pins_SetStateAll(1);
+        Pins_Select(mUnk2C4, mSelected, 1);
         SetGlobeFunc(&MainScreen::Globe1DF3C);
         Globe* globe = gGlobe;
         if (globe != NULL) {
@@ -1848,7 +1778,7 @@ void MainScreen::State17E6C(s32* arg) {
             mUnk278 = gWidescreen ? -0.7125f : -0.625f;
             mUnk32C = 0;
         }
-        fn_800333C4(gTextScale);
+        Article_Arrange(gTextScale);
         ScrollArticle();
         if (lbl_80357560 != NULL) {
             lbl_80357560->MarkRead();
@@ -1864,7 +1794,7 @@ void MainScreen::State17E6C(s32* arg) {
         if (mUnk338 > 0x8000) {
             mUnk338 = 0x8000;
         }
-        f32 t = fn_800449A0(mUnk338);
+        f32 t = CosineEase(mUnk338);
         mUnk244 += 1.0f / 12.0f;
         if (mUnk244 > 1.0f) {
             mUnk244 = 1.0f;
@@ -1874,8 +1804,9 @@ void MainScreen::State17E6C(s32* arg) {
         if (mUnk328 < 0) {
             mUnk328 = 0;
         }
-        if (mStateStep == 1) {
-            fn_80032B04(mUnk2C4, mSelected, 1);
+        switch (mStateStep) {
+        case 1: {
+            Pins_Select(mUnk2C4, mSelected, 1);
             UpdateGlobeCamera();
             Globe* globe = gGlobe;
             if (mUnk2BF) {
@@ -1888,12 +1819,13 @@ void MainScreen::State17E6C(s32* arg) {
                 mUnk2BF = false;
                 mUnk164.x = mUnk234;
                 mUnk16C.x =
-                    fn_80034158() ? mUnk164.x + GetSideMargin() : mUnk164.x + GetSideMargin();
+                    Article_IsBodyScrolling() ? mUnk164.x + GetSideMargin() : mUnk164.x + GetSideMargin();
                 ChangeState(&MainScreen::State195A0, NULL);
                 return;
             }
         }
-        fn_80033374(gTextScale);
+        }
+        Article_Update(gTextScale);
         ScrollArticle();
         UpdateScrollBar();
         break;
@@ -1914,7 +1846,7 @@ void MainScreen::State18770(s32* arg) {
         lbl_803575A8 = 0;
         break;
     case 0:
-        fn_80030544();
+        Bgm_MuteMain();
         lbl_803575BD = true;
         lbl_803575A8 = 1;
         mUnk334 = 0;
@@ -1923,7 +1855,7 @@ void MainScreen::State18770(s32* arg) {
         SetSubState(NULL);
         SetInputHook(&MainScreen::Hook1E758);
         mUnk230 = -(GetScreenWidth() * 2);
-        fn_80032464(mUnk14C.x + GetSideMargin());
+        HeadlineList_SetX(mUnk14C.x + GetSideMargin());
         mUnk338 = 0;
         mUnk244 = mUnk248 = 1.0f;
         mUnk280 = mUnk164.x;
@@ -1933,8 +1865,8 @@ void MainScreen::State18770(s32* arg) {
         if (arg != NULL) {
             mStateStep = 2;
             mDraw = &MainScreen::DrawGlobe;
-            fn_80032AC0(mUnk2C4, mSelected, 1);
-            fn_80032B04(mUnk2C4, mSelected, 1);
+            Pins_SetState(mUnk2C4, mSelected, 1);
+            Pins_Select(mUnk2C4, mSelected, 1);
             SetGlobeFunc(&MainScreen::Globe1DF3C);
             Globe* globe = gGlobe;
             if (globe != NULL) {
@@ -1946,13 +1878,13 @@ void MainScreen::State18770(s32* arg) {
         } else {
             mStateStep++;
             mDraw = &MainScreen::DrawButtonsGlobe;
-            fn_80032A94(0);
+            Pins_SetStateAll(0);
             SetGlobeFunc(&MainScreen::Globe1DF3C);
             mUnk288 = 0.0f;
             mUnk33C = 0x71C;
             mUnk28C = __fabsf(mUnk288 - mUnk23C) / 30.0f;
         }
-        fn_800333C4(gTextScale);
+        Article_Arrange(gTextScale);
         ScrollArticle();
         if (lbl_80357560 != NULL) {
             lbl_80357560->MarkRead();
@@ -1977,10 +1909,10 @@ void MainScreen::State18770(s32* arg) {
             if (article != NULL && article->mLocationName != NULL &&
                 (s32)mUnk238 != GetScreenWidth())
             {
-                fn_80032AC0(mUnk2C4, mSelected, 1);
-                fn_80032B04(mUnk2C4, mSelected, 1);
+                Pins_SetState(mUnk2C4, mSelected, 1);
+                Pins_Select(mUnk2C4, mSelected, 1);
             } else {
-                fn_80032A94(0);
+                Pins_SetStateAll(0);
             }
             if (!IsNearlyZero(prevWidth - mUnk238)) {
                 mUnk338 = 0;
@@ -1991,12 +1923,12 @@ void MainScreen::State18770(s32* arg) {
             }
             return;
         }
-        mUnk16C.x = fn_80034158() ? mUnk164.x + GetSideMargin() : mUnk164.x + GetSideMargin();
+        mUnk16C.x = Article_IsBodyScrolling() ? mUnk164.x + GetSideMargin() : mUnk164.x + GetSideMargin();
         mUnk338 += mUnk33C;
         if (mUnk338 > 0x8000) {
             mUnk338 = 0x8000;
         }
-        f32 t = fn_800449A0(mUnk338);
+        f32 t = CosineEase(mUnk338);
         f32 x = mUnk280 + mUnk284 * t;
         f32 right = mUnk290 + mUnk294 * t;
         mUnk240 -= 1.0f / 18.0f;
@@ -2022,7 +1954,7 @@ void MainScreen::State18770(s32* arg) {
             break;
         case 2:
         default:
-            fn_80032B04(mUnk2C4, mSelected, 1);
+            Pins_Select(mUnk2C4, mSelected, 1);
             UpdateGlobeCamera();
             if (gGlobe == NULL || mUnk338 >= 0x8000) {
                 mUnk164.x = mUnk234;
@@ -2035,7 +1967,7 @@ void MainScreen::State18770(s32* arg) {
             }
             break;
         }
-        fn_80033374(gTextScale);
+        Article_Update(gTextScale);
         ScrollArticle();
         UpdateScrollBar();
         break;
@@ -2062,8 +1994,8 @@ BOOL MainScreen::CheckArticleSwitch() {
         if (mUnk2B7 && mSelected < count - 1) {
             mSelected++;
             OpenArticle(&hasLocation);
-            fn_800333C4(gTextScale);
-            fn_80033538();
+            Article_Arrange(gTextScale);
+            Article_Reset();
             ScrollArticle();
             PlaySE(0x38);
             if (lbl_80357560 != NULL) {
@@ -2074,8 +2006,8 @@ BOOL MainScreen::CheckArticleSwitch() {
         if (mUnk2B6 && mSelected > 0) {
             mSelected--;
             OpenArticle(&hasLocation);
-            fn_800333C4(gTextScale);
-            fn_80033538();
+            Article_Arrange(gTextScale);
+            Article_Reset();
             ScrollArticle();
             PlaySE(0x39);
             if (lbl_80357560 != NULL) {
@@ -2117,7 +2049,7 @@ void MainScreen::CloseArticle() {
     if (IsState(&MainScreen::State195A0)) {
         PlaySE(0x3C);
         if (mRelated != NULL && (mRelated->mNext != NULL || mRelated->mPrev != NULL)) {
-            fn_80030650();
+            Bgm_PlayArticle();
             ChangeState(&MainScreen::State1B694, NULL);
         } else {
             ChangeState(&MainScreen::State1A750, NULL);
@@ -2166,7 +2098,7 @@ void MainScreen::State195B8(s32* arg) {
         break;
     case 0:
         mStateStep++;
-        fn_80030544();
+        Bgm_MuteMain();
         lbl_803575BD = true;
         lbl_803575A8 = 1;
         mUnk334 = IsState(&MainScreen::State195A0);
@@ -2174,27 +2106,27 @@ void MainScreen::State195B8(s32* arg) {
         mUnk23C = 0.0f;
         mUnk244 = 1.0f;
         mActiveLayout = mMainLayout;
-        mUnk228 = mUnk224 = fn_80034164();
+        mUnk228 = mUnk224 = Article_GetScrollOffset();
         SetSubState(&MainScreen::Sub1D338);
         SetInputHook(&MainScreen::Hook1E758);
         mDraw = &MainScreen::DrawGlobe;
         SetGlobeFunc(&MainScreen::Globe1DF3C);
         mUnk154.x = mUnk230 = -GetScreenWidth();
-        fn_80032464(mUnk14C.x + GetSideMargin());
-        fn_80033374(gTextScale);
-        fn_800333C4(gTextScale);
+        HeadlineList_SetX(mUnk14C.x + GetSideMargin());
+        Article_Update(gTextScale);
+        Article_Arrange(gTextScale);
         ScrollArticle();
-        fn_80032A94(1);
-        fn_80032B04(mUnk2C4, mSelected, 1);
+        Pins_SetStateAll(1);
+        Pins_Select(mUnk2C4, mSelected, 1);
         if (lbl_80357560 != NULL) {
             lbl_80357560->MarkRead();
         }
         UpdateScrollBar();
         break;
     default: {
-        fn_80032B04(mUnk2C4, mSelected, 1);
+        Pins_Select(mUnk2C4, mSelected, 1);
         lbl_803575A8 = 1;
-        BOOL zoomed = fn_8003519C(mZoomInPressed, mZoomOutPressed);
+        BOOL zoomed = UpdateTextSize(mZoomInPressed, mZoomOutPressed);
         if (lbl_80356970 <= 0) {
             DisableButton(mMainLayout->FindButton("zoom_out"));
         } else {
@@ -2232,8 +2164,8 @@ void MainScreen::State195B8(s32* arg) {
                     ChangeState(&MainScreen::State18770, &hasLocation);
                     break;
                 }
-                fn_800333C4(gTextScale);
-                fn_80033538();
+                Article_Arrange(gTextScale);
+                Article_Reset();
                 PlaySE(0x38);
                 return;
             }
@@ -2247,8 +2179,8 @@ void MainScreen::State195B8(s32* arg) {
                     ChangeState(&MainScreen::State18770, &hasLocation);
                     break;
                 }
-                fn_800333C4(gTextScale);
-                fn_80033538();
+                Article_Arrange(gTextScale);
+                Article_Reset();
                 PlaySE(0x39);
                 return;
             }
@@ -2281,7 +2213,7 @@ void MainScreen::State195B8(s32* arg) {
                         f32 y = gCursorY[i][0];
                         bool hit = false;
                         ut::Rect rect(0.0f, 0.0f, 0.0f, 0.0f);
-                        if (fn_8003567C(&rect, mUnk16C.x, 123.0f + mUnk224, 1.0f) &&
+                        if (Article_GetPictureRect(&rect, mUnk16C.x, 123.0f + mUnk224, 1.0f) &&
                             gHoverButtons[i] == 0)
                         {
                             f32 x = gCursorX[i][0];
@@ -2293,7 +2225,7 @@ void MainScreen::State195B8(s32* arg) {
                             }
                         }
                         if (hit && !mUnk356[i]) {
-                            fn_80040778(i, 3, 20);
+                            StartRumble(i, 3, 20);
                         }
                         mUnk356[i] = hit;
                         if (y > 83.0f && y < 373.0f && (gTrig[i] & 0x800)) {
@@ -2321,19 +2253,19 @@ void MainScreen::State195B8(s32* arg) {
                     }
                     } else {
                         SetDragRect(i);
-                        if (fn_80034F6C(&mUnk1F4)) {
+                        if (Article_HitTest(&mUnk1F4)) {
                             PlaySE(0x2B);
                         }
                     }
                     break;
                 case 2:
-                    fn_80034FD4();
-                    fn_800333C4(fn_80035188(lbl_80356970));
+                    Article_ClearHit();
+                    Article_Arrange(GetTextScale(lbl_80356970));
                 case 1:
                 default:
                     if (mDragging[i]) {
                         SetDragRect(i);
-                        if (fn_80034F6C(&mUnk1F4)) {
+                        if (Article_HitTest(&mUnk1F4)) {
                             PlaySE(0x2B);
                         }
                         lbl_801EDFD0[i] = 6;
@@ -2352,9 +2284,9 @@ void MainScreen::State195B8(s32* arg) {
             }
         }
 
-        fn_80033374(gTextScale);
+        Article_Update(gTextScale);
         if (zoomed) {
-            fn_800333C4(fn_80035188(lbl_80356970));
+            Article_Arrange(GetTextScale(lbl_80356970));
         }
         if (mUnk104) {
             (this->*mUnk104)();
@@ -2388,7 +2320,7 @@ void MainScreen::State1A750(s32* arg) {
         mDraw = &MainScreen::DrawGlobe;
         mUnk234 = 0.0f;
         mUnk238 = (f32)GetCursorAreaRight();
-        fn_80032A94(1);
+        Pins_SetStateAll(1);
         lbl_80357580 = 0;
         ResetGlobe(globe);
         mUnk338 = 0;
@@ -2405,7 +2337,7 @@ void MainScreen::State1A750(s32* arg) {
     case -1:
         break;
     default: {
-        mUnk16C.x = fn_80034158() ? mUnk164.x + GetSideMargin() : mUnk164.x + GetSideMargin();
+        mUnk16C.x = Article_IsBodyScrolling() ? mUnk164.x + GetSideMargin() : mUnk164.x + GetSideMargin();
         RelatedItem* item = mRelated;
         math::VEC2 ofs(fn_8000D6A0(item).x - mUnk16C.x, fn_8000D6A0(item).y - (123.0f + mUnk224));
         mUnk244 -= 1.0f / 12.0f;
@@ -2424,7 +2356,7 @@ void MainScreen::State1A750(s32* arg) {
             ChangeState(&MainScreen::State1B134, NULL);
             return;
         }
-        f32 t = fn_800449A0(mUnk338);
+        f32 t = CosineEase(mUnk338);
         mFadeRect.left = mUnk280 + t * (fn_8000D6A0(item).x - mUnk280);
         mFadeRect.right = mUnk284 + t * (fn_8000D6A0(item).x - mUnk284);
         mFadeRect.top = mUnk288 + t * (fn_8000D6A0(item).y - mUnk288);
@@ -2447,7 +2379,7 @@ void MainScreen::State1AC60(s32* arg) {
         f32 w = GetScreenWidth();
         mUnk238 = 0.0f;
         mUnk234 = -w;
-        fn_80032A94(1);
+        Pins_SetStateAll(1);
         lbl_80357580 = 0;
         ResetGlobe(globe);
         mUnk338 = 0;
@@ -2461,23 +2393,23 @@ void MainScreen::State1AC60(s32* arg) {
     case -1:
         break;
     default: {
-        mUnk16C.x = fn_80034158() ? mUnk164.x + GetSideMargin() : mUnk164.x + GetSideMargin();
+        mUnk16C.x = Article_IsBodyScrolling() ? mUnk164.x + GetSideMargin() : mUnk164.x + GetSideMargin();
         mUnk338 += mUnk33C;
         if (mUnk338 > 0x8000) {
             mUnk164.x = mUnk234;
             mScreenRect.right = mUnk238;
-            fn_80033374(gTextScale);
+            Article_Update(gTextScale);
             ScrollArticle();
             ChangeState(&MainScreen::State1B134, NULL);
             return;
         }
-        f32 t = fn_800449A0(mUnk338);
+        f32 t = CosineEase(mUnk338);
         mUnk164.x = mUnk280 + mUnk284 * t;
         mScreenRect.right = mUnk290 + mUnk294 * t;
         if (globe != NULL) {
             globe->mHeight = mUnk288 + mUnk28C * t;
         }
-        fn_80033374(gTextScale);
+        Article_Update(gTextScale);
         ScrollArticle();
         UpdateScrollBar();
         break;
@@ -2490,7 +2422,7 @@ void MainScreen::State1B134(s32* arg) {
     switch (mStateStep) {
     case -1:
         mUnk128 = NULL;
-        fn_8004D2E8(globe);
+        globe->ReleaseGrab();
         lbl_801EDFD0[0] = 1;
         lbl_801EDFD0[1] = 1;
         lbl_801EDFD0[2] = 1;
@@ -2505,14 +2437,14 @@ void MainScreen::State1B134(s32* arg) {
         SetInputHook(&MainScreen::Hook1E758);
         mDraw = &MainScreen::DrawGlobe;
         mUnk128 = &MainScreen::Globe1E2BC;
-        fn_80032A94(1);
+        Pins_SetStateAll(1);
         if (arg == NULL) {
-            fn_80030650();
+            Bgm_PlayArticle();
         }
         UpdateScrollBar();
         break;
     default:
-        fn_80032A94(1);
+        Pins_SetStateAll(1);
         for (s32 i = 0; i < 4; i++) {
             if (!IsPointerValid(i) && (gTrig[i] & 0x800)) {
                 mBackPressed = true;
@@ -2534,11 +2466,11 @@ void MainScreen::State1B134(s32* arg) {
             globe->mRotB = true;
         } else if (mResetPressed) {
             PlaySE(0x13);
-            fn_8004DA8C(globe, 5, 1);
+            globe->SetTilt(5, 1);
         }
         for (s32 i = 0; i < 4; i++) {
             f32 y = gCursorY[i][0];
-            if (fn_80032BE0(i)) {
+            if (Pins_IsHovered(i)) {
                 lbl_801EDFD0[i] = 1;
             } else if (globe->mGrab[i]) {
                 lbl_801EDFD0[i] = 2;
@@ -2593,8 +2525,8 @@ void MainScreen::State1B694(s32* arg) {
         SetSubState(NULL);
         SetInputHook(&MainScreen::Hook1ED20);
         mDraw = &MainScreen::DrawGlobe;
-        fn_80032A94(1);
-        mUnk250 = GetFontScale() * fn_80035188(lbl_80356970);
+        Pins_SetStateAll(1);
+        mUnk250 = GetFontScale() * GetTextScale(lbl_80356970);
         f32 split;
         f32 maxHeight = 290.0f;
         f32 width = GetContentRight() - GetSideMargin();
@@ -2611,7 +2543,7 @@ void MainScreen::State1B694(s32* arg) {
         mUnk260 = split = 0.3f * width;
         mUnk264 = width - split;
         mShowRelated = true;
-        f32 rowHeight = mUnk24C * GetFontScale() * fn_80035188(lbl_80356970);
+        f32 rowHeight = mUnk24C * GetFontScale() * GetTextScale(lbl_80356970);
         mUnk2FC = mUnk300;
         s32 max = mUnk2F8 - sVisibleRows[lbl_80356970];
         if (mUnk2FC >= max) {
@@ -2701,7 +2633,7 @@ void MainScreen::State1BD60(s32* arg) {
         SetInputHook(&MainScreen::Hook1ED20);
         mDraw = &MainScreen::DrawGlobe;
         mShowRelated = true;
-        fn_80032A94(1);
+        Pins_SetStateAll(1);
         LayoutRelated();
         SetFunc140(&MainScreen::Func1C7F4);
         UpdateScrollBar();
@@ -2713,7 +2645,7 @@ void MainScreen::State1BD60(s32* arg) {
         }
         mUnk248 = mUnk244;
         lbl_803575A8 = 1;
-        mUnk2C0 = fn_8003519C(mZoomInPressed, mZoomOutPressed);
+        mUnk2C0 = UpdateTextSize(mZoomInPressed, mZoomOutPressed);
         f32 fontScale = GetFontScale();
         mUnk250 = fontScale * gTextScale;
         f32 maxHeight = 290.0f;
@@ -2801,8 +2733,8 @@ void MainScreen::State1C600(s32* arg) {
         gHideClock = true;
         lbl_803575BD = true;
         lbl_803575A8 = 1;
-        fn_80032A94(1);
-        fn_80032B04(mUnk2C4, mSelected, 1);
+        Pins_SetStateAll(1);
+        Pins_Select(mUnk2C4, mSelected, 1);
         SetSubState(NULL);
         mUnk34C = 0;
         mStateStep = 1;
@@ -2843,7 +2775,7 @@ void MainScreen::Func1C7F4() {
     case -1:
         break;
     default: {
-        f32 rowHeight = mUnk24C * GetFontScale() * fn_80035188(lbl_80356970);
+        f32 rowHeight = mUnk24C * GetFontScale() * GetTextScale(lbl_80356970);
         s32 visible = sVisibleRows[lbl_80356970];
         if (mUnk2F8 <= visible) {
             mUnk2FC = 0;
@@ -3010,12 +2942,13 @@ BOOL MainScreen::OpenRelated(RelatedItem* item, s32* arg) {
             mUnk224 = 0.0f;
             mUnk228 = 0.0f;
             NewsTexture* texture = ticker->mArticle->GetTexture();
-            BOOL hasLocation = article->mLocationName != NULL;
-            fn_8003300C(article, list->mCategory->mName, texture, &origin, &thumbPos,
-                        ticker->GetThumbScale(), &size, 0, hasLocation, gTextScale);
-            fn_80033374(gTextScale);
-            fn_800333C4(gTextScale);
-            fn_80033538();
+            bool hasLocation = article->mLocationName != NULL;
+            f32 thumbScale = ticker->GetThumbScale();
+            Article_Set(article, list->mCategory->mName, (BOOL)texture, &origin, &thumbPos,
+                        &thumbScale, size, false, gTextScale, hasLocation);
+            Article_Update(gTextScale);
+            Article_Arrange(gTextScale);
+            Article_Reset();
             ScrollArticle();
             u8 flags = article->mFlags;
             if ((flags & 2) && !(flags & 1)) {
@@ -3038,7 +2971,7 @@ void MainScreen::Sub1D338() {
     case -1:
         break;
     default:
-        if (!fn_80034598()) {
+        if (!Article_IsShort()) {
             for (s32 i = 0; i < 4; i++) {
                 if (mHeld[i]) {
                     SetSubState(&MainScreen::Sub1D594);
@@ -3046,26 +2979,26 @@ void MainScreen::Sub1D338() {
                 }
             }
         }
-        if (fn_80034770()) {
+        if (Article_IsAtTop()) {
             DisableButton(mMainLayout->FindButton("up"));
         } else {
             EnableButton(mMainLayout->FindButton("up"));
         }
-        if (fn_80034780()) {
+        if (Article_IsAtBottom()) {
             DisableButton(mMainLayout->FindButton("down"));
         } else {
             EnableButton(mMainLayout->FindButton("down"));
         }
-        if (mDownPressed && !fn_80034780()) {
+        if (mDownPressed && !Article_IsAtBottom()) {
             PlaySE(0x25);
-            fn_80034690(lbl_80356970, &mUnk224);
+            Article_PageDown(lbl_80356970, mUnk224);
             mUnk2B8 = true;
-        } else if (mUpPressed && !fn_80034770()) {
+        } else if (mUpPressed && !Article_IsAtTop()) {
             PlaySE(0x25);
-            fn_800345E4(lbl_80356970, &mUnk224);
+            Article_PageUp(lbl_80356970, mUnk224);
             mUnk2B8 = true;
         }
-        mUnk228 = fn_80034164();
+        mUnk228 = Article_GetScrollOffset();
         if (IsNearlyZero(gTextScale - lbl_801922D0[lbl_80356970])) {
             Ease(&mUnk224, mUnk228, 0.2f, 20.0f, 1.0f);
         } else {
@@ -3085,7 +3018,7 @@ void MainScreen::Sub1D594() {
         lbl_801EDFD0[3] = 1;
         lbl_803575BA = false;
         lbl_803575BB = false;
-        mUnk228 = fn_80034D34(mUnk224, mUnk22C);
+        mUnk228 = Article_ScrollTo(mUnk224, mUnk22C);
         break;
     case 0:
         mUnk2D4++;
@@ -3095,7 +3028,7 @@ void MainScreen::Sub1D594() {
         PlaySE(0x16);
         break;
     default: {
-        if (fn_80034598()) {
+        if (Article_IsShort()) {
             SetSubState(&MainScreen::Sub1D338);
             return;
         }
@@ -3116,7 +3049,7 @@ void MainScreen::Sub1D594() {
         s32 count = 0;
         for (s32 i = 0; i < 4; i++) {
             lbl_801EDFD0[i] = 1;
-            if (lbl_801F0908[i] & 0x400) {
+            if (gHold[i] & 0x400) {
                 count++;
                 lbl_801EDFD0[i] = 5;
                 velocity += 0.1f * gPointerScroll[i];
@@ -3125,7 +3058,7 @@ void MainScreen::Sub1D594() {
         if (count != 0) {
             mUnk22C = velocity / count;
         }
-        f32 min = fn_80034844();
+        f32 min = Article_GetMaxScrollOffset();
         mUnk224 += mUnk22C;
         if (mUnk224 > 0.0f) {
             mUnk224 = 0.0f;
@@ -3156,12 +3089,12 @@ void MainScreen::Sub1D9DC() {
     switch (mUnk2D4) {
     case 0:
         mUnk2D4++;
-        if (fn_800324A0()) {
+        if (HeadlineList_IsAtBottom()) {
             DisableButton(mHeadDownButton);
         } else {
             EnableButton(mHeadDownButton);
         }
-        if (fn_80032478()) {
+        if (HeadlineList_IsAtTop()) {
             DisableButton(mHeadUpButton);
         } else {
             EnableButton(mHeadUpButton);
@@ -3190,19 +3123,19 @@ void MainScreen::Sub1D9DC() {
             SetSubState(&MainScreen::Sub1DC30);
             return;
         }
-        if (mDownPressed && !fn_800324A0()) {
+        if (mDownPressed && !HeadlineList_IsAtBottom()) {
             PlaySE(0x25);
-            fn_80032450();
-        } else if (mUpPressed && !fn_80032478()) {
+            HeadlineList_ScrollDown();
+        } else if (mUpPressed && !HeadlineList_IsAtTop()) {
             PlaySE(0x25);
-            fn_8003243C();
+            HeadlineList_ScrollUp();
         }
-        if (fn_800324A0()) {
+        if (HeadlineList_IsAtBottom()) {
             DisableButton(mHeadDownButton);
         } else {
             EnableButton(mHeadDownButton);
         }
-        if (fn_80032478()) {
+        if (HeadlineList_IsAtTop()) {
             DisableButton(mHeadUpButton);
         } else {
             EnableButton(mHeadUpButton);
@@ -3216,7 +3149,7 @@ void MainScreen::Sub1DC30() {
     bool held = false;
     switch (mUnk2D4) {
     case -1:
-        fn_80032508();
+        HeadlineList_Snap();
         lbl_801EDFD0[0] = 1;
         lbl_801EDFD0[1] = 1;
         lbl_801EDFD0[2] = 1;
@@ -3251,23 +3184,23 @@ void MainScreen::Sub1DC30() {
         s32 count = 0;
         for (s32 i = 0; i < 4; i++) {
             lbl_801EDFD0[i] = 1;
-            if (lbl_801F0908[i] & 0x400) {
+            if (gHold[i] & 0x400) {
                 count++;
                 lbl_801EDFD0[i] = 5;
                 velocity += 0.1f * gPointerScroll[i];
             }
         }
         if (count != 0) {
-            fn_800324F4(velocity / count);
+            HeadlineList_SetScrollVel(velocity / count);
         }
-        if (fn_800324A0()) {
+        if (HeadlineList_IsAtBottom()) {
             DisableButton(mHeadLayout->FindButton("down"));
             lbl_803575BB = false;
         } else {
             EnableButton(mHeadLayout->FindButton("down"));
             lbl_803575BB = true;
         }
-        if (fn_80032478()) {
+        if (HeadlineList_IsAtTop()) {
             DisableButton(mHeadLayout->FindButton("up"));
             lbl_803575BA = false;
         } else {
@@ -3285,12 +3218,12 @@ void MainScreen::Globe1DF3C() {
     case 0:
         mUnk2D8++;
     default:
-        fn_8004D1D4(globe, lbl_80192370);
-        fn_8004DB80(globe, 0, lbl_80192398);
-        fn_8004DD8C(globe, 0);
-        fn_8004CBE0(globe);
-        fn_8004CE00(globe);
-        fn_8004CC20(globe);
+        globe->UpdateZoom(lbl_80192370);
+        globe->UpdateTilt(0, lbl_80192398);
+        globe->UpdateSpin(0);
+        globe->Calc();
+        globe->CalcPoles();
+        globe->ApplyCamera();
         break;
     case -1:
         break;
@@ -3303,16 +3236,16 @@ void MainScreen::Globe1DFD0() {
     case 0:
         mUnk2D8++;
     default:
-        fn_8004D1D4(globe, lbl_80192370);
+        globe->UpdateZoom(lbl_80192370);
         UpdateGlobeInput();
-        fn_8004DB80(globe, 1, lbl_80192398);
-        fn_8004DD8C(globe, 0);
-        fn_8004CBE0(globe);
-        fn_8004CE00(globe);
+        globe->UpdateTilt(1, lbl_80192398);
+        globe->UpdateSpin(0);
+        globe->Calc();
+        globe->CalcPoles();
         GlobeCamera* camera = globe->mCamera;
         globe->mX = camera->mX;
         globe->mY = camera->mY;
-        fn_8004CC20(globe);
+        globe->ApplyCamera();
         break;
     case -1:
         break;
@@ -3329,16 +3262,16 @@ void MainScreen::UpdateGlobeInput() {
     f32 prevDistance = GetGlobeDistance(globe);
     bool moving = false;
     for (s32 i = 0; i < 4; i++) {
-        switch (fn_8004D628(globe, i)) {
+        switch (globe->UpdateGrab(i)) {
         case 0:
             if (IsState(&MainScreen::State1B134)) {
-                if (gCursorY[i][0] > 63.0f && gCursorY[i][0] < maxY && fn_8004D300(globe, i)) {
+                if (gCursorY[i][0] > 63.0f && gCursorY[i][0] < maxY && globe->StartGrab(i)) {
                     mSoundId = 0x15;
                 }
             }
             break;
         case 2:
-            fn_8004E0E8(globe, 20);
+            globe->PlaySpinSound(20);
         case 1:
             moving = true;
             break;
@@ -3351,7 +3284,7 @@ void MainScreen::UpdateGlobeInput() {
     if (!IsNearlyZero(delta) && IsNearlyZero(mUnk268)) {
         f32 s = delta > 2.0f ? 2.0f : delta;
         s *= 0.5f;
-        fn_8004F8E0(0x12, 0.5f + 0.5f * s, 1.0f + s, 0.0f);
+        PlaySE(0x12, 0.5f + 0.5f * s, 1.0f + s, 0.0f);
     }
     mUnk268 += delta;
     if (mUnk268 > 10.0f) {
@@ -3360,7 +3293,7 @@ void MainScreen::UpdateGlobeInput() {
 }
 
 void MainScreen::Globe1E2BC() {
-    mRelated = fn_80032B60(&mUnk2C4, &mSelected);
+    mRelated = (RelatedItem*)Pins_GetPointed(&mUnk2C4, &mSelected);
     RelatedItem* item = mRelated;
     if (item != NULL) {
         if (item->mNext != NULL) {
@@ -3425,12 +3358,13 @@ BOOL MainScreen::ExitGlobe(BOOL related) {
             mUnk224 = 0.0f;
             mUnk228 = 0.0f;
             NewsTexture* texture = ticker->mArticle->GetTexture();
-            BOOL hasLocation = article->mLocationName != NULL;
-            fn_8003300C(article, list->mCategory->mName, texture, &origin, &thumbPos,
-                        ticker->GetThumbScale(), &size, 0, hasLocation, gTextScale);
-            fn_80033374(gTextScale);
-            fn_800333C4(gTextScale);
-            fn_80033538();
+            bool hasLocation = article->mLocationName != NULL;
+            f32 thumbScale = ticker->GetThumbScale();
+            Article_Set(article, list->mCategory->mName, (BOOL)texture, &origin, &thumbPos,
+                        &thumbScale, size, false, gTextScale, hasLocation);
+            Article_Update(gTextScale);
+            Article_Arrange(gTextScale);
+            Article_Reset();
             ScrollArticle();
             if (related) {
                 ChangeState(&MainScreen::State17E6C, NULL);
@@ -3662,7 +3596,7 @@ BOOL MainScreen::StartDrag(s32 chan, const ut::Rect* rect) {
     f32 x = gCursorX[chan][0];
     f32 y = gCursorY[chan][0];
     if (x > rect->left && x < rect->right && y > rect->top && y < rect->bottom &&
-        !(lbl_801F0908[chan] & 0x400) && (gTrig[chan] & 0x200))
+        !(gHold[chan] & 0x400) && (gTrig[chan] & 0x200))
     {
         mDragging[chan] = true;
         for (s32 i = 0; i < 4; i++) {
@@ -3670,18 +3604,18 @@ BOOL MainScreen::StartDrag(s32 chan, const ut::Rect* rect) {
                 mDragging[i] = false;
             }
         }
-        mDragPos[chan].x = mDragStart[chan].x = lbl_801F0888[chan];
-        mDragPos[chan].y = mDragStart[chan].y = lbl_801F0898[chan];
+        mDragPos[chan].x = mDragStart[chan].x = gPointerX[chan];
+        mDragPos[chan].y = mDragStart[chan].y = gPointerY[chan];
         return TRUE;
     }
     return FALSE;
 }
 
 s32 MainScreen::UpdateDrag(s32 chan, const ut::Rect* rect) {
-    f32 x = lbl_801F0888[chan];
-    f32 y = lbl_801F0898[chan];
+    f32 x = gPointerX[chan];
+    f32 y = gPointerY[chan];
     if (mDragging[chan]) {
-        if (!(lbl_80357688 & 0xFDFF) && (lbl_801F0908[chan] & 0x200) && y > rect->top &&
+        if (!(gHoldAll & 0xFDFF) && (gHold[chan] & 0x200) && y > rect->top &&
             y < rect->bottom)
         {
             mDragPos[chan].x = x;
@@ -3705,7 +3639,7 @@ s32 MainScreen::UpdateDrag(s32 chan, const ut::Rect* rect) {
 }
 
 void MainScreen::SetLocation(NewsArticle* article) {
-    fn_8003256C(&mUnk194, article);
+    GetArticleLocation(&mUnk194, article);
     if (mUnk194.y > 180.0f) {
         mUnk194.y -= 360.0f;
     }

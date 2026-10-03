@@ -263,6 +263,37 @@ news/DrawUtil.cpp:
 	.sbss       start:0x80357638 end:0x80357640
 	.sdata2     start:0x80358DC8 end:0x80358DD8
 
+news/GlobeDots.cpp:
+	.text       start:0x8003CECC end:0x8003D634
+	.rodata     start:0x80192498 end:0x801A64A0
+	.sdata2     start:0x80358DD8 end:0x80358E18
+
+news/System.cpp:
+	.text       start:0x8003D634 end:0x80040A70
+	.data       start:0x801B26D8 end:0x801B2740
+	.bss        start:0x801EE3E8 end:0x801F0B40
+	.sdata      start:0x80356A20 end:0x80356A48
+	.sbss       start:0x80357640 end:0x803576E8
+	.sdata2     start:0x80358E18 end:0x80358E90
+
+news/WiiConnect24.cpp:
+	.text       start:0x80040A70 end:0x800442EC
+	.data       start:0x801B2A20 end:0x801B3020
+	.bss        start:0x801F0B40 end:0x8020DC78
+	.sdata      start:0x80356C48 end:0x80356C60
+	.sbss       start:0x803576E8 end:0x80357708
+
+news/PointerScroll.cpp:
+	.text       start:0x800442EC end:0x80044508
+	.sdata2     start:0x80358E90 end:0x80358EB0
+
+news/MathUtil.cpp:
+	.text       start:0x80044508 end:0x80045238
+	.ctors      start:0x80191F44 end:0x80191F48
+	.rodata     start:0x801A64A0 end:0x801A64B8
+	.bss        start:0x8020DC78 end:0x8020DCB8
+	.sdata2     start:0x80358EB0 end:0x80358ED8
+
 news/SmoothValue.cpp:
 	.text       start:0x80045238 end:0x80045298
 	.sdata2     start:0x80358ED8 end:0x80358EE0
@@ -306,6 +337,32 @@ news/d_scene.cpp:
 	.sdata      start:0x80356C98 end:0x80356CB8
 	.sbss       start:0x80357710 end:0x80357798
 	.sdata2     start:0x80358F58 end:0x80358F98
+
+news/Globe.cpp:
+	.text       start:0x8004C43C end:0x8004E748
+	.ctors      start:0x80191F54 end:0x80191F58
+	.rodata     start:0x801A6620 end:0x801A66A0
+	.data       start:0x801B3508 end:0x801B3518
+	.bss        start:0x8020E850 end:0x8020E880
+	.sdata      start:0x80356CB8 end:0x80356CC0
+	.sbss       start:0x80357798 end:0x803577A8
+	.sdata2     start:0x80358F98 end:0x80359030
+
+news/Resource.cpp:
+	.text       start:0x8004E748 end:0x8004EB24
+	.ctors      start:0x80191F58 end:0x80191F5C
+	.data       start:0x801B3518 end:0x801B35A8
+	.bss        start:0x8020E880 end:0x8021E8E0
+
+news/sound_manager.cpp:
+	.text       start:0x8004EB24 end:0x80051D4C
+	.ctors      start:0x80191F5C end:0x80191F60
+	.rodata     start:0x801A66A0 end:0x801A66B8
+	.data       start:0x801B35A8 end:0x801B3620
+	.bss        start:0x8021E8E0 end:0x8021E938
+	.sdata      start:0x80356CC0 end:0x80356CC8
+	.sbss       start:0x803577A8 end:0x803577F8
+	.sdata2     start:0x80359030 end:0x80359050
 
 revolution/RSO/RSOLink.c:
 	.text       start:0x80051D4C end:0x80052D5C

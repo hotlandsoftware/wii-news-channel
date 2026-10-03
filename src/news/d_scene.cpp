@@ -7,6 +7,7 @@
 #include <news/Draw2D.h>
 #include <news/Fader.h>
 #include <news/HomeMenu.h>
+#include <news/MathUtil.h>
 #include <news/Model.h>
 #include <news/PaneButton.h>
 #include <news/PaneLayout.h>
@@ -14,6 +15,7 @@
 #include <news/PointerScroll.h>
 #include <news/System.h>
 #include <news/Thread.h>
+#include <news/WiiConnect24.h>
 #include <nw4r/g3d/g3d_init.h>
 #include <nw4r/g3d/g3d_scnroot.h>
 #include <nw4r/lyt/lyt_layout.h>
@@ -47,30 +49,13 @@ struct NandFiles {
 };
 
 extern "C" {
-extern MEMHeapHandle lbl_80357640; // MEM1 heap
-extern s32 lbl_8035766C;           // fatal error code
-extern NandFiles lbl_801F09C8;
-extern MEMAllocator gLytAllocator;
-extern u32 lbl_801F0928[4];        // buttons released this frame
-extern u32 lbl_801F0958[4];        // buttons held
-
-void* fn_8003F7B4(u32 arc, const char* path, s32 align, u32* size, MEMHeapHandle heap);
-void fn_80040764(s32 chan, s32 dpd);
-void fn_80040778(s32 chan, s32 arg1, s32 arg2);
-void fn_80040824(s32 arg0, s32 arg1);
-void fn_80040960(void);
-void* fn_80040994(u32 size, s32 align);
-void fn_800409EC(void* block);
-void fn_800409F8(void* block);
-void fn_80040B7C(s32 arg);
-void fn_80044508(s32* hour);
-wchar_t* fn_80044C80(s32 value, wchar_t* buf, s32 width, BOOL zeroPad);
-Globe* fn_8004C43C(Globe* globe);
-void fn_8004C5F0(Globe* globe, s32 flags);
-void fn_8004D170(Globe* globe);
-void fn_8004EA2C(void* sound, s32 flags);
-void fn_8004EA9C(void);
-void fn_8004EAA0(void);
+extern NandFiles gContentHandles;
+Globe* __ct__5GlobeFv(Globe* globe);
+void __dt__5GlobeFv(Globe* globe, s32 flags);
+void CalcScene__5GlobeFv(Globe* globe);
+void __dt__13SoundResourceFv(void* sound, s32 flags);
+void Calc__13SoundResourceFv(void);
+void Update__13SoundResourceFv(void);
 }
 
 void* operator new(size_t size, s32 align);
@@ -182,7 +167,7 @@ static inline void InitCursorTex() {
 }
 
 static inline void* LoadFont(const char* name) {
-    return LoadArcFile(gArchive, name, 32, NULL, lbl_80357640);
+    return LoadArcFile(gArchive, name, 32, NULL, gMainHeap);
 }
 
 Scene::Scene(bool arg)
@@ -201,7 +186,7 @@ Scene::Scene(bool arg)
         return;
     }
 
-    sBrowserHeapBuf = fn_80040994(0x700000, 0);
+    sBrowserHeapBuf = MainHeapAlloc(0x700000, 0);
     sAppHeapBuf = SubHeapAlloc(0x1B00000, 0);
     sBrowserHeap = MEMCreateExpHeapEx(sBrowserHeapBuf, 0x700000, 0);
     sAppHeap = MEMCreateExpHeapEx(sAppHeapBuf, 0x1B00000, 0);
@@ -281,7 +266,7 @@ Scene::Scene(bool arg)
     }
     gCityFont->SetAlternateChar(0xE06B);
 
-    gCursorTpl = (TPLPalette*)LoadArcFile(gArchive, "TPLCommon.tpl.LZ", 32, NULL, lbl_80357640);
+    gCursorTpl = (TPLPalette*)LoadArcFile(gArchive, "TPLCommon.tpl.LZ", 32, NULL, gMainHeap);
     if (gCursorTpl == NULL) {
         SCENE_ERROR(462);
         goto end;
@@ -299,7 +284,7 @@ Scene::Scene(bool arg)
     {
         Globe* globe = (Globe*)operator new(0xD0);
         if (globe != NULL) {
-            globe = fn_8004C43C(globe);
+            globe = __ct__5GlobeFv(globe);
         }
         gGlobe = globe;
     }
@@ -380,11 +365,11 @@ Scene::~Scene() {
         sEarthThread = NULL;
     }
     if (gSoundPlayer != NULL) {
-        fn_8004EA2C(gSoundPlayer, 1);
+        __dt__13SoundResourceFv(gSoundPlayer, 1);
         gSoundPlayer = NULL;
     }
     if (gGlobe != NULL) {
-        fn_8004C5F0(gGlobe, 1);
+        __dt__5GlobeFv(gGlobe, 1);
         gGlobe = NULL;
     }
     if (gFader2 != NULL) {
@@ -396,7 +381,7 @@ Scene::~Scene() {
         gFader = NULL;
     }
     if (gCursorTpl != NULL) {
-        fn_800409EC(gCursorTpl);
+        MainHeapFree(gCursorTpl);
         gCursorTpl = NULL;
     }
     if (gCityFont != NULL) {
@@ -404,7 +389,7 @@ Scene::~Scene() {
         gCityFont = NULL;
     }
     if (sCityFontData != NULL) {
-        fn_800409F8(sCityFontData);
+        SubHeapFree(sCityFontData);
         sCityFontData = NULL;
     }
     if (sTimeFont != NULL) {
@@ -412,7 +397,7 @@ Scene::~Scene() {
         sTimeFont = NULL;
     }
     if (sTimeFontData != NULL) {
-        fn_800409EC(sTimeFontData);
+        MainHeapFree(sTimeFontData);
         sTimeFontData = NULL;
     }
     FreeFonts();
@@ -425,22 +410,22 @@ Scene::~Scene() {
     }
     MEMDestroyExpHeap(sAppHeap);
     MEMDestroyExpHeap(sBrowserHeap);
-    fn_800409F8(sAppHeapBuf);
-    fn_800409EC(sBrowserHeapBuf);
+    SubHeapFree(sAppHeapBuf);
+    MainHeapFree(sBrowserHeapBuf);
 }
 
 void Scene::Exit(BOOL toMenu, s32 arg) {
     VISetBlack(TRUE);
     VIFlush();
     VIWaitForRetrace();
-    fn_80040824(-1, 0);
+    StopRumble(-1, 0);
     if (toMenu) {
-        fn_80040B7C(arg);
+        WC24Shutdown(arg);
     }
 }
 
 BOOL LoadFonts() {
-    void* brfna = fn_8003F7B4(5, "wbf1.brfna", -32, NULL, sBrowserHeap);
+    void* brfna = LoadContentFile(5, "wbf1.brfna", -32, NULL, sBrowserHeap);
     if (brfna == NULL) {
         return TRUE;
     }
@@ -448,7 +433,7 @@ BOOL LoadFonts() {
     u32 size = ut::ArchiveFont::GetRequireBufferSize(brfna, ut::ArchiveFont::LOAD_GLYPH_ALL);
     sSysFontBuf = MEMAllocFromAllocator(&sAppAllocator, size);
     if (sSysFontBuf == NULL) {
-        fn_800409EC(brfna);
+        MainHeapFree(brfna);
         OSPanic(__FILE__, 725, "m_pSysFontBuf\n");
     }
     gSysFont = new ut::ArchiveFont();
@@ -456,13 +441,13 @@ BOOL LoadFonts() {
         OSPanic(__FILE__, 732, "m_pSysFont\n");
     }
     if (!gSysFont->Construct(sSysFontBuf, size, brfna, ut::ArchiveFont::LOAD_GLYPH_ALL)) {
-        fn_800409EC(brfna);
+        MainHeapFree(brfna);
         OSPanic(__FILE__, 737, "nw4r::ut::ArchiveFont::Construct() failed.\n");
     }
     gSysFont->SetAlternateChar(0xE06B);
     MEMFreeToExpHeap(sBrowserHeap, brfna);
 
-    brfna = fn_8003F7B4(5, "wbf2.brfna", -32, NULL, sBrowserHeap);
+    brfna = LoadContentFile(5, "wbf2.brfna", -32, NULL, sBrowserHeap);
     if (brfna == NULL) {
         return TRUE;
     }
@@ -470,16 +455,16 @@ BOOL LoadFonts() {
     size = ut::ArchiveFont::GetRequireBufferSize(brfna, ut::ArchiveFont::LOAD_GLYPH_ALL);
     sArticleFontBuf = MEMAllocFromAllocator(&sAppAllocator, size);
     if (sArticleFontBuf == NULL) {
-        fn_800409EC(brfna);
+        MainHeapFree(brfna);
         OSPanic(__FILE__, 756, "m_pFontBuffer\n");
     }
     gArticleFont = new ut::ArchiveFont();
     if (gArticleFont == NULL) {
-        fn_800409EC(brfna);
+        MainHeapFree(brfna);
         OSPanic(__FILE__, 764, "m_pFont\n");
     }
     if (!gArticleFont->Construct(sArticleFontBuf, size, brfna, ut::ArchiveFont::LOAD_GLYPH_ALL)) {
-        fn_800409EC(brfna);
+        MainHeapFree(brfna);
         OSPanic(__FILE__, 771, "m_pFont->Construct() failed.\n");
     }
     gArticleFont->SetAlternateChar(0xE06B);
@@ -533,7 +518,7 @@ void Scene::Execute() {
             HBMStartBlackOut();
         } else {
             Exit(TRUE, 4);
-            fn_80040960();
+            Restart();
         }
     }
 
@@ -581,14 +566,14 @@ void Scene::Execute() {
         }
         vf2C();
         if (gSoundPlayer != NULL) {
-            fn_8004EAA0();
+            Update__13SoundResourceFv();
         }
     }
 }
 
 void Scene::UpdateSound() {
     if (gSoundPlayer != NULL) {
-        fn_8004EA9C();
+        Calc__13SoundResourceFv();
     }
 }
 
@@ -628,7 +613,7 @@ void Scene::vf34() {
 void Scene::DrawOverlay() {}
 
 void Scene::UpdatePointers() {
-    fn_80040764(-1, 1);
+    SetPointerState(-1, 1);
 }
 
 static inline void DrawClockText(Scene* scene, ut::TextWriterBase<wchar_t>& writer) {
@@ -646,9 +631,9 @@ static inline void DrawClockText(Scene* scene, ut::TextWriterBase<wchar_t>& writ
 
 void Scene::DrawClockJapanese() {
     if (mClockAlpha != 0) {
-        wchar_t* p = fn_80044C80(gClockTime.hour % 12, gTextBuf, 2, FALSE);
+        wchar_t* p = FormatNumber(gClockTime.hour % 12, gTextBuf, 2, FALSE);
         *p = L':';
-        fn_80044C80(gClockTime.min, p + 1, 2, TRUE);
+        FormatNumber(gClockTime.min, p + 1, 2, TRUE);
 
         ut::TextWriterBase<wchar_t> writer;
         DrawClockText(this, writer);
@@ -661,9 +646,9 @@ void Scene::DrawClock12h() {
         if (hour == 0) {
             hour = 12;
         }
-        wchar_t* p = fn_80044C80(hour, gTextBuf, 2, FALSE);
+        wchar_t* p = FormatNumber(hour, gTextBuf, 2, FALSE);
         *p = L':';
-        fn_80044C80(gClockTime.min, p + 1, 2, TRUE);
+        FormatNumber(gClockTime.min, p + 1, 2, TRUE);
 
         ut::TextWriterBase<wchar_t> writer;
         DrawClockText(this, writer);
@@ -682,10 +667,10 @@ void Scene::DrawClock12h() {
     void Scene::name() {                                                                           \
         if (mClockAlpha != 0) {                                                                    \
             s32 hour = gClockTime.hour;                                                          \
-            fn_80044508(&hour);                                                                    \
-            wchar_t* p = fn_80044C80(hour, gTextBuf, 2, TRUE);                                 \
+            WrapHour(&hour);                                                                    \
+            wchar_t* p = FormatNumber(hour, gTextBuf, 2, TRUE);                                 \
             *p = L':';                                                                             \
-            fn_80044C80(gClockTime.min, p + 1, 2, TRUE);                                         \
+            FormatNumber(gClockTime.min, p + 1, 2, TRUE);                                         \
                                                                                                    \
             ut::TextWriterBase<wchar_t> writer;                                                    \
             DrawClockText(this, writer);                                                           \
@@ -774,7 +759,7 @@ BOOL Scene::StateReset() {
     switch (mStep) {
     case 0:
         Exit(TRUE, 4);
-        fn_80040960();
+        Restart();
         break;
     case 1:
         if (Shutdown()) {
@@ -793,7 +778,7 @@ BOOL Scene::StateReset() {
         break;
     case 3:
         Exit(TRUE, 4);
-        fn_80040960();
+        Restart();
         break;
     case -1:
         break;
@@ -854,7 +839,7 @@ BOOL Scene::StateFatal() {
     case -1:
         break;
     default:
-        lbl_8035766C = 'FATL';
+        gSceneRequest = 'FATL';
         break;
     }
     return TRUE;
@@ -867,7 +852,7 @@ BOOL LoadEarth() {
     u8 header[32] ATTRIBUTE_ALIGN(32);
 
     sEarthLoading = true;
-    s32 result = contentOpenNAND(&lbl_801F09C8.mHandle, sEarthPath, &info);
+    s32 result = contentOpenNAND(&gContentHandles.mHandle, sEarthPath, &info);
     switch (result) {
     case 0:
         sEarthFileSize = OSRoundUp32B(contentGetLengthNAND(&info));
@@ -907,7 +892,7 @@ static void* EarthLoadThread(void* arg) {
     CNTFileInfo info;
     CXUncompContextLZ ctx;
 
-    s32 result = contentOpenNAND(&lbl_801F09C8.mHandle, sEarthPath, &info);
+    s32 result = contentOpenNAND(&gContentHandles.mHandle, sEarthPath, &info);
     switch (result) {
     case 0:
         CXInitUncompContextLZ(&ctx, sEarthBuf);
@@ -952,7 +937,7 @@ BOOL UnloadEarth() {
                     if (root != NULL) {
                         root->Clear();
                     }
-                    fn_8004D170(gGlobe);
+                    CalcScene__5GlobeFv(gGlobe);
                 }
                 delete gEarthModel;
                 gEarthModel = NULL;
@@ -1013,11 +998,11 @@ void UpdateLayoutButtons(Layout* layout, u32 se) {
             gHoverButtons[i] = button;
             if (button != NULL && !IsButtonInactive(button)) {
                 PlaySE(se);
-                fn_80040778(i, 3, 20);
+                StartRumble(i, 3, 20);
             }
         }
         if (gHoverButtons[i] != NULL) {
-            if (lbl_801F0928[i] & 0x800) {
+            if (gRelease[i] & 0x800) {
                 gHoverButtons[i]->Press();
                 gHoverButtons[i]->mUnk91 = false;
             }
@@ -1044,7 +1029,7 @@ s32 CheckButtonHold(const char* name, u32 button) {
             if (b != NULL && !b->mDisabled && IsButtonNamed(b, name)) {
                 u32 pressed;
                 if (b->mUnk91) {
-                    pressed = (u16)button & lbl_801F0958[i];
+                    pressed = (u16)button & gRepeatSlow[i];
                 } else {
                     pressed = (u16)button & gTrig[i];
                 }

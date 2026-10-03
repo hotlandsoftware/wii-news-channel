@@ -34,6 +34,7 @@ public:
     virtual ~GlobePin();
 
     void Draw(u8 alpha);
+    nw4r::math::VEC2 GetPos();
     BOOL DrawCards(u8 alpha);
     void DrawLabel();
     void DrawName();

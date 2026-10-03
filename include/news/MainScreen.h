@@ -6,6 +6,7 @@
 #include <nw4r/ut/ut_Rect.h>
 #include <nw4r/ut/ut_TextWriterBase.h>
 #include <news/HeadlineList.h>
+#include <news/d_s_news.h>
 #include <news/TextButton.h>
 #include <news/Scroller.h>
 
@@ -41,8 +42,23 @@ struct GlobeCamera {
     f32 mDistance;  // at 0xA4
 };
 
-// Globe view (not yet decompiled).
+// Globe view (Globe.cpp, include/news/Globe.h; fields as used here).
 struct Globe {
+    void Calc();
+    void ApplyCamera();
+    void CalcPoles();
+    void UpdateLights();
+    void CalcScene();
+    void UpdateZoom(const s32* se);
+    void ReleaseGrab();
+    BOOL StartGrab(s32 chan);
+    s32 UpdateGrab(s32 chan);
+    void SetTilt(s32 level, bool level0);
+    BOOL IsRotating();
+    void UpdateTilt(s32 unused, const s32* se);
+    void UpdateSpin(u32 stop);
+    void PlaySpinSound(u32 id);
+
     u32 unk0;
     GlobeCamera* mCamera;   // at 0x04
     f32 mX;                 // at 0x08
@@ -67,7 +83,6 @@ extern HeadlineList* lbl_8035755C; // headline list being shown
 extern u32 lbl_803575E0;           // number of news sections
 extern Globe* gGlobe;
 
-extern "C" void fn_800323F8(nw4r::math::VEC2* pos, f32 scale, f32 alpha);
 
 // Base of MainScreen (not yet decompiled, 0x800493A8): the text writer and the
 // screen area.
@@ -188,7 +203,7 @@ public:
     void SetLocation(NewsArticle* article);
 
     void DrawButtonsInline() {
-        fn_800323F8(&mUnk164, mUnk23C, mUnk240);
+        HeadlineList_Draw(mUnk164.x, mUnk23C, mUnk240);
         if (lbl_8035755C != NULL && lbl_8035755C->mMode != 2) {
             s32 i;
             s32 count = lbl_803575E0 - 1;

@@ -550,7 +550,7 @@ config.libs = [
         "cflags": cflags_game,
         "progress_category": "game",
         "objects": [
-            Object(NonMatching, "news/Mascot.cpp"),
+            Object(Matching, "news/Mascot.cpp"),
             Object(NonMatching, "news/NewsArticle.cpp"),
             Object(Matching, "news/LanguageSelect.cpp"),
             Object(Matching, "news/TextButton.cpp"),
@@ -563,13 +563,26 @@ config.libs = [
             Object(Matching, "news/LayoutScreen.cpp", extra_cflags=["-inline auto", "-ipa file"]),
             Object(Matching, "news/Camera.cpp"),
             Object(Matching, "news/Locale.cpp"),
-            Object(NonMatching, "news/PointerEffect.cpp"),
+            Object(Matching, "news/PointerEffect.cpp"),
             Object(Matching, "news/ErrorScreen.cpp"),
             Object(NonMatching, "news/Model.cpp"),
             Object(Matching, "news/main.cpp"),
             Object(Matching, "news/DrawUtil.cpp"),
             Object(Matching, "news/SmoothValue.cpp"),
             Object(Matching, "news/PaneButton.cpp", extra_cflags=["-inline auto", "-ipa file"]),
+        ],
+    },
+    {
+        "lib": "news_8003CECC",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_game,
+        "progress_category": "game",
+        "objects": [
+            Object(NonMatching, "news/GlobeDots.cpp"),
+            Object(NonMatching, "news/System.cpp"),
+            Object(NonMatching, "news/WiiConnect24.cpp"),
+            Object(NonMatching, "news/PointerScroll.cpp"),
+            Object(NonMatching, "news/MathUtil.cpp"),
         ],
     },
     {
@@ -1493,6 +1506,17 @@ config.libs = [
         "progress_category": "game",
         "objects": [
             Object(NonMatching, "news/MainScreen.cpp", extra_cflags=["-inline auto", "-ipa file"]),
+        ],
+    },
+    {
+        "lib": "news_8004C398",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_game,
+        "progress_category": "game",
+        "objects": [
+            Object(NonMatching, "news/Globe.cpp"),
+            Object(NonMatching, "news/Resource.cpp"),
+            Object(NonMatching, "news/sound_manager.cpp"),
         ],
     },
 ]
