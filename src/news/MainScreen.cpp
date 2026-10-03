@@ -1350,16 +1350,18 @@ s32 MainScreen::OpenArticle(s32* arg) {
             mUnk164.x = mUnk234 = 0.0f;
             mUnk238 = GetScreenWidth();
             mUnk16C.x = mUnk164.x + GetSideMargin();
-            size.y = 330.0f;
+            f32 h = 330.0f;
             size.x = GetContentRight() - GetSideMargin();
+            size.y = h;
         } else {
             result = 2;
             noLocation = 0;
             mUnk234 = 0.0f;
             mUnk238 = (f32)GetCursorAreaRight();
             mUnk16C.x = mUnk164.x + GetSideMargin();
-            size.y = 330.0f;
+            f32 h = 330.0f;
             size.x = mUnk238 - GetSideMargin() - 5.0f;
+            size.y = h;
             PlaySE(sRegionSE[((u8*)article->mLocation)[0xC]]);
             if (arg != NULL && *arg == 1) {
                 fn_80032658(((u8*)article->mLocation)[0xC]);
