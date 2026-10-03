@@ -170,7 +170,7 @@ void fn_8004FB44(snd::SoundHandle* handle, f32 volume);
 // Faders, HOME Menu, sound system and globe (other files)
 struct Fader {
     u8 unk0[0x10];
-    GXColor mColor;  // at 0x10
+    ut::Color mColor;  // at 0x10
     u8 unk14[0x50 - 0x14];
     BOOL mBusy;      // at 0x50
     u8 unk54[0x5C - 0x54];
@@ -1478,8 +1478,8 @@ BOOL NewsScene::StateMain() {
         if (mFadeBgm) {
             Bgm_PlayMain(TRUE);
         }
-        lbl_80357598 = 0;
         lbl_803575B9 = true;
+        lbl_80357598 = 0;
         mDraw = &NewsScene::DrawMain;
         fn_800138F0(mMainView);
         fn_80048C80(lbl_8035772C, 25);
@@ -1517,15 +1517,14 @@ BOOL NewsScene::StateMain() {
         case 2:
             fn_80015054(mMainView);
             switch (lbl_80357598) {
+            case 0:
+                break;
             case 1:
                 mStep++;
                 Bgm_PlaySlideshow();
                 mTimer = 40;
                 mLogoTargetAlpha = 255;
-                lbl_80357730->mColor.r = 0;
-                lbl_80357730->mColor.g = 0;
-                lbl_80357730->mColor.b = 0;
-                lbl_80357730->mColor.a = 255;
+                lbl_80357730->mColor.Set(0, 0, 0, 255);
                 fn_80049168(lbl_80357730, sFadeParam, 255);
                 fn_80048D20(lbl_80357730, 20);
                 fn_8000C89C(sPointerEffect, 0.6f * GetScreenWidth(), 228.0f);
@@ -1548,6 +1547,7 @@ BOOL NewsScene::StateMain() {
                 }
             }
             break;
+        case 4:
         default:
             if (!lbl_8035772C->mBusy) {
                 mLanguageSelect->SetBackEnabled(TRUE);
