@@ -46,8 +46,8 @@ Anything matched there can be reused directly.
 | `0x8007FE28–0x8008A0A4` | 0xA27C | TMCC JPEG decoder (`TMCCJPEGDecInit`, `TMCCJPEGDecodeRGB565`, `TMCCJPEGDecSetResolution`; Task 5) | — | none (no public source) | see "TMCC JPEG decoder" below |
 | `0x8008A0A4–0x8008AA44` | 0x9A0 | ARC (`arc.c`, **done**) | — | **smg** | 100% |
 | `0x8008AA44–0x80096D2C` | 0xC2E8 | HBM core (`homebutton::*`, task 6 **done**: 6/6 Matching) | HBM May 16 2007 (0x4199_60726) | **ogws `homebuttonMiniLib`** (May 7 2007, same revision); tp `homebuttonLib` for the sound API | ogws: 70–100% per file before porting; tp: Base 22% |
-| `0x80096D2C–0x8009C720` | 0x59F4 | HBM sound (HBMAxSound / `mix`/`syn*`/`seq`; contains `vcmv_main.cpp`) | (HBM) | none (ss has the file list only) | — |
-| `0x8009C720–0x800BA03C` | 0x1D91C | nw4r::ef | — | ogws | ~50% |
+| `0x80096D2C–0x8009D694` | 0x6968 | VC manual viewer `vcmv` (Opera WWW front end; Task 7), **not** an HBM sound engine | — | none | see "VC manual viewer" below |
+| `0x8009D694–0x800BA03C` | 0x1C9A8 | nw4r::ef | — | ogws | ~50% |
 | `0x800BA03C–0x800CE740` | 0x14704 | nw4r::g3d | — | **ogws** | **done** (36/36 Matching) |
 | `0x800CE740–0x800E84D8` | 0x19D98 | nw4r::snd (old, `Channel`-based) | — | ogws | ~40–60% per file |
 | `0x800E84D8–0x800F02A8` | 0x7DD0 | nw4r::ut | — | **tp `nw4hbm/ut`** + ogws | **done** (17/18 Matching; ArchiveFontBase 99.87%) |
@@ -204,7 +204,7 @@ Exact ends from `.ctors`/`__sinit` are marked †.
 - **Status.** 41,596 bytes of code; 4/9 files Matching (7,436 bytes linked from `Matching` units, 14,616 bytes in 100% functions), 92.1% fuzzy overall.
 - **Remaining work.** The 8×8 IDCTs (96%, register allocation and scheduling in the column pass), the YUV 4:1:1/4:2:2/4:2:0 writers (74–79%: register pressure; the original spills `h` and keeps the overflow-guard constant `0x80000000` in `r31`, ours rematerializes it), the RGBA8/RGB565 4:1:1/4:2:2/4:2:0 writers (register allocation), the three `jpgdSetupOutput*` functions (94%: the original keeps `&ctx->pix` in a register instead of folding it into the offsets; no source form tried reproduces this), and `jpgdResync` (the loop exit is `ble; b` instead of `bgt`, plus two register swaps). `tools/decomp/srcsearch.py` was used for most of the register-order fixes and is the first thing to try on the remaining functions.
 
-### HBM (`0x8008AA44–0x8009C720`)
+### HBM (`0x8008AA44–0x80096D2C`)
 
 The HBM here is the May 2007 `homebuttonLib`. It is linked against the regular `nw4r::lyt`/`ut`/`snd` (no `nw4hbm` copy in this DOL).
 
@@ -216,8 +216,8 @@ The HBM here is the May 2007 `homebuttonLib`. It is linked against the regular `
 | `HBMGUIManager.cpp` | `0x800945B8` | tp 91% |
 | `HBMController.cpp` | `0x800959F0` | tp 51% |
 | `HBMRemoteSpk.cpp` | `0x80096538` | tp 82% |
-| `HBMAxSound.cpp` / `HBMCommon.cpp` | ≈`0x80096D2C`, a C++ file ends at `0x8009A3D0`† | none |
-| `mix`, `syn`, `synctrl`, `synenv`, `synmix`, `synpitch`, `synsample`, `synvoice`, `seq` | ≈`0x8009A3D0–0x8009C720` | none (ss has names and order only) |
+
+There is no HBM sound engine (`HBMAxSound`, `mix`, `syn*`, `seq`) in this DOL: the HOME Menu plays its sounds through `nw4r::snd` (`HBMCreateSound`). The code after `HBMRemoteSpk` (`0x80096D2C–0x8009D694`) is the VC manual viewer, see "VC manual viewer" below.
 
 #### HBM core (Task 6, **done**): `0x8008AA44–0x80096D2C`, 6/6 Matching
 
@@ -242,12 +242,13 @@ Findings:
 - `HBMStartBlackOut`, `HBMPlaySound` … `HBMStopSound`, `HBMSetBlackOutColor`, `HBMIsReassignedControllers` were added to `<revolution/hbm.h>` (C linkage). `HBMAllocMem`/`HBMFreeMem` are C++ (`HBMAllocMem__FUl`).
 - Header additions outside HBM: `ut::List_GetNthConst`/`GetNextConst`/`GetPrevConst` (`ut_list.h`), `lyt::ArcResourceAccessor::RES_TYPE_*` constants, `lyt::Pane::SetTranslate(const math::VEC2&)`.
 - `createSound` needed `void* pStrmBuffer;` declared before the size locals for its register allocation.
-- **Clients of the HBM API in the sound range** (Task 7): `fn_80096D2C` (`0x80096D2C`, right after `HBMRemoteSpk`) is a switch over an event number that tail-calls `HBMPlaySound(0x16…0x1B)`, so the HBM sound engine's first file starts there (or this is its sound-effect front end). `HBMUpdateSoundArchivePlayer`, `HBMSetSoundVolume` and `HBMStopSound` are called from `0x8009C1E4`–`0x8009C2C4`.
-- **HBM sound sources exist in tp**: `libs/revolution/src/homebuttonLib/sound/` has `mix.cpp`, `seq.cpp`, `syn.cpp`, `synctrl.cpp`, `synenv.cpp`, `synmix.cpp`, `synpitch.cpp`, `synsample.cpp`, `synvoice.cpp` (Sep 2006). Task 7 should start from them.
-- **`0x8009C720–0x8009D694`** (Task 7, not split): `fn_8009C720`/`fn_8009C724` are one-instruction tail calls into the HBM sound code (`fn_80098598`, `fn_8009C2FC`), `fn_8009C728` is a setter for `.sbss 0x80357908`, followed by the NAND/CNT loading helpers with C++ exception tables already described in the ef section.
+- `0x80096D2C–0x8009D694` was planned as "HBM sound" (Task 7). It is the VC manual viewer, a client of the HBM C API (`HBMPlaySound`, `HBMUpdateSoundArchivePlayer`, `HBMSetSoundVolume`, `HBMStopSound`); see the next section.
 
+### VC manual viewer `vcmv` (`0x80096D2C–0x8009D694`) — Task 7
 
-### nw4r::ef (`0x8009C720–0x800BA03C`, ogws)
+VCMV_SECTION_PLACEHOLDER
+
+### nw4r::ef (`0x8009D694–0x800BA03C`, ogws)
 
 `ef_draworder` ≈`0x8009C720`, `ef_effect` ends `0x8009E0D8`†, `ef_effectsystem` `0x8009E0D8–0x8009E6B8`†, `ef_emitter` `0x8009E6B8`, `ef_animcurve` `0x800A6FD0` (100%), `ef_particle` `0x800A8498`, `ef_particlemanager` `–0x800AB0F8`†, `ef_resource` `0x800AB0F8–0x800ABAE0`†, `ef_util` `0x800ABAE0` (97%), `ef_emitterform`/`emform` (90%) to `0x800ADD94`†, then `ef_creationqueue`/`ef_handle`/`emform/*`, `ef_drawstrategybuilder` `0x800B2D10`, `ef_drawstrategyimpl` `0x800B2E90` (86%), another file ends `0x800B4A78`† (billboard/directional/free strategies), `ef_drawlinestrategy` `0x800B776C` (85%), `ef_drawpointstrategy` `0x800B7C48` (83%), `ef_drawstripestrategy` `0x800B7F3C`.
 
@@ -268,7 +269,7 @@ Lib `nw4r_ef`, GC/3.0a5.2, `cflags_nw4r_ef` (= `cflags_nw4r` + the same five def
 
 Findings:
 
-- **ef does not start at `0x8009C720`.** `0x8009C720–0x8009D694` (`fn_8009C720` … `fn_8009D5F8`, 0xF74 bytes) is not ef: tail-call thunks into the HBM sound code, a NAND directory helper (`NANDPrivateCreateDir`), CNT/NAND file loading with `OSReport`s, compiled with C++ exceptions (they have extab entries). It belongs to the HBM sound task (Task 7) and is left unsplit. `ef_draworder` starts at `0x8009D694`.
+- **ef does not start at `0x8009C720`.** `0x8009C720–0x8009D694` is the end of the VC manual viewer (`VCMVSetArchive`/`VCMVRun`/`VCMVSetStartUrl`/`VCMVQuit`/`VCMVLoadCursor`, then `vcmv_wwwlib.cpp` and `vcmv_rsostatic.cpp`; Task 7). `ef_draworder` starts at `0x8009D694`.
 - **Older revision (pre-Wii Sports):** only `SendClosing`/`DestroyFunc` are virtual in `Effect`, `Emitter`, `Particle` and `ParticleManager` (vtables of 0x10); `Initialize`, `CreateEmitter`, `Calc*`, `Draw` are plain members. No callbacks, flags or velocity in `Effect` (size 0x88: `mGroupID 0x40`, `mFlags 0x44`, `mRootMtx 0x48`, PM list 0x78, `mDrawOrderFunc 0x84`). `EffectSystem` (0x505C) has no draw-order/builder pointers and no version registration; the draw order is a static `DrawOrder` object in `ef_effect.cpp` (`gBasicDrawOrder`, constructed by `__sinit_ef_effect_cpp`); `DrawStrategyBuilder::Create(u32)` and `EmitFormBuilder::Create(EmitFormType)` are static functions (part 2's range). `EffectSystem::Initialize` returns `void`; `CreateEffect` leaves the effect in the WAIT state without `ToWait`. `EmitterParameter` has no `mEmitIntervalRandom` (0x90 bytes; `Emitter` is 0x134, `mTranslate` at 0x8C). `ParticleParameter` has no rotate offsets/collision status (velocity 0x7C, position 0x88, momentum 0xA0; `Particle` 0xE0) and `ParticleParameterDesc` has a `sizeRandom` byte at 0x79 (`mSize += mSize * rnd * sizeRandom / 3276800`), texture names at 0x7A. `EmitterDesc` has the particle type fields before the draw setting (`ptcltype` 0x8C, draw setting 0xA0); `XY_SAME_SIZE`/`XY_SAME_SCALE` are common flags (bits 3/4). `Emitter::SetMtxDirty` marks `this` dirty (not the child) when a grandchild's parent is `this` (bug in this revision). `Emitter::UpdateDatas` must stay as a dead-stripped dummy for the `.sdata2` order.
 - **`ParticleManager::Calc`** (0x1680) dispatches on the full curve flag word (`0x001` alpha, `0x007` colour, `0x303` size/scale/texture SRT, `0x301` texture rotate/fields, `0x30F` spin/magnet, `0x31F` newton, `0x33F` vortex, `0x607` rotate, `0x401` texture, `0x501` child) and implements the field kinds 32–39 (gravity, speed, magnet, newton, vortex, spin, random) inline; the field parameters follow the curve's name table. Matching needed: the vector adds through one inline level (`AddVec`, like ogws's `VEC3::operator+=`), the subtracts/scales as direct `VEC3Sub`/`VEC3Scale` calls (the nesting depth changes the paired-single register allocation), three function-scope float temporaries shared by the field cases (MWCC assigns one register per variable), `2.0f * (PI * x)` (not folded), and the LCG steps written exactly as in the DOL.
 - **ef_animcurve** has no reference source anywhere (ogws lists it as NonMatching without a file). The DOL has ten functions: `AnimCurveExecuteColor` (u8 RGB), `…Alpha` (u8), `…F32x2`, `…F32x3`, `…F32` (component count from the curve flags), `…Rotate`, `…F32x1`, `…Texture`, `createChild`, `…Child` (the per-component names are guesses). The WIP source has `…Alpha` (94%) and `…Texture` (99.2%); the remaining differences are register allocation. Notes for whoever continues: per-variable register allocation follows the declaration order (e.g. `nextLoop` must be declared with `loop`, `pKeys` before the search index), the key-count reload needs a second `*(u16*)pKey` read, the turn/odd test in the fitting branch still compiles to `beq` instead of the original `bne; b`.
@@ -876,7 +877,7 @@ MetroTRK is handled by another agent.
   TP's `nw4hbm` fork is the closest public source for `lyt`/`ut`/`math`.
 - **HBM.** The May 2007 HBM is between TP's (Sep 2006) and later versions.
   Small classes match TP; `HomeButton::calc`/`update`/`startPointEvent`/`startTrigEvent` grew.
-  The HBM sound engine (`0x80096D2C–0x8009C720`) has no public source.
+  There is no HBM sound engine here; `0x80096D2C–0x8009D694` is the VC manual viewer (no public source).
 - **SDK.** Core libraries are May–June 2007, between ogws (≤ Apr 2007) and Petari (Aug 2007–Feb 2008).
   For each file, try both with `refcmp.py` and take the better one.
 - **SC.** SC matches the Forecast Channel's `May 8 2007` build exactly.
@@ -988,7 +989,7 @@ Difficulty: E = mostly drop-in, M = drop-in plus version fixes, H = little or no
 | 4 | NWC24 | `0x800767C8–0x8007FE28` | 38 KB | smg + ogws | M |
 | 5 | TMCC JPEG decoder (identified; in progress: 4/9 files Matching, 92% fuzzy, see "TMCC JPEG decoder") | `0x8007FE28–0x8008A0A4` | 41 KB | none (from disassembly) | H |
 | 6 | HBM core (**done**, 6/6 Matching; ogws `homebuttonMiniLib` is the reference) | `0x8008AA44–0x80096D2C` | 49 KB | ogws `homebuttonMiniLib`, tp `homebuttonLib` | M–H |
-| 7 | HBM sound | `0x80096D2C–0x8009C720` | 23 KB | none | H |
+| 7 | VC manual viewer `vcmv` (was "HBM sound"; see "VC manual viewer") VCMV_TASK_STATUS | `0x80096D2C–0x8009D694` | 27 KB | none (from disassembly) | H |
 | 8 | ef part 1: draworder … resource (**done**, 7/8 Matching; ef starts `0x8009D694`, animcurve WIP) | `0x8009C720–0x800ABAE0` | 62 KB | ogws | M |
 | 9 | ef part 2: util, emform, drawstrategy (**done**, 14/20 Matching + the 3 g3d res files at `0x800B9690`) | `0x800ABAE0–0x800BA03C` | 58 KB | ogws | M |
 | 10 | g3d (**done**, 36/36 Matching; g3d starts at ≈`0x800B9690`) | `0x800BA03C–0x800CE740` | 84 KB | ogws | E–M |

@@ -509,8 +509,8 @@ static void vcmvProcessInput(void) {
     }
 
     c = vcmvCursors;
-    for (i = 0; i < 4; i++, c++) {
-        if (vcmvCurChan == i) {
+    for (s32 j = 0; j < 4; j++, c++) {
+        if (vcmvCurChan == j) {
             if (c->trig & 0x40) {
                 vcmvPlaySound(3);
                 vcmvFading = TRUE;
@@ -526,7 +526,7 @@ static void vcmvProcessInput(void) {
             if ((c->trig & 1) || (c->trig & 2)) {
                 WPADControlMotor(vcmvCurChan, WPAD_MOTOR_STOP);
                 vcmvCursorSwitchTimer = 20;
-                vcmvCurChan = i;
+                vcmvCurChan = j;
                 if (c->pointing) {
                     vcmvRumbleRequest = TRUE;
                 }
