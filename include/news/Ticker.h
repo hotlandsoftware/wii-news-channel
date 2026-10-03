@@ -40,6 +40,7 @@ public:
     void Dummy();
     void GetOrigin(nw4r::math::VEC2& out);
     f32 GetThumbScale() const { return mThumbScale; }
+    NewsArticle* GetArticle() const { return mArticle; }
     nw4r::math::VEC2 GetThumbPos() const {
         return *reinterpret_cast<const nw4r::math::VEC2*>(&mThumbPosX);
     }

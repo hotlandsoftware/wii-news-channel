@@ -16,23 +16,7 @@ class HeadlineList;
 class FrameTextButton;
 class NewsArticle;
 
-// Item of the list at MainScreen::mRelated (not yet decompiled).
-struct RelatedItem {
-    u8 unk0[0x28];
-    RelatedItem* mNext;       // at 0x28
-    RelatedItem* mPrev;       // at 0x2C
-    NewsArticle* mArticle;    // at 0x30
-    u8 unk34[0x58 - 0x34];
-    Scroller mText;           // at 0x58
-    Scroller mNumber;         // at 0x88
-    f32 mThumbX;              // at 0xB8
-    f32 mThumbY;              // at 0xBC
-    u8 unkC0[0xC4 - 0xC0];
-    f32 mThumbScale;          // at 0xC4
-    u8 unkC8[0xDC - 0xC8];
-    s32 mSection;             // at 0xDC
-    s32 mIndex;               // at 0xE0
-};
+class GlobePin;
 
 struct GlobeCamera {
     u8 unk0[0x90];
@@ -83,6 +67,10 @@ extern HeadlineList* lbl_8035755C; // headline list being shown
 extern u32 lbl_803575E0;           // number of news sections
 extern Globe* gGlobe;
 
+inline Globe* GetGlobe() {
+    return gGlobe;
+}
+
 
 // Base of MainScreen (not yet decompiled, 0x800493A8): the text writer and the
 // screen area.
@@ -111,8 +99,8 @@ public:
     typedef void (MainScreen::*StateFunc)(s32* arg);
     typedef void (MainScreen::*Func)();
 
-    MainScreen(u32 arc, nw4r::ut::TextWriterBase<wchar_t>* writer, nw4r::math::VEC2& pos,
-               nw4r::math::VEC2& size);
+    MainScreen(u32 arc, nw4r::ut::TextWriterBase<wchar_t>* writer, const nw4r::math::VEC2& pos,
+               const nw4r::math::VEC2& size);
     ~MainScreen();
 
     void Start();
@@ -148,6 +136,7 @@ public:
     void Hook1ED20();
 
     BOOL IsState(StateFunc state) { return mState == state; }
+    bool IsStateB(StateFunc state) { return mState == state; }
     bool IsListState() {
         return IsState(&MainScreen::State16960) || IsState(&MainScreen::StateList);
     }
@@ -176,12 +165,13 @@ public:
     void SetButtonsEnabled(bool enabled);
     void OpenGlobe();
     void OpenSelected();
+    void SwitchArticle(s32* arg);
     void SetListHook();
     void EaseZoom();
     void ReturnToTop();
     BOOL StartDrag(s32 chan, const nw4r::ut::Rect* rect);
     s32 UpdateDrag(s32 chan, const nw4r::ut::Rect* rect);
-    BOOL OpenRelated(RelatedItem* item, s32* dir);
+    BOOL OpenRelated(GlobePin* item, s32* dir);
     void Sub1D338();
     void ResetGlobe(Globe* globe);
     BOOL ExitGlobe(BOOL related);
@@ -192,7 +182,7 @@ public:
     void Globe1E2BC();
     void LayoutRelated();
     void SetFunc140(Func func);
-    RelatedItem* GetRelated(s32 index);
+    GlobePin* GetRelated(s32 index);
     void UpdateRelatedScroll();
     void UpdateRelatedButtons();
     void Func1C7F4();
@@ -239,8 +229,8 @@ public:
     PaneButton* mResetButton;       // at 0x060
     PaneButton* mEarthBackButton;   // at 0x064
     HeadlineList* mLists[MAX_CATEGORIES];       // at 0x068
-    RelatedItem* mRelated;                      // at 0x0A0
-    RelatedItem* mCurRelated;                   // at 0x0A4
+    GlobePin* mRelated;                      // at 0x0A0
+    GlobePin* mCurRelated;                   // at 0x0A4
     FrameTextButton* mButtons[MAX_CATEGORIES];  // at 0x0A8
     ModeFunc mMode;                 // at 0x0E0
     StateFunc mState;               // at 0x0EC
