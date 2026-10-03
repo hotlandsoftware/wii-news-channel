@@ -1114,11 +1114,10 @@ void SetRenderMode(GXRenderModeObj* rm) {
 }
 
 void Draw2D_SetScissor(u32 x, u32 y, u32 width, u32 height) {
-    bool wide = gWidescreen;
     u16 fb = gRenderMode.fbWidth;
-    f32 scale = (f32)(wide ? 832 : 608) / (s32)fb;
+    f32 scale = (f32)GetScreenWidth() / (s32)fb;
     u32 sx = x / scale;
-    f32 scale2 = (f32)(wide ? 832 : 608) / (s32)fb;
+    f32 scale2 = (f32)GetScreenWidth() / (s32)fb;
     u32 sw = width / scale2;
     GXSetScissor(sx, y, sw, height);
 }
