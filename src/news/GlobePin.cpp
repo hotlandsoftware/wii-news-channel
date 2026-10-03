@@ -606,15 +606,16 @@ void GlobePin::StateRipple() {
     case -1:
         break;
     default: {
+        s32 i;
         Ripple* ripple = mRipples;
         switch (mPhase) {
         case 1:
-            for (s32 i = 0; i < 2; i++, ripple++) {
+            for (i = 0; i < 2; i++, ripple++) {
                 ripple->mAngle += 0x100;
                 if (ripple->mAngle >= 0x4000) {
                     ripple->mAngle = 0;
                 }
-                u16 angle = ripple->mAngle < 0 ? 0 : ripple->mAngle;
+                u16 angle = ripple->mAngle < 0 ? (u16)0 : (u16)ripple->mAngle;
                 ripple->mScale = SinIdx(angle);
                 ripple->mAlpha = 255.0f * CosIdx(angle);
             }
@@ -624,10 +625,10 @@ void GlobePin::StateRipple() {
             break;
         case 2:
         default: {
+            u16 angle;
             BOOL done = TRUE;
-            for (s32 i = 0; i < 2; i++, ripple++) {
+            for (i = 0; i < 2; i++, ripple++) {
                 ripple->mAngle += 0x100;
-                u16 angle;
                 if (ripple->mAngle < 0 || ripple->mAngle >= 0x4000) {
                     angle = 0;
                 } else {
