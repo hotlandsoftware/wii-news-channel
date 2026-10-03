@@ -3023,8 +3023,8 @@ BOOL MainScreen::OpenRelated(RelatedItem* item, s32* arg) {
         mSelected = item->mIndex;
         mCurRelated = item;
     }
-    HeadlineList* list = mLists[mUnk2C4];
-    lbl_8035755C = list;
+    lbl_8035755C = mLists[mUnk2C4];
+    HeadlineList* list = lbl_8035755C;
     if (list != NULL) {
         Globe* globe = lbl_8035775C;
         Ticker* ticker = GetListItem(list, mSelected);
@@ -3037,10 +3037,11 @@ BOOL MainScreen::OpenRelated(RelatedItem* item, s32* arg) {
             mUnk234 = 0.0f;
             mUnk238 = (f32)GetCursorAreaRight();
             mUnk16C.x = mUnk164.x + GetSideMargin();
-            math::VEC2 size;
-            size.y = 330.0f;
-            size.x = mUnk238 - GetSideMargin() - 5.0f;
             math::VEC2 origin;
+            math::VEC2 size;
+            f32 h = 330.0f;
+            size.x = mUnk238 - GetSideMargin() - 5.0f;
+            size.y = h;
             ticker->GetOrigin(origin);
             mUnk224 = 0.0f;
             mUnk228 = 0.0f;
@@ -3449,10 +3450,11 @@ BOOL MainScreen::ExitGlobe(BOOL related) {
             mUnk234 = 0.0f;
             mUnk238 = (f32)GetCursorAreaRight();
             mUnk16C.x = mUnk164.x + GetSideMargin();
-            math::VEC2 size;
-            size.y = 330.0f;
-            size.x = mUnk238 - GetSideMargin() - 5.0f;
             math::VEC2 origin;
+            math::VEC2 size;
+            f32 h = 330.0f;
+            size.x = mUnk238 - GetSideMargin() - 5.0f;
+            size.y = h;
             ticker->GetOrigin(origin);
             mUnk224 = 0.0f;
             mUnk228 = 0.0f;
