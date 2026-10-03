@@ -579,6 +579,20 @@ config.libs = [
         ],
     },
     {
+        "lib": "news_80047B50",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_game,
+        "progress_category": "game",
+        "objects": [
+            Object(NonMatching, "news/PaneLayout.cpp"),
+            Object(NonMatching, "news/PointerHistory.cpp"),
+            Object(NonMatching, "news/Fader.cpp"),
+            Object(NonMatching, "news/Thread.cpp"),
+            Object(NonMatching, "news/ScreenBase.cpp"),
+            Object(NonMatching, "news/d_scene.cpp"),
+        ],
+    },
+    {
         "lib": "nw4r_ut",
         "mw_version": "GC/3.0a5.2",
         "cflags": cflags_nw4r_ut,
