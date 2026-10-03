@@ -1866,12 +1866,9 @@ void MainScreen::State17E6C(s32* arg) {
             mUnk284 = mUnk238;
             mUnk288 = 0.0f;
             mUnk28C = 456.0f;
-            math::VEC2 a = fn_8000D6A0(item);
-            math::VEC2 c = fn_8000D6A0(item);
-            math::VEC2 b = fn_8000D6A0(item);
-            mUnk280 = mUnk284 = mFadeRect.left = mFadeRect.right = c.x;
-            math::VEC2 d = fn_8000D6A0(item);
-            mUnk288 = mUnk28C = mFadeRect.top = mFadeRect.bottom = d.y;
+            math::VEC2 ofs(fn_8000D6A0(item).x - mUnk16C.x, fn_8000D6A0(item).y - (123.0f + mUnk224));
+            mUnk280 = mUnk284 = mFadeRect.left = mFadeRect.right = fn_8000D6A0(item).x;
+            mUnk288 = mUnk28C = mFadeRect.top = mFadeRect.bottom = fn_8000D6A0(item).y;
             mUnk2BF = true;
             mUnk328 = 255;
             mUnk290 = mUnk234 - mUnk280;
