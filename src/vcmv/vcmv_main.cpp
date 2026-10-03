@@ -63,6 +63,16 @@ volatile u8 vcmvFading = TRUE;
 static u8 sSettingsKeyReleased = TRUE;
 static u8 sFirstFrame = TRUE;
 
+static inline f32 vcmvEase(s32 t, f32 from, f32 to, s32 dummy) {
+    if (t >= 7) {
+        return to;
+    }
+    {
+        f32 k = (3.0f * (to - from)) / 343.0f;
+        f32 a = (f32)t * (k * (f32)t); return a * (7.0f - (2.0f / 3.0f) * (f32)t) + from;
+    }
+}
+
 static void vcmvUpdateCursorAnim(volatile vcmvCursor* c) {
     s32 t0 = vcmvFrame - c->downFrame;
     s32 t1 = vcmvFrame - c->upFrame;
@@ -83,22 +93,9 @@ static void vcmvUpdateCursorAnim(volatile vcmvCursor* c) {
 
     c->drawY = c->fy;
     if (c->hold & 2) {
-        f32 to = vcmvCursorPressX;
-        f32 from = c->fx;
-        (void)(vcmvFrame - c->downFrame);
-        if (t0 < 7) {
-            f32 k = (3.0f * (to - from)) / 343.0f;
-            to = (f32)t0 * (k * (f32)t0) * (7.0f - (2.0f / 3.0f) * (f32)t0) + from;
-        }
-        c->drawX = to;
+        c->drawX = vcmvEase(t0, c->fx, vcmvCursorPressX, vcmvFrame - c->downFrame);
     } else {
-        f32 to = c->fx;
-        f32 from = vcmvCursorPressX;
-        if (t1 < 7) {
-            f32 k = (3.0f * (to - from)) / 343.0f;
-            to = (f32)t1 * (k * (f32)t1) * (7.0f - (2.0f / 3.0f) * (f32)t1) + from;
-        }
-        c->drawX = to;
+        c->drawX = vcmvEase(t1, vcmvCursorPressX, c->fx, 0);
     }
 }
 
@@ -139,9 +136,15 @@ static void vcmvReadClassic(volatile vcmvCursor* c, KPADStatus* k) {
     }
     c->vx = k->ex_status.cl.lstick.x * scale;
     c->vy = -k->ex_status.cl.lstick.y * scale;
-    c->fx = c->drawX = c->fx + 4.0f * c->vx;
-    c->drawY = c->fy = c->fy + 4.0f * c->vy;
-    c->x = c->fx + vcmvHalfWidth;
+    {
+        f32 fx = c->fx + 4.0f * c->vx;
+        f32 fy = c->fy + 4.0f * c->vy;
+        c->drawX = fx;
+        c->fx = fx;
+        c->fy = fy;
+        c->drawY = fy;
+        c->x = fx + vcmvHalfWidth;
+    }
     c->y = c->fy + vcmvHalfHeight;
     c->hold = 0;
     c->horizonY = -0.2f;
@@ -315,10 +318,11 @@ static void vcmvUpdateController(s32 chan) {
 }
 
 void vcmvUpdateControllers(void) {
+    u32 max;
     s32 i;
 
     if (vcmvCursors[vcmvCurChan].active == 0) {
-        u32 max = 0;
+        max = 0;
         for (i = 0; i < 4; i++) {
             if (max < vcmvCursors[i].active) {
                 max = vcmvCursors[i].active;
@@ -599,7 +603,10 @@ static void vcmvInitWWW(void) {
     fonts[3] = "Wii NTLG PGothic";
     fonts[2] = "Wii NTLG PGothic";
     fonts[5] = "Wii NTLG PGothic";
-    result = WWWCreateBrowser(&vcmvBrowser, vcmvBrowserCallback, fonts, "/flash/tmp/opera.arc/opera");
+    {
+        const char* path = "/flash/tmp/opera.arc/opera";
+        result = WWWCreateBrowser(&vcmvBrowser, vcmvBrowserCallback, fonts, path);
+    }
     if (result != 0) {
         OSReport("Failed to init Opera: %d, %s\n", result, result == -1 ? "OOM" : "Failure");
         WWWSurfaceShutdown();

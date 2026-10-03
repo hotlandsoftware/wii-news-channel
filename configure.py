@@ -369,6 +369,9 @@ cflags_vcmv = [
     *cflags_hbm,
     "-Cpp_exceptions on",
     "-str reuse,pool,readonly",
+    "-fp_contract on",
+    "-gen-fsel",
+    "-use_lmw_stmw on",
 ]
 
 config.linker_version = "GC/3.0a5.2"
