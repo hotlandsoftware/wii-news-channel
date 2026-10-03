@@ -648,6 +648,322 @@ found:
     }
 }
 
+struct AnimCurveKeyF32 {
+    u16 frame;  // at 0x0
+    u16 interp; // at 0x2
+    u8 PADDING_0x4[2];
+    u8 random; // at 0x6
+    u8 PADDING_0x7;
+    union {
+        f32 value;     // at 0x8
+        u16 randomIdx; // at 0x8
+    };
+};
+
+struct AnimCurveRandomF32 {
+    f32 base;  // at 0x0
+    f32 range; // at 0x4
+};
+
+// Optional output of AnimCurveExecuteF32x1 (every caller passes NULL)
+struct AnimCurveCacheF32 {
+    f32 value; // at 0x0
+    u8 PADDING_0x4[0x11 - 0x4];
+    bool dirty; // at 0x11
+};
+
+template <typename TEntry, typename TKey>
+inline const TEntry* GetRandomEntry(const TKey* pKey, u8* pRandom,
+                                    u8* pRandomTable, u32 base, u32 loop,
+                                    u32& rRandom) {
+    bool useTable = pKey->random & AC_KEY_RANDOM_TABLE;
+
+    AnimCurveRandomSeed rnd;
+    rnd.value = base + loop * 0x7B929 + pKey->randomIdx * 0x371097E7 + 0x4BF53;
+    rnd.bytes[2] ^= rnd.bytes[3];
+    rnd.bytes[1] ^= rnd.bytes[2];
+    rnd.bytes[0] ^= rnd.bytes[1];
+
+    rRandom = rnd.value;
+
+    if (!useTable) {
+        return reinterpret_cast<TEntry*>(pRandom + 4) + pKey->randomIdx;
+    }
+
+    u16 num = *reinterpret_cast<u16*>(pRandomTable);
+    const TEntry* pEntry =
+        reinterpret_cast<TEntry*>(pRandomTable + 4) + (rRandom >> 16) % num;
+    rRandom = rRandom * 0x343FD + 0x269EC3;
+    return pEntry;
+}
+
+inline f32 CalcRandomF32(const AnimCurveRandomF32* pEntry, u32 random) {
+    return pEntry->base + pEntry->range * static_cast<u16>(random >> 16);
+}
+
+inline f32 InterpolateF32(f32 v0, f32 v1, f32 t, u16 interp) {
+    switch (interp & 3) {
+    case AC_INTERP_LINEAR: {
+        return v0 + t * (v1 - v0);
+    }
+    case AC_INTERP_SMOOTH: {
+        return v0 + t * (t * ((3.0f - 2.0f * t) * (v1 - v0)));
+    }
+    case AC_INTERP_STEP: {
+        return v0;
+    }
+    default: {
+        return 0.0f;
+    }
+    }
+}
+
+void AnimCurveExecuteF32x1(u8* pCmdList, Particle* pParticle, f32* pTarget,
+                           u32 tick, u16 seed, u32 life) {
+    AnimCurveCacheF32* pCache = reinterpret_cast<AnimCurveCacheF32*>(pParticle);
+
+    AnimCurveHeader* pHeader = reinterpret_cast<AnimCurveHeader*>(pCmdList);
+
+    u8* pKey = pCmdList + sizeof(AnimCurveHeader);
+    u8* pRandom = pKey + pHeader->keyTable;
+    u8* pRandomTable = pRandom + pHeader->rangeTable;
+
+    u32 loop = 0;
+    u32 nextLoop;
+    u16 len = pHeader->frameLength;
+    u16 frame;
+    f32 time;
+
+    if (len <= 1) {
+        time = 0.0f;
+        loop = tick;
+        frame = 0;
+    } else {
+        u8 flag = pHeader->processFlag;
+
+        if (!(flag & AnimCurveHeader::PROC_FLAG_INFLOOP) &&
+            pHeader->loopCount <= 1) {
+
+            if (!(flag & AnimCurveHeader::PROC_FLAG_FITTING)) {
+                frame = tick;
+                if (tick >= len - 1) {
+                    frame = len - 1;
+                }
+
+                time = frame;
+            } else {
+                time = tick * (static_cast<f32>(len - 1) / (life - 1));
+
+                if (time > len - 1) {
+                    time = len - 1;
+                }
+
+                frame = time;
+            }
+        } else if (!(flag & AnimCurveHeader::PROC_FLAG_FITTING)) {
+            u32 turnLen = len - 1;
+            loop = tick / turnLen;
+
+            if (!(flag & AnimCurveHeader::PROC_FLAG_TURN)) {
+                if (!(flag & AnimCurveHeader::PROC_FLAG_INFLOOP) &&
+                    loop >= pHeader->loopCount) {
+                    frame = turnLen;
+                    loop = static_cast<u8>(pHeader->loopCount - 1);
+                } else {
+                    frame = tick - loop * turnLen;
+                }
+            } else if (!(flag & AnimCurveHeader::PROC_FLAG_INFLOOP) &&
+                       loop >= pHeader->loopCount) {
+                frame = pHeader->loopCount % 2 == 0 ? static_cast<u16>(0) : static_cast<u16>(turnLen);
+                loop = static_cast<u8>(pHeader->loopCount - 1);
+            } else if (loop % 2 == 0) {
+                frame = tick - loop * turnLen;
+            } else {
+                frame = turnLen * (loop + 1) - tick;
+            }
+
+            time = frame;
+        } else if (tick >= life - 1) {
+            if (!(flag & AnimCurveHeader::PROC_FLAG_TURN) ||
+                pHeader->loopCount % 2 != 0) {
+                frame = static_cast<u8>(len - 1);
+            } else {
+                frame = 0;
+            }
+
+            time = frame;
+            loop = static_cast<u8>(pHeader->loopCount - 1);
+        } else {
+            int turnLen = len - 1;
+            f32 ratio = pHeader->loopCount * (static_cast<f32>(turnLen) / (life - 1));
+            loop = tick * ratio / turnLen;
+            time = tick * ratio - loop * turnLen;
+
+            if ((flag & AnimCurveHeader::PROC_FLAG_TURN) && (loop & 1)) {
+                time = turnLen - time;
+            }
+
+            frame = time;
+        }
+    }
+
+    int f = frame;
+    AnimCurveKey* pKeyTable = reinterpret_cast<AnimCurveKey*>(pKey);
+    AnimCurveKeyF32* pKeys;
+
+    if (pKeyTable->count == 0) {
+        return;
+    }
+
+    int idx = pKeyTable->count - 1;
+    int mid = idx / 2;
+    pKeys = reinterpret_cast<AnimCurveKeyF32*>(pKeyTable->datas);
+    int lo = 0;
+    bool exact = static_cast<f32>(__fabs(f - time)) < NW4R_MATH_FLT_EPSILON;
+
+    int frame0 = pKeys[0].frame;
+    int frame1;
+
+    if (f < frame0) {
+        idx = 0;
+        exact = true;
+    } else if (f == frame0) {
+        if (idx == 0) {
+            exact = true;
+        } else if (!exact) {
+            frame1 = pKeys[1].frame;
+        }
+
+        idx = 0;
+    } else {
+        frame1 = pKeys[idx].frame;
+
+        if (frame1 <= f) {
+            exact = true;
+        } else {
+            int val = pKeys[mid].frame;
+
+            while (lo < mid) {
+                if (f == val) {
+                    idx = mid;
+
+                    if (!exact) {
+                        frame0 = val;
+                        frame1 = pKeys[mid + 1].frame;
+                    }
+                    goto found;
+                }
+
+                if (val < f) {
+                    lo = mid;
+                    frame0 = val;
+                } else {
+                    idx = mid;
+                    frame1 = val;
+                }
+
+                mid = (lo + idx) / 2;
+                val = pKeys[mid].frame;
+            }
+
+            idx = lo;
+            exact = false;
+        }
+    }
+found:
+    AnimCurveKeyF32* pTheKey;
+
+    if (exact) {
+        pTheKey = &pKeys[idx];
+    } else {
+    nextLoop = loop;
+    u8 flag = pHeader->processFlag;
+
+    if ((flag & AnimCurveHeader::PROC_FLAG_TURN) &&
+        ((flag & AnimCurveHeader::PROC_FLAG_INFLOOP) ||
+         pHeader->loopCount > 1)) {
+
+        if (!(loop & 1) && idx + 1 >= *reinterpret_cast<u16*>(pKey) - 1 &&
+            ((flag & AnimCurveHeader::PROC_FLAG_INFLOOP) ||
+             loop < pHeader->loopCount - 1)) {
+            nextLoop = loop + 1;
+        }
+
+        if ((loop & 1) && idx == 0 && loop != 0) {
+            loop++;
+        }
+    }
+
+    f32 t = (time - static_cast<u16>(frame0)) /
+            (static_cast<u16>(frame1) - static_cast<u16>(frame0));
+
+    AnimCurveKeyF32* pKey0 = &pKeys[idx];
+    AnimCurveKeyF32* pKey1 = &pKeys[idx + 1];
+    u16 interp = pKey0->interp;
+    bool isRandom0 = pKey0->random != 0;
+    bool isRandom1 = pKey1->random != 0;
+
+    if (!isRandom0 && !isRandom1) {
+        if (pCache != NULL) {
+            pCache->dirty = false;
+        }
+
+        f32 v0 = pKey0->value;
+        f32 v1 = pKey1->value;
+        f32 value;
+
+        if (v0 == v1) {
+            value = v0;
+        } else {
+            value = InterpolateF32(v0, v1, t, interp);
+        }
+
+        *pTarget = value;
+
+        if (pCache != NULL) {
+            pCache->value = value;
+        }
+    } else if (isRandom0 && !isRandom1) {
+        u32 r0;
+        const AnimCurveRandomF32* pEntry0 = GetRandomEntry<AnimCurveRandomF32>(
+            pKey0, pRandom, pRandomTable,
+            CalcRandomBase(seed, pHeader->randomSeed), loop, r0);
+        f32 v0 = CalcRandomF32(pEntry0, r0);
+        *pTarget = InterpolateF32(v0, pKey1->value, t, interp);
+    } else if (!isRandom0 && isRandom1) {
+        u32 r1;
+        const AnimCurveRandomF32* pEntry1 = GetRandomEntry<AnimCurveRandomF32>(
+            pKey1, pRandom, pRandomTable,
+            CalcRandomBase(seed, pHeader->randomSeed), nextLoop, r1);
+        f32 v1 = CalcRandomF32(pEntry1, r1);
+        *pTarget = InterpolateF32(pKey0->value, v1, t, interp);
+    } else {
+        u32 r0;
+        const AnimCurveRandomF32* pEntry0 = GetRandomEntry<AnimCurveRandomF32>(
+            pKey0, pRandom, pRandomTable,
+            CalcRandomBase(seed, pHeader->randomSeed), loop, r0);
+        u32 r1;
+        const AnimCurveRandomF32* pEntry1 = GetRandomEntry<AnimCurveRandomF32>(
+            pKey1, pRandom, pRandomTable,
+            CalcRandomBase(seed, pHeader->randomSeed), nextLoop, r1);
+        f32 v0 = CalcRandomF32(pEntry0, r0);
+        f32 v1 = CalcRandomF32(pEntry1, r1);
+        *pTarget = InterpolateF32(v0, v1, t, interp);
+    }
+        return;
+    }
+
+    if (pTheKey->random == 0) {
+        *pTarget = pTheKey->value;
+    } else {
+        u32 r;
+        const AnimCurveRandomF32* pEntry = GetRandomEntry<AnimCurveRandomF32>(
+            pTheKey, pRandom, pRandomTable,
+            CalcRandomBase(seed, pHeader->randomSeed), loop, r);
+        *pTarget = CalcRandomF32(pEntry, r);
+    }
+}
+
 struct AnimCurveTextureKey {
     u16 frame;    // at 0x0
     u8 PADDING_0x2[4];
