@@ -24,6 +24,57 @@ block_relocations:
   - source: 0x800FC6F8
   - source: 0x800FC770
 
+# SystemCalc (System.cpp) spills lis/addi address pairs to the stack, so dtk misses them.
+add_relocations:
+  - source: 0x8003DD38
+    type: ha
+    target: gCursorX
+  - source: 0x8003DD64
+    type: l
+    target: gCursorX
+  - source: 0x8003DD48
+    type: ha
+    target: gCursorY
+  - source: 0x8003DD84
+    type: l
+    target: gCursorY
+  - source: 0x8003DD60
+    type: ha
+    target: gCursorDist
+  - source: 0x8003DDA4
+    type: l
+    target: gCursorDist
+  - source: 0x8003DD80
+    type: ha
+    target: gPointerX
+  - source: 0x8003DDC4
+    type: l
+    target: gPointerX
+  - source: 0x8003DDA0
+    type: ha
+    target: gPointerY
+  - source: 0x8003DDE0
+    type: l
+    target: gPointerY
+  - source: 0x8003DDC0
+    type: ha
+    target: gPointerDistBase
+  - source: 0x8003DE00
+    type: l
+    target: gPointerDistBase
+  - source: 0x8003DDDC
+    type: ha
+    target: gPointerZoom
+  - source: 0x8003DE20
+    type: l
+    target: gPointerZoom
+  - source: 0x8003DDFC
+    type: ha
+    target: gRepeatSlow
+  - source: 0x8003DE40
+    type: l
+    target: gRepeatSlow
+
 # Large data tables are extracted from the DOL at build time
 # (build/HAGE/include/...), so that they never live in the repository.
 extract:
