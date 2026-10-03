@@ -809,7 +809,7 @@ s32 CWiiConnect24::setupDlTasks(BOOL first, BOOL second, u8 force, u16 interval,
         return ConvertError(err);
                     }
                 }
-                err = NWC24InitDlTask(&dl[i], NWC24_DLTYPE_MULTIPART_V1);
+                err = NWC24InitDlTask(&dl[i], NWC24_DLTYPE_OCTETSTREAM_V1);
                 if (err != NWC24_OK) {
                     SetError(this, "NWC24InitDlTask() failed.", NWC24GetErrorCode(), err);
         return ConvertError(err);
