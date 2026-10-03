@@ -616,8 +616,7 @@ void SystemDraw() {
         switch (gFadeType) {
         case 1: {
             GXSetTevColor(GX_TEVREG0, (GXColor)ut::Color(0));
-            GXColor c = {0, 0, 0, alpha};
-            GXSetTevColor(GX_TEVREG1, c);
+            GXSetTevColor(GX_TEVREG1, (GXColor){0, 0, 0, alpha});
             GXBegin(GX_QUADS, GX_VTXFMT0, 4);
             GXPosition3f32(0.0f, 0.0f, 0.0f);
             GXTexCoord2f32(0.0f, 0.0f);
@@ -632,8 +631,7 @@ void SystemDraw() {
         }
         case 2: {
             GXLoadTexObj(&tex, GX_TEXMAP0);
-            GXColor c = {alpha, alpha, alpha, 255};
-            GXSetTevColor(GX_TEVREG0, c);
+            GXSetTevColor(GX_TEVREG0, (GXColor){alpha, alpha, alpha, 255});
             GXBegin(GX_QUADS, GX_VTXFMT0, 4);
             GXPosition3f32(0.0f, 0.0f, 0.0f);
             GXTexCoord2f32(0.0f, 0.0f);
@@ -656,8 +654,7 @@ void SystemDraw() {
             }
             s *= 0.1f;
             GXLoadTexObj(&tex, GX_TEXMAP0);
-            GXColor c = {alpha, alpha, alpha, 255};
-            GXSetTevColor(GX_TEVREG0, c);
+            GXSetTevColor(GX_TEVREG0, (GXColor){alpha, alpha, alpha, 255});
             GXBegin(GX_QUADS, GX_VTXFMT0, 4);
             GXPosition3f32(0.0f, 0.0f, 0.0f);
             GXTexCoord2f32(s, s);
