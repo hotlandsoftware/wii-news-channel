@@ -229,8 +229,8 @@ static inline s32 GetDaysInYear(s32 year) {
 }
 
 void MinutesToCalendarTime(u32 minutes, OSCalendarTime* time) {
-    u32 hours = minutes / 60;
-    s32 days = (s32)hours / 24;
+    s32 hours = minutes / 60;
+    s32 days = hours / 24;
     s32 totalDays = days;
     s32 year = 0;
     s32 month = 1;
@@ -259,7 +259,7 @@ void MinutesToCalendarTime(u32 minutes, OSCalendarTime* time) {
     time->year = year + 2000;
     time->usec = 0;
     time->min = minutes % 60;
-    time->hour = (s32)hours % 24;
+    time->hour = hours % 24;
     time->wday = (totalDays + 6) % 7;
 }
 
