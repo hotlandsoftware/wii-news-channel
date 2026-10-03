@@ -537,7 +537,7 @@ config.libs = [
         "cflags": cflags_game,
         "progress_category": "game",
         "objects": [
-            Object(NonMatching, "news/Mascot.cpp"),
+            Object(Matching, "news/Mascot.cpp"),
             Object(NonMatching, "news/NewsArticle.cpp"),
             Object(Matching, "news/LanguageSelect.cpp"),
             Object(Matching, "news/TextButton.cpp"),
