@@ -270,14 +270,14 @@ void jpgdOutRGB565_422(JPEGDecContext* ctx, u32 x, u32 y) {
 
 void jpgdOutRGB565_422Edge(JPEGDecContext* ctx, u32 x, u32 y) {
     s32 j;
-    s32 hh;
+    JPEGDecHandle* h;
     u8* out;
     s32 g;
     u8* sy;
     s32 cr;
     s32 yy;
-    JPEGDecHandle* h;
     u8* scb;
+    s32 hh;
     s32 b;
     u8* scr;
     s32 i;
@@ -288,14 +288,14 @@ void jpgdOutRGB565_422Edge(JPEGDecContext* ctx, u32 x, u32 y) {
     s32 cga;
     s32 cb;
     s32 cra;
-    s32 t;
+    s32 k;
     s32 cba;
     s32 r;
-    s32 k;
+    s32 t;
 
     sy = ctx->pix.y;
-    scb = ctx->pix.y + 0x80;
-    scr = ctx->pix.y + 0xC0;
+    scb = 0x80 + ctx->pix.y;
+    scr = 0xC0 + ctx->pix.y;
 
     h = ctx->handle;
     tiles = TILES();
@@ -309,15 +309,15 @@ void jpgdOutRGB565_422Edge(JPEGDecContext* ctx, u32 x, u32 y) {
             if (((i - x) & 1) == 0) {
                 cb = (s8)*scb++;
                 cr = (s8)*scr++;
-                cra = (cr * 0x167) >> 8;
+                cra = (0x167 * cr) >> 8;
                 cga = -(cb * 0x58 + cr * 0xB7) >> 8;
-                cba = (cb * 0x1C6) >> 8;
+                cba = (0x1C6 * cb) >> 8;
             }
             YCC_PIXEL(*sy++);
             PUT_PIXEL(i, j);
         }
-        sy += 16 - w;
         scb += 8 - (w + 1) >> 1;
+        sy += 16 - w;
         scr += 8 - (w + 1) >> 1;
     }
 }
@@ -383,20 +383,20 @@ void jpgdOutRGB565_420(JPEGDecContext* ctx, u32 x, u32 y) {
 }
 
 void jpgdOutRGB565_420Edge(JPEGDecContext* ctx, u32 x, u32 y) {
-    u32 tiles;
-    JPEGDecHandle* h;
+    u8* out;
+    s32 j;
     s32 t;
     s32 cr;
     u8* sy;
     u8* scb;
     u8* scr;
     s32 k;
-    s32 cb;
+    s32 hh;
     s32 i;
     s32 xe;
-    s32 hh;
+    s32 cb;
     s32 ye;
-    u8* out;
+    u32 tiles;
     s32 yy;
     s32 cga;
     s32 cra;
@@ -405,7 +405,7 @@ void jpgdOutRGB565_420Edge(JPEGDecContext* ctx, u32 x, u32 y) {
     s32 g;
     s32 w;
     s32 b;
-    s32 j;
+    JPEGDecHandle* h;
 
     sy = ctx->pix.y;
     scb = ctx->pix.cb;
@@ -416,8 +416,8 @@ void jpgdOutRGB565_420Edge(JPEGDecContext* ctx, u32 x, u32 y) {
     out = h->out;
     w = (h->lastX == x) ? h->remX : 16 / h->scale;
     hh = (h->lastY == y) ? h->remY : 16 / h->scale;
-    xe = x + w;
     ye = y + hh;
+    xe = x + w;
     for (j = y; j < ye; j++) {
         for (i = x; i < xe; i++) {
             if (((i - x) & 1) == 0) {
@@ -446,26 +446,26 @@ void jpgdOutRGB565_444(JPEGDecContext* ctx, u32 x, u32 y) {
     s32 ye;
     s32 i;
     s32 w;
-    JPEGDecHandle* h;
+    s32 hh;
     s32 xe;
     s32 g;
     s32 yy;
     s32 cb;
-    u32 tiles;
-    s32 t;
     s32 cra;
+    s32 t;
+    u32 tiles;
     s32 r;
     u8* scb;
-    s32 cba;
+    JPEGDecHandle* h;
     s32 j;
     s32 cga;
     s32 k;
-    s32 hh;
+    s32 cba;
 
-    scb = ctx->pix.y + 0x40;
     sy = ctx->pix.y;
+    scb = 0x40 + ctx->pix.y;
+    scr = 0x80 + ctx->pix.y;
     h = ctx->handle;
-    scr = ctx->pix.y + 0x80;
     hh = 8 / h->scale;
     out = h->out;
     tiles = TILES();
@@ -475,12 +475,12 @@ void jpgdOutRGB565_444(JPEGDecContext* ctx, u32 x, u32 y) {
     for (j = y; j < ye; j++) {
         for (i = x; i < xe; i++) {
             cr = (s8)*scr++;
-            cra = (cr * 0x167) >> 8;
             cb = (s8)*scb++;
-            yy = *sy++;
             cga = -(cb * 0x58 + cr * 0xB7) >> 8;
+            yy = *sy++;
             g = yy + cga;
-            cba = (cb * 0x1C6) >> 8;
+            cra = (0x167 * cr) >> 8;
+            cba = (0x1C6 * cb) >> 8;
             r = yy + cra;
             b = yy + cba;
             if ((b | r | g) >> 8) {
@@ -488,12 +488,12 @@ void jpgdOutRGB565_444(JPEGDecContext* ctx, u32 x, u32 y) {
                 CLAMP255(g);
                 CLAMP255(r);
             }
-            ((u16*)(out + ((j & 3) << 3)))[(i & 3) + ((i >> 2) + (j >> 2) * tiles) * 16] =
-                ((g << 3) & 0x7E0) + (((b & 0xF8) >> 3) + ((r << 8) & 0xF800));
+            ((u16*)(out + ((3 & j) << 3)))[(3 & i) + ((i >> 2) + (j >> 2) * tiles) * 16] =
+                ((g << 3) & 0x7E0) + (((0xF8 & b) >> 3) + ((r << 8) & 0xF800));
         }
         sy += 8 - w;
-        scb += 8 - w;
         scr += 8 - w;
+        scb += 8 - w;
     }
 }
 

@@ -96,29 +96,29 @@ void jpgdOutYUV411(JPEGDecContext* ctx, u32 x, u32 y) {
     u32 stride;
     u8* sy;
     u8* scr;
-    s32 cw;
-    s32 t;
-    u8* pcb;
-    u8* pcr;
-    s32 w;
-    s32 j;
-    JPEGDecHandle* h;
-    u8* scb;
     s32 hh;
+    u8* pcr;
+    u8* pcb;
+    JPEGDecHandle* h;
+    s32 cw;
+    u8* scb;
+    s32 w;
+    s32 t;
+    s32 j;
     u32 cx;
     u32 cstride;
     u8* py;
 
-    scb = ctx->pix.cb;
     h = ctx->handle;
-    w = 32 / h->scale;
-    py = h->planeY;
+    scb = ctx->pix.cb;
     sy = ctx->pix.y;
-    hh = 8 / h->scale;
-    pcb = h->planeCb;
-    pcr = h->planeCr;
+    w = 32 / h->scale;
     scr = ctx->pix.cr;
+    py = h->planeY;
+    pcb = h->planeCb;
+    hh = 8 / h->scale;
     stride = h->strideY >> 3;
+    pcr = h->planeCr;
     for (j = y; j < (s32)(y + hh); j++) {
         for (i = x; i < (s32)(x + w); i += 4) {
             jpgdPutI8(py, i, j, stride, sy[0]);
@@ -130,13 +130,13 @@ void jpgdOutYUV411(JPEGDecContext* ctx, u32 x, u32 y) {
         sy += 32 - w;
     }
 
-    cw = 8 / h->scale;
     cstride = h->strideC >> 3;
+    cw = 8 / h->scale;
     cx = x >> 2;
     for (j = y; j < (s32)(y + cw); j++) {
         for (i = cx; i < (s32)(cx + cw); i++) {
             t = (i >> 3) + (j >> 2) * cstride;
-            pcb[(t << 5) + ((j & 3) << 3) + (i & 7)] = *scb++ + 0x80;
+            pcb[(t << 5) + ((j & 3) << 3) + (7 & i)] = *scb++ + 0x80;
             pcr[(t << 5) + ((j & 3) << 3) + (i & 7)] = *scr++ + 0x80;
         }
         scb += 8 - cw;
@@ -146,17 +146,17 @@ void jpgdOutYUV411(JPEGDecContext* ctx, u32 x, u32 y) {
 
 void jpgdOutYUV411Edge(JPEGDecContext* ctx, u32 x, u32 y) {
     s32 j;
-    u8* scr;
-    s32 w;
     u8* pcb;
+    s32 w;
+    u8* scr;
     u8* pcr;
     u8* scb;
     u32 ctiles;
     s32 hh;
     u32 cx;
     JPEGDecHandle* h;
-    s32 ye;
     s32 i;
+    s32 ye;
     s32 t;
     u8* sy;
     u8* py;
@@ -164,19 +164,19 @@ void jpgdOutYUV411Edge(JPEGDecContext* ctx, u32 x, u32 y) {
     s32 xe;
     u32 tiles;
 
-    sy = ctx->pix.y;
-    scb = ctx->pix.cb;
     h = ctx->handle;
     tiles = h->strideY >> 3;
-    py = h->planeY;
+    scb = ctx->pix.cb;
     pcr = h->planeCr;
+    py = h->planeY;
+    sy = ctx->pix.y;
     w = (h->lastX == x) ? h->remX : (u8)(32 / h->scale);
     scr = ctx->pix.cr;
     hh = (h->lastY == y) ? h->remY : (u8)(8 / h->scale);
     pcb = h->planeCb;
 
     xe = x + w;
-    ye = y + hh;
+    ye = hh + y;
     for (j = y; j < ye; j++) {
         for (i = x; i < xe; i++) {
             PUT_I8(py, i, j, tiles, *sy++);
@@ -184,14 +184,14 @@ void jpgdOutYUV411Edge(JPEGDecContext* ctx, u32 x, u32 y) {
         sy += 32 - w;
     }
 
+    cw = (3 + w) >> 2;
     cx = x >> 2;
-    cw = (w + 3) >> 2;
     ctiles = h->strideC >> 3;
-    for (j = y; j < (s32)(y + hh); j++) {
+    for (j = y; j < (s32)(hh + y); j++) {
         for (i = cx; i < (s32)(cx + cw); i++) {
             t = (i >> 3) + (j >> 2) * ctiles;
             pcb[(t << 5) + ((j & 3) << 3) + (i & 7)] = *scb++ + 0x80;
-            pcr[(t << 5) + ((j & 3) << 3) + (i & 7)] = *scr++ + 0x80;
+            pcr[(t << 5) + ((j & 3) << 3) + (7 & i)] = *scr++ + 0x80;
         }
         scb += 8 - cw;
         scr += 8 - cw;
@@ -199,54 +199,54 @@ void jpgdOutYUV411Edge(JPEGDecContext* ctx, u32 x, u32 y) {
 }
 
 void jpgdOutYUV422(JPEGDecContext* ctx, u32 x, u32 y) {
-    s32 cw;
+    s32 ye;
     u8* sy;
     s32 i;
-    u32 stride;
     JPEGDecHandle* h;
-    s32 t;
+    u32 stride;
+    s32 j;
     s32 xe;
     u8* py;
     s32 hh;
-    s32 j;
+    s32 t;
     u8* pcb;
     u8* pcr;
-    s32 ye;
+    s32 cw;
     u8* scb;
     u32 cstride;
     s32 w;
     u32 cx;
     u8* scr;
 
-    sy = ctx->pix.y;
     h = ctx->handle;
     stride = h->strideY >> 3;
-    w = 16 / h->scale;
     pcb = h->planeCb;
     py = h->planeY;
-    pcr = h->planeCr;
+    w = 16 / h->scale;
+    sy = ctx->pix.y;
     scb = ctx->pix.y + 0x80;
     hh = 8 / h->scale;
-    scr = ctx->pix.y + 0xC0;
+    scr = 0xC0 + ctx->pix.y;
+    pcr = h->planeCr;
     for (j = y; j < (s32)(y + hh); j++) {
         for (i = x; i < (s32)(x + w); i += 2) {
             jpgdPutI8(py, i, j, stride, sy[0]);
             jpgdPutI8(py, i + 1, j, stride, sy[1]);
-            sy += 2;
+            sy = sy + 2;
         }
         sy += 16 - w;
     }
 
-    cx = x >> 1;
     cw = 8 / h->scale;
-    cstride = h->strideC >> 3;
-    xe = cx + cw;
+    cx = x >> 1;
     ye = y + cw;
+    xe = cw + cx;
+    cstride = h->strideC >> 3;
     for (j = y; j < ye; j++) {
         for (i = cx; i < xe; i++) {
             t = (i >> 3) + (j >> 2) * cstride;
             pcb[(t << 5) + ((j & 3) << 3) + (i & 7)] = *scb++ + 0x80;
-            pcr[(t << 5) + ((j & 3) << 3) + (i & 7)] = *scr++ + 0x80;
+            pcr[(t << 5) + ((j & 3) << 3) + (7 & i)] = *scr++ + 0x80;
         }
         scb += 8 - cw;
         scr += 8 - cw;
@@ -418,36 +418,36 @@ void jpgdOutYUV420Edge(JPEGDecContext* ctx, u32 x, u32 y) {
 void jpgdOutYUV444(JPEGDecContext* ctx, u32 x, u32 y) {
     u8* py;
     u8* pcb;
-    u8* scr;
+    u8* pcr;
     u8* sy;
     s32 t;
-    s32 n;
+    JPEGDecHandle* h;
     u8* scb;
-    s32 j;
-    u8* pcr;
+    s32 n;
+    u8* scr;
     s32 i;
     s32 xe;
-    JPEGDecHandle* h;
+    s32 j;
     s32 ye;
     u32 stride;
 
-    sy = ctx->pix.y;
     h = ctx->handle;
     stride = h->strideY >> 3;
-    py = h->planeY;
-    scb = ctx->pix.y + 0x40;
-    scr = ctx->pix.y + 0x80;
-    pcb = h->planeCb;
-    pcr = h->planeCr;
     n = 8 / h->scale;
+    py = h->planeY;
+    sy = ctx->pix.y;
+    scb = 0x40 + ctx->pix.y;
+    scr = 0x80 + ctx->pix.y;
     xe = x + n;
+    pcb = h->planeCb;
     ye = y + n;
+    pcr = h->planeCr;
     for (j = y; j < ye; j++) {
         for (i = x; i < xe; i++) {
             t = (i >> 3) + (j >> 2) * stride;
-            py[(t << 5) + ((j & 3) << 3) + (i & 7)] = *sy++;
+            py[(t << 5) + ((3 & j) << 3) + (7 & i)] = *sy++;
             pcb[(t << 5) + ((j & 3) << 3) + (i & 7)] = *scb++ + 0x80;
-            pcr[(t << 5) + ((j & 3) << 3) + (i & 7)] = *scr++ + 0x80;
+            pcr[(t << 5) + ((j & 3) << 3) + (7 & i)] = *scr++ + 0x80;
         }
         sy += 8 - n;
         scb += 8 - n;
@@ -499,19 +499,19 @@ void jpgdOutYUV444Edge(JPEGDecContext* ctx, u32 x, u32 y) {
 
 void jpgdOutYUVGray(JPEGDecContext* ctx, u32 x, u32 y) {
     s32 xe;
-    s32 ye;
+    s32 j;
 
     JPEGDecHandle* h = ctx->handle;
     u8* sy = ctx->pix.y;
     s32 n = 8 / h->scale;
     u8* py = h->planeY;
     u32 tiles = h->strideY >> 3;
-    s32 i;
-    s32 j;
     s32 t;
+    s32 ye;
+    s32 i;
 
-    xe = x + n;
     ye = y + n;
+    xe = x + n;
     for (j = y; j < ye; j++) {
         for (i = x; i < xe; i++) {
             PUT_I8(py, i, j, tiles, *sy++);

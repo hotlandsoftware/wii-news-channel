@@ -838,10 +838,10 @@ s32 jpgdResync(JPEGDecContext* ctx) {
             skip = c - expect;
         }
         skip *= ctx->frame.restartInterval;
-        ctx->scan.nextRestart = (c + 1) & 7;
         mcusX = h->mcusX;
         pos = ctx->scan.mcuPos;
-        n = (u8)pos * mcusX + (skip + (pos >> 16));
+        n = mcusX * (u8)pos + (skip + (pos >> 16));
+        ctx->scan.nextRestart = (c + 1) & 7;
         ctx->scan.dcPred[0] = 0;
         ctx->scan.dcPred[1] = 0;
         ctx->scan.dcPred[2] = 0;
