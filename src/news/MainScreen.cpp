@@ -1,3 +1,4 @@
+#define NW4R_UT_COLOR_WORD_COPY
 #include <news/MainScreen.h>
 #include <news/Common.h>
 #include <news/Draw2D.h>
@@ -28,9 +29,11 @@ extern void* lbl_80357730;
 extern s32 lbl_80357760;
 extern const wchar_t* lbl_801B0D08[];
 extern const wchar_t* lbl_801B0E30[];
-extern const s32 lbl_801921B8[];
-extern const s32 lbl_801921E0[];
-extern const u32 lbl_80192208[];
+// Rows visible / rows scrolled per step for each text zoom level.
+static const s32 sVisibleRows[10] = {3, 3, 3, 3, 3, 3, 2, 2, 1, 1};
+static const s32 sScrollRows[10] = {3, 2, 2, 2, 2, 1, 1, 1, 1, 1};
+// Sound effect per article region.
+static const u32 sRegionSE[10] = {75, 76, 77, 78, 79, 80, 81, 82, 83, 84};
 extern u8 lbl_803575BC;
 extern bool lbl_80356CA0;
 extern u8 lbl_80357729;
@@ -1077,7 +1080,7 @@ void MainScreen::ModeMain() {
                 DisableButton(fn_80048364(mMainLayout, "earth"));
             }
         } else if (IsState(&MainScreen::State1B694) || IsState(&MainScreen::State1BD60)) {
-            if (mUnk2FC < mUnk2F8 - lbl_801921B8[lbl_80356970]) {
+            if (mUnk2FC < mUnk2F8 - sVisibleRows[lbl_80356970]) {
                 mDownButton->mDisabled = false;
             } else {
                 DisableButton(mDownButton);
@@ -1348,7 +1351,7 @@ s32 MainScreen::OpenArticle(s32* arg) {
             mUnk16C.x = mUnk164.x + GetSideMargin();
             size.y = 330.0f;
             size.x = mUnk238 - GetSideMargin() - 5.0f;
-            PlaySE(lbl_80192208[((u8*)article->mLocation)[0xC]]);
+            PlaySE(sRegionSE[((u8*)article->mLocation)[0xC]]);
             if (arg != NULL && *arg == 1) {
                 fn_80032658(((u8*)article->mLocation)[0xC]);
             } else {
@@ -2637,7 +2640,7 @@ void MainScreen::State1B694(s32* arg) {
         mShowRelated = true;
         f32 rowHeight = mUnk24C * GetFontScale() * fn_80035188(lbl_80356970);
         mUnk2FC = mUnk300;
-        s32 max = mUnk2F8 - lbl_801921B8[lbl_80356970];
+        s32 max = mUnk2F8 - sVisibleRows[lbl_80356970];
         if (mUnk2FC >= max) {
             mUnk2FC = max - 1;
             if (mUnk2FC < 0) {
@@ -2864,7 +2867,7 @@ void MainScreen::Func1C7F4() {
         break;
     default: {
         f32 rowHeight = mUnk24C * GetFontScale() * fn_80035188(lbl_80356970);
-        s32 visible = lbl_801921B8[lbl_80356970];
+        s32 visible = sVisibleRows[lbl_80356970];
         if (mUnk2F8 <= visible) {
             mUnk2FC = 0;
             mUnk258 = 0.0f;
@@ -2882,15 +2885,15 @@ void MainScreen::Func1C7F4() {
                 }
                 if (mUpPressed && mUnk2FC > 0) {
                     PlaySE(0x25);
-                    mUnk2FC -= lbl_801921E0[lbl_80356970];
+                    mUnk2FC -= sScrollRows[lbl_80356970];
                     if (mUnk2FC < 0) {
                         mUnk2FC = 0;
                     }
                 } else if (mDownPressed && mUnk2FC < max) {
                     PlaySE(0x25);
-                    mUnk2FC += lbl_801921E0[lbl_80356970];
-                    if (mUnk2FC > mUnk2F8 - lbl_801921B8[lbl_80356970]) {
-                        mUnk2FC = mUnk2F8 - lbl_801921B8[lbl_80356970];
+                    mUnk2FC += sScrollRows[lbl_80356970];
+                    if (mUnk2FC > mUnk2F8 - sVisibleRows[lbl_80356970]) {
+                        mUnk2FC = mUnk2F8 - sVisibleRows[lbl_80356970];
                     }
                 }
                 mUnk258 = -(rowHeight * mUnk2FC);
@@ -2927,7 +2930,7 @@ void MainScreen::Func1CAC8() {
         PlaySE(0x16);
         break;
     default: {
-        s32 visible = lbl_801921B8[lbl_80356970];
+        s32 visible = sVisibleRows[lbl_80356970];
         if (mUnk2F8 <= visible) {
             mUnk2FC = 0;
             mUnk258 = 0.0f;
@@ -2973,7 +2976,7 @@ void MainScreen::Func1CAC8() {
             mUnk27C = velocity / count;
         }
         mUnk254 += mUnk27C;
-        f32 min = -(rowHeight * (mUnk2F8 - lbl_801921B8[lbl_80356970]));
+        f32 min = -(rowHeight * (mUnk2F8 - sVisibleRows[lbl_80356970]));
         if (mUnk254 > 0.0f) {
             mUnk254 = 0.0f;
         } else if (mUnk254 < min) {
@@ -3457,10 +3460,9 @@ BOOL MainScreen::ExitGlobe(BOOL related) {
 }
 
 inline void MainScreen::UpdateLayoutAlpha() {
-    s32 min = 0;
+    s32 alpha = 0;
     f32 t = math::SinRad((1.5708f * (15 - mUnk2F4)) / 15.0f);
-    s32 max = 0;
-    s32 alpha = min + (s32)(255.0f - max) * t;
+    alpha += (s32)(255.0f - alpha) * t;
     fn_80048470(mEarthLayout, alpha, mUnk2F4, 15);
     fn_80048470(mMainLayout, alpha, mUnk2F4, 15);
 }
@@ -3737,13 +3739,14 @@ void MainScreen::SetLocation(NewsArticle* article) {
 }
 
 extern "C" void fn_8001F730(lyt::Pane* pane, const ut::Color& color) {
-    char name[100] = "zoom_outT";
-    strcat(name, GetLanguageSuffix());
+    const char name[100] = "zoom_outT";
+    strcat((char*)name, GetLanguageSuffix());
     lyt::Pane* found = pane->FindPaneByName(name, true);
     if (found != NULL) {
         lyt::TextBox* textBox = ut::DynamicCast<lyt::TextBox*>(found);
         ut::Color c = color;
-        c.a = c.a * lbl_80356C98;
+        f32 alpha = lbl_80356C98;
+        c.a = c.a * alpha;
         textBox->SetTextColor(c, c);
     }
 }
