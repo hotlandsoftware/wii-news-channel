@@ -2550,8 +2550,9 @@ void MainScreen::State1B694(s32* arg) {
         }
         mUnk254 = mUnk258 = -(rowHeight * mUnk2FC);
         mUnk25C = 0.0f;
-        lbl_803575FC = sShadowColor;
-        lbl_803575FC.a = sShadowColor.a * mUnk25C;
+        const ut::Color& c = sShadowColor;
+        lbl_803575FC = c;
+        lbl_803575FC.a = c.a * mUnk25C;
         LayoutRelated();
         UpdateScrollBar();
         break;
