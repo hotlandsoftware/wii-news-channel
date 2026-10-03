@@ -1516,7 +1516,7 @@ config.libs = [
         "progress_category": "game",
         "objects": [
             Object(NonMatching, "news/Globe.cpp"),
-            Object(NonMatching, "news/Resource.cpp"),
+            Object(Matching, "news/Resource.cpp", extra_cflags=["-ipa file"]),
             Object(NonMatching, "news/sound_manager.cpp"),
         ],
     },

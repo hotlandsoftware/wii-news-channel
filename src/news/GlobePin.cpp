@@ -128,6 +128,14 @@ GlobePin::GlobePin(s32 arg1, s32 arg2, NewsArticle* article, f32 radius)
     ChangeState(&GlobePin::StateHidden);
 }
 
+// The original's copy is not scheduled (two words, then one), like
+// Camera::GetRot() in Globe.cpp.
+#pragma scheduling off
+inline math::VEC3 GlobePoint::GetPos() const {
+    return mPos;
+}
+#pragma scheduling reset
+
 GlobePin::~GlobePin() {}
 
 void GlobePin::Draw(u8 alpha) {
@@ -176,6 +184,15 @@ static inline void SetTevWhite(GXTevRegID reg, u8 a) {
     GXSetTevColor(reg, color);
 }
 
+static inline void SetTevBlack(GXTevRegID reg) {
+    GXSetTevColor(reg, (GXColor)ut::Color(0));
+}
+
+static inline void SetTevWhiteClear(GXTevRegID reg) {
+    const GXColor white = {255, 255, 255, 0};
+    GXSetTevColor(reg, white);
+}
+
 BOOL GlobePin::DrawCards(u8 alpha) {
     BOOL drawn = FALSE;
     Camera* camera = gGlobe->mCamera;
@@ -200,7 +217,7 @@ BOOL GlobePin::DrawCards(u8 alpha) {
         GXSetCurrentMtx(GX_PNMTX0);
         if (i == mCount - 1) {
             SetTevColorAlpha(GX_TEVREG0, mCardAlpha);
-            GXSetTevColor(GX_TEVREG1, (GXColor)ut::Color(0));
+            SetTevBlack(GX_TEVREG1);
             GXSetZMode(GX_TRUE, GX_LEQUAL, GX_FALSE);
             GXTexObj texObj;
             TPL_GetTexObj(gCommonTpl, 0x53, &texObj);
@@ -223,13 +240,12 @@ BOOL GlobePin::DrawCards(u8 alpha) {
                          GX_CLAMP, GX_CLAMP, GX_FALSE);
             GXLoadTexObj(&texObj, GX_TEXMAP0);
             SetTevWhite(GX_TEVREG0, alpha);
-            GXSetTevColor(GX_TEVREG1, (GXColor)ut::Color(0));
+            SetTevBlack(GX_TEVREG1);
         } else {
             GXTexObj texObj;
             TPL_GetTexObj(gCommonTpl, sNoPictureTex[gLanguage], &texObj);
             GXLoadTexObj(&texObj, GX_TEXMAP0);
-            const GXColor white = {255, 255, 255, 0};
-            GXSetTevColor(GX_TEVREG0, white);
+            SetTevWhiteClear(GX_TEVREG0);
             SetTevColorAlpha(GX_TEVREG1, alpha);
         }
         GXBegin(GX_QUADS, GX_VTXFMT0, 4);
@@ -674,6 +690,7 @@ void GlobePin::TruncateHeadline(ut::CharWriter* writer) {
         u32 n = 0;
         f32 width = 0.0f;
         f32 maxWidth = mHeadlineScroller.mViewWidth - 30.0f * scale;
+        f32 limit;
         if (gLanguage == 0) {
             while (*src != 0) {
                 *dst = *src++;
@@ -687,11 +704,16 @@ void GlobePin::TruncateHeadline(ut::CharWriter* writer) {
                 width += cw;
                 *++dst = 0;
                 if (width > maxWidth) {
-                    f32 ellipsis = scale * font->GetCharWidth(0x2026);
+                    // Both cases use the same scale; the original keeps the compare.
+                    f32 s = scale;
+                    if (n < mHeadlineLen) {
+                        s = scale;
+                    }
+                    limit = s * font->GetCharWidth(0x2026);
                     dst[-1] = 0;
                     dst -= 2;
                     f32 cut = scale * font->GetCharWidth(*dst);
-                    while (cut < ellipsis) {
+                    while (cut < limit) {
                         cut += space + scale * font->GetCharWidth(*--dst);
                     }
                     dst[0] = 0x2026;
@@ -714,7 +736,12 @@ void GlobePin::TruncateHeadline(ut::CharWriter* writer) {
                 width += cw;
                 *++dst = 0;
                 if (width > maxWidth) {
-                    f32 limit = 2.0f * space + scale * (3.0f * font->GetCharWidth(L'.'));
+                    // Both cases use the same scale; the original keeps the compare.
+                    f32 s = scale;
+                    if (n < mHeadlineLen) {
+                        s = scale;
+                    }
+                    limit = 2.0f * space + s * (3.0f * font->GetCharWidth(L'.'));
                     dst[-1] = 0;
                     dst -= 2;
                     f32 cut = scale * font->GetCharWidth(*dst);
@@ -736,24 +763,29 @@ void GlobePin::TruncateHeadline(ut::CharWriter* writer) {
 
 void GlobePin::TruncateLocation(ut::CharWriter* writer) {
     if (mLocationScroller.mMode == Scroller::MODE_WAIT) {
+        f32 width;
+        f32 maxWidth;
+        f32 limit;
+        f32 scale;
+        f32 space;
         const ut::Font* font = writer->GetFont();
-        f32 maxWidth = mLocationScroller.mViewWidth;
+        maxWidth = mLocationScroller.mViewWidth;
         const wchar_t* src = mArticle->mLocationName;
         wchar_t* dst = mArticle->unk40;
-        f32 scale = writer->GetScaleH();
-        f32 space = ((ut::TextWriterBase<wchar_t>*)writer)->GetCharSpace();
-        f32 width = 0.0f;
+        scale = writer->GetScaleH();
+        space = ((ut::TextWriterBase<wchar_t>*)writer)->GetCharSpace();
+        width = 0.0f;
         if (gLanguage == 0) {
             while (*src != 0) {
                 *dst = *src++;
                 width += scale * font->GetCharWidth(*dst);
                 *++dst = 0;
                 if (width > maxWidth) {
-                    f32 ellipsis = scale * font->GetCharWidth(0x2026);
+                    limit = scale * font->GetCharWidth(0x2026);
                     dst[-1] = 0;
                     dst -= 2;
                     f32 cut = scale * font->GetCharWidth(*dst);
-                    while (cut < ellipsis) {
+                    while (cut < limit) {
                         cut += space + scale * font->GetCharWidth(*--dst);
                     }
                     dst[0] = 0x2026;
@@ -768,7 +800,7 @@ void GlobePin::TruncateLocation(ut::CharWriter* writer) {
                 width += scale * font->GetCharWidth(*dst);
                 *++dst = 0;
                 if (width > maxWidth) {
-                    f32 limit = 2.0f * space + scale * (3.0f * font->GetCharWidth(L'.'));
+                    limit = 2.0f * space + scale * (3.0f * font->GetCharWidth(L'.'));
                     dst[-1] = 0;
                     dst -= 2;
                     f32 cut = scale * font->GetCharWidth(*dst);

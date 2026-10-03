@@ -29,7 +29,7 @@ extern "C" const f32 lbl_80192320[];  // max width of a small picture
 extern "C" const f32 lbl_80192348[];  // max height
 
 // Characters that may not start a line (Japanese).
-extern "C" const wchar_t lbl_801920F0[];
+extern const wchar_t gPunctuationTable[];
 
 static ut::Color sTextColor(0, 0, 0, 255);
 static ut::Color sSelectColor(178, 0, 0, 255);
@@ -112,7 +112,7 @@ static inline bool IsNoBreakBefore(wchar_t c) {
         }
     }
     for (s32 i = 0; i < 39; i++) {
-        if (c == lbl_801920F0[i]) {
+        if (c == gPunctuationTable[i]) {
             return true;
         }
     }
@@ -617,8 +617,8 @@ void ArticleText::Update(const math::VEC2* pos, bool clip, f32 scroll) {
     mLastVisible = 0;
     s32 i = 0;
     bool overflow = false;
-    mFirstVisible = mCount;
     mLastFull = 0;
+    mFirstVisible = mCount;
     for (; c->mChar != 0; c++) {
         c->Update(pos, &mRevealRate);
         f32 top = pos->y + c->mPos.y;
@@ -904,8 +904,9 @@ void ArticleText::Layout(const math::VEC2* pos, f32 scale) {
 
 TextChar* ArticleText::PlaceWord(TextChar* c, const f32& scale, const f32& scaleX,
                                  math::VEC2& cursor, s32& count) {
+    f32 k = gCharSpaceScale;
     f32 s = scale * scaleX;
-    f32 space = s * gCharSpaceScale;
+    f32 space = s * k;
     c->mScaleX = scaleX;
     c->SetTarget(cursor.x, cursor.y);
     c->SetLine(mNumLines);
@@ -952,7 +953,7 @@ void ArticleText::ResetUnk80() {
 
 void ArticleText::SetScale(f32 scale) {
     mScale = scale;
-    mLabelScale = 0.7f * scale;
+    mLabelScale = 0.7f * mScale;
     if (mLabelScale > 0.7f) {
         mLabelScale = 0.7f;
     }
@@ -1060,14 +1061,20 @@ f32 ArticleText::GetTop() {
 }
 
 bool ArticleText::GetPictureRect(ut::Rect* rect) {
-    NewsTexture* pic = mPicture;
+    u16 height;
+    NewsTexture* pic;
+    f32 scale;
+    f32 left;
+    f32 top;
+    pic = mPicture;
     if (pic != NULL) {
-        f32 top = mPicPos.y;
+        top = mPicPos.y;
         rect->top = top;
-        f32 scale = mPicScale;
-        f32 left = mPicPos.x;
+        scale = mPicScale;
+        height = pic->height;
+        left = mPicPos.x;
         rect->left = left;
-        rect->bottom = top + scale * pic->height;
+        rect->bottom = top + scale * height;
         rect->right = left + scale * pic->width;
         return true;
     }

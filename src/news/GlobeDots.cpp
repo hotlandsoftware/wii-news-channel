@@ -130,20 +130,23 @@ void GlobeDots::Draw() {
     GXSetTevColor(GX_TEVREG0, (GXColor){0, 0, 0, mAlpha});
 
     GXBegin(GX_TRIANGLES, GX_VTXFMT0, GLOBE_DOT_COUNT * 3);
+    // The dot index is not the loop counter: the original keeps a count, the
+    // index and a pointer into the colour table as three induction variables.
     s32 pos = 0;
-    const u8* colors = gGlobeDotColorIdx;
-    for (s32 i = 0; i < GLOBE_DOT_COUNT; i++) {
-        const u8* c = colors + i;
+    s32 i = 0;
+    for (s32 n = 0; n < GLOBE_DOT_COUNT; n++) {
+        u8 c = gGlobeDotColorIdx[i];
         GXPosition1x16(pos);
-        GXColor1x8(*c);
+        GXColor1x8(c);
         GXTexCoord1x8(0);
         GXPosition1x16(pos + 1);
-        GXColor1x8(*c);
+        GXColor1x8(c);
         GXTexCoord1x8(1);
         GXPosition1x16(pos + 2);
-        GXColor1x8(*c);
+        GXColor1x8(c);
         GXTexCoord1x8(2);
         pos += 3;
+        i++;
     }
     GXEnd();
 }
