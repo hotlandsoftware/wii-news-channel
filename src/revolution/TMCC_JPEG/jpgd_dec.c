@@ -338,17 +338,20 @@ static s32 jpgdParseSOF(JPEGDecContext* ctx) {
     return 0;
 }
 
+static inline void jpgdInitZigzag(JPEGTables* t) {
+    s32 i;
+    for (i = 0; i < 64; i++) {
+        t->zigzag[i] = jpgdZigzag[i] * 4;
+    }
+}
+
 s32 jpgdReadHeader(JPEGDecContext* ctx) {
     u16 marker;
-    const u8* zz = jpgdZigzag;
-    s32 i;
     s32 ret;
 
     ctx->frame.restartInterval = 0;
     ctx->frame.eoi = 0;
-    for (i = 0; i < 64; i++) {
-        ctx->tables.zigzag[i] = *zz++ * 4;
-    }
+    jpgdInitZigzag(&ctx->tables);
     ret = jpgdGetWord(&marker, &ctx->stream);
     if (ret < 0) {
         return ret;
