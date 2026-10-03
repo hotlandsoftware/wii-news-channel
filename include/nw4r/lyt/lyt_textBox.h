@@ -35,6 +35,7 @@ public:
     void SetFontSize(const Size& fontSize) { mFontSize = fontSize; }
 
     u16 GetStringBufferLength() const;
+    wchar_t* GetStringBuffer() const { return mTextBuf; }
 
     f32 GetTextMagH() const;
     f32 GetTextMagV() const;

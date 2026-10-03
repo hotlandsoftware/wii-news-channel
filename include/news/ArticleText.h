@@ -19,13 +19,33 @@ class Font;
 
 // One laid-out character of an ArticleText (0x70 bytes). Characters that may
 // not be separated by a line break are chained into words through
-// mPrev/mNext. The class's code lives at 0x8000CA98 (not yet decompiled).
+// mPrev/mNext. The class's code is TextChar.cpp (0x8000CA98).
 class TextChar {
 public:
     typedef void (TextChar::*StateFunc)();
 
     TextChar();
     ~TextChar();
+
+    void Update(const nw4r::math::VEC2* origin, const f32* rate);
+    void SetLine(s32 line);
+    void SetTarget(f32 x, f32 y);
+    void StateMove();
+    void StateDrop();
+
+    void ChangeState(StateFunc state) {
+        if (mState) {
+            mStateFrame = -1;
+            (this->*mState)();
+        }
+        mState = state;
+        mStateFrame = 0;
+        if (mState) {
+            (this->*mState)();
+        }
+    }
+
+    BOOL IsState(StateFunc state) { return mState == state; }
 
     u16 mChar;                   // at 0x00
     nw4r::math::VEC2 mPos;       // at 0x04
@@ -55,9 +75,6 @@ public:
     s32 mWordIndex;              // at 0x6C
 };
 
-extern "C" void fn_8000CC2C(TextChar* c, const nw4r::math::VEC2* origin, const f32* rate);
-extern "C" void fn_8000CD74(TextChar* c, s32 line);
-extern "C" void fn_8000CE30(TextChar* c, f32 x, f32 y);
 
 // The body text of an article (optionally with a picture, a caption and a
 // credit line): word-wrapped character by character, animated and drawn
