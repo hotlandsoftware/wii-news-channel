@@ -16,7 +16,8 @@ public:
 
     void CalcScreenPos(Camera* camera);
 
-    nw4r::math::VEC3 GetPos() const { return mPos; }
+    // Weak; defined in GlobePin.cpp (after its first use, see there).
+    nw4r::math::VEC3 GetPos() const;
     nw4r::math::VEC2 GetScreenPos() const { return mScreenPos; }
 
     NewsLocationRec* mLocation;    // at 0x04

@@ -128,6 +128,14 @@ GlobePin::GlobePin(s32 arg1, s32 arg2, NewsArticle* article, f32 radius)
     ChangeState(&GlobePin::StateHidden);
 }
 
+// The original's copy is not scheduled (two words, then one), like
+// Camera::GetRot() in Globe.cpp.
+#pragma scheduling off
+inline math::VEC3 GlobePoint::GetPos() const {
+    return mPos;
+}
+#pragma scheduling reset
+
 GlobePin::~GlobePin() {}
 
 void GlobePin::Draw(u8 alpha) {
