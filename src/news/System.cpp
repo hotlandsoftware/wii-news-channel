@@ -275,6 +275,26 @@ static u8 FreeForWPAD(void* ptr) {
     return 0;
 }
 
+static inline f32 GetScreenHalfHeight() {
+    return 228.0f;
+}
+
+// The cursor follows the pointer faster the further away it is.
+static inline f32 GetSmoothRate(f32 current, f32 target) {
+    f32 t = 0.002f * __fabsf(target - current);
+    if (t < 0.1f) {
+        t = 0.1f;
+    }
+    if (t > 1.0f) {
+        t = 1.0f;
+    }
+    return t;
+}
+
+static inline f32 Lerp(f32 a, f32 b, f32 t) {
+    return (1.0f - t) * a + t * b;
+}
+
 void SystemCalc() {
     f32 ratio = (f32)gRenderMode.fbWidth / (f32)gRenderMode.viWidth;
     f32 scale = gWidescreen ? 1.1666666f : 1.0f;
@@ -289,10 +309,12 @@ void SystemCalc() {
         gConnected[i] = false;
         u32 prevHold = gHold[i];
         s32 n = gKPADCount[i] = KPADRead(i, gKPADStatus[i], 16);
-        for (s32 j = 0; j < n; j++) {
-            if (gKPADStatus[i][j].wpad_err == 0) {
-                gConnected[i] = true;
-                break;
+        if (n > 0) {
+            for (s32 j = 0; j < n; j++) {
+                if (gKPADStatus[i][j].wpad_err == 0) {
+                    gConnected[i] = true;
+                    break;
+                }
             }
         }
 
@@ -323,7 +345,7 @@ void SystemCalc() {
                 Vec2 pos;
                 KPADGetProjectionPos(&pos, &s->pos, &rect, ratio);
                 gCursorX[i][j] = pos.x * scale + 0.5f * GetScreenWidth();
-                gCursorY[i][j] = pos.y * scale + 228.0f;
+                gCursorY[i][j] = pos.y * scale + GetScreenHalfHeight();
                 gCursorDist[i][j] = s->dist;
                 gPointerValid[i][j] = s->dpd_valid_fg != 0;
                 if (gKPADLatest[i] < 0) {
@@ -342,22 +364,17 @@ void SystemCalc() {
             gPointerValid[i][j] = false;
         }
 
-        f32 t = 0.002f * __fabsf(gCursorX[i][0] - gPointerX[i]);
-        if (t < 0.1f) {
-            t = 0.1f;
+        f32 tx = GetSmoothRate(gPointerX[i], gCursorX[i][0]);
+        f32 dy = gCursorY[i][0] - gPointerY[i];
+        gPointerX[i] = Lerp(gPointerX[i], gCursorX[i][0], tx);
+        f32 ty = 0.002f * __fabsf(dy);
+        if (ty < 0.1f) {
+            ty = 0.1f;
         }
-        if (t > 1.0f) {
-            t = 1.0f;
+        if (ty > 1.0f) {
+            ty = 1.0f;
         }
-        gPointerX[i] = (1.0f - t) * gPointerX[i] + t * gCursorX[i][0];
-        t = 0.002f * __fabsf(gCursorY[i][0] - gPointerY[i]);
-        if (t < 0.1f) {
-            t = 0.1f;
-        }
-        if (t > 1.0f) {
-            t = 1.0f;
-        }
-        gPointerY[i] = (1.0f - t) * gPointerY[i] + t * gCursorY[i][0];
+        gPointerY[i] = Lerp(gPointerY[i], gCursorY[i][0], ty);
 
         n = gKPADCount[i];
         BOOL found = FALSE;
