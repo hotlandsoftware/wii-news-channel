@@ -138,7 +138,6 @@ public:
     }
 
 
-    bool IsListIdle();
     void SetSubState(Func func);
     void SetInputHook(Func func);
     void ScrollArticle();

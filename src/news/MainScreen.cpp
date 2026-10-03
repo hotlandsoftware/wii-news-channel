@@ -1013,10 +1013,6 @@ static inline void SetButtonEnabled(PaneButton* button, BOOL enabled) {
     }
 }
 
-inline bool MainScreen::IsListIdle() {
-    return IsState(&MainScreen::StateList) && fn_8003251C();
-}
-
 void MainScreen::ModeMain() {
     HeadlineList* list = lbl_8035755C;
     Globe* globe = lbl_8035775C;
@@ -1242,7 +1238,7 @@ void MainScreen::ModeMain() {
         if (mState) {
             (this->*mState)(NULL);
         }
-        if (IsListIdle()) {
+        if (IsState(&MainScreen::StateList) && fn_8003251C()) {
             lbl_80357598 = 2;
             return;
         }
