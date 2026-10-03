@@ -27,6 +27,13 @@ static inline BOOL IsLeapYear(s32 year) {
     return year % 4 == 0;
 }
 
+// Not in the DOL (nothing references it, so the linker stripped it), but its
+// literals open the .sdata2 pool: 0.0008f and -0.0008f come before the 0.0f
+// that the first function left in the file uses.
+BOOL IsNearlyZero(const f32* x) {
+    return IsNearlyZero(*x);
+}
+
 void WrapHour(s32* hour) {
     *hour %= 24;
 }
@@ -55,13 +62,23 @@ static inline f32 DistP(const math::VEC2* a, const math::VEC2* b) {
     return LenP(&e);
 }
 
+static inline math::VEC2 SubV(const math::VEC2& a, const math::VEC2& b) {
+    return math::VEC2(a.x - b.x, a.y - b.y);
+}
+static inline f32 SubLen(math::VEC2* d, const math::VEC2* a, const math::VEC2* b) {
+    math::VEC2 c;
+    c = SubV(*a, *b);
+    *d = c;
+    return LenR(c);
+}
+static inline f32 DistR(const math::VEC2* a, const math::VEC2* b) {
+    return DistP(a, b);
+}
+
 f32 Ease(math::VEC2* value, const math::VEC2* target, f32 rate, f32 maxStep, f32 minStep) {
     if (NotEqual(*value, *target)) {
         math::VEC2 d;
-        math::VEC2 diff;
-        diff = math::VEC2(value->x - target->x, value->y - target->y);
-        d = diff;
-        f32 len = LenV(diff);
+        f32 len = SubLen(&d, value, target);
         if (len < minStep) {
             *value = *target;
         } else {
@@ -85,7 +102,7 @@ f32 Ease(math::VEC2* value, const math::VEC2* target, f32 rate, f32 maxStep, f32
             }
         }
     }
-    return DistP(value, target);
+    return DistR(value, target);
 }
 
 f32 Ease(f32* value, f32 target, f32 rate, f32 maxStep, f32 minStep) {
@@ -168,8 +185,12 @@ void Chase(f32* value, f32 target, f32 step) {
     }
 }
 
+static inline f32 CosIdx(u16 idx) {
+    return math::CosFIdx(0.00390625f * U16ToF32(&idx));
+}
+
 f32 CosineEase(u16 angle) {
-    return 0.5f - 0.5f * math::CosFIdx(0.00390625f * U16ToF32(&angle));
+    return 0.5f - 0.5f * CosIdx(angle);
 }
 
 s32 SplitDigits(s32 value, s32* digits, s32 maxDigits) {

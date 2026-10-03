@@ -582,7 +582,7 @@ config.libs = [
             Object(NonMatching, "news/System.cpp"),
             Object(NonMatching, "news/WiiConnect24.cpp"),
             Object(NonMatching, "news/PointerScroll.cpp"),
-            Object(NonMatching, "news/MathUtil.cpp"),
+            Object(Matching, "news/MathUtil.cpp"),
         ],
     },
     {
