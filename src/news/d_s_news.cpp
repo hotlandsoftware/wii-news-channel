@@ -1915,12 +1915,13 @@ void PostRetraceCallback(u32 retraceCount) {
     s32 counter = sLoadCounter;
     u32 size = lbl_80357658;
     u16 width = gRenderMode.fbWidth;
+    u16 height = gRenderMode.xfbHeight;
     u8* xfb = (u8*)lbl_80357664;
     s32 w = (width * 10) / GetScreenWidth();
-    u32 h = (gRenderMode.xfbHeight * 10) / 456;
+    s32 h = (height * 10) / 456;
     s32 gap = (width * 6) / GetScreenWidth();
     s32 x = (width - (w * 8 + gap * 7)) / 2;
-    s32 y = (gRenderMode.xfbHeight - h) / 2;
+    s32 y = (height - h) / 2;
     for (s32 i = 0; i < 8; i++) {
         u8 c = 160;
         if (i == counter / 8) {
