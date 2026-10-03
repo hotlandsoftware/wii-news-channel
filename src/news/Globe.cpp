@@ -1,5 +1,6 @@
 // The 3D globe view: scene root, camera, zoom/tilt levels and Wii Remote
 // drag/twist input.
+#define NW4R_MATH_VEC3_NO_DTOR
 #include <news/Globe.h>
 #include <news/Camera.h>
 #include <news/Model.h>
@@ -68,6 +69,10 @@ static f32 sInitSpinY = 0.0f;
 
 inline BOOL IsWithin(f32 x, f32 r) {
     return x < r && x > -r;
+}
+
+inline f32 Min(f32 a, f32 b) {
+    return a > b ? b : a;
 }
 
 inline f32 Clamp01(f32 x) {
@@ -153,9 +158,13 @@ void Globe::Init(const math::VEC3* rot, s32 zoom) {
     g3d::Camera camera = mScnRoot->GetCamera(1);
     camera.Init(gRenderMode.fbWidth, gRenderMode.efbHeight, gRenderMode.fbWidth,
                 gRenderMode.xfbHeight, GetScreenWidth(), 456);
-    camera.SetPerspective(mCamera->mFovy, mCamera->mAspect, mCamera->mNear, mCamera->mFar);
+    f32 far = mCamera->mFar;
+    f32 near = mCamera->mNear;
+    f32 aspect = mCamera->mAspect;
+    f32 fovy = mCamera->mFovy;
+    camera.SetPerspective(fovy, aspect, near, far);
     camera.SetScissor(0, 0, gRenderMode.fbWidth, gRenderMode.efbHeight);
-    camera.SetViewport(0.0f, 0.0f, gRenderMode.fbWidth, gRenderMode.efbHeight);
+    camera.SetViewport(0.0f, 0.0f, (s32)gRenderMode.fbWidth, (s32)gRenderMode.efbHeight);
 }
 
 void Globe::Reset(const math::VEC3* rot) {
@@ -229,6 +238,9 @@ void Globe::ApplyCamera() {
 }
 
 void Globe::CalcCameraMtx(math::MTX34* mtx) {
+    math::MTX34 view;
+    math::MTX44 proj;
+    math::VEC3 viewPos;
     math::VEC3 pos(0.0f, 0.0f, gModelDepth);
     PSMTXTrans(gWorkMtx, pos.x, pos.y, pos.z);
     Mtx_RotateDeg(&gWorkMtx, -mRot.x, mRot.y, 0.0f);
@@ -239,15 +251,13 @@ void Globe::CalcCameraMtx(math::MTX34* mtx) {
     pos.y = gWorkMtx._13;
     pos.z = gWorkMtx._23;
 
-    math::MTX34 view;
-    math::MTX44 proj;
     mCamera->mCamera.GetCameraMtx(&view);
     mCamera->mCamera.GetProjectionMtx(&proj);
 
-    math::VEC3 viewPos;
     PSMTXMultVec(view, pos, viewPos);
-    PSMTXTrans(gWorkMtx, mOffsetX * viewPos.z / proj._00 - viewPos.x,
-               mOffsetY * viewPos.z / proj._11 - viewPos.y, 0.0f);
+    f32 x = mOffsetX * viewPos.z / proj._00;
+    f32 y = mOffsetY * viewPos.z / proj._11;
+    PSMTXTrans(gWorkMtx, x - viewPos.x, y - viewPos.y, 0.0f);
     PSMTXConcat(gWorkMtx, view, gWorkMtx);
     *mtx = gWorkMtx;
 }
@@ -258,9 +268,11 @@ void Globe::CalcPoles() {
     }
 
     Camera* camera = mCamera;
-    math::VEC3 dir = camera->mTarget - camera->mPos;
+    math::VEC3 dir;
+    dir = camera->mTarget - camera->mPos;
     math::VEC3 pole = mNorthPole;
-    math::VEC3 toPole = mNorthPole - camera->mPos;
+    math::VEC3 toPole;
+    toPole = mNorthPole - camera->mPos;
     PSVECNormalize(pole, pole);
     PSVECNormalize(dir, dir);
     PSVECNormalize(toPole, toPole);
@@ -269,7 +281,9 @@ void Globe::CalcPoles() {
     mNorthAhead = math::VEC3Dot(&dir, &toPole) < 0.0f;
 
     pole = mSouthPole;
-    toPole = mSouthPole - camera->mPos;
+    math::VEC3 south;
+    south = mSouthPole - camera->mPos;
+    toPole = south;
     PSVECNormalize(pole, pole);
     PSVECNormalize(toPole, toPole);
     mSouthFacing = math::VEC3Dot(&pole, &dir) < 0.0f;
@@ -344,47 +358,49 @@ void Globe::ReleaseGrab() {
 }
 
 BOOL Globe::StartGrab(s32 chan) {
-    if (!(gTrig[chan] & 0x800)) {
-        return FALSE;
-    }
-
-    mGrab[chan] = true;
-    if (chan != 0) {
-        mGrab[0] = false;
-    }
-    if (chan != 1) {
-        mGrab[1] = false;
-    }
-    if (chan != 2) {
-        mGrab[2] = false;
-    }
-    if (chan != 3) {
-        mGrab[3] = false;
-    }
-    mCamera->mResetting = false;
-    mLevelling = false;
-    mSpinning = false;
-
-    mGrabRot[chan].x = mCamera->GetTargetRot().x;
-    mGrabRot[chan].y = mCamera->GetTargetRot().y;
-    mGrabPos[chan].x = lbl_801F0888[chan];
-    mGrabPos[chan].y = lbl_801F0898[chan];
-    mGrabRoll = mCamera->GetRot().z;
-
-    KPADStatus status = lbl_801EE478[chan][0];
-    mGrabTwist[chan] = math::Atan2Deg(status.horizon.x, -status.horizon.y);
-
-    mDragSign = 1.0f;
-    if (mNorthBehind) {
-        if (!mNorthAhead) {
-            mDragSign = mGrabPos[chan].y < mNorthScreen.y ? -1.0f : 1.0f;
+    if (gTrig[chan] & 0x800) {
+        mGrab[chan] = true;
+        for (s32 i = 0; i < 4; i++) {
+            if (chan != i) {
+                mGrab[i] = false;
+            }
         }
-    } else if (mSouthBehind) {
-        if (!mSouthAhead) {
-            mDragSign = mGrabPos[chan].y > mSouthScreen.y ? -1.0f : 1.0f;
+        mCamera->mResetting = false;
+        mLevelling = false;
+        mSpinning = false;
+
+        mGrabRot[chan].x = mCamera->GetTargetRot().x;
+        mGrabRot[chan].y = mCamera->GetTargetRot().y;
+        mGrabPos[chan].x = lbl_801F0888[chan];
+        mGrabPos[chan].y = lbl_801F0898[chan];
+        mGrabRoll = mCamera->GetRot().z;
+
+        KPADStatus status;
+        KPADStatus* kpad = lbl_801EE478[chan];
+        status = *kpad;
+        mGrabTwist[chan] = math::Atan2Deg(status.horizon.x, -status.horizon.y);
+
+        mDragSign = 1.0f;
+        if (mNorthBehind) {
+            if (!mNorthAhead) {
+                mDragSign = mGrabPos[chan].y < mNorthScreen.y ? -1.0f : 1.0f;
+            }
+        } else if (mSouthBehind) {
+            if (!mSouthAhead) {
+                mDragSign = mGrabPos[chan].y > mSouthScreen.y ? -1.0f : 1.0f;
+            }
         }
+        return TRUE;
     }
-    return TRUE;
+    return FALSE;
+}
+
+inline math::VEC3 Camera::GetTargetRot() const {
+    return mTargetRot;
+}
+
+inline math::VEC3 Camera::GetRot() const {
+    return mRot;
 }
 
 s32 Globe::UpdateGrab(s32 chan) {
@@ -394,67 +410,68 @@ s32 Globe::UpdateGrab(s32 chan) {
     }
 
     f32 speed = 0.5f * (0.01f * mCameraDistance);
-    if (!mGrab[chan]) {
-        return 0;
-    }
+    if (mGrab[chan]) {
+        if (lbl_801F0908[chan] & 0x800) {
+            KPADStatus status;
+            KPADStatus* kpad = lbl_801EE478[chan];
+            status = *kpad;
+            f32 roll = math::Atan2Deg(status.horizon.x, -status.horizon.y) - mGrabTwist[chan];
+            if (math::FAbs(roll) > 30.0f) {
+                roll += mGrabRoll;
+                if (roll < 0.0f) {
+                    roll += 360.0f;
+                } else if (roll >= 360.0f) {
+                    roll -= 360.0f;
+                }
+                mCamera->mResetting = false;
+                mSpinX = 0.0f;
+                mSpinY = 0.0f;
+            } else {
+                math::VEC2 rot;
+                rot.x = camera->mTargetRot.x;
+                rot.y = camera->mTargetRot.y;
+                math::VEC3 move;
+                roll = mGrabRoll;
+                move.x = speed * (lbl_801F0898[chan] - mGrabPos[chan].y);
+                if (IsNearlyZero(camera->mRot.z)) {
+                    move.y = speed * (mDragSign * (lbl_801F0888[chan] - mGrabPos[chan].x));
+                } else {
+                    move.y = speed * (lbl_801F0888[chan] - mGrabPos[chan].x);
+                }
+                move.z = 0.0f;
+                fn_8004520C(&gWorkMtx, camera->mRot.z);
+                PSMTXMultVec(gWorkMtx, move, move);
 
-    if (!(lbl_801F0908[chan] & 0x800)) {
+                camera->mTargetRot.x = move.x + mGrabRot[chan].x;
+                camera->mTargetRot.y = mGrabRot[chan].y - move.y;
+                if (camera->mTargetRot.x > 89.0f) {
+                    camera->mTargetRot.x = 89.0f;
+                } else if (camera->mTargetRot.x < -89.0f) {
+                    camera->mTargetRot.x = -89.0f;
+                }
+                while (camera->mTargetRot.y < -180.0f) {
+                    camera->mTargetRot.y += 360.0f;
+                }
+                while (camera->mTargetRot.y > 180.0f) {
+                    camera->mTargetRot.y -= 360.0f;
+                }
+
+                mSpinX = camera->mTargetRot.x - rot.x;
+                mSpinY = camera->mTargetRot.y - rot.y;
+                if (mSpinY < -180.0f) {
+                    mSpinY += 360.0f;
+                } else if (mSpinY > 180.0f) {
+                    mSpinY -= 360.0f;
+                }
+            }
+            fn_80044838(&camera->mRot.z, roll, 0.1f, 180.0f, 1.0f);
+            return 1;
+        }
         mGrab[chan] = false;
         mSpinning = true;
         return 2;
     }
-
-    f32 roll;
-    KPADStatus status = lbl_801EE478[chan][0];
-    f32 twist = math::Atan2Deg(status.horizon.x, -status.horizon.y) - mGrabTwist[chan];
-    if (__fabs(twist) > 30.0f) {
-        roll = twist + mGrabRoll;
-        if (roll < 0.0f) {
-            roll += 360.0f;
-        } else if (roll >= 360.0f) {
-            roll -= 360.0f;
-        }
-        mCamera->mResetting = false;
-        mSpinX = 0.0f;
-        mSpinY = 0.0f;
-    } else {
-        math::VEC2 rot(camera->mTargetRot.x, camera->mTargetRot.y);
-        math::VEC3 move;
-        roll = mGrabRoll;
-        move.x = speed * (lbl_801F0898[chan] - mGrabPos[chan].y);
-        if (IsNearlyZero(camera->mRot.z)) {
-            move.y = speed * (mDragSign * (lbl_801F0888[chan] - mGrabPos[chan].x));
-        } else {
-            move.y = speed * (lbl_801F0888[chan] - mGrabPos[chan].x);
-        }
-        move.z = 0.0f;
-        fn_8004520C(&gWorkMtx, camera->mRot.z);
-        PSMTXMultVec(gWorkMtx, move, move);
-
-        camera->mTargetRot.x = move.x + mGrabRot[chan].x;
-        camera->mTargetRot.y = mGrabRot[chan].y - move.y;
-        if (camera->mTargetRot.x > 89.0f) {
-            camera->mTargetRot.x = 89.0f;
-        } else if (camera->mTargetRot.x < -89.0f) {
-            camera->mTargetRot.x = -89.0f;
-        }
-        while (camera->mTargetRot.y < -180.0f) {
-            camera->mTargetRot.y += 360.0f;
-        }
-        while (camera->mTargetRot.y > 180.0f) {
-            camera->mTargetRot.y -= 360.0f;
-        }
-
-        mSpinX = camera->mTargetRot.x - rot.x;
-        mSpinY = camera->mTargetRot.y - rot.y;
-        if (mSpinY < -180.0f) {
-            mSpinY += 360.0f;
-        } else if (mSpinY > 180.0f) {
-            mSpinY -= 360.0f;
-        }
-    }
-    fn_80044838(&camera->mRot.z, roll, 0.1f, 180.0f, 1.0f);
-    return 1;
+    return 0;
 }
 
 void Globe::SetTilt(s32 level, bool level0) {
@@ -527,18 +544,18 @@ void Globe::UpdateTilt(s32 unused, const u32* se) {
             mLevelling = false;
             mCamera->mTargetRot.x = 0.0f;
         } else if (*lat < 0.0f) {
-            if (Ease(lat, 0.0f, 0.1f, 100.0f, 0.001f) == 0.0f) {
+            if (!Ease(lat, 0.0f, 0.1f, 100.0f, 0.001f)) {
                 mLevelling = false;
             }
         } else if (*lat > 0.0f) {
-            if (Ease(lat, 0.0f, 0.1f, 100.0f, 0.001f) == 0.0f) {
+            if (!Ease(lat, 0.0f, 0.1f, 100.0f, 0.001f)) {
                 mLevelling = false;
             }
         }
     }
 }
 
-void Globe::UpdateSpin(s32 stop) {
+void Globe::UpdateSpin(u32 stop) {
     Camera* camera = mCamera;
     if (camera == NULL) {
         return;
@@ -578,7 +595,7 @@ void Globe::UpdateSpin(s32 stop) {
         mSpinY = 0.0f;
     }
 
-    step = __fabs(step);
+    step = math::FAbs(step);
     if (step < 0.05f) {
         mSpinX *= sSpinDamping[mZoomLevel];
         if (IsNearlyZero(mSpinX)) {
@@ -599,7 +616,7 @@ void Globe::UpdateSpin(s32 stop) {
     }
 
     f32 len = math::FSqrt(mSpinX * mSpinX + mSpinY * mSpinY);
-    if (IsWithin(__fabs(len), 0.001f)) {
+    if (IsWithin(math::FAbs(len), 0.001f)) {
         mSpinning = false;
         mSpinY = 0.0f;
         mSpinX = 0.0f;
@@ -618,13 +635,14 @@ void Globe::SetTwist(f32 twist) {
 }
 
 void Globe::PlaySpinSound(u32 id) {
-    f32 speed = __fabs(math::FSqrt(mSpinX * mSpinX + mSpinY * mSpinY));
+    f32 speed = math::FAbs(math::FSqrt(mSpinX * mSpinX + mSpinY * mSpinY));
     if (!IsWithin(speed, 1.0f)) {
+        f32 pitch;
         f32 volume = speed / 5.0f;
         if (volume > 1.0f) {
             volume = 1.0f;
         }
-        f32 pitch = speed / 90.0f;
+        pitch = speed / 90.0f;
         if (pitch > 1.0f) {
             pitch = 1.0f;
         }
@@ -636,25 +654,30 @@ void Globe::PlaySpinSound(u32 id) {
     }
 }
 
+inline s8 GetExponent(f32 x) {
+    f32 v = 1.0f + x;
+    return ((*(u32*)&v >> 23) & 0xFF) - 127;
+}
+
 void Globe::UpdateCamera() {
+    math::MTX34 indMtx;
+    g3d::Camera::PostureInfo posture;
+    math::MTX34 mtx;
+
     f32 fade = Clamp01((100.0f - mDistance) / 35.0f);
     f32 near = Clamp01((mDistance - 2.0f) / 15.0f);
-    if (!(near > fade)) {
-        fade = near;
-    }
+    fade = near > fade ? fade : near;
     f32 scale = 0.85f + 0.15f * Clamp01((mDistance - 40.0f) / 20.0f);
     f32 alpha = Clamp01((mDistance - 2.0f) / 15.0f);
 
-    s8 scaleExp = 0;
+    s32 scaleExp = 0;
     f32 m = 0.0f;
     if (fade > 1e-18f) {
-        f32 v = 1.0f + fade;
-        scaleExp = (s8)(((*(u32*)&v >> 23) & 0xFF) - 127);
+        scaleExp = GetExponent(fade);
         m = ldexp(1.0, -scaleExp);
     }
     m = fade * m;
 
-    math::MTX34 indMtx;
     indMtx._01 = 0.0f;
     indMtx._00 = m;
     indMtx._02 = 0.0f;
@@ -669,12 +692,12 @@ void Globe::UpdateCamera() {
     math::VEC3 targetOfs(0.25f * -depth, 0.25f * depth, depth);
     math::VEC3 posOfs(0.25f * -dist, 0.25f * dist, dist);
     math::VEC3 up(0.0f, 1.0f, 0.0f);
+    math::VEC3 pos;
 
     PSMTXTrans(gWorkMtx, targetOfs.x, targetOfs.y, targetOfs.z);
     fn_800450D8(&gWorkMtx, -mCamera->mTargetRot.x);
     fn_80045170(&gWorkMtx, mCamera->mTargetRot.z);
     fn_80045124(&gWorkMtx, mCamera->mTargetRot.y);
-    math::MTX34 mtx;
     PSMTXCopy(gWorkMtx, mtx);
     math::VEC3 target(mtx._03, mtx._13, mtx._23);
 
@@ -684,7 +707,9 @@ void Globe::UpdateCamera() {
     fn_80045124(&gWorkMtx, mCamera->mRot.y);
     PSMTXConcat(mtx, gWorkMtx, gWorkMtx);
     PSMTXCopy(gWorkMtx, mtx);
-    math::VEC3 pos(mtx._03, mtx._13, mtx._23);
+    pos.x = mtx._03;
+    pos.y = mtx._13;
+    pos.z = mtx._23;
 
     gWorkMtx._03 = 0.0f;
     gWorkMtx._13 = 0.0f;
@@ -693,7 +718,6 @@ void Globe::UpdateCamera() {
     PSMTXMultVec(gWorkMtx, up, camUp);
 
     camera.SetPosition(pos);
-    g3d::Camera::PostureInfo posture;
     posture.tp = g3d::Camera::POSTURE_LOOKAT;
     posture.cameraUp = camUp;
     posture.cameraTarget = target;
@@ -719,12 +743,13 @@ void Globe::UpdateCamera() {
 
             g3d::ResTexSrt texSrt = mat.GetResTexSrt();
             texSrt.SetMapMode(1, 1, 1, -1);
-            texSrt.ref().texSrt[3].Su = scale;
-            texSrt.ref().texSrt[3].Sv = scale;
-            texSrt.ref().flag &= ~(g3d::TexSrt::FLAG_SCALE_ONE << (3 * g3d::TexSrt::NUM_OF_FLAGS));
+            g3d::ResTexSrtData& srt = texSrt.ref();
+            srt.texSrt[3].Su = scale;
+            srt.texSrt[3].Sv = scale;
+            srt.flag &= ~(g3d::TexSrt::FLAG_SCALE_ONE << (3 * g3d::TexSrt::NUM_OF_FLAGS));
 
             g3d::ResMatIndMtxAndScale ind = mat.GetResMatIndMtxAndScale();
-            ind.GXSetIndTexMtx(GX_ITM_1, indMtx, scaleExp);
+            ind.GXSetIndTexMtx(GX_ITM_0, indMtx, scaleExp);
             ind.DCStore(false);
         }
     }

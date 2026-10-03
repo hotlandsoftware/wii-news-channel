@@ -37,7 +37,7 @@ public:
     BOOL IsRotating();
     void SetTiltNow(s32 level);
     void UpdateTilt(s32 unused, const u32* se);
-    void UpdateSpin(s32 stop);
+    void UpdateSpin(u32 stop);
     void SetZoom(s32 level);
     void SetTwist(f32 twist);
     void PlaySpinSound(u32 id);
