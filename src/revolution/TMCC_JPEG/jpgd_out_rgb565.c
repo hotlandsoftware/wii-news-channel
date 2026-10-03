@@ -126,10 +126,10 @@ void jpgdOutRGB565_411(JPEGDecContext* ctx, u32 x, u32 y) {
     scb = ctx->pix.cb;
     scr = ctx->pix.cr;
     h = ctx->handle;
-    w = 32 / h->scale;
-    hh = 8 / h->scale;
     tiles = TILES();
     out = h->out;
+    w = 32 / h->scale;
+    hh = 8 / h->scale;
     xe = x + w;
     ye = y + hh;
     for (j = y; j < ye; j++) {
@@ -180,10 +180,10 @@ void jpgdOutRGB565_411Edge(JPEGDecContext* ctx, u32 x, u32 y) {
     scb = ctx->pix.cb;
     scr = ctx->pix.cr;
     h = ctx->handle;
-    w = (h->lastX == x) ? h->remX : 32 / h->scale;
-    hh = (h->lastY == y) ? h->remY : 8 / h->scale;
     tiles = TILES();
     out = h->out;
+    w = (h->lastX == x) ? h->remX : 32 / h->scale;
+    hh = (h->lastY == y) ? h->remY : 8 / h->scale;
     xe = x + w;
     ye = y + hh;
     for (j = y; j < ye; j++) {
@@ -229,10 +229,10 @@ void jpgdOutRGB565_422(JPEGDecContext* ctx, u32 x, u32 y) {
     scb = ctx->pix.y + 0x80;
     scr = ctx->pix.y + 0xC0;
     h = ctx->handle;
-    w = 16 / h->scale;
-    hh = 8 / h->scale;
     tiles = TILES();
     out = h->out;
+    w = 16 / h->scale;
+    hh = 8 / h->scale;
     xe = x + w;
     ye = y + hh;
     for (j = y; j < ye; j++) {
@@ -279,10 +279,10 @@ void jpgdOutRGB565_422Edge(JPEGDecContext* ctx, u32 x, u32 y) {
     scb = ctx->pix.y + 0x80;
     scr = ctx->pix.y + 0xC0;
     h = ctx->handle;
-    w = (h->lastX == x) ? h->remX : 16 / h->scale;
-    hh = (h->lastY == y) ? h->remY : 8 / h->scale;
     tiles = TILES();
     out = h->out;
+    w = (h->lastX == x) ? h->remX : 16 / h->scale;
+    hh = (h->lastY == y) ? h->remY : 8 / h->scale;
     xe = x + w;
     ye = y + hh;
     for (j = y; j < ye; j++) {
@@ -328,10 +328,10 @@ void jpgdOutRGB565_420(JPEGDecContext* ctx, u32 x, u32 y) {
     scb = ctx->pix.cb;
     scr = ctx->pix.cr;
     h = ctx->handle;
-    w = 16 / h->scale;
-    hh = 16 / h->scale;
     tiles = TILES();
     out = h->out;
+    w = 16 / h->scale;
+    hh = 16 / h->scale;
     xe = x + w;
     ye = y + hh;
     for (j = y; j < ye; j++) {
@@ -383,10 +383,10 @@ void jpgdOutRGB565_420Edge(JPEGDecContext* ctx, u32 x, u32 y) {
     scb = ctx->pix.cb;
     scr = ctx->pix.cr;
     h = ctx->handle;
-    w = (h->lastX == x) ? h->remX : 16 / h->scale;
-    hh = (h->lastY == y) ? h->remY : 16 / h->scale;
     tiles = TILES();
     out = h->out;
+    w = (h->lastX == x) ? h->remX : 16 / h->scale;
+    hh = (h->lastY == y) ? h->remY : 16 / h->scale;
     xe = x + w;
     ye = y + hh;
     for (j = y; j < ye; j++) {
@@ -437,10 +437,10 @@ void jpgdOutRGB565_444(JPEGDecContext* ctx, u32 x, u32 y) {
     scb = ctx->pix.y + 0x40;
     scr = ctx->pix.y + 0x80;
     h = ctx->handle;
-    w = 8 / h->scale;
-    hh = 8 / h->scale;
     tiles = TILES();
     out = h->out;
+    w = 8 / h->scale;
+    hh = 8 / h->scale;
     xe = x + w;
     ye = y + hh;
     for (j = y; j < ye; j++) {
@@ -485,10 +485,10 @@ void jpgdOutRGB565_444Edge(JPEGDecContext* ctx, u32 x, u32 y) {
     scb = ctx->pix.y + 0x40;
     scr = ctx->pix.y + 0x80;
     h = ctx->handle;
-    w = (h->lastX == x) ? h->remX : 8 / h->scale;
-    hh = (h->lastY == y) ? h->remY : 8 / h->scale;
     tiles = TILES();
     out = h->out;
+    w = (h->lastX == x) ? h->remX : 8 / h->scale;
+    hh = (h->lastY == y) ? h->remY : 8 / h->scale;
     xe = x + w;
     ye = y + hh;
     for (j = y; j < ye; j++) {
@@ -506,24 +506,24 @@ void jpgdOutRGB565_444Edge(JPEGDecContext* ctx, u32 x, u32 y) {
 void jpgdOutRGB565_Gray(JPEGDecContext* ctx, u32 x, u32 y) {
     u8* out;
     u8* sy;
-    s32 w;
-    s32 hh;
     s32 i;
     s32 xe;
-    s32 j;
-    s32 r;
-    s32 g;
-    s32 b;
     s32 ye;
-    s32 yy;
-    JPEGDecHandle* h;
+    s32 b;
     u32 tiles;
+    JPEGDecHandle* h;
+    s32 r;
+    s32 w;
+    s32 j;
+    s32 yy;
+    s32 hh;
+    s32 g;
 
     sy = ctx->pix.y;
     h = ctx->handle;
+    tiles = TILES();
     w = 8 / h->scale;
     hh = w;
-    tiles = TILES();
     out = h->out;
     xe = x + w;
     ye = y + hh;
@@ -571,10 +571,10 @@ void jpgdOutRGB565_GrayEdge(JPEGDecContext* ctx, u32 x, u32 y) {
 
     sy = ctx->pix.y;
     h = ctx->handle;
-    w = (h->lastX == x) ? h->remX : 8 / h->scale;
-    hh = (h->lastY == y) ? h->remY : 8 / h->scale;
     tiles = TILES();
     out = h->out;
+    w = (h->lastX == x) ? h->remX : 8 / h->scale;
+    hh = (h->lastY == y) ? h->remY : 8 / h->scale;
     xe = x + w;
     ye = y + hh;
     for (j = y; j < ye; j++) {
