@@ -1,7 +1,7 @@
 #include <string.h>
 #include "jpgd_internal.h"
 
-const u8 jpgdSampTableH[20] = {
+const u8 jpgdSampTableH[5][4] = {
     4, 1, 1, 0,
     2, 1, 1, 0,
     2, 1, 1, 0,
@@ -9,7 +9,7 @@ const u8 jpgdSampTableH[20] = {
     1, 0, 0, 0,
 };
 
-const u8 jpgdSampTableV[20] = {
+const u8 jpgdSampTableV[5][4] = {
     1, 1, 1, 0,
     1, 1, 1, 0,
     2, 1, 1, 0,

@@ -260,8 +260,8 @@ void jpgdOutRGBA8_GrayEdge(JPEGDecContext* ctx, u32 x, u32 y);
 
 // jpgd_huff.c
 extern const u8 jpgdSampComps[];
-extern const u8 jpgdSampTableH[];
-extern const u8 jpgdSampTableV[];
+extern const u8 jpgdSampTableH[5][4];
+extern const u8 jpgdSampTableV[5][4];
 extern const u8 jpgdZigzag[64];
 extern const s32 jpgdCoefExtent[64];
 s32 jpgdDecodeBlock(s32* coef, s32* quant, s32* dcPred, JPEGDecContext* ctx);

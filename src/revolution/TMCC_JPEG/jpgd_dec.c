@@ -797,10 +797,6 @@ static s32 jpgdCheckComps(JPEGDecContext* ctx) {
 }
 
 s32 jpgdReadSOF(JPEGDecContext* ctx) {
-    const u8* ph;
-    const u8* pv;
-    const u8* bb;
-    const u8* pn;
     s32 hh;
     s32 maxH;
     u16 maxV;
@@ -808,7 +804,6 @@ s32 jpgdReadSOF(JPEGDecContext* ctx) {
     u16 v;
     JPEGFrame* f;
     s32 ret;
-    const u8* a;
     JPEGScan* sc;
     s32 i;
     u8 c;
@@ -888,24 +883,16 @@ s32 jpgdReadSOF(JPEGDecContext* ctx) {
     f->maxH = maxH;
     f->maxV = maxV;
     f->sampling = 5;
-    pn = jpgdSampComps;
-    ph = jpgdSampTableH;
-    pv = jpgdSampTableV;
     for (t = 0; t < 5; t++) {
-        if (f->numComps == *pn) {
-            a = ph;
-            bb = pv;
+        if (f->numComps == jpgdSampComps[t]) {
             for (j = 0; j < f->numComps; j++) {
-                if (f->hSamp[j] != a[j] || f->vSamp[j] != bb[j]) {
+                if (f->hSamp[j] != jpgdSampTableH[t][j] || f->vSamp[j] != jpgdSampTableV[t][j]) {
                     goto next;
                 }
             }
             f->sampling = t;
         }
-    next:
-        pn++;
-        ph += 4;
-        pv += 4;
+    next:;
     }
     if (f->sampling == 5) {
         return -0x70;
