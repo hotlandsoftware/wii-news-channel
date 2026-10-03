@@ -2930,17 +2930,19 @@ void MainScreen::Func1CAC8() {
     bool held = false;
     switch (mUnk2DC) {
     case -1:
-        lbl_803575BA = false;
         lbl_801EDFD0[0] = 1;
         lbl_801EDFD0[1] = 1;
         lbl_801EDFD0[2] = 1;
         lbl_801EDFD0[3] = 1;
+        lbl_803575BA = false;
         lbl_803575BB = false;
         break;
     case 0:
         mUnk2DC++;
-        lbl_801EDFA0[1] = lbl_803575D4;
-        lbl_801EDFB8[1] = lbl_803575D8;
+        f32 x = lbl_803575D4;
+        f32 y = lbl_803575D8;
+        lbl_801EDFA0[1] = x;
+        lbl_801EDFB8[1] = y;
         lbl_80357600.a = 255;
         PlaySE(0x16);
         break;
@@ -2990,8 +2992,8 @@ void MainScreen::Func1CAC8() {
         if (count != 0) {
             mUnk27C = velocity / count;
         }
-        mUnk254 += mUnk27C;
         f32 min = -(rowHeight * (mUnk2F8 - sVisibleRows[lbl_80356970]));
+        mUnk254 += mUnk27C;
         if (mUnk254 > 0.0f) {
             mUnk254 = 0.0f;
         } else if (mUnk254 < min) {
@@ -3253,17 +3255,19 @@ void MainScreen::Sub1DC30() {
     switch (mUnk2D4) {
     case -1:
         fn_80032508();
-        lbl_803575BA = false;
         lbl_801EDFD0[0] = 1;
         lbl_801EDFD0[1] = 1;
         lbl_801EDFD0[2] = 1;
         lbl_801EDFD0[3] = 1;
+        lbl_803575BA = false;
         lbl_803575BB = false;
         break;
     case 0:
         mUnk2D4++;
-        lbl_801EDFA0[1] = lbl_803575D4;
-        lbl_801EDFB8[1] = lbl_803575D8;
+        f32 x = lbl_803575D4;
+        f32 y = lbl_803575D8;
+        lbl_801EDFA0[1] = x;
+        lbl_801EDFB8[1] = y;
         lbl_80357600.a = 100;
         PlaySE(0x16);
         break;
