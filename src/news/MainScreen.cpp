@@ -699,7 +699,7 @@ void MainScreen::DrawRelated() {
     }
     f32 alpha = mUnk25C;
     ut::Color highlight = gHighlightColor;
-    ut::Color sep;
+    ut::Color sep = gSeparatorColor;
     GXColor black;
     GXColor white;
     u8 a = 255.0f * alpha;
@@ -712,7 +712,6 @@ void MainScreen::DrawRelated() {
     white.g = 255;
     white.b = 255;
     white.a = a;
-    sep = gSeparatorColor;
     math::VEC2 pos;
     pos.y = mUnk1A0;
     pos.x = mUnk19C - 0.5f * mUnk1A4;
