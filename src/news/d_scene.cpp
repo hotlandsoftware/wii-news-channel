@@ -69,8 +69,8 @@ Globe* fn_8004C43C(Globe* globe);
 void fn_8004C5F0(Globe* globe, s32 flags);
 void fn_8004D170(Globe* globe);
 void fn_8004EA2C(void* sound, s32 flags);
-void fn_8004EA9C(void* sound);
-void fn_8004EAA0(void* sound);
+void fn_8004EA9C(void);
+void fn_8004EAA0(void);
 }
 
 void* operator new(size_t size, s32 align);
@@ -169,7 +169,7 @@ ut::Color gHighlightColor(140, 180, 180, 255);
     } while (0)
 
 static inline BOOL IsHomeMenuActive() {
-    return lbl_80357710->mActive || lbl_80357710->mOpenManual;
+    return lbl_80357710->IsOpen();
 }
 
 Scene::Scene(bool arg)
@@ -230,10 +230,13 @@ Scene::Scene(bool arg)
     lbl_80357710->mManualEnabled = false;
     lbl_80357710->mSuspendMusic = false;
 
-    if (gLanguage == 0) {
+    switch (gLanguage) {
+    case 0:
         lbl_80357738 = LoadArcFile(gArchive, "font_weather_time.brfnt.LZ", 32, NULL, lbl_80357640);
-    } else {
+        break;
+    default:
         lbl_80357738 = LoadArcFile(gArchive, "font_weather_timeWW.brfnt.LZ", 32, NULL, lbl_80357640);
+        break;
     }
     if (lbl_80357738 == NULL) {
         SCENE_ERROR(413);
@@ -547,11 +550,12 @@ void Scene::Execute() {
 
     if (!gFatalError) {
         UpdateClock();
-        mColonPhase = (lbl_80357718 >> 8) & 1;
-        if ((lbl_80357718 & 0x1F) == 0) {
+        u32 frame = lbl_80357718;
+        mColonPhase = (frame >> 8) & 1;
+        if ((frame & 0x1F) == 0) {
             lbl_8035771C ^= 1;
         }
-        if ((lbl_80357718 & 0xF) == 0) {
+        if ((frame & 0xF) == 0) {
             if (++lbl_80357720 > 2) {
                 lbl_80357720 = 0;
             }
@@ -567,14 +571,14 @@ void Scene::Execute() {
         }
         vf2C();
         if (lbl_80357754 != NULL) {
-            fn_8004EAA0(lbl_80357754);
+            fn_8004EAA0();
         }
     }
 }
 
 void Scene::UpdateSound() {
     if (lbl_80357754 != NULL) {
-        fn_8004EA9C(lbl_80357754);
+        fn_8004EA9C();
     }
 }
 
@@ -809,6 +813,7 @@ BOOL Scene::StateExit() {
         break;
     case -1:
         break;
+    case 2:
     default:
         if (lbl_8035772C->mBusy == 0) {
             if (!lbl_8035772B) {
@@ -926,26 +931,26 @@ static void* EarthLoadThread(void* arg) {
 
 BOOL UnloadEarth() {
     if (lbl_8035772B) {
-        if (lbl_80357760 == NULL) {
-            return FALSE;
-        }
         if (lbl_80357760 != NULL) {
-            if (lbl_8035775C != NULL) {
-                g3d::ScnRoot* root = lbl_8035775C->mScnRoot;
-                if (root != NULL) {
-                    root->Clear();
+            if (lbl_80357760 != NULL) {
+                if (lbl_8035775C != NULL) {
+                    g3d::ScnRoot* root = lbl_8035775C->mScnRoot;
+                    if (root != NULL) {
+                        root->Clear();
+                    }
+                    fn_8004D170(lbl_8035775C);
                 }
-                fn_8004D170(lbl_8035775C);
+                delete lbl_80357760;
+                lbl_80357760 = NULL;
             }
-            delete lbl_80357760;
-            lbl_80357760 = NULL;
+            if (lbl_80357758 != NULL) {
+                MEMFreeToExpHeap(lbl_80357780, lbl_80357758);
+                lbl_80357758 = NULL;
+            }
+            lbl_8035772B = false;
+            return TRUE;
         }
-        if (lbl_80357758 != NULL) {
-            MEMFreeToExpHeap(lbl_80357780, lbl_80357758);
-            lbl_80357758 = NULL;
-        }
-        lbl_8035772B = false;
-        return TRUE;
+        return FALSE;
     }
     return TRUE;
 }

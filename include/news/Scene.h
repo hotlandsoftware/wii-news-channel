@@ -60,8 +60,8 @@ public:
             mStep = -1;
             (this->*mState)();
         }
-        mState = state;
         mStep = 0;
+        mState = state;
         if (mState) {
             (this->*mState)();
         }
