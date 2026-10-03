@@ -2,6 +2,7 @@
 #include <news/Camera.h>
 #include <news/Draw2D.h>
 #include <news/System.h>
+#include <nw4r/math/math_arithmetic.h>
 #include <nw4r/math/math_triangular.h>
 #include <nw4r/math/math_types.h>
 #include <revolution/gx.h>
@@ -77,7 +78,7 @@ static inline f32 Clamp(f32 x, f32 min, f32 max) {
 }
 
 void GlobeDots::UpdateAlpha(f32 dx, f32 dy) {
-    u8 target = Clamp(255.0f - 200.0f * (__fabsf(dx) + __fabsf(dy)), 0.0f, 255.0f);
+    u8 target = Clamp(255.0f - 200.0f * (math::FAbs(dx) + math::FAbs(dy)), 0.0f, 255.0f);
     if (mAlpha > target) {
         if (mAlpha - target < 32) {
             mAlpha = target;
