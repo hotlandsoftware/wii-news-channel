@@ -24,10 +24,10 @@ news/Mascot.cpp:
 	.sdata2     start:0x80358460 end:0x803584F0
 
 news/Connect.cpp:
-	.text       start:0x80007F58 end:0x8000A0F8
+	.text       start:0x80007F58 end:0x80009C54
 	.rodata     start:0x801920C0 end:0x801920F0
 	.data       start:0x801AFFA0 end:0x801B0418
-	.sdata      start:0x80356748 end:0x80356778
+	.sdata      start:0x80356748 end:0x80356768
 	.sdata2     start:0x803584F0 end:0x80358570
 
 news/msg/MsgToSectionSelect.cpp:
@@ -38,6 +38,10 @@ news/msg/MsgSectionSelect.cpp:
 
 news/PunctuationTable.cpp:
 	.rodata     start:0x801920F0 end:0x80192140
+
+news/ConnectTips.cpp:
+	.text       start:0x80009C54 end:0x8000A0F8
+	.sdata      start:0x80356768 end:0x80356778
 
 news/SaveData.cpp:
 	.text       start:0x8000A0F8 end:0x8000BE30

@@ -1399,6 +1399,7 @@ config.libs = [
         "progress_category": "game",
         "objects": [
             Object(Matching, "news/Connect.cpp"),
+            Object(Matching, "news/ConnectTips.cpp"),
             Object(Matching, "news/msg/MsgToSectionSelect.cpp"),
             Object(Matching, "news/msg/MsgSectionSelect.cpp"),
             Object(Matching, "news/PunctuationTable.cpp"),
