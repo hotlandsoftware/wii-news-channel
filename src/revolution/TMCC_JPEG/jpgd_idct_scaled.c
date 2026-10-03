@@ -5,45 +5,40 @@
 #define CLAMP_S8(v) (((v) < 128 && (v) > -129) ? (v) : ((v) > 0 ? 127 : -128))
 
 void jpgdIdct4x4Y(s32* in, u8* out, u16 stride, s32 extent) {
-    s32* ip;
-    s32 i;
-    s32* wp;
     s32 d0;
+    s32* wp;
     s32 d1;
     s32 e1;
+    s32* ip;
     s32 d3;
+    s32 d2;
     s32 e0;
-    s32 ws[64];
+    s32 i;
     s32 t;
     s32 e13;
-    s32 d2;
+    s32 ws[64];
 
-    ip = in + 24;
-    wp = ws + 24;
-    for (i = 0; i < 4; i++) {
-        d1 = ip[1];
-        d3 = ip[3];
-        d0 = ip[0];
-        d2 = ip[2];
+    for (i = 3; i >= 0; i--) {
+        d1 = in[i * 8 + 1];
+        d3 = in[i * 8 + 3];
+        d0 = in[i * 8 + 0];
+        d2 = in[i * 8 + 2];
         t = ((d1 - d3) * 181) >> 8;
-        e13 = t + (d3 + d1);
+        e13 = t + (d1 + d3);
         e0 = d0 + d2;
         e1 = d0 - d2;
-        wp[0] = e0 + e13;
-        wp[1] = e1 + t;
-        wp[2] = e1 - t;
-        wp[3] = e0 - e13;
-        ip -= 8;
-        wp -= 8;
+        ws[i * 8 + 0] = e0 + e13;
+        ws[i * 8 + 1] = e1 + t;
+        ws[i * 8 + 2] = e1 - t;
+        ws[i * 8 + 3] = e0 - e13;
     }
 
-    wp = &ws[3];
     for (i = 3; i >= 0; i--) {
         u8* o = out + i;
-        d1 = wp[8];
-        d3 = wp[24];
-        d0 = wp[0] + 0x40000;
-        d2 = wp[16];
+        d1 = ws[8 + i];
+        d3 = ws[24 + i];
+        d0 = ws[i] + 0x40000;
+        d2 = ws[16 + i];
         t = ((d1 - d3) * 181) >> 8;
         e13 = t + (d3 + d1);
         e0 = d0 + d2;
@@ -52,7 +47,6 @@ void jpgdIdct4x4Y(s32* in, u8* out, u16 stride, s32 extent) {
         o[stride] = CLAMP_U8((e1 + t) >> 11);
         o[stride * 2] = CLAMP_U8((e1 - t) >> 11);
         o[stride * 3] = CLAMP_U8((e0 - e13) >> 11);
-        wp--;
     }
 }
 
