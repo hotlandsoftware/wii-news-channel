@@ -95,7 +95,10 @@ void Layout::Calc() {
         height = 0.0f;
     }
 
-    SetSlide(height * mSlideFrame / mSlideLength);
+    f32 step = height * mSlideFrame / mSlideLength;
+    for (int i = 0; i < mButtonCount; i++) {
+        mButtons[i]->SetSlide(step);
+    }
 
     if (mFadeOut) {
         if (mFadeFrame < mFadeLength) {
