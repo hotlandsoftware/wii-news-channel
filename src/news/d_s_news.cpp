@@ -494,7 +494,7 @@ static inline bool IsArticleShort() {
 }
 
 static inline s32 GetMaxScrollLine() {
-    s32 max = (lbl_80357568->mNumLines + sBodyView->mNumLines + sCreditView->mNumLines + 1) -
+    s32 max = (lbl_80357568->mNumLines + sBodyView->mNumLines + 1 + sCreditView->mNumLines) -
               sLinesPerPage[lbl_80356970];
     return max & ~(max >> 31);
 }
@@ -2717,7 +2717,8 @@ void Article_PageDown(s32 size, const f32& offset) {
         return;
     }
     s32 max = GetMaxScrollLine();
-    sScrollLine = Article_GetLineAt(offset) + sLinesPerPage[size];
+    s32 line = Article_GetLineAt(offset);
+    sScrollLine = line + sLinesPerPage[size];
     if (sScrollLine > max) {
         sScrollLine = max;
     }
