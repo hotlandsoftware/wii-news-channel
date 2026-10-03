@@ -751,7 +751,7 @@ void MainScreen::DrawRelated() {
     Draw2D_SetScissor(pos.x, clipTop, 5.0f + mRelated->mLocationScroller.mViewWidth, clipBottom);
 
     GlobePin* item;
-    pos.y = startY + half;
+    pos.y += half;
     for (item = mRelated; item != NULL; item = item->mNext) {
         if (pos.y > 0.0f && pos.y < 456.0f) {
             mWriter->SetCursor(pos.x + item->mLocationScroller.mPos, pos.y);
@@ -787,7 +787,7 @@ void MainScreen::DrawRelated() {
     GXSetTevColor(GX_TEVREG0, opaque);
     Draw2D_SetScissor(0, clipTop, GetScreenWidth(), clipBottom);
     pos.y = startY + half;
-    for (item = mRelated; item != NULL; item = item->mNext) {
+    for (GlobePin* item = mRelated; item != NULL; item = item->mNext) {
         if (pos.y > 0.0f && pos.y < 456.0f) {
             iconPos.x = iconX;
             iconPos.y = pos.y;
