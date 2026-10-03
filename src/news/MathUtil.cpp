@@ -231,6 +231,7 @@ static inline s32 GetDaysInYear(s32 year) {
 void MinutesToCalendarTime(u32 minutes, OSCalendarTime* time) {
     s32 hours = minutes / 60;
     s32 days = hours / 24;
+    s32 yday;
     s32 totalDays = days;
     s32 year = 0;
     s32 month = 1;
@@ -242,7 +243,7 @@ void MinutesToCalendarTime(u32 minutes, OSCalendarTime* time) {
         days -= n;
         year++;
     }
-    s32 yday = days;
+    yday = days;
     while (true) {
         s32 n = GetDaysInMonth(month, year);
         if (days < n) {
@@ -251,16 +252,16 @@ void MinutesToCalendarTime(u32 minutes, OSCalendarTime* time) {
         days -= n;
         month++;
     }
-    time->mday = days + 1;
     time->sec = 0;
-    time->mon = month - 1;
-    time->yday = yday;
-    time->msec = 0;
-    time->year = year + 2000;
-    time->usec = 0;
     time->min = minutes % 60;
     time->hour = hours % 24;
+    time->mday = days + 1;
+    time->mon = month - 1;
+    time->year = year + 2000;
     time->wday = (totalDays + 6) % 7;
+    time->yday = yday;
+    time->msec = 0;
+    time->usec = 0;
 }
 
 u32 GetCurrentMinutes() {
