@@ -2513,8 +2513,8 @@ void Article_DrawFrame(const math::VEC2& pos, s32 type, f32 alpha) {
 }
 
 void Article_DrawDate(const math::VEC2& pos, s32 alpha) {
-    f32 maxWidth = sArticleSize.x - 20.0f;
     math::VEC2 p(10.0f + pos.x, pos.y - 20.0f);
+    f32 maxWidth = sArticleSize.x - 20.0f;
     lbl_8020E4C0.SetFont(*gSysFont);
     lbl_8020E4C0.SetTextColor(ut::Color(70, 70, 70, alpha));
     if (lbl_80357560) {
@@ -2535,14 +2535,15 @@ void Article_DrawDate(const math::VEC2& pos, s32 alpha) {
 }
 
 void Article_DrawSourceAndDate(const math::VEC2& pos, s32 alpha) {
-    f32 maxWidth = sArticleSize.x - 20.0f;
     ut::Color white(255, 255, 255, alpha);
     math::VEC2 p(10.0f + pos.x, pos.y - 20.0f);
+    f32 maxWidth = sArticleSize.x - 20.0f;
     if (sSourceIconType == 0) {
         NewsTexture* logo = sSourceLogo;
         if (logo) {
             f32 w = logo->width;
-            math::VEC3 lp(p.x, p.y - logo->height, 0.0f);
+            f32 h = logo->height;
+            math::VEC3 lp(p.x, p.y - h, 0.0f);
             SetupTexGX();
             GXSetTevColor(GX_TEVREG0, white);
             Draw2D_Texture(logo, &lp, 1.0f);
@@ -2564,9 +2565,10 @@ void Article_DrawSourceAndDate(const math::VEC2& pos, s32 alpha) {
     lbl_8020E4C0.SetFont(*gSysFont);
     lbl_8020E4C0.SetTextColor(ut::Color(70, 70, 70, alpha));
     if (lbl_80357560) {
-        p.x = (pos.x + sArticleSize.x) - 10.0f;
         f32 scale;
-        if (sDateWidth > maxWidth) {
+        f32 dw = sDateWidth;
+        p.x = (pos.x + sArticleSize.x) - 10.0f;
+        if (dw > maxWidth) {
             scale = 0.6f * (maxWidth / sDateWidth);
         } else {
             scale = 0.6f;
