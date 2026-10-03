@@ -927,17 +927,6 @@ static inline void PlayPinHoverSE() {
     }
 }
 
-static inline void UpdateBgmVolume() {
-    snd::SoundHandle* handle = gBgmHandles;
-    SmoothValue* volume = sBgmVolume;
-    for (s32 i = 0; i < 4; i++, volume++, handle++) {
-        if (IsSoundPlaying(handle)) {
-            volume->Update();
-            SetSoundVolume(handle, volume->mValue);
-        }
-    }
-}
-
 void NewsScene::Calc() {
     if (gAllocFailed) {
         if (mState != &NewsScene::StateFatal) {
@@ -969,13 +958,10 @@ void NewsScene::Calc() {
         if (!lbl_803575BC && !lbl_803575BD) {
             PlayPinHoverSE();
         }
-        SmoothValue* volume = sBgmVolume;
-        snd::SoundHandle* handle = gBgmHandles;
-        s32 i = 0;
-        for (; i < 4; i++, handle++, volume++) {
-            if (IsSoundPlaying(handle)) {
-                volume->Update();
-                SetSoundVolume(handle, volume->mValue);
+        for (s32 i = 0; i < 4; i++) {
+            if (IsSoundPlaying(&gBgmHandles[i])) {
+                sBgmVolume[i].Update();
+                SetSoundVolume(&gBgmHandles[i], sBgmVolume[i].mValue);
             }
         }
         if (++sBlinkTimer >= 40) {
@@ -2260,7 +2246,8 @@ BOOL Article_Set(NewsArticle* article, const wchar_t* title, BOOL withPicture,
 
     gTextWriter.SetFont(*gSysFont);
     gTextWriter.SetScale(0.6f);
-    gTextWriter.SetCharSpace(0.6f * gCharSpaceScale);
+    f32 space = gCharSpaceScale;
+    gTextWriter.SetCharSpace(0.6f * space);
     if (lbl_80357564) {
         sTitleWidth = gTextWriter.CalcStringWidth(lbl_80357564);
     }
@@ -2378,9 +2365,11 @@ static inline f32 GetLogoHeight() {
 void Article_Arrange(f32 scale) {
     lbl_80357568->Layout(scale);
     f32 logoHeight = GetLogoHeight();
-    math::VEC2 pos(0.0f, lbl_80357568->mHeight + scale * logoHeight);
+    f32 y = lbl_80357568->GetHeight();
+    y += scale * logoHeight;
+    math::VEC2 pos(0.0f, y);
     sBodyView->Layout(&pos, scale);
-    pos.y = sBodyView->mHeight + sBodyView->mLineHeight;
+    pos.y = sBodyView->GetHeight() + sBodyView->GetLineHeight();
     sCreditView->Layout(&pos, scale);
 }
 
@@ -2563,8 +2552,7 @@ void Article_Draw(const math::VEC2& pos, s32 type, BOOL drawHeadline, f32 alpha,
     if (drawHeadline) {
         lbl_80357568->Draw(&pos, 0, alpha, 1.0f);
     }
-    f32 y = pos.y + sBodyView->GetTop();
-    math::VEC2 p(pos.x, y - 8.0f * gTextScale);
+    math::VEC2 p(pos.x, pos.y + sBodyView->GetTop() - 8.0f * gTextScale);
     if ((u32)(sSourceLayout - 3) <= 3) {
         if (sSourceIconType == 0) {
             Article_DrawSourceLogo(p, sSourceLayout != 6, alpha);
