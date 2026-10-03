@@ -354,6 +354,20 @@ static s32 vcmvReadFile(vcmvSaveFile* file) {
     return NANDClose(&sFileInfo);
 }
 
+static inline BOOL vcmvSyncFiles(void) {
+    vcmvSaveFile* file;
+    for (file = sSaveFiles; file->path != NULL; file++) {
+        if (file->size != 0) {
+            if (vcmvWriteFile(file) != 0) {
+                return FALSE;
+            }
+        } else if (vcmvReadFile(file) != 0) {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
 void vcmvSaveSettings(void) {
     vcmvSettingsData.magic = VCMV_SETTINGS_MAGIC;
     vcmvSettingsData.magic2 = VCMV_SETTINGS_MAGIC;
@@ -455,19 +469,19 @@ static void vcmvLZDecode(u8* dst, vcmvLZState* s, u32 size) {
 }
 
 static s32 vcmvLoadModule(void) {
-    CNTHandle handle;
-    CNTFileInfo info;
+    s32 delta;
+    RSOObjectHeader* module;
     u8 header[0x58];
-    vcmvLZState lz;
+    u32 i;
     void* compressed = NULL;
     void* rest = NULL;
+    RSOExportFuncTable* imp;
     s32 result;
     u32 fixedSize;
+    vcmvLZState lz;
+    CNTHandle handle;
+    CNTFileInfo info;
     u32 restSize;
-    RSOObjectHeader* module;
-    u32 i;
-    RSOExportFuncTable* imp;
-    s32 delta;
 
     result = contentInitHandleNAND(2, &handle, vcmvMem2Allocator);
     if (result != 0) {
@@ -549,13 +563,13 @@ fail:
 }
 
 static s32 vcmvLoadFonts(void) {
-    CNTHandle handle;
     CNTFileInfo info;
+    const char** file;
+    vcmvFontFile* font;
+    const char** name;
     s32 result;
     s32 count;
-    vcmvFontFile* font;
-    const char** file;
-    const char** name;
+    CNTHandle handle;
 
     result = contentInitHandleNAND(3, &handle, vcmvMem2Allocator);
     if (result != 0) {
@@ -603,31 +617,17 @@ s32 vcmvLoadWWWLib(void) {
         sFirstLoad = FALSE;
         vcmvLinkStatic((RSOObjectHeader*)vcmvStaticRSO);
 
-        for (file = sSaveFiles; file->path != NULL; file++) {
-            if (file->size != 0) {
-                if (vcmvWriteFile(file) != 0) {
-                    ok = FALSE;
-                    goto done;
-                }
-            } else {
-                if (vcmvReadFile(file) != 0) {
-                    ok = FALSE;
-                    goto done;
-                }
-            }
-        }
-        ok = TRUE;
-    done:
+        ok = vcmvSyncFiles();
         if (!ok) {
             return 0;
         }
     }
 
     result = vcmvLoadFonts();
-    if (vcmvLoadFonts() != 0) {
-        return result;
+    if (vcmvLoadFonts() == 0) {
+        return vcmvLoadModule();
     }
-    return vcmvLoadModule();
+    return result;
 }
 
 void vcmvUnloadWWWLib(void) {
@@ -639,9 +639,11 @@ void vcmvUnloadWWWLib(void) {
         if (sModule->mEpilog != 0) {
             ((void (*)(void))sModule->mEpilog)();
         }
+        s32 n = sizeof(sImportTable) / sizeof(sImportTable[0]);
         RSOExportFuncTable* imp = sImportTable;
-        for (i = 0; i < sizeof(sImportTable) / sizeof(sImportTable[0]); i++, imp++) {
+        while (n-- > 0) {
             *imp->symbol_ptr = (u32)vcmvUnlinkedFunction;
+            imp++;
         }
         vcmvFree(&sModuleBss);
     }
