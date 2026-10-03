@@ -1392,6 +1392,15 @@ config.libs = [
             Object(Matching, "nw4r/snd/snd_WsdTrack.cpp"),
         ],
     },
+    {
+        "lib": "news_80012ABC",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_game,
+        "progress_category": "game",
+        "objects": [
+            Object(NonMatching, "news/MainScreen.cpp", extra_cflags=["-inline auto", "-ipa file"]),
+        ],
+    },
 ]
 
 

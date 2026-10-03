@@ -27,6 +27,7 @@ public:
 
     const nw4r::ut::Rect& GetRect() const { return mRect; }
     f32 GetWidth() const { return mSize.x; }
+    void SetEnabled(bool enabled) { mEnabled = enabled; }
 
 protected:
     wchar_t* mText;                              // at 0x04
