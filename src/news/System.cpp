@@ -137,7 +137,7 @@ static void* AllocForWPAD(u32 size);
 static u8 FreeForWPAD(void* ptr);
 void ChangeScene(u32 id);
 void SetVideoMode(bool progressive, bool widescreen, bool narrow);
-void SetRenderMode(const GXRenderModeObj* rm);
+void SetRenderMode(GXRenderModeObj* rm);
 
 inline void* operator new(size_t size, MEMHeapHandle heap) {
     return MEMAllocFromExpHeapEx(heap, size, 4);
@@ -578,12 +578,13 @@ void SystemDraw() {
             }
         }
 
+        Mtx44 proj;
         Mtx m;
         PSMTXIdentity(m);
         GXLoadPosMtxImm(m, GX_PNMTX0);
         GXSetCurrentMtx(GX_PNMTX0);
-        Mtx44 proj;
-        C_MTXOrtho(proj, 0.0f, 456.0f, 0.0f, GetScreenWidth(), -100.0f, 100.0f);
+        f32 sw = GetScreenWidth();
+        C_MTXOrtho(proj, 0.0f, 456.0f, 0.0f, sw, -100.0f, 100.0f);
         GXSetProjection(proj, GX_ORTHOGRAPHIC);
         Draw2D_SetupGX();
         GXSetZMode(GX_FALSE, GX_LEQUAL, GX_FALSE);
@@ -637,16 +638,15 @@ void SystemDraw() {
             GXLoadTexObj(&tex, GX_TEXMAP0);
             GXColor c = {alpha, alpha, alpha, 255};
             GXSetTevColor(GX_TEVREG0, c);
-            f32 s1 = 1.0f - s;
             GXBegin(GX_QUADS, GX_VTXFMT0, 4);
             GXPosition3f32(0.0f, 0.0f, 0.0f);
             GXTexCoord2f32(s, s);
             GXPosition3f32(w, 0.0f, 0.0f);
-            GXTexCoord2f32(s1, s);
+            GXTexCoord2f32(1.0f - s, s);
             GXPosition3f32(w, h, 0.0f);
-            GXTexCoord2f32(s1, s1);
+            GXTexCoord2f32(1.0f - s, 1.0f - s);
             GXPosition3f32(0.0f, h, 0.0f);
-            GXTexCoord2f32(s, s1);
+            GXTexCoord2f32(s, 1.0f - s);
             GXEnd();
             break;
         }
@@ -771,7 +771,8 @@ void Draw2D_SetOrtho() {
     GXLoadPosMtxImm(m, GX_PNMTX0);
     GXSetCurrentMtx(GX_PNMTX0);
     Mtx44 proj;
-    C_MTXOrtho(proj, 0.0f, 456.0f, 0.0f, GetScreenWidth(), -100.0f, 100.0f);
+    f32 w = GetScreenWidth();
+    C_MTXOrtho(proj, 0.0f, 456.0f, 0.0f, w, -100.0f, 100.0f);
     GXSetProjection(proj, GX_ORTHOGRAPHIC);
 }
 
@@ -1020,12 +1021,13 @@ void Draw2D_Tex(TPLPalette* tpl, u32 index, const Vec* pos, f32 scaleX, f32 scal
     GXEnd();
 }
 
-void SetRenderMode(const GXRenderModeObj* rm) {
-    BOOL black = TRUE;
+void SetRenderMode(GXRenderModeObj* rm) {
     u32 scan = VIGetScanMode();
-    bool toProg = scan != VI_PROGRESSIVE && (rm->viTVmode & 3) == VI_PROGRESSIVE;
+    BOOL black = TRUE;
+    u32 mode = rm->viTVmode & 3;
+    bool toProg = scan != VI_PROGRESSIVE && mode == VI_PROGRESSIVE;
     if (!toProg) {
-        bool toInt = scan == VI_PROGRESSIVE && (rm->viTVmode & 3) != VI_PROGRESSIVE;
+        bool toInt = scan == VI_PROGRESSIVE && mode != VI_PROGRESSIVE;
         if (!toInt) {
             black = FALSE;
         }
@@ -1087,8 +1089,12 @@ void SetRenderMode(const GXRenderModeObj* rm) {
 }
 
 void Draw2D_SetScissor(u32 x, u32 y, u32 width, u32 height) {
-    u32 sx = x / ((f32)GetScreenWidth() / (s32)gRenderMode.fbWidth);
-    u32 sw = width / ((f32)GetScreenWidth() / (s32)gRenderMode.fbWidth);
+    bool wide = gWidescreen;
+    u16 fb = gRenderMode.fbWidth;
+    f32 scale = (f32)(wide ? 832 : 608) / (s32)fb;
+    u32 sx = x / scale;
+    f32 scale2 = (f32)(wide ? 832 : 608) / (s32)fb;
+    u32 sw = width / scale2;
     GXSetScissor(sx, y, sw, height);
 }
 
@@ -1151,14 +1157,22 @@ void StopRumble(s32 chan, s32 cooldown) {
 
 void PowerCallback() {
     gShutdown = true;
-    if (gSceneId == SCENE_NEWS && gNewsScene) {
-        gNewsScene->OnReset();
+    switch (gSceneId) {
+    case SCENE_NEWS:
+        if (gNewsScene) {
+            gNewsScene->OnReset();
+        }
+        break;
     }
 }
 
 void ResetCallback() {
-    if (gSceneId == SCENE_NEWS && gNewsScene) {
-        gNewsScene->OnPowerOff();
+    switch (gSceneId) {
+    case SCENE_NEWS:
+        if (gNewsScene) {
+            gNewsScene->OnPowerOff();
+        }
+        break;
     }
 }
 
