@@ -3658,16 +3658,19 @@ inline BOOL MainScreen::IsHovered(s32 index) {
 }
 
 void MainScreen::UpdateRelatedButtons() {
+    RelatedItem* item = mRelated;
+    f32 y = mUnk1A0;
     f32 maxY = 456.0f;
     s32 i = 0;
     f32 rowHeight = mUnk24C * mUnk250;
-    RelatedItem* item = mRelated;
-    f32 y = mUnk1A0;
     ut::TextWriterBase<wchar_t> writer;
-    y = ((y + 5.0f) + mUnk254) + 0.5f * rowHeight;
+    y += 5.0f;
+    y += mUnk254;
+    y += 0.5f * rowHeight;
     writer.SetFont(*gSysFont);
     writer.SetupGX();
-    writer.SetCharSpace(mUnk250 * gCharSpaceScale);
+    f32 space = gCharSpaceScale;
+    writer.SetCharSpace(mUnk250 * space);
     for (; item != NULL; item = item->mNext, i++) {
         item->mText.mActive = IsHovered(i);
         item->mText.Update();
