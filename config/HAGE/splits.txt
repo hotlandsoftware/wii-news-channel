@@ -120,6 +120,16 @@ news/LanguageSelect.cpp:
 	.sbss       start:0x80357480 end:0x80357490
 	.sdata2     start:0x803586E0 end:0x80358720
 
+news/MainScreen.cpp:
+	.text       start:0x80012ABC end:0x8001F994
+	.ctors      start:0x80191F10 end:0x80191F14
+	.rodata     start:0x801921B8 end:0x80192298
+	.data       start:0x801B1290 end:0x801B19A0
+	.bss        start:0x801EDDD0 end:0x801EDE00
+	.sdata      start:0x803567F8 end:0x803568E8
+	.sbss       start:0x80357490 end:0x803574A8
+	.sdata2     start:0x80358720 end:0x80358820
+
 news/TextButton.cpp:
 	.text       start:0x8001F994 end:0x80020254
 	.ctors      start:0x80191F14 end:0x80191F18

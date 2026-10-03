@@ -1419,6 +1419,15 @@ config.libs = [
             Object(NonMatching, "news/GlobePin.cpp"),
         ],
     },
+    {
+        "lib": "news_80012ABC",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_game,
+        "progress_category": "game",
+        "objects": [
+            Object(NonMatching, "news/MainScreen.cpp", extra_cflags=["-inline auto", "-ipa file"]),
+        ],
+    },
 ]
 
 

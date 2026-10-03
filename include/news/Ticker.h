@@ -39,6 +39,10 @@ public:
     f32 SetLayout(nw4r::math::VEC2& pos, f32 scale);
     void Dummy();
     void GetOrigin(nw4r::math::VEC2& out);
+    f32 GetThumbScale() const { return mThumbScale; }
+    nw4r::math::VEC2 GetThumbPos() const {
+        return *reinterpret_cast<const nw4r::math::VEC2*>(&mThumbPosX);
+    }
     void TruncateText();
     f32 CalcTextWidth(const wchar_t* str);
 
