@@ -45,7 +45,7 @@ u8 vcmvGoBack;
 u8 vcmvGoForward;
 static s32 sLastMouseType;
 static s32 sLastMouseX;
-s32 vcmvLastMouseY;
+volatile s32 vcmvLastMouseY;
 static s32 sMouseDown;
 static s32 sLastMouseButton;
 static s32 sLastInputFrame;

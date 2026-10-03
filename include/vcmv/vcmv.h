@@ -187,7 +187,7 @@ extern s32 vcmvRumbleStart;             // 0x803579D8
 extern s32 vcmvScrollTime;              // 0x803579E0
 extern u8 vcmvGoBack;                   // 0x803579E9
 extern u8 vcmvGoForward;                // 0x803579EA
-extern s32 vcmvLastMouseY;              // 0x803579F4
+extern volatile s32 vcmvLastMouseY;              // 0x803579F4
 extern volatile u8 vcmvFading;                   // 0x80356ED0
 
 BOOL vcmvAllocIfNecessary(void* pPtr, u32 size, MEMAllocator* first, MEMAllocator* second);

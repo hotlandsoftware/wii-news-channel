@@ -773,12 +773,15 @@ void vcmvUpdate(void) {
             sWriteTex = tex;
         }
         vcmvConvertSurface();
-        sScrollMouseY = vcmvLastMouseY;
-        sScrollTex = sWriteTex;
-        if (sScrollStart) {
-            sScrollStart = FALSE;
-            vcmvBusy2 = TRUE;
-            sScroll.startFrame = vcmvFrame;
+        {
+            u8 start = sScrollStart;
+            sScrollMouseY = vcmvLastMouseY;
+            sScrollTex = sWriteTex;
+            if (start) {
+                sScrollStart = FALSE;
+                vcmvBusy2 = TRUE;
+                sScroll.startFrame = vcmvFrame;
+            }
         }
         if (vcmvBusy2) {
             s32 above = 10000;
