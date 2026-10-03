@@ -11,6 +11,8 @@
 
 using namespace nw4r;
 
+static inline f32 GetAspect() { return gWidescreen ? 832.0f / 608.0f : 1.0f; }
+
 Layout::Layout(void* arc, const char* name, PaneButtonColors* colors, bool influencedAlpha) {
     mFadeLength = 0;
     mFadeFrame = 0;
@@ -26,8 +28,7 @@ Layout::Layout(void* arc, const char* name, PaneButtonColors* colors, bool influ
     mDrawInfo = new lyt::DrawInfo();
     mDrawInfo->SetInfluencedAlpha(influencedAlpha);
     mDrawInfo->SetLocationAdjust(true);
-    f32 aspect = gWidescreen ? 832.0f / 608.0f : 1.0f;
-    mDrawInfo->SetLocationAdjustScale(math::VEC2(1.0f / aspect, 1.0f));
+    mDrawInfo->SetLocationAdjustScale(math::VEC2(1.0f / GetAspect(), 1.0f));
     mDrawInfo->SetViewRect(mLayout->GetLayoutRect());
     math::MTX34 viewMtx;
     PSMTXIdentity(viewMtx.mtx);
@@ -68,6 +69,12 @@ void Layout::Reset() {
     mSlideFrame = 0;
 }
 
+inline void Layout::SetSlide(f32 step) {
+    for (int i = 0; i < mButtonCount; i++) {
+        mButtons[i]->SetSlide(step);
+    }
+}
+
 void Layout::Calc() {
     for (int i = 0; i < mButtonCount; i++) {
         mButtons[i]->UpdateFrame();
@@ -88,11 +95,7 @@ void Layout::Calc() {
         height = 0.0f;
     }
 
-    f32 step = height * mSlideFrame / mSlideLength;
-    for (int i = 0; i < mButtonCount; i++) {
-        PaneButton* button = mButtons[i];
-        button->mOffsetY = step * (button->mPane->GetTranslate().y > 0.0f ? 1 : -1);
-    }
+    SetSlide(height * mSlideFrame / mSlideLength);
 
     if (mFadeOut) {
         if (mFadeFrame < mFadeLength) {
@@ -103,8 +106,18 @@ void Layout::Calc() {
     }
 
     mAlpha = 255 - mFadeFrame * 255 / mFadeLength;
+    SetButtonAlpha(mAlpha);
+}
+
+void Layout::SetButtonAlpha(s32 alpha) {
     for (int i = 0; i < mButtonCount; i++) {
-        mButtons[i]->mAlpha = mAlpha;
+        mButtons[i]->SetBaseAlpha(alpha);
+    }
+}
+
+inline void Layout::UpdatePanes() {
+    for (int i = 0; i < mButtonCount; i++) {
+        mButtons[i]->UpdatePane();
     }
 }
 
@@ -125,9 +138,7 @@ void Layout::Draw() {
     GXSetCullMode(GX_CULL_NONE);
     GXSetZMode(GX_FALSE, GX_NEVER, GX_FALSE);
 
-    for (int i = 0; i < mButtonCount; i++) {
-        mButtons[i]->UpdatePane();
-    }
+    UpdatePanes();
 
     mLayout->CalculateMtx(*mDrawInfo);
 
@@ -154,9 +165,13 @@ PaneButton* Layout::HitTest(f32 x, f32 y) {
     return NULL;
 }
 
+static inline bool IsNamed(PaneButton* button, const char* name) {
+    return strcmp(button->mPane->GetName(), name) == 0;
+}
+
 PaneButton* Layout::FindButton(const char* name) {
     for (int i = 0; i < mButtonCount; i++) {
-        if (strcmp(mButtons[i]->mPane->GetName(), name) == 0) {
+        if (IsNamed(mButtons[i], name)) {
             return mButtons[i];
         }
     }
@@ -189,9 +204,7 @@ void Layout::FadeIn(s32 frames) {
 
 void Layout::SetBlend(s32 alpha, s32 blend, s32 blendMax) {
     for (int i = 0; i < mButtonCount; i++) {
-        mButtons[i]->mFadeAlpha = alpha;
-        mButtons[i]->mBlend = blend;
-        mButtons[i]->mBlendMax = blendMax;
+        mButtons[i]->SetBlend(alpha, blend, blendMax);
     }
 }
 

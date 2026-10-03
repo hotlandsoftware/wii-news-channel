@@ -38,6 +38,9 @@ struct Layout {
     void SetBlend(s32 alpha, s32 blend, s32 blendMax);
     void SetAlpha(s32 alpha);
     void SetViewMtx(const Mtx mtx);
+    void SetButtonAlpha(s32 alpha);
+    void UpdatePanes();
+    void SetSlide(f32 step);
 
     nw4r::lyt::ArcResourceAccessor* mResAccessor; // at 0x000
     nw4r::lyt::Layout* mLayout;                   // at 0x004
