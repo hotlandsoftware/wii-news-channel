@@ -640,8 +640,8 @@ static void* vcmvDrawThreadMain(void* arg) {
 
     elapsed = vcmvFrame;
     vcmvFrame = 100;
+    elapsed = elapsed - vcmvFrame;
     vcmvRumbleStart = 0;
-    elapsed -= vcmvFrame;
     vcmvRumbling = FALSE;
     for (i = 0; i < 4; i++) {
         vcmvCursors[i].upFrame = vcmvFrame - 7;
@@ -693,14 +693,14 @@ static void* vcmvDrawThreadMain(void* arg) {
             }
         } else if (vcmvRumbleRequest) {
             vcmvRumbleRequest = FALSE;
-            vcmvRumbling = TRUE;
             vcmvRumbleStart = vcmvFrame;
+            vcmvRumbling = TRUE;
             WPADControlMotor(vcmvCurChan, WPAD_MOTOR_RUMBLE);
         }
 
         if (vcmvRumbling && vcmvFrame - vcmvRumbleStart >= 2) {
-            vcmvRumbling = FALSE;
             vcmvRumbleStart = vcmvFrame;
+            vcmvRumbling = FALSE;
             WPADControlMotor(vcmvCurChan, WPAD_MOTOR_STOP);
         }
 

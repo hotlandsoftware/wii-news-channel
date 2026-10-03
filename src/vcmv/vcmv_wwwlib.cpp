@@ -7,7 +7,7 @@
 
 
 typedef struct vcmvSaveFile {
-    char* path; // 0x0
+    char* volatile path; // 0x0
     void* buf;  // 0x4
     u32 size;   // 0x8
 } vcmvSaveFile;

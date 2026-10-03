@@ -399,14 +399,14 @@ void vcmvFlushCallback(vcmvRect* rect, int arg) {
 static void vcmvConvertSurface(void) {
     u16* tex = sTexBufs[sWriteTex];
     s32 stride = vcmvScreenWidth;
-    u32* src;
     u16* dstRow;
-    s32 y;
+    u32* src;
     s32 x;
+    s32 y;
 
-    sDirty = FALSE;
-    sFlushLock = 0;
     src = (u32*)vcmvSurfaceBuffer;
+    sFlushLock = 0;
+    sDirty = FALSE;
     dstRow = tex;
     for (y = 0; y < vcmvScreenHeight; y += 4) {
         u32* s0 = src;
@@ -420,26 +420,26 @@ static void vcmvConvertSurface(void) {
             d[1] = RGB565(s0[1]);
             d[2] = RGB565(s0[2]);
             d[3] = RGB565(s0[3]);
-            s0 += 4;
+            s0 = s0 + 4;
             d[4] = RGB565(s1[0]);
             d[5] = RGB565(s1[1]);
             d[6] = RGB565(s1[2]);
             d[7] = RGB565(s1[3]);
-            s1 += 4;
+            s1 = 4 + s1;
             d[8] = RGB565(s2[0]);
             d[9] = RGB565(s2[1]);
             d[10] = RGB565(s2[2]);
             d[11] = RGB565(s2[3]);
-            s2 += 4;
+            s2 = s2 + 4;
             d[12] = RGB565(s3[0]);
             d[13] = RGB565(s3[1]);
             d[14] = RGB565(s3[2]);
             d[15] = RGB565(s3[3]);
-            s3 += 4;
-            d += 16;
+            s3 = s3 + 4;
+            d = 16 + d;
         }
-        src += stride * 4;
         dstRow += vcmvScreenWidth * 4;
+        src += stride * 4;
     }
 
     DCStoreRange(tex, vcmvScreenWidth * vcmvScreenHeight * 2);
@@ -466,8 +466,8 @@ int vcmvBrowserCallback(void* browser, void* window, u32 event, void** data) {
 #pragma unused(browser)
     switch (event) {
     case 6:
-        sLoadStarted = TRUE;
         vcmvScrollTime = vcmvFrame - 5;
+        sLoadStarted = TRUE;
         vcmvLoading = TRUE;
         sProgress = 0.0f;
         break;
@@ -492,8 +492,8 @@ int vcmvBrowserCallback(void* browser, void* window, u32 event, void** data) {
         sProgress = 1.0f / (2.0f - sProgress);
         break;
     case 7: {
-        vcmvLoading = FALSE;
         vcmvScrollTime = vcmvFrame - 5;
+        vcmvLoading = FALSE;
         if (vcmvBusy) {
             vcmvBusy = FALSE;
             sPageLoaded = TRUE;
@@ -630,19 +630,19 @@ void vcmvSetFontSize(u16 size) {
 BOOL vcmvCreateSurface(s32 width, s32 height) {
     bool ok = true;
     BOOL keep = FALSE;
-    u16 w = (width + 3) & ~3;
+    u16 w = (3 + width) & ~3;
     u16 h = (height + 3) & ~3;
     u32 size;
     s32 i;
 
-    sPrevTex = NO_TEXTURE;
     vcmvScreenWidth = w;
     vcmvScreenHeight = h;
+    vcmvHalfHeight = 0.5f * h;
     vcmvHalfWidth = 0.5f * w;
     sTexScaleX = 0.5f / vcmvHalfWidth;
-    vcmvHalfHeight = 0.5f * h;
     sTexScaleY = 0.5f / vcmvHalfHeight;
     vcmvCursorPressX = 0.5f * (w - sFontSize);
+    sPrevTex = NO_TEXTURE;
     sTextRight = w - (s32)(0.5f * sFontSize);
 
     if (sWriteTex < NO_TEXTURE && sTexBufs[sWriteTex] != NULL) {
@@ -653,8 +653,8 @@ BOOL vcmvCreateSurface(s32 width, s32 height) {
         sShowTex = 0;
     }
     if (!vcmvDialogOpen) {
-        sPrevTex = sShowTex;
         vcmvDialogOpen = TRUE;
+        sPrevTex = sShowTex;
     }
 
     size = w * h * 2;
