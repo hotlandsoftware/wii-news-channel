@@ -16,7 +16,7 @@ static void VFiPFDIR_GetOpenedDir(struct PF_DIR_ENT* p_ent, struct PF_DIR_ENT** 
     }
 }
 
-// 99.9%: namelength and prev_entry_offset get r31/r29 swapped.
+// The declaration order of the register locals below sets their callee-saved registers.
 static s32 VFiPFDIR_DoMakeDir(struct PF_VOLUME* p_vol, struct PF_STR* p_path, u32 unused, struct PF_DIRENT* p_dirent) {
     struct PF_DIR_ENT parent_ent;
     struct PF_DIR_ENT ent;
@@ -33,16 +33,16 @@ static s32 VFiPFDIR_DoMakeDir(struct PF_VOLUME* p_vol, struct PF_STR* p_path, u3
     u32 sector;
     u32 success_size;
     u32 pos_idx;
-    u16 namelength;
-    u8 num_entry_LFNs;
-    struct PF_FAT_HINT* p_hint;
-    u32 num_sectors;
     u16 prev_entry_offset;
-    u32 new_cluster;
+    u32 num_sectors;
+    u8 num_entry_LFNs;
+    u16 namelength;
+    struct PF_FAT_HINT* p_hint;
     u8 sum;
     u32* position;
     u32 i;
     u32 old_sector;
+    u32 new_cluster;
     s32 err;
 
     num_entry_LFNs = 0;
