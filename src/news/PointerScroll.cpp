@@ -46,15 +46,15 @@ void PointerScroll::UpdateChannel(s32 chan) {
 }
 
 void PointerScroll::Update() {
-    s32* dir = mDir;
     s32* timer = mTimer;
-    for (s32 i = 0; i < 4; i++) {
-        dir[i] = 0;
+    s32* dir = mDir;
+    for (s32 i = 0; i < 4; i++, dir++, timer++) {
+        *dir = 0;
         if (gHold[i] & 0x400) {
             mActive = true;
             UpdateChannel(i);
         } else {
-            timer[i] = 0;
+            *timer = 0;
         }
     }
 }
