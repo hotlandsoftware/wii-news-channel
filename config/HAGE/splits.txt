@@ -1202,6 +1202,9 @@ nw4r/snd/snd_Lfo.cpp:
 	.rodata     start:0x801ACCE0 end:0x801ACD08
 	.sdata2     start:0x80359A00 end:0x80359A30
 
+nw4r/snd/snd_McsSoundArchive.cpp:
+	.text       start:0x800D5DB0 end:0x800D5DC8
+
 nw4r/snd/snd_MemorySoundArchive.cpp:
 	.text       start:0x800D5DC8 end:0x800D61FC
 	.data       start:0x801CE098 end:0x801CE118
