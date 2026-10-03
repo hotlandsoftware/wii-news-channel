@@ -583,11 +583,12 @@ NewsScene::NewsScene()
     u32 logoWidth = TPL_GetWidth(gCommonTpl, sLogoIndex[gLanguage]);
     mLogoPos.x = 0.5f * GetScreenWidth() - 0.5f * logoWidth;
     u32 logoHeight = TPL_GetHeight(gCommonTpl, sLogoIndex[gLanguage]);
-    mLogoPos.z = 0.0f;
     mLogoPos.y = 228.0f - 0.5f * logoHeight;
+    mLogoPos.z = 0.0f;
 
     lbl_803575D0 = TPL_GetHeight(gCursorTpl, 0);
-    f32 x = 0.5f * (GetScreenWidth() - TPL_GetWidth(gCursorTpl, 0));
+    TPLPalette* tpl = gCursorTpl;
+    f32 x = 0.5f * (GetScreenWidth() - TPL_GetWidth(tpl, 0));
     lbl_801EDFA0.y = 68.0f;
     lbl_803575D4 = 68.0f;
     lbl_801EDFB8.x = x;
