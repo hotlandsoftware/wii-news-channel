@@ -83,13 +83,16 @@ static inline void PressButton(Layout* layout, const char* name) {
     button->mToggle = true;
 }
 
-static inline const wchar_t* GetServerMessage(NewsHeader* file, u32 size) {
+static inline f32 GetCursorX(s32 chan) { return gCursorX[chan][0]; }
+static inline f32 GetCursorY(s32 chan) { return gCursorY[chan][0]; }
+
+static inline const wchar_t* GetServerMessage(NewsHeader* file, const u32& size) {
     if (file->messageOfs == 0) {
         return NULL;
     }
     const wchar_t* msg = (const wchar_t*)file->At(file->messageOfs);
-    const wchar_t* p = msg;
-    for (s32 n = 0; (u8*)p < (u8*)file + size && n < 0x200; p++, n++) {
+    s32 n = 0;
+    for (const wchar_t* p = msg; (u8*)p < (u8*)file + size && n < 0x200; p++, n++) {
         if (*p == 0) {
             return msg;
         }
@@ -293,24 +296,8 @@ void Connect::Update() {
                 lbl_80357729 = 1;
             }
         } else if (mDownloadState == DL_DONE) {
-            const wchar_t* msg;
             s32 cur = mCurrentFile;
-            NewsHeader* file = mFiles[cur];
-            if (file->messageOfs == 0) {
-                msg = NULL;
-            } else {
-                msg = (const wchar_t*)file->At(file->messageOfs);
-                const wchar_t* p = msg;
-                s32 n = 0;
-                for (; (u8*)p < (u8*)file + mFileSizes[cur] && n < 0x200; p++, n++) {
-                    if (*p == 0) {
-                        goto found;
-                    }
-                }
-                msg = NULL;
-            }
-        found:
-            mMessage = msg;
+            mMessage = GetServerMessage(mFiles[cur], mFileSizes[cur]);
             if (mMessage != NULL) {
                 mDownloadState = DL_ERROR;
             } else {
@@ -493,7 +480,7 @@ void Connect::Update() {
         mMascot->Update();
         if (mState == STATE_WAIT) {
             for (s32 i = 0; i < 4; i++) {
-                if (IsPointerValid(i) && mMascot->HitTest(gCursorX[i][0], gCursorY[i][0])) {
+                if (IsPointerValid(i) && mMascot->HitTest(GetCursorX(i), GetCursorY(i))) {
                     if (!mHover[i]) {
                         fn_80040778(i, 3, 20);
                     }
@@ -511,8 +498,8 @@ void Connect::Update() {
                     }
                     for (s32 chan = 0; chan < 4; chan++) {
                         if (IsPointerValid(chan) && (lbl_80357688 & 0x800)) {
-                            f32 dx = gCursorX[chan][0] - x;
-                            f32 dy = gCursorY[chan][0] - 280.0f;
+                            f32 dx = GetCursorX(chan) - x;
+                            f32 dy = GetCursorY(chan) - 280.0f;
                             if (dx >= -15.0f && dx < 15.0f && dy >= -10.0f && dy < 30.0f) {
                                 f32 half = 0.5f * GetScreenWidth();
                                 f32 pan = (x - half) / half;
