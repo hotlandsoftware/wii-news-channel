@@ -1105,7 +1105,7 @@ config.libs = [
         "cflags": cflags_vcmv,
         "progress_category": "sdk",
         "objects": [
-            Object(NonMatching, "vcmv/vcmv_sound.cpp"),
+            Object(Matching, "vcmv/vcmv_cursor.cpp"),
             Object(NonMatching, "vcmv/vcmv_draw.cpp"),
             Object(NonMatching, "vcmv/vcmv_jsext.cpp"),
             Object(NonMatching, "vcmv/vcmv_main.cpp"),

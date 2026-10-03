@@ -31,6 +31,11 @@ void vcmvLoadCursorTextures(HBMDataInfo* info);
 void vcmvDrawCursor(s32 chan);
 
 // vcmv_draw.cpp
+typedef struct vcmvQuad {
+    f32 x[4]; // 0x00
+    f32 y[4]; // 0x10
+} vcmvQuad;
+
 extern const char* vcmvStartUrl;            // 0x80357908
 extern const char* vcmvUrl;                 // 0x8035790C
 extern void* vcmvSurfaceBuffer;             // 0x80357910
@@ -65,6 +70,7 @@ void vcmvOpenWindow(s32 mode);
 void vcmvUpdate(void);
 void vcmvDrawScreen(f32 alpha);
 void vcmvOpenStartPage(void);
+void vcmvDrawQuad(vcmvQuad* quad);
 
 // vcmv_jsext.cpp
 extern u8 vcmvJSReady; // 0x80357998

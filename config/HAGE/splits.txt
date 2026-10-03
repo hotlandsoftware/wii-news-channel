@@ -690,7 +690,7 @@ revolution/HBM/HBMRemoteSpk.cpp:
 	.data       start:0x801CC3C8 end:0x801CC3D8
 	.sbss       start:0x803578E8 end:0x803578F0
 
-vcmv/vcmv_sound.cpp:
+vcmv/vcmv_cursor.cpp:
 	extab       start:0x800064E0 end:0x800064F0
 	extabindex  start:0x80006940 end:0x80006958
 	.text       start:0x80096D2C end:0x80097564
