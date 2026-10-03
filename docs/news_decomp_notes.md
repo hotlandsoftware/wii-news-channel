@@ -167,16 +167,17 @@ Block `0x80007F58`–`0x8000FA38` (between `Mascot.cpp` and `NewsArticle.cpp`). 
 
 | File | `.text` | Data | Contents |
 | --- | --- | --- | --- |
-| `Connect.cpp` | `0x80007F58`–`0x8000A0F8` | `.rodata 0x801920C0`, `.data 0x801AFFA0`, `.sdata 0x80356748`, `.sdata2 0x803584F0` | `Connect`: the download screen (state machine, progress dots, mascot, tips window, error screen with error codes). `ConnectTips`: the tip text typed out in the tips window. Ends with the weak `lyt::Pane::GetRuntimeTypeInfo`. |
+| `Connect.cpp` | `0x80007F58`–`0x80009C54` | `.rodata 0x801920C0`, `.data 0x801AFFA0`, `.sdata 0x80356748`, `.sdata2 0x803584F0` | `Connect`: the download screen (state machine, progress dots, mascot, tips window, error screen with error codes). Matching. |
+| `ConnectTips.cpp` | `0x80009C54`–`0x8000A0F8` | `.sdata 0x80356768` | `ConnectTips`: the tip text typed out in the tips window. Ends with the weak `lyt::Pane::GetRuntimeTypeInfo`. Matching. |
 | `msg/MsgToSectionSelect.cpp` | – | `.data 0x801B0418` | `gMsgToSectionSelect` |
 | `msg/MsgSectionSelect.cpp` | – | `.data 0x801B0508` | `gMsgSectionSelect` |
 | `PunctuationTable.cpp` | – | `.rodata 0x801920F0` | `gPunctuationTable` (byte-swapped UTF-16, used at `0x8002799C`); its position among the data-only files is a guess |
-| `SaveData.cpp` | `0x8000A0F8`–`0x8000BE30` | `.rodata 0x80192140`, `.data 0x801B0608`, `.sdata 0x80356778`, `.sbss 0x80357468`, `.sdata2 0x80358570` | NAND save file `noerase/savedata.dat` (label `HAG0` + CRC32), `SaveErrorDialog` (error2–5 layouts), `FormatSaveTime`, `CheckNewsFiles` (validates the 24 downloaded news files) |
+| `SaveData.cpp` | `0x8000A0F8`–`0x8000BE30` | `.rodata 0x80192140`, `.data 0x801B0608`, `.sdata 0x80356778`, `.sbss 0x80357468`, `.sdata2 0x80358570` | NAND save file `noerase/savedata.dat` (label `HAG0` + CRC32), `SaveErrorDialog` (error2–5 layouts), `FormatSaveTime`, `CheckNewsFiles` (validates the 24 downloaded news files). NonMatching: only `CheckNewsFiles` (97.8%, register allocation) is left. |
 | `msg/MsgNewsChannel.cpp` … `msg/MsgToTop.cpp` | – | `.data 0x801B0930`–`0x801B1120`, `.sdata 0x80356798`–`0x803567B8` | `gMsgNewsChannel`, `gMsgOtherAreas`, `gMsgOtherAreasShort`, `gMsgChooseLanguage`, `gMsgRegionalNews`, `gMsgTheNews`, `gMsgUpdated`, `gMsgLastUpdated`, `gMsgToTop` (one file each) |
-| `Bubbles.cpp` | `0x8000BE30`–`0x8000C904` | `.sdata2 0x803585A0` | `Bubbles`: background circles and rings |
+| `Bubbles.cpp` | `0x8000BE30`–`0x8000C904` | `.sdata2 0x803585A0` | `Bubbles`: background circles and rings. Matching. |
 | `GlobePoint.cpp` | `0x8000C904`–`0x8000CA98` | `.data 0x801B1120`, `.sdata2 0x80358608` | `GlobePoint`: a news location on the globe |
-| `TextChar.cpp` | `0x8000CA98`–`0x8000D01C` | `.data 0x801B1130`, `.sdata 0x803567B8`, `.sdata2 0x80358610` | `TextChar` (declared in `ArticleText.h`): one character of an `ArticleText`, easing towards its target; drops in when its line changes |
-| `GlobePin.cpp` | `0x8000D01C`–`0x8000FA38` | `.ctors 0x80191F08`, `.data 0x801B1170`, `.rodata 0x80192158`, `.bss 0x801EDD90`, `.sdata 0x803567C8`, `.sbss 0x80357470`, `.sdata2 0x80358650` | `GlobePin : GlobePoint`: pin, ripples, label and picture cards of a location; also the headline/location truncation used by the globe screen's list |
+| `TextChar.cpp` | `0x8000CA98`–`0x8000D01C` | `.data 0x801B1130`, `.sdata 0x803567B8`, `.sdata2 0x80358610` | `TextChar` (declared in `ArticleText.h`): one character of an `ArticleText`, easing towards its target; drops in when its line changes. Matching. |
+| `GlobePin.cpp` | `0x8000D01C`–`0x8000FA38` | `.ctors 0x80191F08`, `.data 0x801B1170`, `.rodata 0x80192158`, `.bss 0x801EDD90`, `.sdata 0x803567C8`, `.sbss 0x80357470`, `.sdata2 0x80358650` | `GlobePin : GlobePoint`: pin, ripples, label and picture cards of a location; also the headline/location truncation used by the globe screen's list. NonMatching (99.6%), see below. |
 
 New globals named from this block: `gRandSeed` (`0x803576A0`, `include/news/Random.h`), the `gMsg*` tables above, `Fader` (`lbl_8035772C`, `include/news/SaveData.h`).
 
@@ -205,3 +206,23 @@ New globals named from this block: `gRandSeed` (`0x803576A0`, `include/news/Rand
 - **Pointer-to-list loops.** `PaneList& list = pane->GetChildList(); for (it = list.GetBeginIter(); it != list.GetEndIter(); ...)` computes the end once; calling `pane->GetChildList()` in the condition reloads the pane every iteration.
 - **`c = buf[i]; i++;`** instead of `c = buf[i++]` keeps the original load-before-store order of the index.
 - **`switch (c) { case '\n': ... }`** gives a signed `cmpwi` for a `wchar_t` compare; `if (c == L'\n')` gives `cmplwi`.
+- **String blobs in `symbols.txt`.** dtk often makes one `lbl_` object out of a run of string literals in `.data`. Code that loads a later string then shows as a relocation mismatch (`addi rX, r31, 0x398` against the blob) even though the bytes match. Split the blob into one symbol per string, using the offsets of the `@NNNN` objects in our `.o` (Connect `0x801B0328`, SaveData `0x801B0608`/`0x801B07A4`). The same goes for `GXColor` templates in `.sdata2` that dtk splits into single bytes (`lbl_80358668`/`6C`): one 4-byte symbol each.
+- **Unpooled duplicate literals mark a file boundary.** Connect.cpp had two `L""` in `.sdata` (`0x80356760` and `0x80356770`), and the second one, with `"%s%s"`, starts 8-byte aligned. `-str reuse` would have pooled them, so the code that uses the second one (`ConnectTips`, `0x80009C54`–`0x8000A0F8`) is its own file, `ConnectTips.cpp`.
+- **One inline for two copies of a loop.** Bubbles' two "find a free slot" loops (in `Update` and `AddRing`) got the original counter/pointer registers only once both called one inline member, `Bubbles::Add(type, x, y, vx, vy, size, time)`.
+- **Inline parameters by `const&` delay loads.** Connect's server message check loads the file size only after the `messageOfs` test. That needed `GetServerMessage(NewsHeader* const& file, const u32& size)`: with `file` by value the address register and the file pointer swap.
+- **`if/else` tail sharing.** In GlobePin's `TruncateHeadline` the two branches that add a character width share one `fadds` (the first branch jumps to it). That is `f32 cw; if (...) { cw = scale * W; } else { f32 s = scale; cw = s * W; } width += cw;`. Identical branches are merged completely, and adding to `width` in each branch gives two `fadds`.
+- **A label/scale constant that is not folded.** `f32 scale = 1.1f; if (lang == 0) { scale *= 0.9f; } else { scale *= 0.75f; }` keeps the runtime `fmuls` (and puts `1.1` in the pool). An inline `GetLabelScale(1.1f)` folds it to `0.99`/`0.825`.
+- **Dead locals still get a stack slot.** Connect's tips drawing calls `TPL_GetWidth` and ignores the result. Only `f32 w = s * TPL_GetWidth(...);` (unused) moved the next int→float temporaries to the original slots.
+- **`Vec pos = GetPos();`** (C struct, not `VEC3`) gives the original temporary plus `lwz`/`stw` copy for a `VEC3`-returning call (GlobePin ctor). Declaring the `VEC3` locals in reverse order (`right`, `up`, `dir`, `pos`) gave the original stack layout.
+- **Polarity of flag tests.** `NewsSourceRec::noLogo` is checked as `(size != 0 && noLogo != 0) || (size == 0 && noLogo == 0)`; the reverse test compiles to the same instructions with `beq`/`bne` swapped.
+- **Loop-invariant member reads.** `u32 fileSize = file->fileSize;` inside a loop is hoisted (with a guard before the loop); writing `file->fileSize` in each comparison keeps the load in the loop, as in `CheckNewsFiles`.
+- **Constants held in locals.** GlobePin's `Update` and `Draw` needed `f32 minY = 63.0f; f32 maxY = 393.0f;` at function scope, `f32 maxDist = 35.0f;` just inside the hover loop, and `f32 k = 1.5f;` after the TPL size reads. This is how the original hoisted constants get their FPRs.
+
+### Still NonMatching in 0x80007F58–0x8000FA38
+
+- `SaveData.cpp` (98.9%): only `CheckNewsFiles` (97.8%). Register allocation over the whole 3.7 KB function. The original reuses `r31` (`current`, dead after `*current = newest`) as the entry-search counter, and keeps `articleIdx` in a volatile register.
+- `GlobePin.cpp` (99.6%):
+  - The weak `GlobePoint::GetPos` (68.6%, 28 bytes): the original copies the `VEC3` as two words then one; ours loads all three first. Every `return mPos` form tried gives the same code.
+  - `Update` (99.7%): the original `VEC3Dot` allocates `work0..3` to f0, f1, f2, but nw4r's inline asm `VEC3Dot` gives f2, f1, f0. A local copy of the asm inline with `register f32 work3, work2, work1, work0;` fixes it. It is not used, because of the asm policy.
+  - `Update` also has the cursor y/x register swap.
+  - `UpdateCards` (99.7%), `TruncateHeadline` (98.3%), `TruncateLocation` (99.5%), `Draw` (99.7%), `DrawCards` (99.9%): FPR/GPR swaps between pairs of variables (e.g. `maxWidth`/`width` and `limit`/`cut` in the truncation functions), plus one dead `cmplw` in `TruncateHeadline` that no source form reproduced.
