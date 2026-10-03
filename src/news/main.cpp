@@ -19,20 +19,20 @@ using namespace nw4r;
 extern "C" {
 
 // Browser (Opera) library
-void fn_8009C504(MEMAllocator* allocator1, MEMAllocator* allocator2);
-BOOL fn_8009C55C(void);
-void fn_8009C560(void);
-void fn_8009C5C0(GXRenderModeObj* rmode1, GXRenderModeObj* rmode2, u8 flag);
-BOOL fn_8009C5C8(s32 width, s32 height);
-void fn_8009C5CC(s32 arg);
-void fn_8009C5D0(void);
-BOOL fn_8009C5D4(u32 size);
-void fn_8009C6C8(void);
-void fn_8009C720(void* arc);
-const char* fn_8009C724(void (*callback)(BOOL, GXRenderModeObj*), const char* url, s32 chan);
-void fn_8009C728(const char* url);
-void fn_8009C730(s32 arg);
-void fn_8009C788(HBMDataInfo* info);
+void VCMVInit(MEMAllocator* allocator1, MEMAllocator* allocator2);
+BOOL VCMVLoadLibrary(void);
+void VCMVUnloadLibrary(void);
+void VCMVSetRenderMode(GXRenderModeObj* rmode1, GXRenderModeObj* rmode2, u8 flag);
+BOOL VCMVCreateSurface(s32 width, s32 height);
+void VCMVSetFontSize(s32 arg);
+void VCMVDestroySurface(void);
+BOOL VCMVCreateHeap(u32 size);
+void VCMVDestroyHeap(void);
+void VCMVSetArchive(void* arc);
+const char* VCMVRun(void (*callback)(BOOL, GXRenderModeObj*), const char* url, s32 chan);
+void VCMVSetStartUrl(const char* url);
+void VCMVQuit(s32 arg);
+void VCMVLoadCursor(HBMDataInfo* info);
 }
 
 
@@ -148,8 +148,8 @@ HomeMenu::HomeMenu(u32 manualArc, const char* manualPath, const char* startUrl,
 
             mBrowserAllocator = browserAllocator;
             mArcAllocator = arcAllocator;
-            fn_8009C504(browserAllocator, arcAllocator);
-            fn_8009C788(mInfo);
+            VCMVInit(browserAllocator, arcAllocator);
+            VCMVLoadCursor(mInfo);
 
             HBMCreate(mInfo);
             HBMCreateSound(mSoundData, mSoundHeap, HBM_SOUND_HEAP_SIZE);
@@ -372,33 +372,33 @@ BOOL HomeMenu::RunManual() {
             }
         }
 
-        ret = !fn_8009C55C();
+        ret = !VCMVLoadLibrary();
         if (ret) {
-            fn_8009C720(arc);
+            VCMVSetArchive(arc);
             PrintHeapInfo();
-            fn_8009C5C0(&gRenderMode, &gRenderMode, 0);
-            ret = fn_8009C5C8(gWidescreen ? 808 : 608, 456) != 0;
+            VCMVSetRenderMode(&gRenderMode, &gRenderMode, 0);
+            ret = VCMVCreateSurface(gWidescreen ? 808 : 608, 456) != 0;
             if (ret) {
-                fn_8009C5CC(12);
+                VCMVSetFontSize(12);
                 PrintHeapInfo();
-                ret = fn_8009C5D4(0x1400000 - size) != 0;
+                ret = VCMVCreateHeap(0x1400000 - size) != 0;
                 if (ret) {
                     PrintHeapInfo();
-                    fn_8009C728(mStartUrl);
+                    VCMVSetStartUrl(mStartUrl);
                     if (!mQuit) {
                         mBrowserRunning = true;
-                        const char* url = fn_8009C724(BrowserDrawCallback, mUrl, chan);
+                        const char* url = VCMVRun(BrowserDrawCallback, mUrl, chan);
                         mBrowserRunning = false;
                         strncpy(mUrl, url, sizeof(mUrl) - 1);
                     }
                     PrintHeapInfo();
-                    fn_8009C6C8();
+                    VCMVDestroyHeap();
                 }
                 PrintHeapInfo();
-                fn_8009C5D0();
+                VCMVDestroySurface();
             }
             PrintHeapInfo();
-            fn_8009C560();
+            VCMVUnloadLibrary();
         }
 
         PrintHeapInfo();
@@ -454,7 +454,7 @@ void HomeMenu::BrowserDrawCallback(BOOL fade, GXRenderModeObj* rmode) {
 
 void HomeMenu::Quit() {
     if (mBrowserRunning) {
-        fn_8009C730(0);
+        VCMVQuit(0);
     }
     mQuit = true;
 }

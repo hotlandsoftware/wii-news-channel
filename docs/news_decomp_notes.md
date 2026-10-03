@@ -7,7 +7,7 @@ Project-specific findings. Read this before decompiling a file.
 | Range | Contents |
 | --- | --- |
 | `0x80006FC0`–`0x80051D4C` | News Channel game code (C++). |
-| `0x80051D4C`–`0x800FB9EC` | HOME Menu (HBM), RSO, NW4R (`lyt`, `snd`, `g3d`, `ut`, `math`), and the TMCC JPEG decoder (`0x8007FE28`–`0x8008A0A4`). |
+| `0x80051D4C`–`0x800FB9EC` | HOME Menu (HBM), RSO, NW4R (`lyt`, `snd`, `g3d`, `ut`, `math`), the TMCC JPEG decoder (`0x8007FE28`–`0x8008A0A4`) and the VC manual viewer `vcmv` (`0x80096D2C`–`0x8009D694`, Opera WWW front end; see `docs/platform_layer_map.md`). |
 | `0x800FB9EC`–`0x80179F64` | RVL SDK (May–June 2007 builds). |
 | `0x80179F64`–`0x8018C7C0` | MSL / Runtime.PPCEABI.H. |
 | `0x8018C7C0`–`0x80191F00` | MetroTRK. |
@@ -384,7 +384,7 @@ Globals named from this block: `gHomeMenu`, `gFader`/`gFader2`, `gGlobe` (the si
 - **Local aggregate init with run-time values.** `Vec v0 = {-size, -size, -100.0f};` copies a `.rodata` template word by word inside the loop and then stores the run-time fields; that is GlobeDots' "vertex template" at `0x80192498` (three 12-byte compiler objects).
 - **Operand order of a constant add.** `pos.y * scale + 228.0f` puts the constant first in `fadds`; returning it from an inline (`GetScreenHalfHeight()`) keeps the original order (same as `GetScreenCenterY()` in SaveData).
 - **dtk misses address pairs spilled to the stack.** In `SystemCalc` the `lis rX, sym@ha` results are stored to the stack and the `addi` comes later through another register, so dtk leaves raw `lis r0, 0x801f`/`addi r3, r3, 0x588`. `config.yml` now has `add_relocations` for these 8 pairs.
-- **Inline wrappers that only change register allocation.** NewsArticle's `operator new(size_t, MEMAllocator*)`/`new[]` were inline wrappers around the `fn_` functions; calling the real operators directly changed `NewsData::GetPicture` (99.10 → 99.02%). The wrappers stay, calling the mangled names through `extern "C"` declarations.
+- **Inline wrappers that only change register allocation.** NewsArticle's `operator new(size_t, MEMAllocator*)`/`new[]` were inline wrappers around the `fn_` functions; calling the real operators directly changed `NewsData::GetPicture` (99.10 → 99.02%). The `operator new` wrapper stays, calling the mangled name through an `extern "C"` declaration; `operator new[]` is called directly (the near-miss sweep found that this improves `NewsData::Init` and leaves `GetPicture` unchanged).
 
 ### Still NonMatching in 0x8003CECC–0x80045238
 
@@ -422,4 +422,16 @@ More patterns from this block:
 - **Data symbols.** `sStreamBuffer` is `0x10040` bytes (a stray `lbl_80218028` inside it was removed); `sSoundMode`, `sVoiceFx`, `sNoiseSeed`, `lbl_80359048` had padding in their sizes; `sLightColor`/`lbl_80358FA8` (clear colour) were split into single bytes by dtk.
 - **`FxBase` vtable.** Our `sound_manager.o` emits the weak `nw4r::snd::FxBase` vtable and virtuals (all inline in the header); nothing references them and the original linker dead-stripped them, so `.data` stays at 93.75% in objdiff. This does not affect linking.
 - **Open issues (NonMatching):** `CalcPoles` (97.8%) differs only in the register allocation inside the inline-asm `VEC3Sub`/`VEC3Dot` (the original's `VEC3Sub` has the `psq_st` after the second pair of loads, like `VEC3Add` in `math_types.h`) and stays as is under the asm policy; `UpdateCamera` (97.6%) `f30`/`f31` swap of two clamped factors and the store order of `target`; `StartGrab`/`CalcCameraMtx` small register swaps; `JPEGDecoder::Decode` (97.5%) register numbering plus a dead `cmpwi tex, 0` before the allocation-failure report that no source form reproduced; `FxVoice` `PitchUp` (90.3%), `PitchDown` (91.1%), `Radio` (91.4%), `UpdateBuffer` (97.9%), `MakeWindow` (98.7%), ctor (98.5%): register allocation (the original keeps the `/ 96` magic constant and `0` in callee-saved registers and indexes `mWindowB[n]` with an `n * 4` induction variable instead of `this + n * 4`).
+
+## VC manual viewer (`vcmv`, `0x80096D2C–0x8009D694`) findings
+
+Full write-up in `docs/platform_layer_map.md` ("VC manual viewer"). Codegen tricks that may apply elsewhere:
+
+- **Flags.** `cflags_vcmv` adds `-fp_contract on` (fused multiply-adds), `-gen-fsel` (a float `a >= 0 ? b : c` becomes `fsel`; `__fsel` always adds an `frsp`) and `-use_lmw_stmw on` (`stmw`/`lmw`; frames that save FPRs still use `_savegpr_*`) to the HBM flags.
+- **`x += c` on a volatile float** compiles to `fadds`, `frsp`, `stfs`, and a following `if (x > k)` compares the `frsp` result without re-reading; `x = x + c` re-reads `x`.
+- **`const T*` parameters** let MWCC move loads above GX FIFO writes (`vcmvDrawQuad(const vcmvQuad*)`); the FIFO declaration form does not matter.
+- **`.sdata2` order from a dead out-of-line copy:** a global, non-inline helper (`vcmvEase`) defined before its caller pools its literals first; constants that only exist after inlining (here `343.0f` from `frames * frames * frames` with `frames = 7`) come after the int-to-float constant. Same idea as `EaseZoom` in MainScreen.
+- **Data the original link kept but nothing references** (three `.sbss` words, two `.bss` gaps) needs `force_active` in `config.yml`; `#pragma force_active` does not keep data.
+- **Unroll factor.** `while (n-- > 0) { ...; p++; }` unrolls 8× where the equivalent `for` unrolls 16×.
+- **Float register numbering** follows the declaration order of the locals (`f32 u0, u1, …`), not the order of the assignments.
 
