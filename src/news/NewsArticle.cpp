@@ -36,18 +36,6 @@ static const u32 sIcon[4][2] = {
     {78, 78},
 };
 
-static inline BOOL HasLocation(NewsHeader* file, u32 idx) {
-    return idx < file->numLocations && file->locationsOfs != 0;
-}
-
-static inline bool HasLocation2(u32 idx, NewsHeader* file) {
-    return idx < file->numLocations && file->locationsOfs != 0;
-}
-
-static inline bool IsValidIdx(u32 idx, u32 num) {
-    return idx < num;
-}
-
 NewsArticle::NewsArticle(NewsHeader* file, NewsEntryRec* entry, u32 topic, u32 index, BOOL isCurrent) {
     mPrevSame = NULL;
     mNextSame = NULL;
@@ -97,8 +85,9 @@ found:
         mCopyright = (wchar_t*)mFile->At(mSource->copyrightOfs);
     }
 
-    if (mFile->numLocations > mText->locationIdx && mFile->locationsOfs != 0) {
-        mLocation = (NewsLocationRec*)mFile->At(mFile->locationsOfs) + mText->locationIdx;
+    u32 loc = mText->locationIdx;
+    if (loc < mFile->numLocations && mFile->locationsOfs != 0) {
+        mLocation = (NewsLocationRec*)mFile->At(mFile->locationsOfs) + loc;
         mLocationName = (wchar_t*)mFile->At(mLocation->nameOfs);
         unk5C = wcslen(mLocationName) + 1;
         unk40 = new (&gNewsAllocator) wchar_t[unk5C];

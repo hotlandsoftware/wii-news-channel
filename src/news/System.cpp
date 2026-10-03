@@ -171,13 +171,16 @@ void SystemInit() {
         KPADEnableAimingMode(i);
         KPADSetPosParam(i, 0.05f, 1.0f);
         KPADSetDistParam(i, 0.03f, 1.0f);
-        gPointerX[i] = GetScreenWidth() / 2;
+        // The centre is stored after gHold[i] below.
+        f32* pointerX = &gPointerX[i];
+        f32 centerX = GetScreenWidth() / 2;
         gRepeatSlowOn[i] = false;
         gRepeatFastOn[i] = false;
         gZoomStarted[i] = false;
         gPointerY[i] = 228.0f;
         gKPADLatest[i] = -1;
         gHold[i] = 0;
+        *pointerX = centerX;
         gTrig[i] = 0;
         gRelease[i] = 0;
         gCursorHorizon[i].x = 0.0f;
@@ -1113,12 +1116,14 @@ void SetRenderMode(GXRenderModeObj* rm) {
     }
 }
 
+// Screen units per framebuffer pixel, horizontally.
+static inline f32 GetXScale(u16 fbWidth) {
+    return (f32)GetScreenWidth() / (s32)fbWidth;
+}
+
 void Draw2D_SetScissor(u32 x, u32 y, u32 width, u32 height) {
-    u16 fb = gRenderMode.fbWidth;
-    f32 scale = (f32)GetScreenWidth() / (s32)fb;
-    u32 sx = x / scale;
-    f32 scale2 = (f32)GetScreenWidth() / (s32)fb;
-    u32 sw = width / scale2;
+    u32 sx = x / GetXScale(gRenderMode.fbWidth);
+    u32 sw = width / GetXScale(gRenderMode.fbWidth);
     GXSetScissor(sx, y, sw, height);
 }
 
