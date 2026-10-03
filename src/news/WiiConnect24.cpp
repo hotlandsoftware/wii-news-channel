@@ -919,6 +919,7 @@ s32 CWiiConnect24::setupDlTasks(BOOL first, BOOL second, u8 force, u16 interval,
 }
 
 s32 CWiiConnect24::execDownload(s32 index, u32 mask, u16 id) {
+    NWC24Err err;
     s32 result;
     u16 kind = mKind[index];
     if (!sSOReady) {
@@ -944,11 +945,11 @@ s32 CWiiConnect24::execDownload(s32 index, u32 mask, u16 id) {
     switch (kind) {
     case 2:
         sDownloading = true;
-        result = NWC24ExecDownloadTask(6, id, mask);
+        err = NWC24ExecDownloadTask(6, id, mask);
         sDownloading = false;
-        if (result != NWC24_OK) {
-            SetError(this, "NWC24ExecDownloadTask() failed.", NWC24GetErrorCode(), result);
-            return ConvertError((NWC24Err)result);
+        if (err != NWC24_OK) {
+            SetError(this, "NWC24ExecDownloadTask() failed.", NWC24GetErrorCode(), err);
+            return ConvertError(err);
         }
         break;
     }
