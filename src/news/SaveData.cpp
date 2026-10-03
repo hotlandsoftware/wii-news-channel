@@ -710,8 +710,8 @@ s32 CheckNewsFiles(NewsHeader** files, u32* sizes, s32* current, u32* mask) {
                 if (textSize == 0 && textOfs != 0) {
                     result = -1;
                 }
-                textSize = text->unk24;
                 textOfs = text->bodyOfs;
+                textSize = text->unk24;
                 if (textOfs + textSize > fileSize) {
                     result = -1;
                 }
