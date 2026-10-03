@@ -351,6 +351,17 @@ cflags_bte = [
     "-ir include/revolution/bte",
 ]
 
+# HOME Menu (homebuttonLib, May 16 2007): RVL flags, as ogws homebuttonMiniLib
+# but with small data sections
+cflags_hbm = [
+    *cflags_rvl,
+    "-DNW4R_MATH_VEC2_NO_DTOR",
+    "-DNW4R_MATH_VEC3_NO_DTOR",
+    "-DNW4R_MATH_MTX34_NO_DTOR",
+    "-DNW4R_UT_COLOR_DEFAULT_WHITE",
+    "-DNW4R_UT_RECT_DEFAULT_ZERO",
+]
+
 config.linker_version = "GC/3.0a5.2"
 
 
@@ -1027,6 +1038,20 @@ config.libs = [
         "progress_category": "sdk",
         "objects": [
             Object(Matching, "revolution/ARC/arc.c"),
+        ],
+    },
+    {
+        "lib": "hbm",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_hbm,
+        "progress_category": "sdk",
+        "objects": [
+            Object(Matching, "revolution/HBM/HBMBase.cpp"),
+            Object(Matching, "revolution/HBM/HBMAnmController.cpp"),
+            Object(Matching, "revolution/HBM/HBMFrameController.cpp"),
+            Object(Matching, "revolution/HBM/HBMGUIManager.cpp"),
+            Object(Matching, "revolution/HBM/HBMController.cpp"),
+            Object(Matching, "revolution/HBM/HBMRemoteSpk.cpp"),
         ],
     },
     {

@@ -471,6 +471,40 @@ revolution/ARC/arc.c:
 	.data       start:0x801CB600 end:0x801CB670
 	.sdata      start:0x80356DD8 end:0x80356DE0
 
+revolution/HBM/HBMBase.cpp:
+	.text       start:0x8008AA44 end:0x8009430C
+	.rodata     start:0x801AAF58 end:0x801AB208
+	.data       start:0x801CB670 end:0x801CC260
+	.bss        start:0x802AFF60 end:0x802AFF98
+	.sdata      start:0x80356DE0 end:0x80356EB0
+	.sbss       start:0x803578D0 end:0x803578D8
+	.sdata2     start:0x80359070 end:0x803590E8
+
+revolution/HBM/HBMAnmController.cpp:
+	.text       start:0x8009430C end:0x80094418
+	.data       start:0x801CC260 end:0x801CC270
+
+revolution/HBM/HBMFrameController.cpp:
+	.text       start:0x80094418 end:0x800945B8
+	.sdata2     start:0x803590E8 end:0x803590F0
+
+revolution/HBM/HBMGUIManager.cpp:
+	.text       start:0x800945B8 end:0x800959F0
+	.data       start:0x801CC270 end:0x801CC3C8
+	.sbss       start:0x803578D8 end:0x803578E0
+	.sdata2     start:0x803590F0 end:0x80359100
+
+revolution/HBM/HBMController.cpp:
+	.text       start:0x800959F0 end:0x80096538
+	.bss        start:0x802AFF98 end:0x802B0128
+	.sbss       start:0x803578E0 end:0x803578E8
+	.sdata2     start:0x80359100 end:0x80359110
+
+revolution/HBM/HBMRemoteSpk.cpp:
+	.text       start:0x80096538 end:0x80096D2C
+	.data       start:0x801CC3C8 end:0x801CC3D8
+	.sbss       start:0x803578E8 end:0x803578F0
+
 nw4r/ef/ef_draworder.cpp:
 	.text       start:0x8009D694 end:0x8009D794
 	.data       start:0x801CD8B0 end:0x801CD8C8

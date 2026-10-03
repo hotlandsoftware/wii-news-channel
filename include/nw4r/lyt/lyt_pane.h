@@ -84,6 +84,7 @@ public:
 
     const math::VEC3& GetTranslate() const { return mTranslate; }
     void SetTranslate(const math::VEC3& value) { mTranslate = value; }
+    void SetTranslate(const math::VEC2& value) { SetTranslate(math::VEC3(value.x, value.y, 0.0f)); } // added for the HOME Menu
 
     const math::VEC3& GetRotate() const { return mRotate; }
     void SetRotate(const math::VEC3& value) { mRotate = value; }
