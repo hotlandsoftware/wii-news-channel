@@ -25,6 +25,84 @@ inline f32 TurnTime(f32 time, u8 flag, u32 loop, int turnLen) {
     return turnLen - time;
 }
 
+inline u16 CalcFrameF(AnimCurveHeader* pHeader, u32 tick, u32 life,
+                      u32& rLoop, f32& rTime) {
+    u16 len = pHeader->frameLength;
+    u16 frame;
+
+    if (len <= 1) {
+        rTime = 0.0f;
+        rLoop = tick;
+        frame = 0;
+    } else {
+        u8 flag = pHeader->processFlag;
+
+        if (!(flag & AnimCurveHeader::PROC_FLAG_INFLOOP) &&
+            pHeader->loopCount <= 1) {
+
+            if (!(flag & AnimCurveHeader::PROC_FLAG_FITTING)) {
+                frame = tick;
+                if (tick >= len - 1) {
+                    frame = len - 1;
+                }
+
+                rTime = frame;
+            } else {
+                rTime = tick * (static_cast<f32>(len - 1) / (life - 1));
+
+                if (rTime > len - 1) {
+                    rTime = len - 1;
+                }
+
+                frame = rTime;
+            }
+        } else if (!(flag & AnimCurveHeader::PROC_FLAG_FITTING)) {
+            u32 turnLen = len - 1;
+            rLoop = tick / turnLen;
+
+            if (!(flag & AnimCurveHeader::PROC_FLAG_TURN)) {
+                if (!(flag & AnimCurveHeader::PROC_FLAG_INFLOOP) &&
+                    rLoop >= pHeader->loopCount) {
+                    frame = turnLen;
+                    rLoop = static_cast<u8>(pHeader->loopCount - 1);
+                } else {
+                    frame = tick - rLoop * turnLen;
+                }
+            } else if (!(flag & AnimCurveHeader::PROC_FLAG_INFLOOP) &&
+                       rLoop >= pHeader->loopCount) {
+                frame = pHeader->loopCount % 2 == 0 ? static_cast<u16>(0) : static_cast<u16>(turnLen);
+                rLoop = static_cast<u8>(pHeader->loopCount - 1);
+            } else if (rLoop % 2 == 0) {
+                frame = tick - rLoop * turnLen;
+            } else {
+                frame = turnLen * (rLoop + 1) - tick;
+            }
+
+            rTime = frame;
+        } else if (tick >= life - 1) {
+            if (!(flag & AnimCurveHeader::PROC_FLAG_TURN) ||
+                pHeader->loopCount % 2 != 0) {
+                frame = static_cast<u8>(len - 1);
+            } else {
+                frame = 0;
+            }
+
+            rTime = frame;
+            rLoop = static_cast<u8>(pHeader->loopCount - 1);
+        } else {
+            int turnLen = len - 1;
+            f32 ratio = pHeader->loopCount * (static_cast<f32>(turnLen) / (life - 1));
+            rLoop = tick * ratio / turnLen;
+            rTime = tick * ratio - rLoop * turnLen;
+
+            rTime = TurnTime(rTime, flag, rLoop, turnLen);
+            frame = rTime;
+        }
+    }
+
+    return frame;
+}
+
 struct AnimCurveKeyU8 {
     u16 frame;  // at 0x0
     u16 interp; // at 0x2
@@ -1875,79 +1953,8 @@ void AnimCurveExecuteF32x1(u8* pCmdList, Particle* pParticle, f32* pTarget,
 
     u32 loop = 0;
     u32 nextLoop;
-    u16 len = pHeader->frameLength;
-    u16 frame;
     f32 time;
-
-    if (len <= 1) {
-        time = 0.0f;
-        loop = tick;
-        frame = 0;
-    } else {
-        u8 flag = pHeader->processFlag;
-
-        if (!(flag & AnimCurveHeader::PROC_FLAG_INFLOOP) &&
-            pHeader->loopCount <= 1) {
-
-            if (!(flag & AnimCurveHeader::PROC_FLAG_FITTING)) {
-                frame = tick;
-                if (tick >= len - 1) {
-                    frame = len - 1;
-                }
-
-                time = frame;
-            } else {
-                time = tick * (static_cast<f32>(len - 1) / (life - 1));
-
-                if (time > len - 1) {
-                    time = len - 1;
-                }
-
-                frame = time;
-            }
-        } else if (!(flag & AnimCurveHeader::PROC_FLAG_FITTING)) {
-            u32 turnLen = len - 1;
-            loop = tick / turnLen;
-
-            if (!(flag & AnimCurveHeader::PROC_FLAG_TURN)) {
-                if (!(flag & AnimCurveHeader::PROC_FLAG_INFLOOP) &&
-                    loop >= pHeader->loopCount) {
-                    frame = turnLen;
-                    loop = static_cast<u8>(pHeader->loopCount - 1);
-                } else {
-                    frame = tick - loop * turnLen;
-                }
-            } else if (!(flag & AnimCurveHeader::PROC_FLAG_INFLOOP) &&
-                       loop >= pHeader->loopCount) {
-                frame = pHeader->loopCount % 2 == 0 ? static_cast<u16>(0) : static_cast<u16>(turnLen);
-                loop = static_cast<u8>(pHeader->loopCount - 1);
-            } else if (loop % 2 == 0) {
-                frame = tick - loop * turnLen;
-            } else {
-                frame = turnLen * (loop + 1) - tick;
-            }
-
-            time = frame;
-        } else if (tick >= life - 1) {
-            if (!(flag & AnimCurveHeader::PROC_FLAG_TURN) ||
-                pHeader->loopCount % 2 != 0) {
-                frame = static_cast<u8>(len - 1);
-            } else {
-                frame = 0;
-            }
-
-            time = frame;
-            loop = static_cast<u8>(pHeader->loopCount - 1);
-        } else {
-            int turnLen = len - 1;
-            f32 ratio = pHeader->loopCount * (static_cast<f32>(turnLen) / (life - 1));
-            loop = tick * ratio / turnLen;
-            time = tick * ratio - loop * turnLen;
-
-            time = TurnTime(time, flag, loop, turnLen);
-            frame = time;
-        }
-    }
+    u16 frame = CalcFrameF(pHeader, tick, life, loop, time);
 
     int f = frame;
     AnimCurveKey* pKeyTable = reinterpret_cast<AnimCurveKey*>(pKey);
