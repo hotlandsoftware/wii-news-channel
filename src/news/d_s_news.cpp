@@ -2167,12 +2167,11 @@ void Pins_Select(s32 category, s32 index, u8 state) {
 
 GlobePin* Pins_GetPointed(s32* category, s32* index) {
     GlobePin** pin = sSortedPins;
+    f32 maxY = 393.0f;
     for (u32 i = 0; i < sNumPins; i++, pin++) {
-        GlobePin* p = *pin;
-        if (p && p->mPointerChan >= 0) {
-            f32 y = gCursorY[p->mPointerChan][0];
-            if (y > 63.0f && y < 393.0f) {
-                *category = p->mCategory;
+        if (*pin && (*pin)->mPointerChan >= 0) {
+            if (gCursorY[(*pin)->mPointerChan][0] > 63.0f && gCursorY[(*pin)->mPointerChan][0] < maxY) {
+                *category = (*pin)->mCategory;
                 *index = (*pin)->mIndex;
                 return *pin;
             }
