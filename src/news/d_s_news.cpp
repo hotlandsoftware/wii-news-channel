@@ -2607,8 +2607,10 @@ void Article_DrawSourceLogo(const math::VEC2& pos, BOOL right, f32 alpha) {
     f32 scale = gTextScale * GetIconScale();
     if (logo) {
         ut::Color color(255, 255, 255, 255.0f * alpha);
-        f32 y = (pos.y - scale * logo->height) - 5.0f;
-        f32 w = scale * logo->width;
+        f32 lw = logo->width;
+        f32 lh = logo->height;
+        f32 y = (pos.y - scale * lh) - 5.0f;
+        f32 w = scale * lw;
         f32 x;
         if (right) {
             x = (sArticleSize.x - 10.0f) - w;
