@@ -2412,9 +2412,10 @@ static inline f32 GetIconScale() {
 }
 
 static inline f32 GetLogoHeight() {
+    f32 h;
     f32 height = 4.0f;
     if ((u32)(sSourceLayout - 3) <= 3) {
-        f32 h = 0.0f;
+        h = 0.0f;
         if (sSourceIconType == 0) {
             if (sSourceLogo) {
                 h = sSourceLogo->height;
