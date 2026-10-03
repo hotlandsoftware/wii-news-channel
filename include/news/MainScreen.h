@@ -99,8 +99,8 @@ public:
     typedef void (MainScreen::*StateFunc)(s32* arg);
     typedef void (MainScreen::*Func)();
 
-    MainScreen(u32 arc, nw4r::ut::TextWriterBase<wchar_t>* writer, nw4r::math::VEC2& pos,
-               nw4r::math::VEC2& size);
+    MainScreen(u32 arc, nw4r::ut::TextWriterBase<wchar_t>* writer, const nw4r::math::VEC2& pos,
+               const nw4r::math::VEC2& size);
     ~MainScreen();
 
     void Start();

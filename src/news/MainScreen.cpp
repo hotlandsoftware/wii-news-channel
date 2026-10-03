@@ -122,8 +122,8 @@ static inline void DisableButton(PaneButton* button) {
     button->Press();
 }
 
-MainScreen::MainScreen(u32 arc, ut::TextWriterBase<wchar_t>* writer, math::VEC2& pos,
-                       math::VEC2& size)
+MainScreen::MainScreen(u32 arc, ut::TextWriterBase<wchar_t>* writer, const math::VEC2& pos,
+                       const math::VEC2& size)
     : ScreenBase(writer, pos.x, pos.y, size.x, size.y),
       mMainLayout(NULL),
       mHeadLayout(NULL),
