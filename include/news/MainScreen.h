@@ -67,6 +67,10 @@ extern HeadlineList* lbl_8035755C; // headline list being shown
 extern u32 lbl_803575E0;           // number of news sections
 extern Globe* gGlobe;
 
+inline Globe* GetGlobe() {
+    return gGlobe;
+}
+
 
 // Base of MainScreen (not yet decompiled, 0x800493A8): the text writer and the
 // screen area.

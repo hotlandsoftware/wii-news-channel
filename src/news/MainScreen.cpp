@@ -906,7 +906,7 @@ static inline void SetButtonEnabled(PaneButton* button, BOOL enabled) {
 
 void MainScreen::ModeMain() {
     HeadlineList* list = lbl_8035755C;
-    Globe* globe = gGlobe;
+    Globe* globe = GetGlobe();
     Ticker* ticker = NULL;
     NewsArticle* article = NULL;
     BOOL held = FALSE;
