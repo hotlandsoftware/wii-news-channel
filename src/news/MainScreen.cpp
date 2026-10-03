@@ -1409,7 +1409,8 @@ void MainScreen::State16960(s32* arg) {
         mUnk288 = 1.0f;
         mUnk338 = 0;
         mUnk240 = 1.0f;
-        mUnk28C = __fabsf(mUnk288 - mUnk23C) / 15.0f;
+        f32 d = mUnk288 - mUnk23C;
+        mUnk28C = __fabsf(d) / 15.0f;
         if (arg != NULL) {
             mStateStep = 2;
             mDraw = &MainScreen::DrawButtons2;
@@ -1924,11 +1925,9 @@ void MainScreen::State18770(s32* arg) {
             mUnk338 = 0x8000;
         }
         f32 t = CosineEase(mUnk338);
-        f32 x = mUnk280 + mUnk284 * t;
-        f32 right = mUnk290 + mUnk294 * t;
+        mUnk164.x = mUnk280 + mUnk284 * t;
+        mScreenRect.right = mUnk290 + mUnk294 * t;
         mUnk240 -= 1.0f / 18.0f;
-        mUnk164.x = x;
-        mScreenRect.right = right;
         if (mUnk240 < 0.0f) {
             mUnk240 = 0.0f;
         }
@@ -3099,11 +3098,8 @@ void MainScreen::Sub1D9DC() {
         break;
     default: {
         HeadlineList* list = lbl_8035755C;
-        if (list == NULL) {
-            break;
-        }
-        if (list->mMode == HeadlineList::MODE_SECTION && list->mNumItems == 0) {
-            break;
+        if (list == NULL || (list->mMode == HeadlineList::MODE_SECTION && list->mNumItems == 0)) {
+            return;
         }
         if (mHeld[0]) {
             held = true;
