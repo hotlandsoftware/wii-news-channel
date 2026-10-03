@@ -1007,8 +1007,8 @@ void Draw2D_Tex(TPLPalette* tpl, u32 index, const Vec* pos, f32 scaleX, f32 scal
     GXLoadTexObj(&texObj, GX_TEXMAP0);
     f32 x0 = pos->x;
     f32 y0 = pos->y;
-    f32 x1 = x0 + scaleX * TPL_GetWidth(tpl, index);
-    f32 y1 = y0 + scaleY * TPL_GetHeight(tpl, index);
+    f32 x1 = pos->x + scaleX * TPLGet(tpl, index)->textureHeader->width;
+    f32 y1 = pos->y + scaleY * TPLGet(tpl, index)->textureHeader->height;
     GXBegin(GX_QUADS, GX_VTXFMT0, 4);
     GXPosition3f32(x0, y0, pos->z);
     GXTexCoord2f32(0.0f, 0.0f);
