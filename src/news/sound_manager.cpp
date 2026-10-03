@@ -646,8 +646,8 @@ void FxVoice::UpdateBuffer(int channels, void** ppBuffer, u32 size, snd::SampleF
         switch (mMode) {
         case MODE_ECHO_FILTER:
             for (ch = 0; ch < 2; ch++) {
-                s32 work[FX_FRAME_SAMPLES + 11];
                 s32 echo[FX_FRAME_SAMPLES + 11];
+                s32 work[FX_FRAME_SAMPLES + 11];
                 Read(work, mInput[ch], 0, -11, FX_FRAME_SAMPLES + 11);
                 Read(echo, mOutput[ch], -60, -11, FX_FRAME_SAMPLES + 11);
                 for (s32 i = 0; i < FX_FRAME_SAMPLES + 11; i++) {
@@ -669,9 +669,9 @@ void FxVoice::UpdateBuffer(int channels, void** ppBuffer, u32 size, snd::SampleF
         case MODE_CHORUS:
             for (ch = 0; ch < 2; ch++) {
                 s32* out = buffers[ch];
-                s32* lfo = &mLfo[(mFrame % 30) * FX_FRAME_SAMPLES];
+                s32 lfo = (mFrame % 30) * FX_FRAME_SAMPLES;
                 for (s32 i = 0; i < FX_FRAME_SAMPLES; i++) {
-                    out[i] = *GetSample(mInput[ch], -2, i + lfo[i]);
+                    out[i] = *GetSample(mInput[ch], -2, i + mLfo[lfo + i]);
                 }
                 s32* echo = GetSample(mOutput[ch], -60, 0);
                 for (s32 i = 0; i < FX_FRAME_SAMPLES; i++) {
