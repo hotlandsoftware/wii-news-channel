@@ -775,7 +775,7 @@ void Draw2D_SetupGX() {
     GXSetBlendMode(GX_BM_BLEND, GX_BL_SRCALPHA, GX_BL_INVSRCALPHA, GX_LO_SET);
     GXSetZMode(GX_TRUE, GX_LEQUAL, GX_TRUE);
     GXSetZCompLoc(GX_FALSE);
-    GXSetAlphaCompare(GX_ALWAYS, 0, GX_AOP_AND, GX_ALWAYS, 0);
+    GXSetAlphaCompare(GX_GREATER, 0, GX_AOP_AND, GX_ALWAYS, 0);
     GXSetColorUpdate(GX_TRUE);
     GXSetAlphaUpdate(GX_FALSE);
     GXSetCullMode(GX_CULL_NONE);
@@ -938,6 +938,7 @@ void SetVideoMode(bool progressive, bool widescreen, bool narrow) {
     rm.efbHeight = 456;
 
     switch (VIGetTvFormat()) {
+    case VI_NTSC:
     default:
         rm.viTVmode = progressive ? VI_TVMODE_NTSC_PROG : VI_TVMODE_NTSC_INT;
         maxW = 720;
@@ -1003,6 +1004,8 @@ void SetVideoMode(bool progressive, bool widescreen, bool narrow) {
     rm.aa = 0;
     for (s32 i = 0; i < 12; i++) {
         rm.sample_pattern[i][0] = 6;
+    }
+    for (s32 i = 0; i < 12; i++) {
         rm.sample_pattern[i][1] = 6;
     }
     SetRenderMode(&rm);
