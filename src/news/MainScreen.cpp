@@ -334,9 +334,12 @@ MainScreen::MainScreen(u32 arc, ut::TextWriterBase<wchar_t>* writer, const math:
         button->mUnk91 = true;
         button->mTextColorCallback = fn_8001F730;
     }
-    mMainLayout->FindButton("zoom_in")->mUnk91 = true;
-    mMainLayout->FindButton("back")->mUnk91 = true;
-    mMainLayout->FindButton("earth")->mUnk91 = true;
+    button = mMainLayout->FindButton("zoom_in");
+    button->mUnk91 = true;
+    button = mMainLayout->FindButton("back");
+    button->mUnk91 = true;
+    button = mMainLayout->FindButton("earth");
+    button->mUnk91 = true;
     mHeadBackButton->mUnk91 = true;
     DisableButton(mHeadBackButton);
     mHeadUpButton->mUnk91 = true;
