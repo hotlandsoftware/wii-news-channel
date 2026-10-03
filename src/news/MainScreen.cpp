@@ -102,7 +102,7 @@ f32 fn_800449A0(u16 t);
 void fn_800329CC(void);
 BOOL fn_8003251C(void);
 void fn_80048D20(void* obj, s32 frames);
-void fn_800491EC(void* obj, GXColor color, s32 arg);
+void fn_800491EC(void* obj, ut::Color color, s32 arg);
 void fn_80048C80(void* obj, s32 frames);
 void fn_80032658(u8 region);
 void fn_80032580(NewsArticle* article, s32 arg, f32 x, f32 y);
@@ -179,10 +179,12 @@ const char* sGenreNames[] = {
     "genre_h", "genre_i", "genre_j", "genre_k", "genre_l", "genre_m", "genre_n",
 };
 
+#pragma explicit_zero_data on
 f32 sDragStartX = 0.0f;
 f32 sDragStartY = 0.0f;
 f32 sDragPosX = 0.0f;
 f32 sDragPosY = 0.0f;
+#pragma explicit_zero_data off
 
 static inline f32 Lerp(f32 a, f32 b, f32 t) {
     return a + (b - a) * t;
@@ -611,6 +613,7 @@ void MainScreen::LayoutSectionButtons() {
         }
     }
 }
+#pragma explicit_zero_data on
 f32 sCursorY = 0.0f;
 f32 sCursorZ = 0.0f;
 f32 sLineZ = 0.0f;
@@ -619,6 +622,7 @@ f32 sGlobeX = 0.0f;
 f32 sGlobeY = 0.0f;
 f32 sGlobe2X = 0.0f;
 f32 sGlobe2Y = 0.0f;
+#pragma explicit_zero_data off
 
 void MainScreen::Draw() {
     Draw2D_SetupGX();
@@ -1275,7 +1279,7 @@ void MainScreen::ModeWait() {
     case 0: {
         mModeStep++;
         fn_80048D20(lbl_80357730, 30);
-        GXColor color = {0, 0, 0, 0xA0};
+        ut::Color color(0, 0, 0, 0xA0);
         *(GXColor*)((u8*)lbl_80357730 + 0x10) = color;
         fn_800491EC(lbl_80357730, color, 0);
     }
@@ -2243,7 +2247,7 @@ void MainScreen::State195B8(s32* arg) {
         }
 
         bool canSwitch = false;
-        if (mState == &MainScreen::State195B8 && count > 1) {
+        if (IsState(&MainScreen::State195B8) && count > 1) {
             canSwitch = true;
         }
         if (canSwitch) {
