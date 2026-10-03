@@ -503,6 +503,16 @@ void FreeFonts() {
     }
 }
 
+static inline void CheckPointerOverClock(const f32& bottom) {
+    gPointerOverClock = false;
+    for (s32 i = 0; i < 4; i++) {
+        if (IsPointerValid(i) && gCursorY[i][0] < bottom) {
+            gPointerOverClock = true;
+            break;
+        }
+    }
+}
+
 void Scene::Execute() {
     if (gFatalError) {
         if (!IsState(&Scene::StateFatal)) {
@@ -537,13 +547,7 @@ void Scene::Execute() {
         }
     }
 
-    gPointerOverClock = false;
-    for (s32 i = 0; i < 4; i++) {
-        if (IsPointerValid(i) && gCursorY[i][0] < mClockBottom) {
-            gPointerOverClock = true;
-            break;
-        }
-    }
+    CheckPointerOverClock(mClockBottom);
 
     if (mState) {
         (this->*mState)();
