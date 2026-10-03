@@ -48,7 +48,7 @@ s32 jpgdSetupScale(JPEGDecContext* ctx) {
     h->mcusY = ctx->frame.mcusY;
     h->mcuWidth = (h->scale + ctx->frame.mcuWidth - 1) / h->scale;
     h->mcuHeight = (h->scale + ctx->frame.mcuHeight - 1) / h->scale;
-    h->width = (ctx->frame.width + h->scale - 1) / h->scale;
+    h->width = ((s32)(ctx->frame.width + h->scale) - 1) / h->scale;
     h->height = (h->scale + ctx->frame.height - 1) / h->scale;
     h->remX = (h->scale + ctx->frame.remX - 1) / h->scale;
     h->remY = (h->scale + ctx->frame.remY - 1) / h->scale;
