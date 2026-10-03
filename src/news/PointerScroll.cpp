@@ -1,1 +1,58 @@
-#include <types.h>
+#include <news/PointerScroll.h>
+#include <news/System.h>
+#include <nw4r/math/math_triangular.h>
+
+using namespace nw4r;
+
+extern "C" u32 lbl_801F0908[4]; // held buttons
+
+static inline BOOL IsInDeadZone(f32 d) {
+    return d < 20.0f && d > -20.0f;
+}
+
+static inline f32 CosRad(f32 rad) {
+    return math::CosFIdx(40.743664f * rad);
+}
+
+PointerScroll::PointerScroll() {
+    Init();
+}
+
+void PointerScroll::Reset() {
+    Init();
+}
+
+void PointerScroll::UpdateChannel(s32 chan) {
+    f32 d = 228.0f - gCursorY[chan][0];
+    mDelta[chan] = d;
+    if (IsInDeadZone(d)) {
+        mDelta[chan] = 0.0f;
+        return;
+    }
+    if (mTimer[chan] > 0) {
+        mTimer[chan]--;
+    }
+    if (mTimer[chan] == 0) {
+        mDir[chan] = mDelta[chan] > 0.0f ? 1 : 2;
+        f32 max = 185.2f;
+        f32 t = __fabsf(mDelta[chan]) - 20.0f;
+        if (t > max) {
+            t = max;
+        }
+        mTimer[chan] = (s32)(23.0f * CosRad(1.5707964f * t / max)) + 1;
+    }
+}
+
+void PointerScroll::Update() {
+    s32* dir = mDir;
+    s32* timer = mTimer;
+    for (s32 i = 0; i < 4; i++) {
+        dir[i] = 0;
+        if (lbl_801F0908[i] & 0x400) {
+            mActive = true;
+            UpdateChannel(i);
+        } else {
+            timer[i] = 0;
+        }
+    }
+}
