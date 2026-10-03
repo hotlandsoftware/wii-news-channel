@@ -22,23 +22,26 @@ void PointerScroll::Reset() {
 }
 
 void PointerScroll::UpdateChannel(s32 chan) {
+    f32* delta = &mDelta[chan];
+    s32* timer = &mTimer[chan];
+    s32* dir = &mDir[chan];
     f32 d = 228.0f - gCursorY[chan][0];
-    mDelta[chan] = d;
+    *delta = d;
     if (IsInDeadZone(d)) {
-        mDelta[chan] = 0.0f;
+        *delta = 0.0f;
         return;
     }
-    if (mTimer[chan] > 0) {
-        mTimer[chan]--;
+    if (*timer > 0) {
+        (*timer)--;
     }
-    if (mTimer[chan] == 0) {
-        mDir[chan] = mDelta[chan] > 0.0f ? 1 : 2;
+    if (*timer == 0) {
+        *dir = *delta > 0.0f ? 1 : 2;
         f32 max = 185.2f;
-        f32 t = __fabsf(mDelta[chan]) - 20.0f;
+        f32 t = __fabsf(*delta) - 20.0f;
         if (t > max) {
             t = max;
         }
-        mTimer[chan] = (s32)(23.0f * CosRad(1.5707964f * t / max)) + 1;
+        *timer = (s32)(23.0f * CosRad(1.5707964f * t / max)) + 1;
     }
 }
 
