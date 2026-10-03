@@ -76,22 +76,21 @@ s32 jpgdSetupOutputRGB565(JPEGDecContext* ctx) {
         ((g << 3) & 0x7E0) + ((b & 0xF8) >> 3) + ((r << 8) & 0xF800)
 #define TILES() (h->strideY >> 2)
 
-#define YCC_CHROMA(cb, cr)                                  \
-    cra = ((s8)(cr) * 0x167) >> 8;                          \
-    cga = -((s8)(cb) * 0x58 + (s8)(cr) * 0xB7) >> 8;        \
-    cba = ((s8)(cb) * 0x1C6) >> 8
+#define YCC_CHROMA(cbv, crv)                    \
+    cb = (s8)(cbv);                             \
+    cr = (s8)(crv);                             \
+    cra = (cr * 0x167) >> 8;                    \
+    cga = -(cb * 0x58 + cr * 0xB7) >> 8;        \
+    cba = (cb * 0x1C6) >> 8
 
 #define CLAMP255(v)    \
-    if ((v) > 255) {   \
-        (v) = 255;     \
-    } else if ((v) < 0) { \
-        (v) = 0;       \
-    }
+    (v) = ((v) > 255) ? 255 : ((v) < 0) ? 0 : (v)
 
 #define YCC_PIXEL(yv)                     \
-    r = (yv) + cra;                       \
-    g = (yv) + cga;                       \
-    b = (yv) + cba;                       \
+    yy = (yv);                            \
+    r = yy + cra;                         \
+    g = yy + cga;                         \
+    b = yy + cba;                         \
     if ((b | r | g) >> 8) {               \
         CLAMP255(b);                      \
         CLAMP255(g);                      \
@@ -116,6 +115,9 @@ void jpgdOutRGB565_411(JPEGDecContext* ctx, u32 x, u32 y) {
     s32 r;
     s32 g;
     s32 b;
+    s32 cb;
+    s32 cr;
+    s32 yy;
 
     sy = ctx->pix.y;
     scb = ctx->pix.cb;
@@ -161,6 +163,9 @@ void jpgdOutRGB565_411Edge(JPEGDecContext* ctx, u32 x, u32 y) {
     s32 r;
     s32 g;
     s32 b;
+    s32 cb;
+    s32 cr;
+    s32 yy;
 
     sy = ctx->pix.y;
     scb = ctx->pix.cb;
@@ -201,6 +206,9 @@ void jpgdOutRGB565_422(JPEGDecContext* ctx, u32 x, u32 y) {
     s32 r;
     s32 g;
     s32 b;
+    s32 cb;
+    s32 cr;
+    s32 yy;
 
     sy = ctx->pix.y;
     scb = ctx->pix.y + 0x80;
@@ -242,6 +250,9 @@ void jpgdOutRGB565_422Edge(JPEGDecContext* ctx, u32 x, u32 y) {
     s32 r;
     s32 g;
     s32 b;
+    s32 cb;
+    s32 cr;
+    s32 yy;
 
     sy = ctx->pix.y;
     scb = ctx->pix.y + 0x80;
@@ -282,6 +293,9 @@ void jpgdOutRGB565_420(JPEGDecContext* ctx, u32 x, u32 y) {
     s32 r;
     s32 g;
     s32 b;
+    s32 cb;
+    s32 cr;
+    s32 yy;
 
     sy = ctx->pix.y;
     scb = ctx->pix.cb;
@@ -328,6 +342,9 @@ void jpgdOutRGB565_420Edge(JPEGDecContext* ctx, u32 x, u32 y) {
     s32 r;
     s32 g;
     s32 b;
+    s32 cb;
+    s32 cr;
+    s32 yy;
 
     sy = ctx->pix.y;
     scb = ctx->pix.cb;
@@ -373,6 +390,11 @@ void jpgdOutRGB565_444(JPEGDecContext* ctx, u32 x, u32 y) {
     s32 r;
     s32 g;
     s32 b;
+    s32 cb;
+    s32 cr;
+    s32 yy;
+
+    u8* out;
 
     sy = ctx->pix.y;
     scb = ctx->pix.y + 0x40;
@@ -381,12 +403,13 @@ void jpgdOutRGB565_444(JPEGDecContext* ctx, u32 x, u32 y) {
     w = 8 / h->scale;
     hh = 8 / h->scale;
     tiles = TILES();
+    out = h->out;
     for (j = y; j < (s32)(y + hh); j++) {
-        for (i = x; i < (s32)(x + w); i += 1) {
+        for (i = x; i < (s32)(x + w); i++) {
             YCC_CHROMA(*scb++, *scr++);
-            YCC_PIXEL(sy[0]);
-            PUT_PIXEL(i, j);
-            sy += 1;
+            YCC_PIXEL(*sy++);
+            ((u16*)(out + ((j & 3) << 3)))[(i & 3) + ((i >> 2) + (j >> 2) * tiles) * 16] =
+                ((g << 3) & 0x7E0) + ((b & 0xF8) >> 3) + ((r << 8) & 0xF800);
         }
         sy += 8 - w;
         scb += 8 - w;
@@ -412,6 +435,9 @@ void jpgdOutRGB565_444Edge(JPEGDecContext* ctx, u32 x, u32 y) {
     s32 r;
     s32 g;
     s32 b;
+    s32 cb;
+    s32 cr;
+    s32 yy;
 
     sy = ctx->pix.y;
     scb = ctx->pix.y + 0x40;
@@ -450,6 +476,9 @@ void jpgdOutRGB565_Gray(JPEGDecContext* ctx, u32 x, u32 y) {
     s32 r;
     s32 g;
     s32 b;
+    s32 cb;
+    s32 cr;
+    s32 yy;
 
     sy = ctx->pix.y;
     h = ctx->handle;
@@ -490,6 +519,9 @@ void jpgdOutRGB565_GrayEdge(JPEGDecContext* ctx, u32 x, u32 y) {
     s32 r;
     s32 g;
     s32 b;
+    s32 cb;
+    s32 cr;
+    s32 yy;
 
     sy = ctx->pix.y;
     h = ctx->handle;

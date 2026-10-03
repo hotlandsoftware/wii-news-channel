@@ -360,26 +360,35 @@ void jpgdOutYUV420Edge(JPEGDecContext* ctx, u32 x, u32 y) {
 }
 
 void jpgdOutYUV444(JPEGDecContext* ctx, u32 x, u32 y) {
-    JPEGDecHandle* h;
+    u8* pcr;
     u8* sy;
     u8* scb;
     u8* scr;
     s32 n;
-    s32 i;
+    JPEGDecHandle* h;
     s32 j;
     s32 t;
+    s32 i;
+
+    u8* py;
+    u8* pcb;
+    u32 stride;
 
     sy = ctx->pix.y;
     scb = ctx->pix.y + 0x40;
     scr = ctx->pix.y + 0x80;
     h = ctx->handle;
     n = 8 / h->scale;
+    stride = h->strideY >> 3;
+    py = h->planeY;
+    pcb = h->planeCb;
+    pcr = h->planeCr;
     for (j = y; j < (s32)(y + n); j++) {
         for (i = x; i < (s32)(x + n); i++) {
-            t = (i >> 3) + (j >> 2) * (h->strideY >> 3);
-            h->planeY[(t << 5) + ((j & 3) << 3) + (i & 7)] = *sy++;
-            h->planeCb[(t << 5) + ((j & 3) << 3) + (i & 7)] = *scb++ + 0x80;
-            h->planeCr[(t << 5) + ((j & 3) << 3) + (i & 7)] = *scr++ + 0x80;
+            t = (i >> 3) + (j >> 2) * stride;
+            py[(t << 5) + ((j & 3) << 3) + (i & 7)] = *sy++;
+            pcb[(t << 5) + ((j & 3) << 3) + (i & 7)] = *scb++ + 0x80;
+            pcr[(t << 5) + ((j & 3) << 3) + (i & 7)] = *scr++ + 0x80;
         }
         sy += 8 - n;
         scb += 8 - n;
@@ -397,19 +406,27 @@ void jpgdOutYUV444Edge(JPEGDecContext* ctx, u32 x, u32 y) {
     s32 i;
     s32 j;
     s32 t;
+    u32 stride;
+    u8* py;
+    u8* pcb;
+    u8* pcr;
 
     sy = ctx->pix.y;
     scb = ctx->pix.y + 0x40;
     scr = ctx->pix.y + 0x80;
     h = ctx->handle;
-    w = (h->lastX == x) ? h->remX : (u8)(8 / h->scale);
-    hh = (h->lastY == y) ? h->remY : (u8)(8 / h->scale);
+    stride = h->strideY >> 3;
+    py = h->planeY;
+    pcb = h->planeCb;
+    pcr = h->planeCr;
+    w = (h->lastX == x) ? h->remX : 8 / h->scale;
+    hh = (h->lastY == y) ? h->remY : 8 / h->scale;
     for (j = y; j < (s32)(y + hh); j++) {
         for (i = x; i < (s32)(x + w); i++) {
-            t = (i >> 3) + (j >> 2) * (h->strideY >> 3);
-            h->planeY[(t << 5) + ((j & 3) << 3) + (i & 7)] = *sy++;
-            h->planeCb[(t << 5) + ((j & 3) << 3) + (i & 7)] = *scb++ + 0x80;
-            h->planeCr[(t << 5) + ((j & 3) << 3) + (i & 7)] = *scr++ + 0x80;
+            t = (i >> 3) + (j >> 2) * stride;
+            py[(t << 5) + ((j & 3) << 3) + (i & 7)] = *sy++;
+            pcb[(t << 5) + ((j & 3) << 3) + (i & 7)] = *scb++ + 0x80;
+            pcr[(t << 5) + ((j & 3) << 3) + (i & 7)] = *scr++ + 0x80;
         }
         sy += 8 - w;
         scb += 8 - w;

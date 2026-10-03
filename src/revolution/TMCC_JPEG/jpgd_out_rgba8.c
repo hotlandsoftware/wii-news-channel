@@ -77,22 +77,21 @@ s32 jpgdSetupOutputRGBA8(JPEGDecContext* ctx) {
     ((u16*)((u8*)h->out + (((y) & 3) << 3)))[((x) & 3) + (t + 1) * 16] = ((g << 8) & 0xFF00) + (u8)b
 #define TILES() ((h->strideY >> 1) & ~1)
 
-#define YCC_CHROMA(cb, cr)                                  \
-    cra = ((s8)(cr) * 0x167) >> 8;                          \
-    cga = -((s8)(cb) * 0x58 + (s8)(cr) * 0xB7) >> 8;        \
-    cba = ((s8)(cb) * 0x1C6) >> 8
+#define YCC_CHROMA(cbv, crv)                    \
+    cb = (s8)(cbv);                             \
+    cr = (s8)(crv);                             \
+    cra = (cr * 0x167) >> 8;                    \
+    cga = -(cb * 0x58 + cr * 0xB7) >> 8;        \
+    cba = (cb * 0x1C6) >> 8
 
 #define CLAMP255(v)    \
-    if ((v) > 255) {   \
-        (v) = 255;     \
-    } else if ((v) < 0) { \
-        (v) = 0;       \
-    }
+    (v) = ((v) > 255) ? 255 : ((v) < 0) ? 0 : (v)
 
 #define YCC_PIXEL(yv)                     \
-    r = (yv) + cra;                       \
-    g = (yv) + cga;                       \
-    b = (yv) + cba;                       \
+    yy = (yv);                            \
+    r = yy + cra;                         \
+    g = yy + cga;                         \
+    b = yy + cba;                         \
     if ((b | r | g) >> 8) {               \
         CLAMP255(b);                      \
         CLAMP255(g);                      \
@@ -117,6 +116,9 @@ void jpgdOutRGBA8_411(JPEGDecContext* ctx, u32 x, u32 y) {
     s32 r;
     s32 g;
     s32 b;
+    s32 cb;
+    s32 cr;
+    s32 yy;
 
     sy = ctx->pix.y;
     scb = ctx->pix.cb;
@@ -162,6 +164,9 @@ void jpgdOutRGBA8_411Edge(JPEGDecContext* ctx, u32 x, u32 y) {
     s32 r;
     s32 g;
     s32 b;
+    s32 cb;
+    s32 cr;
+    s32 yy;
 
     sy = ctx->pix.y;
     scb = ctx->pix.cb;
@@ -202,6 +207,9 @@ void jpgdOutRGBA8_422(JPEGDecContext* ctx, u32 x, u32 y) {
     s32 r;
     s32 g;
     s32 b;
+    s32 cb;
+    s32 cr;
+    s32 yy;
 
     sy = ctx->pix.y;
     scb = ctx->pix.y + 0x80;
@@ -243,6 +251,9 @@ void jpgdOutRGBA8_422Edge(JPEGDecContext* ctx, u32 x, u32 y) {
     s32 r;
     s32 g;
     s32 b;
+    s32 cb;
+    s32 cr;
+    s32 yy;
 
     sy = ctx->pix.y;
     scb = ctx->pix.y + 0x80;
@@ -283,6 +294,9 @@ void jpgdOutRGBA8_420(JPEGDecContext* ctx, u32 x, u32 y) {
     s32 r;
     s32 g;
     s32 b;
+    s32 cb;
+    s32 cr;
+    s32 yy;
 
     sy = ctx->pix.y;
     scb = ctx->pix.cb;
@@ -329,6 +343,9 @@ void jpgdOutRGBA8_420Edge(JPEGDecContext* ctx, u32 x, u32 y) {
     s32 r;
     s32 g;
     s32 b;
+    s32 cb;
+    s32 cr;
+    s32 yy;
 
     sy = ctx->pix.y;
     scb = ctx->pix.cb;
@@ -374,6 +391,9 @@ void jpgdOutRGBA8_444(JPEGDecContext* ctx, u32 x, u32 y) {
     s32 r;
     s32 g;
     s32 b;
+    s32 cb;
+    s32 cr;
+    s32 yy;
 
     sy = ctx->pix.y;
     scb = ctx->pix.y + 0x40;
@@ -413,6 +433,9 @@ void jpgdOutRGBA8_444Edge(JPEGDecContext* ctx, u32 x, u32 y) {
     s32 r;
     s32 g;
     s32 b;
+    s32 cb;
+    s32 cr;
+    s32 yy;
 
     sy = ctx->pix.y;
     scb = ctx->pix.y + 0x40;
@@ -451,6 +474,9 @@ void jpgdOutRGBA8_Gray(JPEGDecContext* ctx, u32 x, u32 y) {
     s32 r;
     s32 g;
     s32 b;
+    s32 cb;
+    s32 cr;
+    s32 yy;
 
     sy = ctx->pix.y;
     h = ctx->handle;
@@ -491,6 +517,9 @@ void jpgdOutRGBA8_GrayEdge(JPEGDecContext* ctx, u32 x, u32 y) {
     s32 r;
     s32 g;
     s32 b;
+    s32 cb;
+    s32 cr;
+    s32 yy;
 
     sy = ctx->pix.y;
     h = ctx->handle;
