@@ -162,6 +162,17 @@ void GlobePin::Draw(u8 alpha) {
     }
 }
 
+static inline void SetTevColorAlpha(GXTevRegID reg, u8 a) {
+    GXColor color = ut::Color(0);
+    color.a = a;
+    GXSetTevColor(reg, color);
+}
+
+static inline void SetTevWhite(GXTevRegID reg, u8 a) {
+    GXColor color = {255, 255, 255, a};
+    GXSetTevColor(reg, color);
+}
+
 BOOL GlobePin::DrawCards(u8 alpha) {
     BOOL drawn = FALSE;
     Camera* camera = lbl_8035775C->mCamera;
@@ -185,9 +196,7 @@ BOOL GlobePin::DrawCards(u8 alpha) {
         GXLoadPosMtxImm(mtx, GX_PNMTX0);
         GXSetCurrentMtx(GX_PNMTX0);
         if (i == mCount - 1) {
-            GXColor shadow = ut::Color(0);
-            shadow.a = mCardAlpha;
-            GXSetTevColor(GX_TEVREG0, shadow);
+            SetTevColorAlpha(GX_TEVREG0, mCardAlpha);
             GXSetTevColor(GX_TEVREG1, (GXColor)ut::Color(0));
             GXSetZMode(GX_TRUE, GX_LEQUAL, GX_FALSE);
             GXTexObj texObj;
@@ -210,8 +219,7 @@ BOOL GlobePin::DrawCards(u8 alpha) {
             GXInitTexObj(&texObj, tex->data, tex->width, tex->height, (GXTexFmt)tex->format,
                          GX_CLAMP, GX_CLAMP, GX_FALSE);
             GXLoadTexObj(&texObj, GX_TEXMAP0);
-            GXColor color = {255, 255, 255, alpha};
-            GXSetTevColor(GX_TEVREG0, color);
+            SetTevWhite(GX_TEVREG0, alpha);
             GXSetTevColor(GX_TEVREG1, (GXColor)ut::Color(0));
         } else {
             GXTexObj texObj;
@@ -219,9 +227,7 @@ BOOL GlobePin::DrawCards(u8 alpha) {
             GXLoadTexObj(&texObj, GX_TEXMAP0);
             const GXColor white = {255, 255, 255, 0};
             GXSetTevColor(GX_TEVREG0, white);
-            GXColor color = ut::Color(0);
-            color.a = alpha;
-            GXSetTevColor(GX_TEVREG1, color);
+            SetTevColorAlpha(GX_TEVREG1, alpha);
         }
         GXBegin(GX_QUADS, GX_VTXFMT0, 4);
         GXPosition3f32(-halfW, halfH, 0.0f);
