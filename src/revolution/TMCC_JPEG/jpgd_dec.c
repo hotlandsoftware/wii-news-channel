@@ -786,9 +786,9 @@ s32 jpgdReadDQT(JPEGDecContext* ctx) {
 }
 
 static s32 jpgdCheckComps(JPEGDecContext* ctx) {
+    s32 i;
     JPEGFrame* f = &ctx->frame;
     JPEGScan* sc = &ctx->scan;
-    s32 i;
 
     for (i = 0; i < ctx->frame.numComps; i++) {
         if (f->hSamp[i] < 1 || f->hSamp[i] > 4) {
@@ -805,21 +805,21 @@ static s32 jpgdCheckComps(JPEGDecContext* ctx) {
 }
 
 s32 jpgdReadSOF(JPEGDecContext* ctx) {
-    const u8* a;
-    s32 maxH;
-    const u8* pn;
-    s32 ret;
-    s32 i;
-    s32 hh;
     const u8* ph;
     const u8* pv;
-    u8 c;
     const u8* bb;
+    const u8* pn;
+    s32 hh;
+    s32 maxH;
     u16 maxV;
+    s32 t;
     u16 v;
     JPEGFrame* f;
-    s32 t;
+    s32 ret;
+    const u8* a;
     JPEGScan* sc;
+    s32 i;
+    u8 c;
     s32 j;
 
     f = &ctx->frame;
@@ -875,11 +875,10 @@ s32 jpgdReadSOF(JPEGDecContext* ctx) {
             return ret;
         }
         b = c;
-        hh = b >> 4;
-        f->hSamp[i] = hh;
+        f->hSamp[i] = b >> 4;
         f->vSamp[i] = b & 0xF;
-        if (hh > maxH) {
-            maxH = hh;
+        if (f->hSamp[i] > maxH) {
+            maxH = f->hSamp[i];
         }
         if (f->vSamp[i] > maxV) {
             maxV = f->vSamp[i];
@@ -905,18 +904,16 @@ s32 jpgdReadSOF(JPEGDecContext* ctx) {
             a = ph;
             bb = pv;
             for (j = 0; j < f->numComps; j++) {
-                if (f->hSamp[j] != *a || f->vSamp[j] != *bb) {
+                if (f->hSamp[j] != a[j] || f->vSamp[j] != bb[j]) {
                     goto next;
                 }
-                bb++;
-                a++;
             }
             f->sampling = t;
         }
     next:
+        pn++;
         ph += 4;
         pv += 4;
-        pn++;
     }
     if (f->sampling == 5) {
         return -0x70;
