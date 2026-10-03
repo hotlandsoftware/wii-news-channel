@@ -167,35 +167,37 @@ static void vcmvCompareSamples(vcmvRect* rect, f32* ratio) {
 // compared with rows further down
 static BOOL vcmvFindScrollUp(vcmvRect* rect, s32* dy) {
     u8 offsets[SCROLL_SEARCH];
+    s32 xFirst;
+    s32 yEnd;
     u8 misses[SCROLL_SEARCH];
-    s32 n = SCROLL_SEARCH;
+    s32 n;
     s32 i;
-    s32 y = rect->y;
-    s32 yEnd = y + rect->h;
+    s32 cols;
+    s32 y;
+    u32* sampleRow;
     s32 x;
     s32 xEnd;
-    s32 cols;
     u32* rowStart;
     u32* rowEnd;
-    u32* sampleRow;
-    s32 xFirst;
 
+    yEnd = rect->y + rect->h;
+    n = SCROLL_SEARCH;
     if (vcmvScreenHeight - yEnd < SCROLL_SEARCH) {
         n = vcmvScreenHeight - yEnd;
     }
-    y += n;
+    y = rect->y + n;
     for (i = 0; i < n; i++) {
         misses[i] = 3;
         offsets[i] = i + 4;
     }
 
-    cols = (vcmvScreenWidth + 127) / 128;
     x = rect->x;
-    xFirst = x & 127;
+    cols = (127 + vcmvScreenWidth) / 128;
     xEnd = rect->w;
+    xFirst = 127 & x;
+    sampleRow = sSamples + y * cols + x / 128;
     rowStart = (u32*)vcmvSurfaceBuffer + (x / 128) * 128 + y * vcmvScreenWidth;
     rowEnd = (u32*)vcmvSurfaceBuffer + xEnd + (y * vcmvScreenWidth + x);
-    sampleRow = sSamples + y * cols + x / 128;
 
     for (; y < yEnd + offsets[n - 1]; y++) {
         s32 col = sSampleColumns[y & 127];
@@ -204,7 +206,7 @@ static BOOL vcmvFindScrollUp(vcmvRect* rect, s32* dy) {
 
         if (col < xFirst) {
             sample++;
-            p += 128;
+            p = p + 128;
         }
         for (; p < rowEnd; p += 128, sample++) {
             s32 j;
@@ -224,8 +226,8 @@ static BOOL vcmvFindScrollUp(vcmvRect* rect, s32* dy) {
             n = k;
         }
         rowStart += vcmvScreenWidth;
-        rowEnd += vcmvScreenWidth;
-        sampleRow += cols;
+        rowEnd = vcmvScreenWidth + rowEnd;
+        sampleRow = sampleRow + cols;
     }
 
     if (n == 1) {
@@ -237,20 +239,23 @@ static BOOL vcmvFindScrollUp(vcmvRect* rect, s32* dy) {
 
 // Same as vcmvFindScrollUp, for the page moving down
 static BOOL vcmvFindScrollDown(vcmvRect* rect, s32* dy) {
-    u8 offsets[SCROLL_SEARCH];
-    u8 misses[SCROLL_SEARCH];
-    s32 n = SCROLL_SEARCH;
-    s32 i;
-    s32 y = rect->y;
-    s32 yEnd = y + rect->h;
-    s32 x;
-    s32 xEnd;
-    s32 cols;
-    u32* rowStart;
     u32* rowEnd;
+    s32 xEnd;
     u32* sampleRow;
+    u8 misses[SCROLL_SEARCH];
+    s32 cols;
+    u8 offsets[SCROLL_SEARCH];
+    s32 y;
+    s32 n;
     s32 xFirst;
+    u32* rowStart;
+    s32 x;
+    s32 yEnd;
+    s32 i;
 
+    y = rect->y;
+    n = SCROLL_SEARCH;
+    yEnd = y + rect->h;
     if (y < SCROLL_SEARCH) {
         n = y;
     }
@@ -259,13 +264,13 @@ static BOOL vcmvFindScrollDown(vcmvRect* rect, s32* dy) {
         offsets[i] = i + 4;
     }
 
-    cols = (vcmvScreenWidth + 127) / 128;
-    x = rect->x;
-    xFirst = x & 127;
     xEnd = rect->w;
-    rowStart = (u32*)vcmvSurfaceBuffer + (x / 128) * 128 + y * vcmvScreenWidth;
-    rowEnd = (u32*)vcmvSurfaceBuffer + xEnd + (y * vcmvScreenWidth + x);
+    x = rect->x;
+    cols = (vcmvScreenWidth + 127) / 128;
     sampleRow = sSamples + y * cols + x / 128;
+    rowEnd = (u32*)vcmvSurfaceBuffer + xEnd + (y * vcmvScreenWidth + x);
+    xFirst = 127 & x;
+    rowStart = (u32*)vcmvSurfaceBuffer + (x / 128) * 128 + y * vcmvScreenWidth;
 
     for (; y < yEnd - offsets[n - 1]; y++) {
         s32 col = sSampleColumns[y & 127];
@@ -274,7 +279,7 @@ static BOOL vcmvFindScrollDown(vcmvRect* rect, s32* dy) {
 
         if (col < xFirst) {
             sample++;
-            p += 128;
+            p = 128 + p;
         }
         for (; p < rowEnd; p += 128, sample++) {
             s32 j;
@@ -293,9 +298,9 @@ static BOOL vcmvFindScrollDown(vcmvRect* rect, s32* dy) {
             }
             n = k;
         }
-        rowStart += vcmvScreenWidth;
-        rowEnd += vcmvScreenWidth;
-        sampleRow += cols;
+        sampleRow = sampleRow + cols;
+        rowStart = vcmvScreenWidth + rowStart;
+        rowEnd = rowEnd + vcmvScreenWidth;
     }
 
     if (n == 1) {
@@ -393,6 +398,7 @@ void vcmvFlushCallback(vcmvRect* rect, int arg) {
 // Converts the ARGB8888 surface into 4x4 RGB565 texture tiles
 static void vcmvConvertSurface(void) {
     u16* tex = sTexBufs[sWriteTex];
+    s32 stride = vcmvScreenWidth;
     u32* src;
     u16* dstRow;
     s32 y;
@@ -404,9 +410,9 @@ static void vcmvConvertSurface(void) {
     dstRow = tex;
     for (y = 0; y < vcmvScreenHeight; y += 4) {
         u32* s0 = src;
-        u32* s1 = s0 + vcmvScreenWidth;
-        u32* s2 = s1 + vcmvScreenWidth;
-        u32* s3 = s2 + vcmvScreenWidth;
+        u32* s1 = s0 + stride;
+        u32* s2 = s1 + stride;
+        u32* s3 = s2 + stride;
         u16* d = dstRow;
 
         for (x = 0; x < vcmvScreenWidth; x += 4) {
@@ -432,7 +438,7 @@ static void vcmvConvertSurface(void) {
             s3 += 4;
             d += 16;
         }
-        src += vcmvScreenWidth * 4;
+        src += stride * 4;
         dstRow += vcmvScreenWidth * 4;
     }
 
