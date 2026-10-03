@@ -1070,10 +1070,11 @@ s32 CWiiConnect24::readLZ77FileEx(VFFile file, MEMHeapHandle heap, void** dst, u
 }
 
 static void* SOAllocFunc(u32 name, s32 size) {
+    void* ptr = NULL;
     if (size > 0) {
-        return MEMAllocFromExpHeapEx(sSOHeap, size, 32);
+        ptr = MEMAllocFromExpHeapEx(sSOHeap, size, 32);
     }
-    return NULL;
+    return ptr;
 }
 
 static void SOFreeFunc(u32 name, void* ptr, s32 size) {
