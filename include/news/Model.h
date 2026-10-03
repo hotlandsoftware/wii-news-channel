@@ -16,6 +16,10 @@ public:
     nw4r::math::MTX34 CalcMtx(const nw4r::math::VEC3& rotate);
     void Draw();
 
+    nw4r::g3d::ResMdl GetResMdl() const { return mResMdl; }
+    nw4r::g3d::ScnMdlSimple* GetScnMdl() const { return mScnMdl; }
+    nw4r::math::MTX34* GetMtx() { return &mMtx; }
+
 private:
     u32 _04;
     nw4r::g3d::ResMdl mResMdl;            // at 0x08

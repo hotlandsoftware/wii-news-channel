@@ -132,6 +132,11 @@ public:
     bool SelectLightObj(u32 lightIdx, int lightObjIdx);
     bool SelectAmbLightObj(int lightObjIdx);
 
+    // Used by game code (Globe.cpp)
+    LightSetting* GetSetting() const {
+        return mpSetting;
+    }
+
 private:
     LightSetting* mpSetting;      // at 0x0
     LightSetData* mpLightSetData; // at 0x4

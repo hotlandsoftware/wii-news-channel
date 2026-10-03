@@ -174,7 +174,7 @@ extern bool lbl_80356CA0;
 extern f32 gModelDepth;
 extern OSCalendarTime lbl_8020E008;
 extern ut::TextWriterBase<wchar_t> lbl_8020E4C0;
-extern const f32 lbl_801A6648[];
+extern const f32 gGlobeTiltAngle[];
 extern const wchar_t* lbl_801B04EC[];
 extern const wchar_t* lbl_801B05E8[];
 extern const wchar_t* lbl_801B0F38[];
@@ -535,7 +535,7 @@ NewsScene::NewsScene()
     font->SetResource(sHeaderFontData);
     gHeaderFont->SetAlternateChar(0xE06B);
 
-    Camera::sHomeRot.x = lbl_801A6648[5];
+    Camera::sHomeRot.x = gGlobeTiltAngle[5];
     Camera::sHomeRot.y = 0.0f;
     Camera::sHomeRot.z = 0.0f;
     lbl_803575A0 = 0;

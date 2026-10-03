@@ -20,6 +20,8 @@ public:
     void Project(nw4r::math::VEC2* screen, const nw4r::math::VEC3* pos);
 
     nw4r::g3d::Camera GetG3dCamera() const { return mCamera; }
+    nw4r::math::VEC3 GetTargetRot() const { return mTargetRot; }
+    nw4r::math::VEC3 GetRot() const { return mRot; }
 
     // Rotation that ResetRotation() returns to. Also written from outside this file.
     static nw4r::math::VEC3 sHomeRot;
