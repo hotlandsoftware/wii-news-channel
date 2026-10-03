@@ -3,6 +3,7 @@
 #define NW4R_UT_COLOR_DEFAULT_WHITE
 #define NW4R_UT_COLOR_WORD_COPY
 
+#include <news/PointerHistory.h>
 #include <news/PaneLayout.h>
 #include <news/SlideShow.h>
 #include <news/ArticleText.h>
@@ -22,7 +23,6 @@ using namespace nw4r;
 // Not yet decompiled: layouts (0x80047B50), the article view (0x8002E7DC),
 // the globe (0x8004BD60) and input globals.
 extern u8 lbl_801EE270[];         // layout resource accessor
-extern "C" u8 lbl_8020DE24[];     // pointer history
 extern "C" s32 lbl_8020E4A0[4];   // per-channel "pointer used" flags
 extern "C" f32 lbl_801F0888[4];   // pointer x per channel
 extern "C" f32 lbl_801F0898[4];   // pointer y per channel (stride 0xC)
@@ -81,7 +81,6 @@ void DrawScreenFade(s32 alpha);
 extern "C" void SetBlend__6LayoutFlll(Layout* layout, s32 alpha);
 
 extern "C" {
-BOOL fn_80048854(void* history, s32 chan, f32* x, f32* y);
 void fn_8004BD60(Layout* layout, u32 arg);
 s32 fn_8004C000(const char* name, u32 button);
 s32 fn_8004C13C(const char* name, u32 button);
@@ -1940,7 +1939,7 @@ void SlideShow::CheckPointer() {
             f32 x = gCursorX[i][0];
             f32 y = gCursorY[i][0];
             f32 px, py;
-            if (fn_80048854(lbl_8020DE24, i, &px, &py)) {
+            if (gPointerHistory.GetOldest(i, &px, &py)) {
                 if (x >= -16.0f && x < right && px >= -16.0f && px < right) {
                     f32 dx = x - px;
                     f32 dy = y - py;

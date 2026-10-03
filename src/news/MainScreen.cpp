@@ -1,4 +1,5 @@
 #define NW4R_UT_COLOR_WORD_COPY
+#include <news/PointerHistory.h>
 #include <news/PaneLayout.h>
 #include <news/MainScreen.h>
 #include <news/Common.h>
@@ -56,7 +57,6 @@ extern f32 lbl_803575D4;
 extern f32 lbl_803575D0;
 extern const f32 lbl_801922D0[];   // text scale per zoom level
 extern const s32 lbl_80192370[];
-extern u8 lbl_8020DE24[];          // pointer history
 extern f32 lbl_80356C98;           // layout alpha
 const char* GetLanguageSuffix();
 extern const s32 lbl_80192398[];
@@ -151,7 +151,6 @@ BOOL fn_8004D300(Globe* globe, s32 chan);
 void fn_8004E0E8(Globe* globe, s32 arg);
 void fn_8004F8E0(u32 id, f32 pitch, f32 volume, f32 pan);
 RelatedItem* fn_80032B60(s32* section, s32* index);
-BOOL fn_80048854(void* history, s32 chan, f32* x, f32* y);
 f32 fn_8000F73C(RelatedItem* item, const wchar_t* text, ut::Font* font, f32 scale, f32 space);
 void fn_8000F8A8(RelatedItem* item, f32 rowHeight);
 void fn_8000EFFC(RelatedItem* item, ut::TextWriterBase<wchar_t>* writer);
@@ -3481,7 +3480,7 @@ void MainScreen::Hook1E758() {
         f32 y = gCursorY[i][0];
         f32 prevX;
         f32 prevY;
-        if (fn_80048854(lbl_8020DE24, i, &prevX, &prevY)) {
+        if (gPointerHistory.GetOldest(i, &prevX, &prevY)) {
             if (x >= left && x < right && prevX >= left && prevX < right &&
                 (x - prevX) * (x - prevX) + (y - prevY) * (y - prevY) > minDist)
             {
