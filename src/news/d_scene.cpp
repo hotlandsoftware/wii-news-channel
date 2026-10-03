@@ -50,12 +50,12 @@ struct NandFiles {
 
 extern "C" {
 extern NandFiles gContentHandles;
-Globe* fn_8004C43C(Globe* globe);
-void fn_8004C5F0(Globe* globe, s32 flags);
-void fn_8004D170(Globe* globe);
-void fn_8004EA2C(void* sound, s32 flags);
-void fn_8004EA9C(void);
-void fn_8004EAA0(void);
+Globe* __ct__5GlobeFv(Globe* globe);
+void __dt__5GlobeFv(Globe* globe, s32 flags);
+void CalcScene__5GlobeFv(Globe* globe);
+void __dt__13SoundResourceFv(void* sound, s32 flags);
+void Calc__13SoundResourceFv(void);
+void Update__13SoundResourceFv(void);
 }
 
 void* operator new(size_t size, s32 align);
@@ -284,7 +284,7 @@ Scene::Scene(bool arg)
     {
         Globe* globe = (Globe*)operator new(0xD0);
         if (globe != NULL) {
-            globe = fn_8004C43C(globe);
+            globe = __ct__5GlobeFv(globe);
         }
         gGlobe = globe;
     }
@@ -365,11 +365,11 @@ Scene::~Scene() {
         sEarthThread = NULL;
     }
     if (gSoundPlayer != NULL) {
-        fn_8004EA2C(gSoundPlayer, 1);
+        __dt__13SoundResourceFv(gSoundPlayer, 1);
         gSoundPlayer = NULL;
     }
     if (gGlobe != NULL) {
-        fn_8004C5F0(gGlobe, 1);
+        __dt__5GlobeFv(gGlobe, 1);
         gGlobe = NULL;
     }
     if (gFader2 != NULL) {
@@ -566,14 +566,14 @@ void Scene::Execute() {
         }
         vf2C();
         if (gSoundPlayer != NULL) {
-            fn_8004EAA0();
+            Update__13SoundResourceFv();
         }
     }
 }
 
 void Scene::UpdateSound() {
     if (gSoundPlayer != NULL) {
-        fn_8004EA9C();
+        Calc__13SoundResourceFv();
     }
 }
 
@@ -937,7 +937,7 @@ BOOL UnloadEarth() {
                     if (root != NULL) {
                         root->Clear();
                     }
-                    fn_8004D170(gGlobe);
+                    CalcScene__5GlobeFv(gGlobe);
                 }
                 delete gEarthModel;
                 gEarthModel = NULL;

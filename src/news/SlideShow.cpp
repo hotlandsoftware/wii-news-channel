@@ -56,7 +56,19 @@ struct GlobeCamera {
     f32 mLon; // at 0x90
     f32 mLat; // at 0x94
 };
+// Globe view (Globe.cpp, include/news/Globe.h; fields as used here).
 struct Globe {
+    void Calc();
+    void ApplyCamera();
+    void CalcPoles();
+    void UpdateLights();
+    void CalcScene();
+    void UpdateZoom(const s32* se);
+    void SetTiltNow(s32 level);
+    void UpdateTilt(s32 unused, const s32* se);
+    void UpdateSpin(u32 stop);
+    void SetZoom(s32 level);
+
     u8 unk0[0x4];
     GlobeCamera* mCamera; // at 0x04
     f32 mLon;             // at 0x08
@@ -76,16 +88,6 @@ extern "C" void SetBlend__6LayoutFlll(Layout* layout, s32 alpha);
 
 extern "C" {
 
-void fn_8004CBE0(Globe* globe);
-void fn_8004CC20(Globe* globe, GlobeCamera* camera);
-void fn_8004CE00(Globe* globe);
-void fn_8004D0B0(Globe* globe);
-void fn_8004D170(Globe* globe);
-void fn_8004D1D4(Globe* globe, const s32* table, f32 t);
-void fn_8004DB4C(s32 arg);
-void fn_8004DB80(Globe* globe, s32 arg, const s32* table);
-void fn_8004DD8C(Globe* globe, s32 arg);
-void fn_8004E0B8(Globe* globe, u32 location);
 
 void fn_8001F730(nw4r::lyt::Pane* pane, const nw4r::ut::Color& color);
 void fn_80030960(f32 t);
@@ -538,7 +540,7 @@ void SlideShow::Start() {
     LoadArticle();
     ChangeState(&SlideShow::StateShow);
     if (gGlobe != NULL) {
-        fn_8004DB4C(7);
+        gGlobe->SetTiltNow(7);
     }
     Calc();
     fn_8003633C(1);
@@ -643,7 +645,7 @@ void SlideShow::Calc() {
         f32 t = range * CosineEase(mGlobeAngle);
         mGlobeZoom = mGlobeZoomFrom + t;
         globe->mZoom = mGlobeZoom;
-        fn_8004D1D4(globe, lbl_80192370, t);
+        globe->UpdateZoom(lbl_80192370);
 
         Globe* g = gGlobe;
         if (g != NULL) {
@@ -658,17 +660,17 @@ void SlideShow::Calc() {
             }
         }
 
-        fn_8004DB80(globe, 0, lbl_80192398);
-        fn_8004DD8C(globe, 0);
-        fn_8004CBE0(globe);
-        fn_8004CE00(globe);
+        globe->UpdateTilt(0, lbl_80192398);
+        globe->UpdateSpin(0);
+        globe->Calc();
+        globe->CalcPoles();
         GlobeCamera* camera = globe->mCamera;
         globe->mLon = camera->mLon;
         globe->mLat = camera->mLat;
-        fn_8004CC20(globe, camera);
+        globe->ApplyCamera();
         fn_800329CC();
-        fn_8004D0B0(globe);
-        fn_8004D170(globe);
+        globe->UpdateLights();
+        globe->CalcScene();
     }
 
     if (mArticle != NULL && mArticle->mLocation == NULL) {
@@ -1889,7 +1891,7 @@ void SlideShow::LayoutArticle() {
             fn_80032580(mArticle, 7, mGlobeZoomTo, -0.3f);
             lbl_8035697C = 0;
         } else {
-            fn_8004E0B8(gGlobe, ((u8*)mArticle->mLocation)[0xC]);
+            gGlobe->SetZoom(((u8*)mArticle->mLocation)[0xC]);
         }
         mShowPicture = false;
     } else {

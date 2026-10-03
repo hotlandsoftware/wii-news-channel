@@ -7,6 +7,7 @@
 #include <news/PaneLayout.h>
 #include <news/Random.h>
 #include <news/SaveData.h>
+#include <news/SoundManager.h>
 #include <news/System.h>
 #include <news/WiiConnect24.h>
 #include <nw4r/lyt/lyt_pane.h>
@@ -46,10 +47,6 @@ void DrawScreenFade(s32 alpha);
 void OnExitRequested();
 
 extern "C" {
-void fn_8004F8E0(u32 id, f32 volume, f32 pitch, f32 pan);
-void fn_8004FAB0(snd::SoundHandle* handle, s32 frames);
-void fn_8004FAD0(snd::SoundHandle* handle, u32 variation, s32 arg2);
-u32 fn_8004FAF0(snd::SoundHandle* handle);
 }
 
 const char* GetLanguageSuffix();
@@ -487,7 +484,7 @@ void Connect::Update() {
                                 } else if (pan > 1.0f) {
                                     pan = 1.0f;
                                 }
-                                fn_8004F8E0(0x46, 1.0f, 1.0f, pan);
+                                PlaySE(0x46, 1.0f, 1.0f, pan);
                                 mDotWait[i] = 10;
                                 break;
                             }
@@ -512,11 +509,11 @@ void Connect::Update() {
             PlaySound(&mSound, 0x17);
             mSoundPlaying = true;
         }
-        if (mSoundPlaying && fn_8004FAF0(&mSound) != 0) {
-            fn_8004FAD0(&mSound, 0, 0);
+        if (mSoundPlaying && IsSoundPaused(&mSound)) {
+            PauseSound(&mSound, false, 0);
         }
     } else if (mSoundPlaying) {
-        fn_8004FAB0(&mSound, 0);
+        StopSound(&mSound, 0);
         mSoundPlaying = false;
     }
 
@@ -667,9 +664,9 @@ BOOL Connect::IsDone() {
     return mState == STATE_DONE && mFader->mBusy == 0;
 }
 
-void Connect::SetSoundVariation(u32 variation) {
-    if (mSoundPlaying && variation != fn_8004FAF0(&mSound)) {
-        fn_8004FAD0(&mSound, variation, 0);
+void Connect::SetSoundPaused(bool pause) {
+    if (mSoundPlaying && pause != IsSoundPaused(&mSound)) {
+        PauseSound(&mSound, pause, 0);
     }
 }
 

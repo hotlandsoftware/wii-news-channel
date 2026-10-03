@@ -20,6 +20,8 @@
 #include <news/PaneButton.h>
 #include <news/SlideShow.h>
 #include <news/SmoothValue.h>
+#include <news/Resource.h>
+#include <news/SoundManager.h>
 #undef gSeparatorColor
 #include <news/Common.h>
 #include <nw4r/math/math_arithmetic.h>
@@ -99,21 +101,7 @@ void fn_80015200(void* view);
 
 
 // Globe (0x8004C240..)
-void fn_8004C69C(void* globe, math::VEC3* pos, u8 zoom);
-void fn_8004C890(void* globe, math::VEC3* rot);
-void fn_8004CA10(void* globe);
-void fn_8004CAE4(void* globe, math::VEC3* pos, s32 arg, f32 scale);
-void fn_8004CB38(void* globe);
-void fn_8004DA8C(void* globe, s32 arg0, s32 arg1);
-void fn_8004DB4C(void* globe, s32 arg);
-void fn_8004E0B8(void* globe, s32 level);
-void fn_8004E0D4(void* globe, f32 arg);
 
-// Sound (0x8004E9A4..)
-void* fn_8004E9A4(void* mem, const char* path, void* heap);
-void fn_8004EA2C(void* sound, s32 arg);
-void fn_8004FAB0(snd::SoundHandle* handle, s32 frames);
-void fn_8004FB44(snd::SoundHandle* handle, f32 volume);
 }
 
 
@@ -122,7 +110,18 @@ struct HomeMenuInfo {
     void* mHeap;     // at 0x04
 };
 
+// Globe view (Globe.cpp, include/news/Globe.h)
 struct Globe {
+    void Init(const math::VEC3* rot, s32 zoom);
+    void Reset(const math::VEC3* rot);
+    void Draw();
+    void DrawCursor(const Vec* pos, s32 unused, f32 scale);
+    void ResetScene();
+    void SetTilt(s32 level, bool level0);
+    void SetTiltNow(s32 level);
+    void SetZoom(s32 level);
+    void SetTwist(f32 twist);
+
     u8 unk0[0x4];
     s32 mFocus;      // at 0x04
     u8 unk8[0x6C - 0x8];
@@ -132,7 +131,7 @@ struct Globe {
 };
 
 extern HomeMenuInfo* gHomeMenu;
-extern void* gSoundPlayer;     // sound system
+extern SoundResource* gSoundPlayer; // sound system
 extern Globe* gGlobe;
 extern BOOL gEarthModel;
 extern bool gExitRequested;
@@ -140,8 +139,7 @@ extern bool gHideClock;
 extern f32 gModelDepth;
 extern OSCalendarTime gClockTime;
 extern ut::TextWriterBase<wchar_t> gTextWriter;
-extern snd::SoundHandle lbl_8021E8CC[4];
-extern const f32 lbl_801A6648[];
+extern const f32 gGlobeTiltAngle[];
 extern const wchar_t* lbl_801B04EC[];
 extern const wchar_t* lbl_801B05E8[];
 extern const wchar_t* lbl_801B0F38[];
@@ -478,11 +476,7 @@ NewsScene::NewsScene()
     SetDPDAll(1);
     sIsNight = !(gClockTime.hour >= 5 && gClockTime.hour < 22);
 
-    void* sound = operator new(8);
-    if (sound) {
-        sound = fn_8004E9A4(sound, "rev_news.brsar", gHomeMenu->mHeap);
-    }
-    gSoundPlayer = sound;
+    gSoundPlayer = new SoundResource("rev_news.brsar", gHomeMenu->mHeap);
     if (gSoundPlayer == NULL) {
         gAllocFailed = true;
         return;
@@ -504,7 +498,7 @@ NewsScene::NewsScene()
     font->SetResource(sHeaderFontData);
     gHeaderFont->SetAlternateChar(0xE06B);
 
-    Camera::sHomeRot.x = lbl_801A6648[5];
+    Camera::sHomeRot.x = gGlobeTiltAngle[5];
     Camera::sHomeRot.y = 0.0f;
     Camera::sHomeRot.z = 0.0f;
     lbl_803575A0 = 0;
@@ -767,7 +761,7 @@ NewsScene::~NewsScene() {
 }
 
 void NewsScene::Exit(BOOL toMenu, s32 arg) {
-    fn_8004EA2C(gSoundPlayer, 1);
+    delete gSoundPlayer;
     Scene::Exit(toMenu, arg);
 }
 
@@ -775,11 +769,11 @@ void NewsScene::OnHomeMenuClose() {
     if (!gFatalError) {
         if (gGlobe) {
             math::VEC3 rot(0.0f, 0.0f, 0.0f);
-            fn_8004C890(gGlobe, &rot);
+            gGlobe->Reset(&rot);
             sGlobeRenderer->ResetAlpha();
         }
         if (gGlobe) {
-            fn_8004DB4C(gGlobe, 5);
+            gGlobe->SetTiltNow(5);
         }
         fn_8000BE74(sPointerEffect);
         RestoreDPD();
@@ -809,7 +803,7 @@ void NewsScene::Draw() {
             if (gGlobe != NULL && !lbl_8035697C) {
                 sGlobeRenderer->UpdateAlpha(gGlobe->mCenterX, gGlobe->mCenterY);
                 sGlobeRenderer->Draw();
-                fn_8004CA10(gGlobe);
+                gGlobe->Draw();
                 if (!lbl_803575BC) {
                     u8 alpha = 255.0f * sPinAlpha;
                     if (lbl_80357580) {
@@ -851,7 +845,7 @@ void NewsScene::Draw() {
                     Draw2D_FillRect(&rect, &lbl_803575FC);
                 }
                 math::VEC3 pos(lbl_801EDF70.x, lbl_801EDF70.y + lbl_803575C8, lbl_801EDF70.z);
-                fn_8004CAE4(gGlobe, &pos, 0, 1.0f);
+                gGlobe->DrawCursor(&pos, 0, 1.0f);
                 if (gNewsData->mHeader->unk2C[1] && lbl_803575B9) {
                     pos.x = lbl_801EDF88.x;
                     pos.y -= TPL_GetHeight(gCommonTpl, 0x3E);
@@ -933,12 +927,12 @@ static inline void PlayPinHoverSE() {
 }
 
 static inline void UpdateBgmVolume() {
-    snd::SoundHandle* handle = lbl_8021E8CC;
+    snd::SoundHandle* handle = gBgmHandles;
     SmoothValue* volume = sBgmVolume;
     for (s32 i = 0; i < 4; i++, volume++, handle++) {
         if (IsSoundPlaying(handle)) {
             volume->Update();
-            fn_8004FB44(handle, volume->mValue);
+            SetSoundVolume(handle, volume->mValue);
         }
     }
 }
@@ -975,12 +969,12 @@ void NewsScene::Calc() {
             PlayPinHoverSE();
         }
         SmoothValue* volume = sBgmVolume;
-        snd::SoundHandle* handle = lbl_8021E8CC;
+        snd::SoundHandle* handle = gBgmHandles;
         s32 i = 0;
         for (; i < 4; i++, handle++, volume++) {
             if (IsSoundPlaying(handle)) {
                 volume->Update();
-                fn_8004FB44(handle, volume->mValue);
+                SetSoundVolume(handle, volume->mValue);
             }
         }
         if (++sBlinkTimer >= 40) {
@@ -992,9 +986,9 @@ void NewsScene::Calc() {
 
 void NewsScene::OnHomeMenuOpen() {
     s32 i = 0;
-    snd::SoundHandle* handle = lbl_8021E8CC;
+    snd::SoundHandle* handle = gBgmHandles;
     for (; i < 4; i++, handle++) {
-        fn_8004FB44(handle, 0.0f);
+        SetSoundVolume(handle, 0.0f);
     }
     if (mIntro) {
         fn_800096B0(mIntro, 1);
@@ -1197,10 +1191,10 @@ BOOL NewsScene::StateLanguageSelect() {
                 mStep++;
                 gFader->FadeOut(25);
                 if (mSettings->mNewsLanguage != gSelectedNewsLanguage) {
-                    snd::SoundHandle* handle = lbl_8021E8CC;
+                    snd::SoundHandle* handle = gBgmHandles;
                     for (s32 i = 0; i < 4; i++, handle++) {
                         if (IsSoundPlaying(handle)) {
-                            fn_8004FAB0(handle, 25);
+                            StopSound(handle, 25);
                         }
                     }
                 }
@@ -1248,11 +1242,11 @@ static inline void SetBgmTargetP(SmoothValue* v, f32 target, f32 frames) {
 }
 
 void Bgm_MuteMain() {
-    if (!IsSoundPlaying(&lbl_8021E8CC[0])) {
-        PlaySound(&lbl_8021E8CC[0], 0x1C);
+    if (!IsSoundPlaying(&gBgmHandles[0])) {
+        PlaySound(&gBgmHandles[0], 0x1C);
     }
-    if (!IsSoundPlaying(&lbl_8021E8CC[1])) {
-        PlaySound(&lbl_8021E8CC[1], 0x1D);
+    if (!IsSoundPlaying(&gBgmHandles[1])) {
+        PlaySound(&gBgmHandles[1], 0x1D);
     }
     sBgmVolume[0].mTarget = 0.0f;
     sBgmVolume[1].mTarget = 0.0f;
@@ -1260,26 +1254,26 @@ void Bgm_MuteMain() {
     sBgmVolume[3].mTarget = 0.0f;
     sBgmVolume[0].mStep = Abs(sBgmVolume[0].mTarget - sBgmVolume[0].mValue) / 120.0f;
     sBgmVolume[1].mStep = Abs(sBgmVolume[1].mTarget - sBgmVolume[1].mValue) / 120.0f;
-    if (IsSoundPlaying(&lbl_8021E8CC[2])) {
-        fn_8004FAB0(&lbl_8021E8CC[2], 120);
+    if (IsSoundPlaying(&gBgmHandles[2])) {
+        StopSound(&gBgmHandles[2], 120);
     }
-    if (IsSoundPlaying(&lbl_8021E8CC[3])) {
-        fn_8004FAB0(&lbl_8021E8CC[3], 120);
+    if (IsSoundPlaying(&gBgmHandles[3])) {
+        StopSound(&gBgmHandles[3], 120);
     }
     sBgmVolume[2].mStep = 1.0f / 120.0f;
     sBgmVolume[3].mStep = 1.0f / 120.0f;
 }
 
 void Bgm_PlayArticle() {
-    PlaySound(&lbl_8021E8CC[2], 0x1E);
-    if (!IsSoundPlaying(&lbl_8021E8CC[0])) {
-        PlaySound(&lbl_8021E8CC[0], 0x1C);
+    PlaySound(&gBgmHandles[2], 0x1E);
+    if (!IsSoundPlaying(&gBgmHandles[0])) {
+        PlaySound(&gBgmHandles[0], 0x1C);
     }
-    if (!IsSoundPlaying(&lbl_8021E8CC[1])) {
-        PlaySound(&lbl_8021E8CC[1], 0x1D);
+    if (!IsSoundPlaying(&gBgmHandles[1])) {
+        PlaySound(&gBgmHandles[1], 0x1D);
     }
-    if (IsSoundPlaying(&lbl_8021E8CC[3])) {
-        fn_8004FAB0(&lbl_8021E8CC[3], 120);
+    if (IsSoundPlaying(&gBgmHandles[3])) {
+        StopSound(&gBgmHandles[3], 120);
     }
     sBgmVolume[0].mTarget = 1.0f;
     sBgmVolume[1].mTarget = 0.0f;
@@ -1293,21 +1287,21 @@ void Bgm_PlayArticle() {
 
 void Bgm_PlayMain(BOOL restart) {
     if (restart) {
-        PlaySound(&lbl_8021E8CC[0], 0x1C);
-        PlaySound(&lbl_8021E8CC[1], 0x1D);
+        PlaySound(&gBgmHandles[0], 0x1C);
+        PlaySound(&gBgmHandles[1], 0x1D);
     } else {
-        if (!IsSoundPlaying(&lbl_8021E8CC[0])) {
-            PlaySound(&lbl_8021E8CC[0], 0x1C);
+        if (!IsSoundPlaying(&gBgmHandles[0])) {
+            PlaySound(&gBgmHandles[0], 0x1C);
         }
-        if (!IsSoundPlaying(&lbl_8021E8CC[1])) {
-            PlaySound(&lbl_8021E8CC[1], 0x1D);
+        if (!IsSoundPlaying(&gBgmHandles[1])) {
+            PlaySound(&gBgmHandles[1], 0x1D);
         }
     }
-    if (IsSoundPlaying(&lbl_8021E8CC[2])) {
-        fn_8004FAB0(&lbl_8021E8CC[2], 60);
+    if (IsSoundPlaying(&gBgmHandles[2])) {
+        StopSound(&gBgmHandles[2], 60);
     }
-    if (IsSoundPlaying(&lbl_8021E8CC[3])) {
-        fn_8004FAB0(&lbl_8021E8CC[3], 60);
+    if (IsSoundPlaying(&gBgmHandles[3])) {
+        StopSound(&gBgmHandles[3], 60);
     }
     sBgmVolume[0].mTarget = 1.0f;
     sBgmVolume[1].mTarget = 1.0f;
@@ -1321,18 +1315,18 @@ void Bgm_PlayMain(BOOL restart) {
 
 void Bgm_PlaySlideshow() {
     if (!sIsNight) {
-        PlaySound(&lbl_8021E8CC[3], 0x1F);
+        PlaySound(&gBgmHandles[3], 0x1F);
     } else {
-        PlaySound(&lbl_8021E8CC[3], 0x20);
+        PlaySound(&gBgmHandles[3], 0x20);
     }
-    if (IsSoundPlaying(&lbl_8021E8CC[0])) {
-        fn_8004FAB0(&lbl_8021E8CC[0], 60);
+    if (IsSoundPlaying(&gBgmHandles[0])) {
+        StopSound(&gBgmHandles[0], 60);
     }
-    if (IsSoundPlaying(&lbl_8021E8CC[1])) {
-        fn_8004FAB0(&lbl_8021E8CC[1], 60);
+    if (IsSoundPlaying(&gBgmHandles[1])) {
+        StopSound(&gBgmHandles[1], 60);
     }
-    if (IsSoundPlaying(&lbl_8021E8CC[2])) {
-        fn_8004FAB0(&lbl_8021E8CC[2], 60);
+    if (IsSoundPlaying(&gBgmHandles[2])) {
+        StopSound(&gBgmHandles[2], 60);
     }
     sBgmVolume[0].mTarget = 0.0f;
     sBgmVolume[0].mStep = 1.0f / 60.0f;
@@ -1383,7 +1377,7 @@ BOOL NewsScene::StateMain() {
         lbl_801EDF88.y = y2;
         lbl_801EDF88.x = x2;
         if (gGlobe) {
-            fn_8004DB4C(gGlobe, 5);
+            gGlobe->SetTiltNow(5);
         }
         if (!mInitialized) {
             sBgmVolume[0].mValue = sBgmVolume[0].mTarget;
@@ -2008,22 +2002,22 @@ void Globe_FocusArticle(NewsArticle* article, s32 arg, f32 x, f32 y) {
         f32 px = loc.x;
         math::VEC3 pos(px, py, 0.0f);
         gGlobe->mOffset = ofs;
-        fn_8004C69C(gGlobe, &pos, article->mLocation->unk4[8]);
-        fn_8004DA8C(gGlobe, 5, 0);
-        fn_8004DB4C(gGlobe, arg);
-        fn_8004E0D4(gGlobe, 0.0f);
+        gGlobe->Init(&pos, article->mLocation->unk4[8]);
+        gGlobe->SetTilt(5, 0);
+        gGlobe->SetTiltNow(arg);
+        gGlobe->SetTwist(0.0f);
     }
 }
 
 void Globe_ResetFocus() {
     if (gGlobe) {
-        fn_8004CB38(gGlobe);
+        gGlobe->ResetScene();
     }
 }
 
 void Globe_SetZoom(s32 level) {
     if (gGlobe) {
-        fn_8004E0B8(gGlobe, level);
+        gGlobe->SetZoom(level);
     }
 }
 

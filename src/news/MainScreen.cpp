@@ -9,6 +9,7 @@
 #include <news/MathUtil.h>
 #include <news/NewsArticle.h>
 #include <news/PaneButton.h>
+#include <news/SoundManager.h>
 #include <news/System.h>
 #include <news/TextButton.h>
 #include <news/Ticker.h>
@@ -82,9 +83,6 @@ BOOL fn_8003567C(ut::Rect* rect, f32 x, f32 y, f32 scale);
 BOOL fn_80035764(ut::Rect* rect);
 void fn_80035A3C(ut::Rect* r0, ut::Rect* r1, f32 alpha);
 void fn_80032644(void);
-BOOL fn_8004DABC(Globe* globe);
-void fn_8004D0B0(Globe* globe);
-void fn_8004D170(Globe* globe);
 void fn_800329CC(void);
 BOOL fn_8003251C(void);
 void fn_80032658(u8 region);
@@ -112,9 +110,7 @@ f32 fn_80034164(void);
 void fn_80030650(void);
 BOOL fn_80034F6C(ut::Rect* rect);
 void fn_80034FD4(void);
-void fn_8004D2E8(Globe* globe);
 BOOL fn_80032BE0(s32 chan);
-void fn_8004DA8C(Globe* globe, s32 arg1, s32 arg2);
 BOOL fn_80034598(void);
 BOOL fn_80034770(void);
 BOOL fn_80034780(void);
@@ -127,16 +123,6 @@ void fn_80032450(void);
 void fn_8003243C(void);
 void fn_80032508(void);
 void fn_800324F4(f32 velocity);
-void fn_8004D1D4(Globe* globe, const s32* table);
-void fn_8004DB80(Globe* globe, s32 arg, const s32* table);
-void fn_8004DD8C(Globe* globe, s32 arg);
-void fn_8004CBE0(Globe* globe);
-void fn_8004CE00(Globe* globe);
-void fn_8004CC20(Globe* globe);
-s32 fn_8004D628(Globe* globe, s32 chan);
-BOOL fn_8004D300(Globe* globe, s32 chan);
-void fn_8004E0E8(Globe* globe, s32 arg);
-void fn_8004F8E0(u32 id, f32 pitch, f32 volume, f32 pan);
 RelatedItem* fn_80032B60(s32* section, s32* index);
 f32 fn_8000F73C(RelatedItem* item, const wchar_t* text, ut::Font* font, f32 scale, f32 space);
 void fn_8000F8A8(RelatedItem* item, f32 rowHeight);
@@ -1019,7 +1005,7 @@ void MainScreen::ModeMain() {
             }
         }
 
-        if (fn_8004DABC(gGlobe)) {
+        if (gGlobe->IsRotating()) {
             EnableButton(mResetButton);
         } else {
             DisableButton(mResetButton);
@@ -1222,8 +1208,8 @@ void MainScreen::ModeMain() {
             if (gGlobe != NULL && mUnk128) {
                 (this->*mUnk128)();
             }
-            fn_8004D0B0(g);
-            fn_8004D170(g);
+            g->UpdateLights();
+            g->CalcScene();
             if (mSoundId != 0xFFFFFFFF) {
                 PlaySE(mSoundId);
             }
@@ -2483,7 +2469,7 @@ void MainScreen::State1B134(s32* arg) {
     switch (mStateStep) {
     case -1:
         mUnk128 = NULL;
-        fn_8004D2E8(globe);
+        globe->ReleaseGrab();
         lbl_801EDFD0[0] = 1;
         lbl_801EDFD0[1] = 1;
         lbl_801EDFD0[2] = 1;
@@ -2527,7 +2513,7 @@ void MainScreen::State1B134(s32* arg) {
             globe->mRotB = true;
         } else if (mResetPressed) {
             PlaySE(0x13);
-            fn_8004DA8C(globe, 5, 1);
+            globe->SetTilt(5, 1);
         }
         for (s32 i = 0; i < 4; i++) {
             f32 y = gCursorY[i][0];
@@ -3278,12 +3264,12 @@ void MainScreen::Globe1DF3C() {
     case 0:
         mUnk2D8++;
     default:
-        fn_8004D1D4(globe, lbl_80192370);
-        fn_8004DB80(globe, 0, lbl_80192398);
-        fn_8004DD8C(globe, 0);
-        fn_8004CBE0(globe);
-        fn_8004CE00(globe);
-        fn_8004CC20(globe);
+        globe->UpdateZoom(lbl_80192370);
+        globe->UpdateTilt(0, lbl_80192398);
+        globe->UpdateSpin(0);
+        globe->Calc();
+        globe->CalcPoles();
+        globe->ApplyCamera();
         break;
     case -1:
         break;
@@ -3296,16 +3282,16 @@ void MainScreen::Globe1DFD0() {
     case 0:
         mUnk2D8++;
     default:
-        fn_8004D1D4(globe, lbl_80192370);
+        globe->UpdateZoom(lbl_80192370);
         UpdateGlobeInput();
-        fn_8004DB80(globe, 1, lbl_80192398);
-        fn_8004DD8C(globe, 0);
-        fn_8004CBE0(globe);
-        fn_8004CE00(globe);
+        globe->UpdateTilt(1, lbl_80192398);
+        globe->UpdateSpin(0);
+        globe->Calc();
+        globe->CalcPoles();
         GlobeCamera* camera = globe->mCamera;
         globe->mX = camera->mX;
         globe->mY = camera->mY;
-        fn_8004CC20(globe);
+        globe->ApplyCamera();
         break;
     case -1:
         break;
@@ -3322,16 +3308,16 @@ void MainScreen::UpdateGlobeInput() {
     f32 prevDistance = GetGlobeDistance(globe);
     bool moving = false;
     for (s32 i = 0; i < 4; i++) {
-        switch (fn_8004D628(globe, i)) {
+        switch (globe->UpdateGrab(i)) {
         case 0:
             if (IsState(&MainScreen::State1B134)) {
-                if (gCursorY[i][0] > 63.0f && gCursorY[i][0] < maxY && fn_8004D300(globe, i)) {
+                if (gCursorY[i][0] > 63.0f && gCursorY[i][0] < maxY && globe->StartGrab(i)) {
                     mSoundId = 0x15;
                 }
             }
             break;
         case 2:
-            fn_8004E0E8(globe, 20);
+            globe->PlaySpinSound(20);
         case 1:
             moving = true;
             break;
@@ -3344,7 +3330,7 @@ void MainScreen::UpdateGlobeInput() {
     if (!IsNearlyZero(delta) && IsNearlyZero(mUnk268)) {
         f32 s = delta > 2.0f ? 2.0f : delta;
         s *= 0.5f;
-        fn_8004F8E0(0x12, 0.5f + 0.5f * s, 1.0f + s, 0.0f);
+        PlaySE(0x12, 0.5f + 0.5f * s, 1.0f + s, 0.0f);
     }
     mUnk268 += delta;
     if (mUnk268 > 10.0f) {

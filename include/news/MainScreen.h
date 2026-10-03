@@ -41,8 +41,23 @@ struct GlobeCamera {
     f32 mDistance;  // at 0xA4
 };
 
-// Globe view (not yet decompiled).
+// Globe view (Globe.cpp, include/news/Globe.h; fields as used here).
 struct Globe {
+    void Calc();
+    void ApplyCamera();
+    void CalcPoles();
+    void UpdateLights();
+    void CalcScene();
+    void UpdateZoom(const s32* se);
+    void ReleaseGrab();
+    BOOL StartGrab(s32 chan);
+    s32 UpdateGrab(s32 chan);
+    void SetTilt(s32 level, bool level0);
+    BOOL IsRotating();
+    void UpdateTilt(s32 unused, const s32* se);
+    void UpdateSpin(u32 stop);
+    void PlaySpinSound(u32 id);
+
     u32 unk0;
     GlobeCamera* mCamera;   // at 0x04
     f32 mX;                 // at 0x08

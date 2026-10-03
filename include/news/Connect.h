@@ -76,7 +76,7 @@ public:
     void Update();
     void Draw();
     BOOL IsDone();
-    void SetSoundVariation(u32 variation);
+    void SetSoundPaused(bool pause);
     void DrawProgress(f32 alpha);
     void ShowErrorCode(s32 errorCode, s32 code);
 
