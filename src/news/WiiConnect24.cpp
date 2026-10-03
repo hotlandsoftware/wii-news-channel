@@ -910,13 +910,14 @@ s32 CWiiConnect24::setupDlTasks(BOOL first, BOOL second, u8 force, u16 interval,
 }
 
 s32 CWiiConnect24::execDownload(s32 index, u32 mask, u16 id) {
+    s32 result;
     u16 kind = mKind[index];
     if (!sSOReady) {
         sSOStarting = true;
         SOLibraryConfig config;
         config.alloc = SOAllocFunc;
         config.free = SOFreeFunc;
-        s32 result = SOInit(&config);
+        result = SOInit(&config);
         if (result < 0) {
             SetError(this, "SOInit() failed.", 0, result);
             sSOStarting = false;
@@ -932,16 +933,15 @@ s32 CWiiConnect24::execDownload(s32 index, u32 mask, u16 id) {
         sSOStarting = false;
     }
     switch (kind) {
-    case 2: {
+    case 2:
         sDownloading = true;
-        NWC24Err err = NWC24ExecDownloadTask(6, id, mask);
+        result = NWC24ExecDownloadTask(6, id, mask);
         sDownloading = false;
-        if (err != NWC24_OK) {
-            SetError(this, "NWC24ExecDownloadTask() failed.", NWC24GetErrorCode(), err);
-        return ConvertError(err);
+        if (result != NWC24_OK) {
+            SetError(this, "NWC24ExecDownloadTask() failed.", NWC24GetErrorCode(), result);
+            return ConvertError((NWC24Err)result);
         }
         break;
-    }
     }
     return 0;
 }
@@ -954,7 +954,11 @@ s32 CWiiConnect24::deleteDlTasks(BOOL first, BOOL second) {
     NWC24Err err;
 
     kind[0] = first ? mKind[0] : 0;
-    kind[1] = second ? mKind[1] : 0;
+    if (second) {
+        kind[1] = mKind[1];
+    } else {
+        kind[1] = 0;
+    }
     for (s32 i = 0; i < 2; i++) {
         if (kind[i] == 0) {
             continue;
