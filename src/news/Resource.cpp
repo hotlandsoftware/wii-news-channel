@@ -32,8 +32,9 @@ struct PictureTexture : NewsTexture {
         width = w;
         height = h;
         data = NULL;
+        u32 size = GetDataSize();
         format = GX_TF_RGB565;
-        data = MEMAllocFromAllocator(allocator, GetDataSize());
+        data = MEMAllocFromAllocator(allocator, size);
     }
 
     u32 GetDataSize() const {
@@ -76,6 +77,9 @@ NewsTexture* JPEGDecoder::Decode(const void* data, u32 size, MEMAllocator* alloc
     u16 h = ROUND_UP(handle.height, 8);
     PictureTexture* tex = new (allocator) PictureTexture(allocator, handle.width, handle.height);
     if (tex == NULL || tex->data == NULL) {
+        if (tex != NULL) {
+            tex = NULL;
+        }
         OSReport("イメージメモリ確保失敗!!(%dx%d)\n", handle.width, handle.height);
         return NULL;
     }
