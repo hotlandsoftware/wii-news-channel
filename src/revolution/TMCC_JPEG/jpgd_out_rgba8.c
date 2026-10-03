@@ -106,40 +106,40 @@ s32 jpgdSetupOutputRGBA8(JPEGDecContext* ctx) {
     }
 
 void jpgdOutRGBA8_411(JPEGDecContext* ctx, u32 x, u32 y) {
-    s32 cra;
-    u8* scr;
-    s32 hh;
-    s32 cr;
     u8* sy;
-    u8* out;
+    u8* scr;
+    s32 g;
     s32 j;
+    s32 cra;
+    u8* out;
+    s32 w;
+    s32 cr;
     s32 yy;
-    s32 t;
-    s32 cga;
+    s32 i;
     JPEGDecHandle* h;
     s32 xe;
-    u8* scb;
-    s32 g;
-    u32 tiles;
-    s32 ye;
-    s32 w;
-    s32 b;
-    s32 k;
     s32 cb;
+    u8* scb;
+    s32 ye;
+    s32 hh;
+    s32 k;
+    s32 t;
+    s32 cga;
+    s32 b;
     s32 r;
-    s32 i;
+    u32 tiles;
     s32 cba;
 
-    sy = ctx->pix.y;
     scb = ctx->pix.cb;
+    sy = ctx->pix.y;
     scr = ctx->pix.cr;
 
     h = ctx->handle;
     tiles = TILES();
-    out = h->out;
     hh = 8 / h->scale;
     ye = y + hh;
     w = 32 / h->scale;
+    out = h->out;
     xe = x + w;
     for (j = y; j < ye; j++) {
         for (i = x; i < xe; i += 4) {
@@ -156,7 +156,7 @@ void jpgdOutRGBA8_411(JPEGDecContext* ctx, u32 x, u32 y) {
             PUT_PIXEL(i + 2, j);
             YCC_PIXEL(sy[3]);
             PUT_PIXEL(i + 3, j);
-            sy = sy + 4;
+            sy += 4;
         }
         sy += 32 - w;
         scb += (32 - w) >> 2;
@@ -214,38 +214,38 @@ void jpgdOutRGBA8_411Edge(JPEGDecContext* ctx, u32 x, u32 y) {
 }
 
 void jpgdOutRGBA8_422(JPEGDecContext* ctx, u32 x, u32 y) {
-    s32 k;
-    s32 cga;
-    s32 t;
     u8* sy;
+    s32 cga;
+    s32 hh;
+    s32 r;
     u8* scb;
     u8* scr;
     s32 i;
     s32 xe;
     s32 ye;
-    s32 r;
+    s32 yy;
     u32 tiles;
-    s32 cra;
+    s32 cba;
     JPEGDecHandle* h;
     u8* out;
-    s32 yy;
-    s32 hh;
-    s32 cba;
-    s32 g;
-    s32 b;
-    s32 j;
-    s32 cr;
-    s32 cb;
+    s32 t;
     s32 w;
+    s32 cra;
+    s32 g;
+    s32 cb;
+    s32 j;
+    s32 k;
+    s32 b;
+    s32 cr;
 
     sy = ctx->pix.y;
-    scb = ctx->pix.y + 0x80;
+    scb = 0x80 + ctx->pix.y;
     scr = ctx->pix.y + 0xC0;
 
     h = ctx->handle;
     tiles = TILES();
-    out = h->out;
     w = 16 / h->scale;
+    out = h->out;
     hh = 8 / h->scale;
     xe = x + w;
     ye = y + hh;
@@ -255,12 +255,12 @@ void jpgdOutRGBA8_422(JPEGDecContext* ctx, u32 x, u32 y) {
             cr = (s8)*scr++;
             cba = (cb * 0x1C6) >> 8;
             cga = -(cb * 0x58 + cr * 0xB7) >> 8;
-            cra = (cr * 0x167) >> 8;
+            cra = (0x167 * cr) >> 8;
             YCC_PIXEL(sy[0]);
             PUT_PIXEL(i, j);
             YCC_PIXEL(sy[1]);
             PUT_PIXEL(i + 1, j);
-            sy = 2 + sy;
+            sy = sy + 2;
         }
         sy += 16 - w;
         scb += (16 - w) >> 1;
@@ -324,23 +324,23 @@ void jpgdOutRGBA8_422Edge(JPEGDecContext* ctx, u32 x, u32 y) {
 void jpgdOutRGBA8_420(JPEGDecContext* ctx, u32 x, u32 y) {
     s32 hh;
     u8* scb;
-    s32 cba;
+    s32 w;
     u8* scr;
     s32 i;
-    s32 w;
-    u8* out;
-    s32 cr;
+    s32 cb;
     u8* sy;
+    JPEGDecHandle* h;
+    u8* out;
     u32 tiles;
     s32 cra;
-    s32 t;
-    JPEGDecHandle* h;
     s32 cga;
+    s32 cr;
+    s32 t;
     s32 j;
-    s32 k;
-    s32 cb;
-    s32 r;
     s32 b;
+    s32 cba;
+    s32 r;
+    s32 k;
     s32 yy;
     s32 g;
 
@@ -350,16 +350,16 @@ void jpgdOutRGBA8_420(JPEGDecContext* ctx, u32 x, u32 y) {
 
     h = ctx->handle;
     tiles = TILES();
-    out = h->out;
-    w = 16 / h->scale;
     hh = 16 / h->scale;
+    w = 16 / h->scale;
+    out = h->out;
     for (j = y; j < (s32)(y + hh); j++) {
         for (i = x; i < (s32)(x + w); i += 2) {
             cb = (s8)*scb++;
             cr = (s8)*scr++;
             cra = (0x167 * cr) >> 8;
             cga = -(cb * 0x58 + cr * 0xB7) >> 8;
-            cba = (0x1C6 * cb) >> 8;
+            cba = (cb * 0x1C6) >> 8;
             YCC_PIXEL(sy[0]);
             PUT_PIXEL(i, j);
             YCC_PIXEL(sy[1]);
@@ -367,7 +367,7 @@ void jpgdOutRGBA8_420(JPEGDecContext* ctx, u32 x, u32 y) {
             sy += 2;
         }
         sy += 16 - w;
-        if (j & 1) {
+        if (1 & j) {
             scb += (16 - w) >> 1;
             scr += (16 - w) >> 1;
         } else {
