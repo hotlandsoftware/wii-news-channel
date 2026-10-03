@@ -5,6 +5,7 @@
 #include <news/MainScreen.h>
 #include <news/Common.h>
 #include <news/Draw2D.h>
+#include <news/GlobePin.h>
 #include <news/HeadlineList.h>
 #include <news/MathUtil.h>
 #include <news/NewsArticle.h>
@@ -28,8 +29,8 @@ extern s32 lbl_80357598;
 extern s32 lbl_80356970;           // text zoom level (0-9)
 extern u8 lbl_8035697C;
 extern s32 gEarthModel;
-extern const wchar_t* lbl_801B0D08[];
-extern const wchar_t* lbl_801B0E30[];
+extern const wchar_t* gMsgRegionalNews[];
+extern const wchar_t* gMsgTheNews[];
 // Rows visible / rows scrolled per step for each text zoom level.
 static const s32 sVisibleRows[10] = {3, 3, 3, 3, 3, 3, 2, 2, 1, 1};
 static const s32 sScrollRows[10] = {3, 2, 2, 2, 2, 1, 1, 1, 1, 1};
@@ -73,15 +74,9 @@ void DrawScreenFade(s32 alpha);
 
 extern "C" {
 void fn_8001F730(nw4r::lyt::Pane* pane, const nw4r::ut::Color& color);
-void fn_8000E180(RelatedItem* item, ut::TextWriterBase<wchar_t>* writer);
-math::VEC2 fn_8000D6A0(RelatedItem* item);
 // The original calls Fader::SetColor(ut::Color, u8) with only the color set (r5
 // is left as it is), as if through an older one-argument declaration.
 void SetColor__5FaderFQ34nw4r2ut5ColorUc(Fader* fader, ut::Color color);
-f32 fn_8000F73C(RelatedItem* item, const wchar_t* text, ut::Font* font, f32 scale, f32 space);
-void fn_8000F8A8(RelatedItem* item, f32 rowHeight);
-void fn_8000EFFC(RelatedItem* item, ut::TextWriterBase<wchar_t>* writer);
-void fn_8000F3F0(RelatedItem* item, ut::TextWriterBase<wchar_t>* writer);
 }
 
 
@@ -704,9 +699,9 @@ void MainScreen::DrawRelated() {
         writer.SetCharSpace(gCharSpaceScale);
         writer.SetCursor(textX, textY);
         if (gUpdateMsgType == 1) {
-            writer.Print(lbl_801B0D08[gLanguage]);
+            writer.Print(gMsgRegionalNews[gLanguage]);
         } else {
-            writer.Print(lbl_801B0E30[gLanguage]);
+            writer.Print(gMsgTheNews[gLanguage]);
         }
     }
 
@@ -750,13 +745,13 @@ void MainScreen::DrawRelated() {
     mWriter->SetupGX();
     mWriter->SetCharSpace(gCharSpaceScale);
     mWriter->SetScale(0.8f * scale);
-    Draw2D_SetScissor(pos.x, clipTop, 5.0f + mRelated->mNumber.mViewWidth, clipBottom);
+    Draw2D_SetScissor(pos.x, clipTop, 5.0f + mRelated->mLocationScroller.mViewWidth, clipBottom);
 
-    RelatedItem* item;
+    GlobePin* item;
     pos.y = startY + half;
     for (item = mRelated; item != NULL; item = item->mNext) {
         if (pos.y > 0.0f && pos.y < 456.0f) {
-            mWriter->SetCursor(pos.x + item->mNumber.mPos, pos.y);
+            mWriter->SetCursor(pos.x + item->mLocationScroller.mPos, pos.y);
             if (item->mArticle->mFlags & 1) {
                 mWriter->SetTextColor(ut::Color(0x50, 0x50, 0x50, 0xFF));
             } else {
@@ -773,14 +768,14 @@ void MainScreen::DrawRelated() {
         mWriter->SetCharSpace(scale * gCharSpaceScale);
         mWriter->SetScale(scale);
         if (pos.y > 0.0f && pos.y < 456.0f) {
-            Draw2D_SetScissor(iconPos.x, clipTop, item->mText.mViewWidth - textOfs, clipBottom);
-            mWriter->SetCursor(iconPos.x + item->mText.mPos, pos.y);
+            Draw2D_SetScissor(iconPos.x, clipTop, item->mHeadlineScroller.mViewWidth - textOfs, clipBottom);
+            mWriter->SetCursor(iconPos.x + item->mHeadlineScroller.mPos, pos.y);
             if (item->mArticle->mFlags & 1) {
                 mWriter->SetTextColor(ut::Color(0x50, 0x50, 0x50, 0xFF));
             } else {
                 mWriter->SetTextColor(ut::Color(0, 0, 0, 0xFF));
             }
-            fn_8000E180(item, mWriter);
+            item->DrawHeadline(mWriter);
         }
         pos.y += rowHeight;
     }
@@ -797,9 +792,9 @@ void MainScreen::DrawRelated() {
             u32 icon = item->mArticle->GetCategoryIcon();
             Draw2D_Icon(icon, &iconPos, scale, scale, writer->GetDrawFlag());
             if (item->mArticle->GetTexture()) {
-                iconPos.x = iconX + item->mText.mViewWidth + item->mThumbX - 5.0f;
-                iconPos.y += item->mThumbY;
-                Draw2D_Texture(item->mArticle->GetTexture(), &iconPos, item->mThumbScale);
+                iconPos.x = iconX + item->mHeadlineScroller.mViewWidth + item->mPicX - 5.0f;
+                iconPos.y += item->mPicY;
+                Draw2D_Texture(item->mArticle->GetTexture(), &iconPos, item->mPicScale);
             }
         }
         pos.y += rowHeight;
@@ -1749,7 +1744,7 @@ void MainScreen::State17E6C(s32* arg) {
             mUnk33C = 0xAAA;
             mUnk340 = 0;
         } else {
-            RelatedItem* item = mRelated;
+            GlobePin* item = mRelated;
             mUnk244 = mUnk248 = 0.0f;
             mUnk338 = 0;
             mUnk33C = 0xAAA;
@@ -1758,9 +1753,9 @@ void MainScreen::State17E6C(s32* arg) {
             mUnk284 = mUnk238;
             mUnk288 = 0.0f;
             mUnk28C = 456.0f;
-            math::VEC2 ofs(fn_8000D6A0(item).x - mUnk16C.x, fn_8000D6A0(item).y - (123.0f + mUnk224));
-            mUnk280 = mUnk284 = mFadeRect.left = mFadeRect.right = fn_8000D6A0(item).x;
-            mUnk288 = mUnk28C = mFadeRect.top = mFadeRect.bottom = fn_8000D6A0(item).y;
+            math::VEC2 ofs(item->GetPos().x - mUnk16C.x, item->GetPos().y - (123.0f + mUnk224));
+            mUnk280 = mUnk284 = mFadeRect.left = mFadeRect.right = item->GetPos().x;
+            mUnk288 = mUnk28C = mFadeRect.top = mFadeRect.bottom = item->GetPos().y;
             mUnk2BF = true;
             mUnk328 = 255;
             mUnk290 = mUnk234 - mUnk280;
@@ -2048,7 +2043,7 @@ inline bool MainScreen::NoButtonPressed() {
 void MainScreen::CloseArticle() {
     if (IsState(&MainScreen::State195A0)) {
         PlaySE(0x3C);
-        if (mRelated != NULL && (mRelated->mNext != NULL || mRelated->mPrev != NULL)) {
+        if (mRelated != NULL && (mRelated->mNext != NULL || mRelated->m2C != 0)) {
             Bgm_PlayArticle();
             ChangeState(&MainScreen::State1B694, NULL);
         } else {
@@ -2185,15 +2180,15 @@ void MainScreen::State195B8(s32* arg) {
                 return;
             }
         } else if (IsState(&MainScreen::State195A0)) {
-            RelatedItem* item = mCurRelated;
+            GlobePin* item = mCurRelated;
             s32 dir = 0;
             if (item != NULL) {
                 if (mUnk2B7 && item->mNext != NULL) {
                     OpenRelated(item->mNext, &dir);
                     return;
                 }
-                if (mUnk2B6 && item->mPrev != NULL) {
-                    OpenRelated(item->mPrev, &dir);
+                if (mUnk2B6 && item->m2C != 0) {
+                    OpenRelated((GlobePin*)item->m2C, &dir);
                     return;
                 }
             }
@@ -2338,8 +2333,8 @@ void MainScreen::State1A750(s32* arg) {
         break;
     default: {
         mUnk16C.x = Article_IsBodyScrolling() ? mUnk164.x + GetSideMargin() : mUnk164.x + GetSideMargin();
-        RelatedItem* item = mRelated;
-        math::VEC2 ofs(fn_8000D6A0(item).x - mUnk16C.x, fn_8000D6A0(item).y - (123.0f + mUnk224));
+        GlobePin* item = mRelated;
+        math::VEC2 ofs(item->GetPos().x - mUnk16C.x, item->GetPos().y - (123.0f + mUnk224));
         mUnk244 -= 1.0f / 12.0f;
         if (mUnk244 < 0.0f) {
             mUnk244 = 0.0f;
@@ -2357,10 +2352,10 @@ void MainScreen::State1A750(s32* arg) {
             return;
         }
         f32 t = CosineEase(mUnk338);
-        mFadeRect.left = mUnk280 + t * (fn_8000D6A0(item).x - mUnk280);
-        mFadeRect.right = mUnk284 + t * (fn_8000D6A0(item).x - mUnk284);
-        mFadeRect.top = mUnk288 + t * (fn_8000D6A0(item).y - mUnk288);
-        mFadeRect.bottom = mUnk28C + t * (fn_8000D6A0(item).y - mUnk28C);
+        mFadeRect.left = mUnk280 + t * (item->GetPos().x - mUnk280);
+        mFadeRect.right = mUnk284 + t * (item->GetPos().x - mUnk284);
+        mFadeRect.top = mUnk288 + t * (item->GetPos().y - mUnk288);
+        mFadeRect.bottom = mUnk28C + t * (item->GetPos().y - mUnk28C);
         UpdateScrollBar();
         break;
     }
@@ -2594,9 +2589,9 @@ inline void MainScreen::SetFunc140(Func func) {
     }
 }
 
-inline RelatedItem* MainScreen::GetRelated(s32 index) {
+inline GlobePin* MainScreen::GetRelated(s32 index) {
     s32 i = 0;
-    for (RelatedItem* item = mRelated; item != NULL; item = item->mNext, i++) {
+    for (GlobePin* item = mRelated; item != NULL; item = item->mNext, i++) {
         if (index == i) {
             return item;
         }
@@ -2913,10 +2908,10 @@ void MainScreen::Func1CAC8() {
     }
 }
 
-BOOL MainScreen::OpenRelated(RelatedItem* item, s32* arg) {
+BOOL MainScreen::OpenRelated(GlobePin* item, s32* arg) {
     if (item != NULL) {
-        mUnk2C4 = item->mSection;
-        mSelected = item->mIndex;
+        mUnk2C4 = item->mDC;
+        mSelected = item->mE0;
         mCurRelated = item;
     }
     lbl_8035755C = mLists[mUnk2C4];
@@ -3293,8 +3288,8 @@ void MainScreen::UpdateGlobeInput() {
 }
 
 void MainScreen::Globe1E2BC() {
-    mRelated = (RelatedItem*)Pins_GetPointed(&mUnk2C4, &mSelected);
-    RelatedItem* item = mRelated;
+    mRelated = Pins_GetPointed(&mUnk2C4, &mSelected);
+    GlobePin* item = mRelated;
     if (item != NULL) {
         if (item->mNext != NULL) {
             mUnk2F8 = 0;
@@ -3503,24 +3498,24 @@ void MainScreen::LayoutRelated() {
     f32 scale = mUnk250;
     f32 rowHeight = h * scale;
     f32 charSpace = scale * gCharSpaceScale;
-    RelatedItem* item = mRelated;
+    GlobePin* item = mRelated;
     ut::TextWriterBase<wchar_t> writer;
     writer.SetFont(*gSysFont);
     writer.SetCharSpace(charSpace);
     for (; item != NULL; item = item->mNext) {
         writer.SetScale(mUnk250);
-        f32 width = fn_8000F73C(item, item->mArticle->mHeadline, gSysFont, mUnk250, charSpace);
+        f32 width = item->CalcHeadlineWidth(item->mArticle->mHeadline, gSysFont, mUnk250, charSpace);
         f32 textWidth = 30.0f * mUnk250 + width;
-        item->mText.Reset();
-        item->mText.mViewWidth =
+        item->mHeadlineScroller.Reset();
+        item->mHeadlineScroller.mViewWidth =
             item->mArticle->GetTexture() ? (mUnk264 - 20.0f) - rowHeight : mUnk264 - 10.0f;
-        item->mText.mContentWidth = textWidth;
+        item->mHeadlineScroller.mContentWidth = textWidth;
         writer.SetScale(0.8f * mUnk250);
         f32 numberWidth = writer.CalcStringWidth(item->mArticle->mLocationName);
-        item->mNumber.Reset();
-        item->mNumber.mViewWidth = mUnk260 - 10.0f;
-        item->mNumber.mContentWidth = numberWidth;
-        fn_8000F8A8(item, rowHeight);
+        item->mLocationScroller.Reset();
+        item->mLocationScroller.mViewWidth = mUnk260 - 10.0f;
+        item->mLocationScroller.mContentWidth = numberWidth;
+        item->LayoutPicture(rowHeight);
     }
 }
 
@@ -3529,22 +3524,22 @@ void MainScreen::UpdateRelatedScroll() {
     f32 scale = mUnk250;
     f32 rowHeight = h * scale;
     f32 charSpace = scale * gCharSpaceScale;
-    RelatedItem* item = mRelated;
+    GlobePin* item = mRelated;
     ut::TextWriterBase<wchar_t> writer;
     writer.SetFont(*gSysFont);
     writer.SetCharSpace(charSpace);
     for (; item != NULL; item = item->mNext) {
         writer.SetScale(mUnk250);
-        f32 width = fn_8000F73C(item, item->mArticle->mHeadline, gSysFont, mUnk250, charSpace);
+        f32 width = item->CalcHeadlineWidth(item->mArticle->mHeadline, gSysFont, mUnk250, charSpace);
         f32 textWidth = 30.0f * mUnk250 + width;
-        item->mText.mViewWidth =
+        item->mHeadlineScroller.mViewWidth =
             item->mArticle->GetTexture() ? (mUnk264 - 20.0f) - rowHeight : mUnk264 - 10.0f;
-        item->mText.mContentWidth = textWidth;
+        item->mHeadlineScroller.mContentWidth = textWidth;
         writer.SetScale(0.8f * mUnk250);
         f32 numberWidth = writer.CalcStringWidth(item->mArticle->mLocationName);
-        item->mNumber.mViewWidth = mUnk260 - 10.0f;
-        item->mNumber.mContentWidth = numberWidth;
-        fn_8000F8A8(item, rowHeight);
+        item->mLocationScroller.mViewWidth = mUnk260 - 10.0f;
+        item->mLocationScroller.mContentWidth = numberWidth;
+        item->LayoutPicture(rowHeight);
     }
 }
 
@@ -3558,7 +3553,7 @@ inline BOOL MainScreen::IsHovered(s32 index) {
 }
 
 void MainScreen::UpdateRelatedButtons() {
-    RelatedItem* item = mRelated;
+    GlobePin* item = mRelated;
     f32 y = mUnk1A0;
     f32 maxY = 456.0f;
     s32 i = 0;
@@ -3572,18 +3567,18 @@ void MainScreen::UpdateRelatedButtons() {
     f32 space = gCharSpaceScale;
     writer.SetCharSpace(mUnk250 * space);
     for (; item != NULL; item = item->mNext, i++) {
-        item->mText.mActive = IsHovered(i);
-        item->mText.Update();
-        item->mNumber.mActive = IsHovered(i);
-        item->mNumber.Update();
+        item->mHeadlineScroller.mActive = IsHovered(i);
+        item->mHeadlineScroller.Update();
+        item->mLocationScroller.mActive = IsHovered(i);
+        item->mLocationScroller.Update();
         if (y > 0.0f && y < maxY) {
             writer.SetScale(mUnk250);
-            fn_8000EFFC(item, &writer);
+            item->TruncateHeadline(&writer);
             writer.SetScale(0.8f * mUnk250);
-            fn_8000F3F0(item, &writer);
+            item->TruncateLocation(&writer);
         }
         y += rowHeight;
-        fn_8000F8A8(item, rowHeight);
+        item->LayoutPicture(rowHeight);
     }
 }
 

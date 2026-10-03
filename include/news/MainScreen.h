@@ -16,23 +16,7 @@ class HeadlineList;
 class FrameTextButton;
 class NewsArticle;
 
-// Item of the list at MainScreen::mRelated (not yet decompiled).
-struct RelatedItem {
-    u8 unk0[0x28];
-    RelatedItem* mNext;       // at 0x28
-    RelatedItem* mPrev;       // at 0x2C
-    NewsArticle* mArticle;    // at 0x30
-    u8 unk34[0x58 - 0x34];
-    Scroller mText;           // at 0x58
-    Scroller mNumber;         // at 0x88
-    f32 mThumbX;              // at 0xB8
-    f32 mThumbY;              // at 0xBC
-    u8 unkC0[0xC4 - 0xC0];
-    f32 mThumbScale;          // at 0xC4
-    u8 unkC8[0xDC - 0xC8];
-    s32 mSection;             // at 0xDC
-    s32 mIndex;               // at 0xE0
-};
+class GlobePin;
 
 struct GlobeCamera {
     u8 unk0[0x90];
@@ -181,7 +165,7 @@ public:
     void ReturnToTop();
     BOOL StartDrag(s32 chan, const nw4r::ut::Rect* rect);
     s32 UpdateDrag(s32 chan, const nw4r::ut::Rect* rect);
-    BOOL OpenRelated(RelatedItem* item, s32* dir);
+    BOOL OpenRelated(GlobePin* item, s32* dir);
     void Sub1D338();
     void ResetGlobe(Globe* globe);
     BOOL ExitGlobe(BOOL related);
@@ -192,7 +176,7 @@ public:
     void Globe1E2BC();
     void LayoutRelated();
     void SetFunc140(Func func);
-    RelatedItem* GetRelated(s32 index);
+    GlobePin* GetRelated(s32 index);
     void UpdateRelatedScroll();
     void UpdateRelatedButtons();
     void Func1C7F4();
@@ -239,8 +223,8 @@ public:
     PaneButton* mResetButton;       // at 0x060
     PaneButton* mEarthBackButton;   // at 0x064
     HeadlineList* mLists[MAX_CATEGORIES];       // at 0x068
-    RelatedItem* mRelated;                      // at 0x0A0
-    RelatedItem* mCurRelated;                   // at 0x0A4
+    GlobePin* mRelated;                      // at 0x0A0
+    GlobePin* mCurRelated;                   // at 0x0A4
     FrameTextButton* mButtons[MAX_CATEGORIES];  // at 0x0A8
     ModeFunc mMode;                 // at 0x0E0
     StateFunc mState;               // at 0x0EC
