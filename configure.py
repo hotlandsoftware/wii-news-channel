@@ -368,6 +368,7 @@ cflags_hbm = [
 cflags_vcmv = [
     *cflags_hbm,
     "-Cpp_exceptions on",
+    "-str reuse,pool,readonly",
 ]
 
 config.linker_version = "GC/3.0a5.2"
@@ -1106,6 +1107,7 @@ config.libs = [
             Object(NonMatching, "vcmv/vcmv_jsext.cpp"),
             Object(NonMatching, "vcmv/vcmv_main.cpp"),
             Object(NonMatching, "vcmv/vcmv_wwwlib.cpp"),
+            Object(NonMatching, "vcmv/vcmv_rsostatic.cpp"),
         ],
     },
     {

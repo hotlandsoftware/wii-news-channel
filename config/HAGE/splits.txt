@@ -734,15 +734,22 @@ vcmv/vcmv_main.cpp:
 	.sdata2     start:0x80359188 end:0x803591D0
 
 vcmv/vcmv_wwwlib.cpp:
-	extab       start:0x80006648 end:0x800066A0
-	extabindex  start:0x80006B5C end:0x80006BE0
-	.text       start:0x8009C78C end:0x8009D694
-	.rodata     start:0x801AB408 end:0x801AC700
+	extab       start:0x80006648 end:0x80006698
+	extabindex  start:0x80006B5C end:0x80006BD4
+	.text       start:0x8009C78C end:0x8009D5F4
+	.rodata     start:0x801AB408 end:0x801ABDD0
 	.data       start:0x801CC620 end:0x801CD8B0
 	.bss        start:0x802B2B80 end:0x802B2C78
 	.sdata      start:0x80356ED8 end:0x80356F00
 	.sbss       start:0x80357A30 end:0x80357C00
-	.sdata2     start:0x803591D0 end:0x803593C8
+	.sdata2     start:0x803591D0 end:0x803591E8
+
+vcmv/vcmv_rsostatic.cpp:
+	extab       start:0x80006698 end:0x800066A0
+	extabindex  start:0x80006BD4 end:0x80006BE0
+	.text       start:0x8009D5F4 end:0x8009D694
+	.rodata     start:0x801ABDD0 end:0x801AC700
+	.sdata2     start:0x803591E8 end:0x803593C8
 
 nw4r/ef/ef_draworder.cpp:
 	.text       start:0x8009D694 end:0x8009D794
