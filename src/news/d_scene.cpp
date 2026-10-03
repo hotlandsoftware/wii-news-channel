@@ -858,7 +858,8 @@ BOOL LoadEarth() {
 
     lbl_8035772B = true;
     s32 result = contentOpenNAND(&lbl_801F09C8.mHandle, sEarthPath, &info);
-    if (result == 0) {
+    switch (result) {
+    case 0:
         lbl_80357764 = OSRoundUp32B(contentGetLengthNAND(&info));
         result = contentReadNAND(&info, header, sizeof(header), 0);
         contentCloseNAND(&info);
@@ -867,7 +868,8 @@ BOOL LoadEarth() {
             return FALSE;
         }
         lbl_80357768 = CXGetUncompressedSize(header);
-    } else {
+        break;
+    default:
         OSReport("Error!! (%s) CNTOpen() failed. %d\n", sEarthPath, result);
         return FALSE;
     }
@@ -896,7 +898,8 @@ static void* EarthLoadThread(void* arg) {
     CXUncompContextLZ ctx;
 
     s32 result = contentOpenNAND(&lbl_801F09C8.mHandle, sEarthPath, &info);
-    if (result == 0) {
+    switch (result) {
+    case 0:
         CXInitUncompContextLZ(&ctx, lbl_80357788);
         for (u32 offset = 0; offset < lbl_80357764; offset += lbl_8035776C) {
             u32 size = lbl_80357764 - offset;
@@ -918,7 +921,8 @@ static void* EarthLoadThread(void* arg) {
             gFatalError = true;
             return NULL;
         }
-    } else {
+        break;
+    default:
         OSReport("Error!! (%s) CNTOpen() failed. %d\n", sEarthPath, result);
         gFatalError = true;
         return NULL;
@@ -961,10 +965,11 @@ static inline BOOL IsButtonInactive(PaneButton* button) {
 
 void UpdateLayoutButtons(Layout* layout, u32 se) {
     f32 width = GetScreenWidth();
-    f32 halfWidth = 0.5f * 608.0f;
-    f32 scale = 608.0f / width;
+    f32 baseWidth = 608.0f;
     f32 centerX = 0.5f * width;
-    f32 halfHeight = 0.5f * gRenderMode.efbHeight;
+    f32 halfWidth = 0.5f * baseWidth;
+    f32 scale = baseWidth / width;
+    f32 halfHeight = 0.5f * (s32)gRenderMode.efbHeight;
 
     for (s32 i = 0; i < 4; i++) {
         if (!IsPointerValid(i)) {
@@ -1029,9 +1034,9 @@ s32 CheckButtonHold(const char* name, u32 button) {
             if (b != NULL && !b->mDisabled && IsButtonNamed(b, name)) {
                 u32 pressed;
                 if (b->mUnk91) {
-                    pressed = button & lbl_801F0958[i];
+                    pressed = (u16)button & lbl_801F0958[i];
                 } else {
-                    pressed = button & gTrig[i];
+                    pressed = (u16)button & gTrig[i];
                 }
                 if (pressed) {
                     lbl_8020E4A0[i]->mUnk91 = true;
@@ -1048,7 +1053,7 @@ s32 CheckButtonTrig(const char* name, u32 button) {
     for (s32 i = 0; i < 4; i++) {
         if (IsPointerValid(i)) {
             PaneButton* b = lbl_8020E4A0[i];
-            if (b != NULL && (button & gTrig[i]) && !b->mDisabled && IsButtonNamed(b, name)) {
+            if (b != NULL && ((u16)button & gTrig[i]) && !b->mDisabled && IsButtonNamed(b, name)) {
                 lbl_8020E4A0[i]->SetPressed(false);
                 return i;
             }
@@ -1058,8 +1063,9 @@ s32 CheckButtonTrig(const char* name, u32 button) {
 }
 
 void LatLonToDegrees(u16 lat, u16 lon, math::VEC2* out) {
-    out->y = lon * (360.0f / 65536.0f);
-    out->x = (s16)lat * (360.0f / 65536.0f);
+    f32 k = 360.0f / 65536.0f;
+    out->y = lon * k;
+    out->x = (s16)lat * k;
 }
 
 void UpdatePointerScroll() {
