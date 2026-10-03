@@ -67,7 +67,7 @@ extern HeadlineList* lbl_8035755C; // headline list being shown
 extern u32 lbl_803575E0;           // number of news sections
 extern Globe* lbl_8035775C;
 
-extern "C" void fn_800323F8(nw4r::math::VEC2* pos, f32 scale, f32 alpha);
+void HeadlineList_Draw(const f32& offsetX, f32 alpha, f32 headerAlpha);
 
 // Base of MainScreen (not yet decompiled, 0x800493A8): the text writer and the
 // screen area.
@@ -188,7 +188,7 @@ public:
     void SetLocation(NewsArticle* article);
 
     void DrawButtonsInline() {
-        fn_800323F8(&mUnk164, mUnk23C, mUnk240);
+        HeadlineList_Draw(mUnk164.x, mUnk23C, mUnk240);
         if (lbl_8035755C != NULL && lbl_8035755C->mMode != 2) {
             s32 i;
             s32 count = lbl_803575E0 - 1;

@@ -2801,19 +2801,20 @@ void Article_ClampScroll() {
     }
 }
 
-void Article_ScrollTo(f32 offset, f32 dir) {
-    s32 line = 0;
+f32 Article_ScrollTo(f32 offset, f32 dir) {
     s32 headlineLines = lbl_80357568->mNumLines;
     s32 bodyLines = sBodyView->mNumLines;
     f32 y = 0.0f;
     s32 bodyStart = headlineLines + 1;
     s32 total = headlineLines + bodyLines + sCreditView->mNumLines + 1;
     s32 creditStart = bodyStart + bodyLines;
+    s32 line = 0;
     for (; line < total; line++) {
         if (line < headlineLines) {
             y -= lbl_80357568->mLineHeight;
         } else if (line < bodyStart) {
-            y -= GetLogoHeight() * gTextScale;
+            f32 h = GetLogoHeight();
+            y -= h * gTextScale;
         } else if (line < creditStart) {
             y -= sBodyView->mLineHeight;
         } else {
@@ -2827,7 +2828,7 @@ void Article_ScrollTo(f32 offset, f32 dir) {
         line++;
     }
     sScrollLine = line;
-    Article_GetScrollOffset();
+    return Article_GetScrollOffset();
 }
 
 BOOL Article_HitTest(const ut::Rect* rect) {
@@ -2869,8 +2870,8 @@ f32 GetTextScale(s32 size) {
 
 #include <news/MathUtil.h>
 
-BOOL UpdateTextSize(BOOL up, BOOL down) {
-    BOOL changed = FALSE;
+bool UpdateTextSize(BOOL up, BOOL down) {
+    bool changed = false;
     s32 se[10] = {0x2C, 0x2D, 0x2E, 0x2F, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35};
     s32 prev = lbl_80356970;
     if (up) {
@@ -2884,7 +2885,7 @@ BOOL UpdateTextSize(BOOL up, BOOL down) {
     }
     if (prev != lbl_80356970) {
         PlaySE(se[lbl_80356970]);
-        changed = TRUE;
+        changed = true;
     }
     Ease(&gTextScale, lbl_801922D0[lbl_80356970], 0.12f, 1.0f, 0.01f);
     return changed;
