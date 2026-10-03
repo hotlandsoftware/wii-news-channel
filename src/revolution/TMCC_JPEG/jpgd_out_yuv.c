@@ -197,8 +197,6 @@ void jpgdOutYUV422(JPEGDecContext* ctx, u32 x, u32 y) {
     s32 cw;
     u32 cx;
     u32 cstride;
-    s32 row;
-    u8* dy;
 
     sy = ctx->pix.y;
     scb = ctx->pix.y + 0x80;
@@ -211,14 +209,9 @@ void jpgdOutYUV422(JPEGDecContext* ctx, u32 x, u32 y) {
     pcb = h->planeCb;
     pcr = h->planeCr;
     for (j = y; j < (s32)(y + hh); j++) {
-        row = (j >> 2) * stride;
-        dy = py + ((j & 3) << 3);
-        for (i = x; i < (s32)(x + w); i += 2) {
-            t = ((i >> 3) + row) << 5;
-            dy[t + (i & 7)] = sy[0];
-            t = (((i + 1) >> 3) + row) << 5;
-            dy[t + ((i + 1) & 7)] = sy[1];
-            sy += 2;
+        for (i = x; i < (s32)(x + w); i++) {
+            t = (i >> 3) + (j >> 2) * stride;
+            py[(t << 5) + ((j & 3) << 3) + (i & 7)] = *sy++;
         }
         sy += 16 - w;
     }
