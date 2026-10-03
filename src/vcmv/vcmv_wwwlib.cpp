@@ -593,7 +593,7 @@ void vcmvLoadSettings(void) {
 static inline u32 vcmvReadBE32(vcmvLZState* s) {
     u32 x = *(const u32*)s->src;
     s->src += 4;
-    return (x << 24) | ((x << 8) & 0xFF0000) | ((x >> 8) & 0xFF00) | (x >> 24);
+    return (x >> 24) | ((x >> 8) & 0xFF00) | ((x << 8) & 0xFF0000) | (x << 24);
 }
 
 static void vcmvLZDecode(u8* dst, vcmvLZState* s, u32 size) {
