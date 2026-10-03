@@ -2418,7 +2418,7 @@ static inline f32 GetIconScale() {
 
 static inline f32 GetLogoHeight() {
     f32 h;
-    f32 height = 4.0f;
+    f32 height = 30.0f;
     if ((u32)(sSourceLayout - 3) <= 3) {
         h = 0.0f;
         if (sSourceIconType == 0) {
@@ -2641,15 +2641,16 @@ bool Article_IsBodyScrolling() {
 }
 
 f32 Article_GetScrollOffset() {
-    f32 y = 0.0f;
     s32 headlineLines = lbl_80357568->mNumLines;
     s32 bodyStart = headlineLines + 1;
     s32 creditStart = bodyStart + sBodyView->mNumLines;
+    f32 y = 0.0f;
     for (s32 i = 0; i < sScrollLine; i++) {
         if (i < headlineLines) {
             y += lbl_80357568->mLineHeight;
         } else if (i < bodyStart) {
-            y += GetLogoHeight() * gTextScale;
+            f32 h = GetLogoHeight();
+            y += h * gTextScale;
         } else if (i < creditStart) {
             y += sBodyView->mLineHeight;
         } else {
