@@ -49,13 +49,19 @@ static inline f32 LenR(const math::VEC2& v) {
 static inline f32 LenP(const math::VEC2* v) {
     return math::FSqrt(v->x * v->x + v->y * v->y);
 }
-f32 Ease(math::VEC2* value, const math::VEC2* target, f32 rate, f32 maxStep, f32 minStep) {
+static inline f32 DistP(const math::VEC2* a, const math::VEC2* b) {
     math::VEC2 e;
+    SubP(&e, a, b);
+    return LenP(&e);
+}
+
+f32 Ease(math::VEC2* value, const math::VEC2* target, f32 rate, f32 maxStep, f32 minStep) {
     if (NotEqual(*value, *target)) {
+        math::VEC2 d;
         math::VEC2 diff;
         diff = math::VEC2(value->x - target->x, value->y - target->y);
+        d = diff;
         f32 len = LenV(diff);
-        math::VEC2 d = diff;
         if (len < minStep) {
             *value = *target;
         } else {
@@ -79,8 +85,7 @@ f32 Ease(math::VEC2* value, const math::VEC2* target, f32 rate, f32 maxStep, f32
             }
         }
     }
-    SubP(&e, value, target);
-    return LenP(&e);
+    return DistP(value, target);
 }
 
 f32 Ease(f32* value, f32 target, f32 rate, f32 maxStep, f32 minStep) {
