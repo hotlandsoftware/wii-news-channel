@@ -105,8 +105,7 @@ s32 jpgdDecodeBlock(s32* coef, s32* quant, s32* dcPred, JPEGDecContext* ctx) {
     if (rs != 0) {
         FILL_BITS(s, rs);
         n = 1 << rs;
-        s->numBits -= rs;
-        v = (n - 1) & (s->bits >> s->numBits);
+        v = (n - 1) & (s->bits >> (s->numBits -= rs));
         if ((n >> 1) > v) {
             v -= n - 1;
         }
@@ -171,29 +170,29 @@ s32 jpgdDecodeBlockScaled(s32* coef, s32* quant, s32* dcPred, JPEGDecContext* ct
     JPEGHuffCode* codes;
     s32 pos;
     u8* vals;
-    const u8* zz;
     s32 rs;
-    s32 one;
     u32 n;
     JPEGHuffLookup* lk;
 
     lk = ctx->tables.dc.lookup;
     FILL_BITS(&ctx->stream, 8);
     idx = (ctx->stream.bits >> (ctx->stream.numBits - 8)) & 0xFF;
-    if (lk[idx].len != 0) {
-        rs = lk[idx].val;
-        ctx->stream.numBits -= lk[idx].len;
-    } else {
-        rs = jpgdHuffDecodeSlow(ctx->tables.dc.codes, ctx->tables.dc.vals, ctx);
+    {
+        u16 len = lk[idx].len;
+        if (len != 0) {
+            rs = lk[idx].val;
+            ctx->stream.numBits -= len;
+        } else {
+            rs = jpgdHuffDecodeSlow(ctx->tables.dc.codes, ctx->tables.dc.vals, ctx);
         if (rs < 0) {
             return rs;
         }
     }
+    }
     if (rs != 0) {
         FILL_BITS(&ctx->stream, rs);
         n = 1 << rs;
-        ctx->stream.numBits -= rs;
-        v = (n - 1) & (ctx->stream.bits >> ctx->stream.numBits);
+        v = (n - 1) & (ctx->stream.bits >> (ctx->stream.numBits -= rs));
         if ((n >> 1) > v) {
             v -= n - 1;
         }
@@ -206,9 +205,7 @@ s32 jpgdDecodeBlockScaled(s32* coef, s32* quant, s32* dcPred, JPEGDecContext* ct
     vals = ctx->tables.ac.vals;
     limit = ctx->coefLimit;
     memset(&coef[1], 0, ctx->coefLimit2);
-    zz = jpgdZigzag;
     k = 1;
-    one = 1;
     do {
         FILL_BITS(&ctx->stream, 8);
         idx = (ctx->stream.bits >> (ctx->stream.numBits - 8)) & 0xFF;
@@ -229,16 +226,15 @@ s32 jpgdDecodeBlockScaled(s32* coef, s32* quant, s32* dcPred, JPEGDecContext* ct
                 k++;
                 ctx->stream.numBits -= sz;
             } else {
-                n = one << sz;
-                ctx->stream.numBits -= sz;
-                v = (n - 1) & (ctx->stream.bits >> ctx->stream.numBits);
+                n = 1 << sz;
+                v = (n - 1) & (ctx->stream.bits >> (ctx->stream.numBits -= sz));
                 if ((n >> 1) > v) {
                     v -= n - 1;
                 }
                 if (k >= 64) {
                     return -0x64;
                 }
-                pos = zz[k];
+                pos = jpgdZigzag[k];
                 k++;
                 coef[pos] = v * quant[pos];
             }

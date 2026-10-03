@@ -1125,7 +1125,7 @@ config.libs = [
             Object(NonMatching, "revolution/TMCC_JPEG/jpgd_out_yuv.c"),
             Object(NonMatching, "revolution/TMCC_JPEG/jpgd_out_rgb565.c"),
             Object(NonMatching, "revolution/TMCC_JPEG/jpgd_out_rgba8.c"),
-            Object(NonMatching, "revolution/TMCC_JPEG/jpgd_huff.c"),
+            Object(Matching, "revolution/TMCC_JPEG/jpgd_huff.c"),
         ],
     },
     {
