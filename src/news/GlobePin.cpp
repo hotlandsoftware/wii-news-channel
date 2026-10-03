@@ -149,8 +149,8 @@ void GlobePin::Draw(u8 alpha) {
                 f32 w = halfW * scale;
                 f32 h = halfH * scale;
                 color.a = ripple->mAlpha;
-                pos.x = GetScreenPos().x - w;
-                pos.y = GetScreenPos().y - h;
+                pos.x = GetPos().x - w;
+                pos.y = GetPos().y - h;
                 GXSetTevColor(GX_TEVREG0, color);
                 GXSetTevColor(GX_TEVREG1, sRippleColor);
                 Draw2D_Tex(gCommonTpl, 0x52, &pos, scale, scale);

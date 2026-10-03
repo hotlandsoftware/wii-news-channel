@@ -2401,16 +2401,17 @@ void Article_ArrangeHeadline(f32 scale) {
 
 static inline f32 GetIconScale() {
     f32 scale = 1.0f;
-    switch (sSourceIconType) {
-    case 0:
+    if (sSourceIconType != 0) {
+        switch (sSourceIconType) {
+        case 3:
+        case 4:
+        case 5:
+        case 6:
+            scale = 0.5f;
+            break;
+        }
+    } else {
         scale = 0.5f;
-        break;
-    case 3:
-    case 4:
-    case 5:
-    case 6:
-        scale = 0.5f;
-        break;
     }
     return scale;
 }
@@ -2431,19 +2432,7 @@ static inline f32 GetLogoHeight() {
             }
         }
         if (h > 0.0f) {
-            f32 scale = 1.0f;
-            switch (sSourceIconType) {
-            case 0:
-                scale = 0.5f;
-                break;
-            case 3:
-            case 4:
-            case 5:
-            case 6:
-                scale = 0.5f;
-                break;
-            }
-            height = 20.0f + h * scale;
+            height = 20.0f + h * GetIconScale();
         }
     }
     return height;
