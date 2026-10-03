@@ -15,39 +15,14 @@ struct GlobeView {
 };
 extern "C" GlobeView* lbl_8035775C;
 
-// One triangle per dot, before it is scaled and rotated into place.
-static const Vec sGlobeDotTemplate[3] = {
-    {0.0f, 0.0f, -100.0f},
-    {0.0f, 0.0f, -100.0f},
-    {0.0f, 0.0f, -100.0f},
-};
-
-static const f32 sGlobeDotTexCoords[3][2] = {
-    {0.0f, 0.0f},
-    {1.0f, 0.0f},
-    {0.0f, 1.0f},
-};
-
-// Rotation of each dot about x and y (u16 angle units). The extracted table is
-// bytes, hence the union.
-static const union {
+extern const f32 gGlobeDotTexCoords[3][2];
+extern const union GlobeDotAngles {
     u8 bytes[GLOBE_DOT_COUNT * 4];
     u16 angles[GLOBE_DOT_COUNT][2];
-} sGlobeDotAngles = {
-#include "news/GlobeDotAngles.inc"
-};
-
-static const u8 sGlobeDotSizes[GLOBE_DOT_COUNT] = {
-#include "news/GlobeDotSizes.inc"
-};
-
-static const u8 sGlobeDotColorIdx[GLOBE_DOT_COUNT] = {
-#include "news/GlobeDotColorIdx.inc"
-};
-
-static const u8 sGlobeDotColors[GLOBE_DOT_COUNT * 3] = {
-#include "news/GlobeDotColors.inc"
-};
+} gGlobeDotAngles;
+extern const u8 gGlobeDotSizes[GLOBE_DOT_COUNT];
+extern const u8 gGlobeDotColorIdx[GLOBE_DOT_COUNT];
+extern const u8 gGlobeDotColors[GLOBE_DOT_COUNT * 3];
 
 // The SDK fast cast (OSu16tof32).
 static inline f32 U16ToF32(register u16* in) {
@@ -69,29 +44,23 @@ static inline f32 CosIdx(u16 idx) {
 GlobeDots::GlobeDots() {
     for (s32 i = 0; i < GLOBE_DOT_COUNT; i++) {
         s32 idx = i * 3;
-        f32 size = 0.0045f * sGlobeDotSizes[i];
+        f32 size = 0.0045f * gGlobeDotSizes[i];
         f32 size3 = 3.0f * size;
-        u16 rotX = sGlobeDotAngles.angles[i][0];
-        u16 rotY = sGlobeDotAngles.angles[i][1];
+        u16 rotX = gGlobeDotAngles.angles[i][0];
+        u16 rotY = gGlobeDotAngles.angles[i][1];
 
         Mtx mx, my, m;
         PSMTXRotTrig(mx, 'x', SinIdx(rotX), CosIdx(rotX));
         PSMTXRotTrig(my, 'y', SinIdx(rotY), CosIdx(rotY));
         PSMTXConcat(my, mx, m);
 
-        Vec v0 = *(Vec*)&sGlobeDotTemplate[0];
-        v0.x = -size;
-        v0.y = -size;
+        Vec v0 = {-size, -size, -100.0f};
         PSMTXMultVec(m, &v0, &mVerts[idx]);
 
-        Vec v1 = *(Vec*)&sGlobeDotTemplate[1];
-        v1.x = size3;
-        v1.y = -size;
+        Vec v1 = {size3, -size, -100.0f};
         PSMTXMultVec(m, &v1, &mVerts[idx + 1]);
 
-        Vec v2 = *(Vec*)&sGlobeDotTemplate[2];
-        v2.x = -size;
-        v2.y = size3;
+        Vec v2 = {-size, size3, -100.0f};
         PSMTXMultVec(m, &v2, &mVerts[idx + 2]);
     }
 }
@@ -145,8 +114,8 @@ void GlobeDots::Draw() {
     GXSetVtxAttrFmt(GX_VTXFMT0, GX_VA_CLR0, GX_CLR_RGB, GX_RGB8, 0);
     GXSetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX0, GX_TEX_ST, GX_F32, 0);
     GXSetArray(GX_VA_POS, mVerts, sizeof(Vec));
-    GXSetArray(GX_VA_CLR0, (void*)sGlobeDotColors, 3);
-    GXSetArray(GX_VA_TEX0, (void*)sGlobeDotTexCoords, sizeof(sGlobeDotTexCoords[0]));
+    GXSetArray(GX_VA_CLR0, (void*)gGlobeDotColors, 3);
+    GXSetArray(GX_VA_TEX0, (void*)gGlobeDotTexCoords, sizeof(gGlobeDotTexCoords[0]));
     GXSetChanCtrl(GX_COLOR0, GX_FALSE, GX_SRC_VTX, GX_SRC_VTX, GX_LIGHT_NULL, GX_DF_NONE,
                   GX_AF_NONE);
 
@@ -159,7 +128,7 @@ void GlobeDots::Draw() {
     GXSetTevColor(GX_TEVREG0, (GXColor){0, 0, 0, mAlpha});
 
     GXBegin(GX_TRIANGLES, GX_VTXFMT0, GLOBE_DOT_COUNT * 3);
-    const u8* colors = sGlobeDotColorIdx;
+    const u8* colors = gGlobeDotColorIdx;
     for (s32 i = 0; i < GLOBE_DOT_COUNT; i++) {
         GXPosition1x16(i * 3);
         GXColor1x8(colors[i]);
@@ -173,3 +142,27 @@ void GlobeDots::Draw() {
     }
     GXEnd();
 }
+
+const f32 gGlobeDotTexCoords[3][2] = {
+    {0.0f, 0.0f},
+    {1.0f, 0.0f},
+    {0.0f, 1.0f},
+};
+
+// Rotation of each dot about x and y (u16 angle units). The extracted table is
+// bytes, hence the union.
+const union GlobeDotAngles gGlobeDotAngles = {
+#include "news/GlobeDotAngles.inc"
+};
+
+const u8 gGlobeDotSizes[GLOBE_DOT_COUNT] = {
+#include "news/GlobeDotSizes.inc"
+};
+
+const u8 gGlobeDotColorIdx[GLOBE_DOT_COUNT] = {
+#include "news/GlobeDotColorIdx.inc"
+};
+
+const u8 gGlobeDotColors[GLOBE_DOT_COUNT * 3] = {
+#include "news/GlobeDotColors.inc"
+};

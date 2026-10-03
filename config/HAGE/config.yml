@@ -28,19 +28,19 @@ block_relocations:
 # (build/HAGE/include/...), so that they never live in the repository.
 extract:
   # GlobeDots: the dots of the globe (angles, sizes, colour indices, colours)
-  - symbol: sGlobeDotAngles
+  - symbol: gGlobeDotAngles
     binary: news/GlobeDotAngles.bin
     header: news/GlobeDotAngles.inc
     header_type: raw
-  - symbol: sGlobeDotSizes
+  - symbol: gGlobeDotSizes
     binary: news/GlobeDotSizes.bin
     header: news/GlobeDotSizes.inc
     header_type: raw
-  - symbol: sGlobeDotColorIdx
+  - symbol: gGlobeDotColorIdx
     binary: news/GlobeDotColorIdx.bin
     header: news/GlobeDotColorIdx.inc
     header_type: raw
-  - symbol: sGlobeDotColors
+  - symbol: gGlobeDotColors
     binary: news/GlobeDotColors.bin
     header: news/GlobeDotColors.inc
     header_type: raw
