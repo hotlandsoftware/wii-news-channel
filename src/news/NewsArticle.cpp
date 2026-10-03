@@ -4,9 +4,9 @@
 #include <wchar.h>
 
 // Not yet decompiled: allocators and the JPEG decoder in other files.
-extern MEMAllocator lbl_801EE1E0; // general allocator
-extern MEMAllocator lbl_801EE1F0; // picture allocator
-extern s32 lbl_803575B0;
+extern MEMAllocator gNewsAllocator; // general allocator
+extern MEMAllocator gPictureAllocator; // picture allocator
+extern s32 gBlinkPhase;
 
 extern "C" {
 void* fn_80040A28(size_t size, MEMAllocator* allocator);
@@ -104,7 +104,7 @@ found:
         mLocation = (NewsLocationRec*)mFile->At(mFile->locationsOfs) + mText->locationIdx;
         mLocationName = (wchar_t*)mFile->At(mLocation->nameOfs);
         unk5C = wcslen(mLocationName) + 1;
-        unk40 = new (&lbl_801EE1E0) wchar_t[unk5C];
+        unk40 = new (&gNewsAllocator) wchar_t[unk5C];
         if (unk40 == NULL) {
             gAllocFailed = true;
             return;
@@ -116,17 +116,17 @@ found:
         unk58 += mSource->nameSize / 2 + 1;
     }
 
-    mHeadline = new (&lbl_801EE1E0) wchar_t[unk58];
+    mHeadline = new (&gNewsAllocator) wchar_t[unk58];
     if (mHeadline == NULL) {
         gAllocFailed = true;
         return;
     }
-    mShortHeadline = new (&lbl_801EE1E0) wchar_t[unk58];
+    mShortHeadline = new (&gNewsAllocator) wchar_t[unk58];
     if (mShortHeadline == NULL) {
         gAllocFailed = true;
         return;
     }
-    unk3C = new (&lbl_801EE1E0) wchar_t[unk58];
+    unk3C = new (&gNewsAllocator) wchar_t[unk58];
     if (unk3C == NULL) {
         gAllocFailed = true;
         return;
@@ -141,9 +141,9 @@ found:
 
 u32 NewsArticle::GetCategoryIcon() const {
     if (mLocation != NULL) {
-        return sIconLocal[mFlags][lbl_803575B0];
+        return sIconLocal[mFlags][gBlinkPhase];
     }
-    return sIcon[mFlags][lbl_803575B0];
+    return sIcon[mFlags][gBlinkPhase];
 }
 
 void NewsArticle::MarkRead() {
@@ -249,7 +249,7 @@ s32 NewsData::Init(NewsHeader** files, s32 current) {
         }
     }
 
-    mCategories = new (&lbl_801EE1E0) Category[mNumCategories];
+    mCategories = new (&gNewsAllocator) Category[mNumCategories];
     if (mCategories == NULL) {
         gAllocFailed = true;
         return 3;
@@ -284,7 +284,7 @@ s32 NewsData::Init(NewsHeader** files, s32 current) {
         src = mFiles[n];
         if (src != NULL && src->numPictures != 0) {
             mPictureCache[n].fileId = src->id;
-            mPictureCache[n].pics = new (&lbl_801EE1E0) NewsPicture*[src->numPictures];
+            mPictureCache[n].pics = new (&gNewsAllocator) NewsPicture*[src->numPictures];
             if (mPictureCache[n].pics != NULL) {
                 for (j = 0; j < src->numPictures; j++) {
                     mPictureCache[n].pics[j] = NULL;
@@ -299,7 +299,7 @@ s32 NewsData::Init(NewsHeader** files, s32 current) {
         count = topicRec->numEntries;
         topic->mNumArticles = count;
         if (count != 0) {
-            topic->mArticles = new (&lbl_801EE1E0) NewsArticle*[count];
+            topic->mArticles = new (&gNewsAllocator) NewsArticle*[count];
             if (topic->mArticles == NULL) {
                 gAllocFailed = true;
                 return 4;
@@ -320,7 +320,7 @@ s32 NewsData::Init(NewsHeader** files, s32 current) {
         for (j = 0; j < topicRec->numEntries; j++, slot++, entry++) {
             src = GetFile(entry->fileId);
             isCurrent = src == mHeader;
-            *slot = new (&lbl_801EE1E0) NewsArticle(src, entry, i, j, isCurrent);
+            *slot = new (&gNewsAllocator) NewsArticle(src, entry, i, j, isCurrent);
             if (*slot == NULL) {
                 gAllocFailed = true;
                 return 5;
@@ -443,9 +443,9 @@ NewsPicture* NewsData::GetPicture(NewsTextBuffer* text) {
             if (file->picturesOfs != 0 && idx < file->numPictures) {
                 NewsPictureRec* rec = (NewsPictureRec*)file->At(file->picturesOfs) + idx;
                 void* data = file->At(rec->dataOfs);
-                NewsPicture* pic = new (&lbl_801EE1F0) NewsPicture;
+                NewsPicture* pic = new (&gPictureAllocator) NewsPicture;
                 if (pic != NULL) {
-                    pic->texture = decoder.Decode(data, rec->size, &lbl_801EE1F0);
+                    pic->texture = decoder.Decode(data, rec->size, &gPictureAllocator);
                     if (pic->texture != NULL) {
                         if (rec->captionOfs != 0) {
                             pic->caption = (wchar_t*)file->At(rec->captionOfs);
@@ -483,7 +483,7 @@ void NewsData::LoadLogos() {
 
     for (i = 0; i < NEWS_FILE_MAX; i++) {
         if (mLogoCount[i] != 0) {
-            mLogoCache[i] = new (&lbl_801EE1E0) LogoCache[mLogoCount[i]];
+            mLogoCache[i] = new (&gNewsAllocator) LogoCache[mLogoCount[i]];
             if (mLogoCache[i] != NULL) {
                 cache = mLogoCache[i];
                 for (j = 0; j < mLogoCount[i]; j++, cache++) {
@@ -519,7 +519,7 @@ NewsTexture* NewsData::LoadLogo(NewsHeader* file, u32 ofs, u32 size) {
         }
         if (cache->ofs == 0) {
             JPEGDecoder decoder;
-            NewsTexture* tex = decoder.Decode(file->At(ofs), size, &lbl_801EE1F0);
+            NewsTexture* tex = decoder.Decode(file->At(ofs), size, &gPictureAllocator);
             if (tex != NULL) {
                 cache->ofs = ofs;
                 cache->tex = tex;

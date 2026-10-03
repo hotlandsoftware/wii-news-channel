@@ -71,6 +71,8 @@ struct Globe {
 };
 extern "C" Globe* lbl_8035775C;
 
+void DrawScreenFade(s32 alpha);
+
 extern "C" {
 Layout* fn_80047B50(void* mem, u32 arc, const char* name, void* resAccessor, u32 arg);
 void fn_80047DE8(Layout* layout, s32 flags);
@@ -139,7 +141,6 @@ void fn_8003519C(bool zoomIn, bool zoomOut);
 BOOL fn_8003567C(ut::Rect* out, f32 x, f32 y, f32 zoom);
 BOOL fn_80035764(ut::Rect* out);
 void fn_80035A3C(const ut::Rect* text, const ut::Rect* select, f32 alpha);
-void fn_80035CD0(s32 alpha);
 void fn_800360EC(const ut::Rect* rect, u8 alpha, f32 z);
 void fn_80036328(u8 alpha, u32 y);
 void fn_8003633C(s32 arg);
@@ -1768,7 +1769,7 @@ void SlideShow::DrawPictures() {
 
 void SlideShow::DrawSelection() {
     f32 t = math::SinFIdx(FIdxRad(1.5707964f * (mMessageFade / 15.0f)));
-    fn_80035CD0(255.0f * t);
+    DrawScreenFade(255.0f * t);
     ut::Rect text(0.0f, 0.0f, 0.0f, 0.0f);
     ut::Rect select(0.0f, 0.0f, 0.0f, 0.0f);
     if (fn_8003567C(&text, mText.left, mTextOfs + (mText.top + mScroll),

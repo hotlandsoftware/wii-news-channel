@@ -24,6 +24,7 @@ VIRetraceCallback VISetPreRetraceCallback(VIRetraceCallback);
 VIRetraceCallback VISetPostRetraceCallback(VIRetraceCallback);
 void VISetBlack(BOOL);
 u32 VIGetRetraceCount(void);
+u32 VIGetNextField(void);
 u32 VIGetCurrentLine(void);
 u32 VIGetTvFormat(void);
 u32 VIGetScanMode(void);

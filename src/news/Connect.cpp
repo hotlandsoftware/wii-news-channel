@@ -40,13 +40,14 @@ extern DownloadTask lbl_8020CEB8[8];
 extern u8 lbl_80357729;
 extern u32 lbl_80357688;          // pointer button hold
 
+void AdvanceLoadingFrame();
+void DrawLoadingScreen();
+void DrawScreenFade(s32 alpha);
+void OnExitRequested();
+
 extern "C" {
 void* fn_80040994(u32 size, s32 align);
 void fn_800409EC(void* p);
-void fn_80031BC8();
-void fn_80031BE0();
-void fn_80035CD0(s32 alpha);
-void fn_800365C0();
 void fn_80040778(s32 chan, s32 arg1, s32 arg2);
 s32 fn_80040C0C(MEMHeapHandle heap, u32 arg, NewsHeader** files, u32* arg3, u32* sizes,
                 const char* url, u32 arg6);
@@ -191,7 +192,7 @@ void Connect::Reset(s32 country, s32 language) {
 }
 
 void Connect::Update() {
-    fn_80031BC8();
+    AdvanceLoadingFrame();
     fn_80047F70(mLayout);
     fn_80047F70(mErrorLayout);
 
@@ -452,7 +453,7 @@ void Connect::Update() {
         break;
     case STATE_RETURN:
         if (++mTimer >= 30) {
-            fn_800365C0();
+            OnExitRequested();
         }
         break;
     case STATE_DONE:
@@ -556,7 +557,7 @@ static inline f32 EaseSin(f32 t) {
 }
 
 void Connect::Draw() {
-    fn_80031BE0();
+    DrawLoadingScreen();
     switch (mState) {
     case STATE_WAIT:
     case STATE_FADE_TO_ERROR:
@@ -574,7 +575,7 @@ void Connect::Draw() {
                 DrawProgress(a * mAlpha);
             }
             f32 t = EaseSin(mTipsOpen / 20.0f);
-            fn_80035CD0(192.0f * t);
+            DrawScreenFade(192.0f * t);
             f32 mx = mMascot->mX;
             f32 my = mMascot->mY;
             s32 width = GetScreenWidth();

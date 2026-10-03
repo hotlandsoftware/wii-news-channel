@@ -16,8 +16,9 @@ using namespace nw4r;
 // Not yet decompiled: data in other files.
 extern u8 lbl_801EE270[];             // layout resource accessor
 extern const wchar_t* lbl_801B26BC[]; // per-language message
+void OnExitRequested();
+
 extern "C" {
-void fn_800365C0();
 void fn_80048C80(Fader* fader, s32 frames); // fade in
 void fn_80048D20(Fader* fader, s32 frames); // fade out
 u32 fn_80044F08(); // current time in minutes
@@ -269,7 +270,7 @@ void SaveErrorDialog::Update() {
         break;
     case STATE_WAIT_RETURN:
         if (++mTimer >= 30) {
-            fn_800365C0();
+            OnExitRequested();
             mState = STATE_DONE;
         }
         break;

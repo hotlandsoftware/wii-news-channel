@@ -169,6 +169,7 @@ public:
     bool mEmpty;                               // at 0x188
     u32 mNumCategories;                            // at 0x18C
     s32 mLogoCount[NEWS_FILE_MAX];             // at 0x190
+    u32 unk1F0;                                // at 0x1F0
 };
 
 extern NewsData* gNewsData;

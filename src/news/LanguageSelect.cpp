@@ -13,7 +13,7 @@ using namespace nw4r;
 // Not yet decompiled: layouts, input and globals in other files.
 extern u8 lbl_801EE270[];          // layout resource accessor
 extern const wchar_t* lbl_801B26BC[]; // language names
-extern u8 lbl_8035698C;            // selected language
+extern u8 gSelectedNewsLanguage;            // selected language
 extern s32 lbl_80357598;
 extern u32 lbl_80357688;           // pointer button hold
 extern u32 lbl_80357698;           // D-pad trigger
@@ -365,7 +365,7 @@ void LanguageSelect::StateConfirm(Item* item) {
             }
             break;
         case 2:
-            lbl_8035698C = mSelected->language;
+            gSelectedNewsLanguage = mSelected->language;
             lbl_80357598 = 0;
             ChangeState(&LanguageSelect::StateIdle);
             break;

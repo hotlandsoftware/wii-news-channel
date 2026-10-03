@@ -72,6 +72,8 @@ struct LayoutScroll {
     s32 mPos;   // at 0x420
 };
 
+void DrawScreenFade(s32 alpha);
+
 extern "C" {
 Layout* fn_80047B50(void* mem, u32 arc, const char* name, void* resAccessor, u32 arg);
 void fn_80047DE8(Layout* layout, s32 flags);
@@ -90,7 +92,6 @@ f32 fn_80035188(s32 zoom);
 void fn_8001F730(nw4r::lyt::Pane* pane, const nw4r::ut::Color& color);
 void fn_8000E180(RelatedItem* item, ut::TextWriterBase<wchar_t>* writer);
 void fn_80033FFC(math::VEC2* pos, s32 arg1, s32 arg2, f32 arg3, f32 scale);
-void fn_80035CD0(s32 alpha);
 BOOL fn_8003567C(ut::Rect* rect, f32 x, f32 y, f32 scale);
 BOOL fn_80035764(ut::Rect* rect);
 void fn_80035A3C(ut::Rect* r0, ut::Rect* r1, f32 alpha);
@@ -947,7 +948,7 @@ void MainScreen::DrawButtonsGlobe() {
 #pragma auto_inline off
 void MainScreen::DrawCursor() {
     f32 s = math::SinRad(1.5707964f * (mUnk34C / 15.0f));
-    fn_80035CD0(255.0f * s);
+    DrawScreenFade(255.0f * s);
     ut::Rect r0(0.0f, 0.0f, 0.0f, 0.0f);
     ut::Rect r1(0.0f, 0.0f, 0.0f, 0.0f);
     f32 scale = 1.0f + 0.05f * math::SinRad(1.5707964f * (mUnk350 / 8.0f));

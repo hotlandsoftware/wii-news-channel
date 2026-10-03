@@ -570,6 +570,15 @@ config.libs = [
         ],
     },
     {
+        "lib": "news_8002E7DC",
+        "mw_version": "GC/3.0a5.2",
+        "cflags": cflags_game,
+        "progress_category": "game",
+        "objects": [
+            Object(NonMatching, "news/d_s_news.cpp", extra_cflags=["-inline auto", "-ipa file"]),
+        ],
+    },
+    {
         "lib": "nw4r_ut",
         "mw_version": "GC/3.0a5.2",
         "cflags": cflags_nw4r_ut,
