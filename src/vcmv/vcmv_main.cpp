@@ -802,7 +802,7 @@ void VCMVUnloadLibrary(void) {
 BOOL vcmvCheckWideScreen(void) {
     vcmvLoadSettings();
     if (vcmvAspectRatio && vcmvSettingsData.unk5) {
-        vcmvAspectScale = 4.0f / 3.0f;
+        vcmvAspectScale = 1.333333f;
         return TRUE;
     }
     vcmvAspectScale = 1.0f;
