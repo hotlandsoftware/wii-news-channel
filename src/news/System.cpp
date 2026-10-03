@@ -814,13 +814,15 @@ const char* GetLanguageSuffix() {
 
 void* LoadContentFile(u32 archive, const char* name, s32 align, u32* size, MEMHeapHandle heap) {
     CNTFileInfo info;
+    s32 read;
+    u32 len;
     void* result = NULL;
     u32 resultSize = 0;
     if (contentOpenNAND(&gContentHandles[archive], name, &info) == 0) {
-        u32 len = ROUND_UP(contentGetLengthNAND(&info), 32);
+        len = ROUND_UP(contentGetLengthNAND(&info), 32);
         void* buf = MEMAllocFromExpHeapEx(heap, len, align);
         if (buf) {
-            s32 read = contentReadNAND(&info, buf, len, 0);
+            read = contentReadNAND(&info, buf, len, 0);
             contentCloseNAND(&info);
             if (read == 0) {
                 MEMFreeToExpHeap(heap, buf);
@@ -838,11 +840,13 @@ void* LoadContentFile(u32 archive, const char* name, s32 align, u32* size, MEMHe
 
 void* LoadArcFile(u32 archive, const char* name, s32 align, u32* size, MEMHeapHandle heap) {
     void* result = NULL;
+    void* comp;
+    void* buf;
     u32 resultSize = 0;
-    void* comp = LoadContentFile(archive, name, -align, NULL, heap);
+    comp = LoadContentFile(archive, name, -align, NULL, heap);
     if (comp) {
         resultSize = CXGetUncompressedSize(comp);
-        void* buf = MEMAllocFromExpHeapEx(heap, resultSize, align);
+        buf = MEMAllocFromExpHeapEx(heap, resultSize, align);
         if (buf) {
             switch (*(u8*)comp & 0xF0) {
             case 0x10:
