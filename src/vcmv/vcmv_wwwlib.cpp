@@ -29,21 +29,21 @@ typedef struct vcmvLZState {
 static void vcmvUnlinkedFunction(void);
 
 // Function pointers into the WWW library, filled in from its exports
-void* WWWSurfaceInit;
+s32 (*WWWSurfaceInit)(int width, int height, int stride, int format, void* buffer);
 void* WWWSurfaceNewScreen;
 void* WWWSurfaceDeleteScreen;
 void* WWWSurfaceResize;
-void* WWWSurfaceShutdown;
-void* WWWSurfaceSetFlushCallback;
+void (*WWWSurfaceShutdown)(void);
+s32 (*WWWSurfaceSetFlushCallback)(void (*callback)(void), int arg);
 void* WWWSurfaceInvalidate;
 void* WWWSurfaceUpdateScreen;
 void* WWWSurfaceLockArea;
 void* WWWSurfaceUnlockArea;
-void* WWWSurfaceMouseEvt;
-void* WWWSurfaceWheelEvt;
+void (*WWWSurfaceMouseEvt)(int type, int x, int y, int button, int arg4, int arg5);
+void (*WWWSurfaceWheelEvt)(int type, int x, int y, int delta, int arg4);
 void* WWWSurfaceKeyboardEvt;
 void (*WWWSurfaceAddFont)(const char* name);
-void* WWWCreateBrowser;
+s32 (*WWWCreateBrowser)(void** browser, void (*callback)(void), const char** fonts, const char* path);
 void* WWWTerminateBrowser;
 void* WWWRunSlice;
 void* WWWCreateBrowserWindow;
@@ -61,7 +61,7 @@ void* WWWPostUrl;
 void* WWWOpenUrl;
 void* WWWGetHistoryCount;
 void* WWWNextPage;
-void* WWWPrevPage;
+void (*WWWPrevPage)(void* window);
 void* WWWMoveInHistory;
 void* WWWStop;
 void* WWWReload;
@@ -107,9 +107,9 @@ void* WWWResetNavigation;
 void* WWWClearHighlight;
 void* WWWSetHighlight;
 void* WWWGetActiveLinkType;
-void* WWWGetBrowserAllocationFunctions;
-void* WWWShutdownBrowserAllocationFunctions;
-void* WWWSetAllocationFunctions;
+void (*WWWGetBrowserAllocationFunctions)(void* heap, u32 size, void** pAlloc, void** pRealloc, void** pFree);
+void (*WWWShutdownBrowserAllocationFunctions)(void);
+void (*WWWSetAllocationFunctions)(void* alloc0, void* realloc0, void* free0, void* alloc1, void* realloc1, void* alloc2, void* realloc2);
 void* WWWHTTPCreateHttpLib;
 void* WWWHTTPTerminateHttpLib;
 void* WWWHTTPSessionRunSlice;
@@ -140,7 +140,7 @@ void* WWWProtocolWrite;
 void* WWWProtocolSetMimeType;
 void* WWWProtocolFinished;
 void* WWWProtocolFailed;
-void* WWWAddProtocol;
+void (*WWWAddProtocol)(const char* name);
 
 static RSOExportFuncTable sImportTable[] = {
     {"WWWSurfaceInit", (u32*)&WWWSurfaceInit},
@@ -292,8 +292,9 @@ void vcmvAddFonts(void) {
 }
 
 static s32 vcmvCreateParentDirs(vcmvSaveFile* file) {
-    s32 i;
-    for (i = strlen(file->path) - 1; i >= 0; i--) {
+    s32 i = strlen(file->path);
+    while (i != 0) {
+        i--;
         if (file->path[i] == '/') {
             s32 result;
             file->path[i] = '\0';
@@ -594,7 +595,7 @@ static s32 vcmvLoadFonts(void) {
 s32 vcmvLoadWWWLib(void) {
     s32 result;
 
-    vcmvSettingsDirty = FALSE;
+    vcmvPluginsRegistered = FALSE;
     if (sFirstLoad) {
         BOOL ok;
         vcmvSaveFile* file;
@@ -638,8 +639,9 @@ void vcmvUnloadWWWLib(void) {
         if (sModule->mEpilog != 0) {
             ((void (*)(void))sModule->mEpilog)();
         }
-        for (i = 0; i < sizeof(sImportTable) / sizeof(sImportTable[0]); i++) {
-            *sImportTable[i].symbol_ptr = (u32)vcmvUnlinkedFunction;
+        RSOExportFuncTable* imp = sImportTable;
+        for (i = 0; i < sizeof(sImportTable) / sizeof(sImportTable[0]); i++, imp++) {
+            *imp->symbol_ptr = (u32)vcmvUnlinkedFunction;
         }
         vcmvFree(&sModuleBss);
     }
