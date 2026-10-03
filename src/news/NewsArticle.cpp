@@ -9,21 +9,18 @@ extern MEMAllocator gNewsAllocator; // general allocator
 extern MEMAllocator gPictureAllocator; // picture allocator
 extern s32 gBlinkPhase;
 
-// operator new(size_t, MEMAllocator*) and operator new[](size_t, MEMAllocator*) (System.cpp).
-// Called through inline wrappers: calling the operators directly changes the register
-// allocation of NewsData::GetPicture.
+// operator new(size_t, MEMAllocator*) (System.cpp) is called through an inline wrapper:
+// calling the operator directly changes the register allocation of NewsData::GetPicture.
+// operator new[](size_t, MEMAllocator*) is called directly.
 extern "C" {
 void* __nw__FUlP12MEMAllocator(size_t size, MEMAllocator* allocator);
-void* __nwa__FUlP12MEMAllocator(size_t size, MEMAllocator* allocator);
 }
 
 inline void* operator new(size_t size, MEMAllocator* allocator) {
     return __nw__FUlP12MEMAllocator(size, allocator);
 }
 
-inline void* operator new[](size_t size, MEMAllocator* allocator) {
-    return __nwa__FUlP12MEMAllocator(size, allocator);
-}
+void* operator new[](size_t size, MEMAllocator* allocator);
 
 static const u32 sIconLocal[4][2] = {
     {67, 67},
@@ -38,6 +35,18 @@ static const u32 sIcon[4][2] = {
     {79, 77},
     {78, 78},
 };
+
+static inline BOOL HasLocation(NewsHeader* file, u32 idx) {
+    return idx < file->numLocations && file->locationsOfs != 0;
+}
+
+static inline bool HasLocation2(u32 idx, NewsHeader* file) {
+    return idx < file->numLocations && file->locationsOfs != 0;
+}
+
+static inline bool IsValidIdx(u32 idx, u32 num) {
+    return idx < num;
+}
 
 NewsArticle::NewsArticle(NewsHeader* file, NewsEntryRec* entry, u32 topic, u32 index, BOOL isCurrent) {
     mPrevSame = NULL;
@@ -318,7 +327,7 @@ s32 NewsData::Init(NewsHeader** files, s32 current) {
 
     // Link articles that appear in several topics.
     topic = mCategories;
-    for (u32 i = 0; i < mNumCategories; i++, topic++) {
+    for (s32 i = 0; i < mNumCategories; topic++, i++) {
         slot = topic->mArticles;
         for (j = 0; j < topic->mNumArticles; j++, slot++) {
             same = FindArticle((*slot)->mText, i, j + 1);

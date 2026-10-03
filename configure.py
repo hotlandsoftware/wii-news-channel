@@ -537,7 +537,7 @@ config.libs = [
         "cflags": cflags_game,
         "progress_category": "game",
         "objects": [
-            Object(NonMatching, "news/Mascot.cpp"),
+            Object(Matching, "news/Mascot.cpp"),
             Object(NonMatching, "news/NewsArticle.cpp"),
             Object(Matching, "news/LanguageSelect.cpp"),
             Object(Matching, "news/TextButton.cpp"),
@@ -550,7 +550,7 @@ config.libs = [
             Object(Matching, "news/LayoutScreen.cpp", extra_cflags=["-inline auto", "-ipa file"]),
             Object(Matching, "news/Camera.cpp"),
             Object(Matching, "news/Locale.cpp"),
-            Object(NonMatching, "news/PointerEffect.cpp"),
+            Object(Matching, "news/PointerEffect.cpp"),
             Object(Matching, "news/ErrorScreen.cpp"),
             Object(NonMatching, "news/Model.cpp"),
             Object(Matching, "news/main.cpp"),

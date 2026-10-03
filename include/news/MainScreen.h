@@ -6,6 +6,7 @@
 #include <nw4r/ut/ut_Rect.h>
 #include <nw4r/ut/ut_TextWriterBase.h>
 #include <news/HeadlineList.h>
+#include <news/d_s_news.h>
 #include <news/TextButton.h>
 #include <news/Scroller.h>
 
@@ -82,7 +83,6 @@ extern HeadlineList* lbl_8035755C; // headline list being shown
 extern u32 lbl_803575E0;           // number of news sections
 extern Globe* gGlobe;
 
-extern "C" void fn_800323F8(nw4r::math::VEC2* pos, f32 scale, f32 alpha);
 
 // Base of MainScreen (not yet decompiled, 0x800493A8): the text writer and the
 // screen area.
@@ -203,7 +203,7 @@ public:
     void SetLocation(NewsArticle* article);
 
     void DrawButtonsInline() {
-        fn_800323F8(&mUnk164, mUnk23C, mUnk240);
+        HeadlineList_Draw(mUnk164.x, mUnk23C, mUnk240);
         if (lbl_8035755C != NULL && lbl_8035755C->mMode != 2) {
             s32 i;
             s32 count = lbl_803575E0 - 1;

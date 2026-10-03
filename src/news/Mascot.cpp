@@ -20,10 +20,10 @@ inline void Mascot::Init() {
     mTimer = time;
     f32 offset = time * sWalkInSpeed;
     f32 center = 250.0f + 0.5f * GetScreenWidth();
-    mX = offset + center;
     mY = 88.0f;
-    mSpeed = sWalkInSpeed;
+    mX = offset + center;
     mFlip = 0;
+    mSpeed = sWalkInSpeed;
     mDirection = 0;
     mAnimId = 0;
     mAnimTime = 0.0f;

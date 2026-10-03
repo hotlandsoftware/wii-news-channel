@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Random local search over semantics-preserving source edits of one C function.
 
-Usage: srcsearch.py <src> <function>[=<symbol>] [iterations] [--restarts N]
+Usage: srcsearch.py <src> <function>[=<symbol>] [iterations] [--restarts N] [--symbol|--sym MANGLED]
 
-For C++ give the name as written in the source and the mangled symbol, e.g.
-PitchUp=PitchUp__7FxVoiceFPPl.
+For C++ give the name as written in the source and the mangled symbol, either as
+PitchUp=PitchUp__7FxVoiceFPPl or with --symbol/--sym (e.g. GetPicture
+--sym GetPicture__8NewsDataFP14NewsTextBuffer).
 
 <src> is a path like src/revolution/TMCC_JPEG/jpgd_dec.c. The unit is derived from it.
 Each candidate is compiled directly with the unit's ninja compile command (ninja itself is
@@ -228,10 +229,11 @@ def main():
     ap.add_argument("func")
     ap.add_argument("iterations", nargs="?", type=int, default=300)
     ap.add_argument("--restarts", type=int, default=0)
-    ap.add_argument("--symbol", help="symbol name to score (mangled C++ name); default: func")
+    ap.add_argument("--symbol", "--sym", dest="symbol",
+                    help="symbol name to score (C++: the mangled name); default: func")
     a = ap.parse_args()
     src, func, iters, restarts = a.src, a.func, a.iterations, a.restarts
-    # C++: "SourceName=MangledSymbol", e.g. "PitchUp=PitchUp__7FxVoiceFPPl", or --symbol
+    # C++: "SourceName=MangledSymbol", e.g. "PitchUp=PitchUp__7FxVoiceFPPl", or --symbol/--sym
     sym = a.symbol or func
     if "=" in func:
         func, sym = func.split("=", 1)

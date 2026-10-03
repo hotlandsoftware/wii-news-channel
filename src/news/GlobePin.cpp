@@ -85,7 +85,7 @@ GlobePin::GlobePin(s32 arg1, s32 arg2, NewsArticle* article, f32 radius)
     math::VEC3 right;
     math::VEC3 up;
     math::VEC3 dir;
-    Vec pos = GetPos();
+    Vec pos = GlobePoint::GetPos();
     Mtx mtx;
     PSVECNormalize(&pos, &dir);
     if (0.0f == dir.x && 0.0f == dir.z) {
@@ -149,8 +149,8 @@ void GlobePin::Draw(u8 alpha) {
                 f32 w = halfW * scale;
                 f32 h = halfH * scale;
                 color.a = ripple->mAlpha;
-                pos.x = GetScreenPos().x - w;
-                pos.y = GetScreenPos().y - h;
+                pos.x = GetPos().x - w;
+                pos.y = GetPos().y - h;
                 GXSetTevColor(GX_TEVREG0, color);
                 GXSetTevColor(GX_TEVREG1, sRippleColor);
                 Draw2D_Tex(gCommonTpl, 0x52, &pos, scale, scale);
@@ -159,6 +159,10 @@ void GlobePin::Draw(u8 alpha) {
     } else {
         DrawCards(alpha);
     }
+}
+
+math::VEC2 GlobePin::GetPos() {
+    return mScreenPos;
 }
 
 static inline void SetTevColorAlpha(GXTevRegID reg, u8 a) {
@@ -445,7 +449,7 @@ void GlobePin::Update(Camera* camera) {
     mHover[2] = false;
     mHover[3] = false;
     CalcScreenPos(camera);
-    math::VEC3 pos = GetPos();
+    math::VEC3 pos = GlobePoint::GetPos();
     f32 minY = 63.0f;
     f32 maxY = 393.0f;
     math::VEC3 dir = camera->mDir;
@@ -458,7 +462,7 @@ void GlobePin::Update(Camera* camera) {
                 if (IsPointerValid(i)) {
                     math::VEC2 cursor(gCursorX[i][0], gCursorY[i][0]);
                     if (cursor.y > minY && cursor.y < maxY) {
-                        math::VEC2 screen = GetScreenPos();
+                        math::VEC2 screen = GetPos();
     f32 maxDist = 35.0f;
                         math::VEC2 d;
                         d.x = cursor.x - screen.x;
@@ -585,8 +589,8 @@ void GlobePin::UpdateCards(f32 alpha) {
             a = 255;
         }
     }
-    mLabelHidden = false;
     mLabelAlpha = a * alpha;
+    mLabelHidden = false;
 }
 
 void GlobePin::StateHidden() {

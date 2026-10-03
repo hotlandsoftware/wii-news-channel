@@ -118,8 +118,7 @@ void PointerEffect::Calc() {
                 f32 y = gCursorY[i][0];
                 f32 x = gCursorX[i][0];
                 f32 sy = 456.0f - y - 3.0f - dy;
-                f32 sx = dx + (3.0f + x);
-                SetEffectPos(effect, sx, sy);
+                SetEffectPos(effect, dx + (3.0f + x), sy);
             }
 
             if (mState[i] == STATE_OPEN_SPIN) {

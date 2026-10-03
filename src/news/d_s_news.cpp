@@ -7,6 +7,7 @@
 #define gSeparatorColor gSeparatorColor_GXColor
 #include <news/Fader.h>
 #include <news/System.h>
+#include <news/d_s_news.h>
 #include <news/ArticleText.h>
 #include <news/Scene.h>
 #include <news/Camera.h>
@@ -2352,23 +2353,24 @@ void Article_ArrangeHeadline(f32 scale) {
 
 static inline f32 GetIconScale() {
     f32 scale = 1.0f;
-    switch (sSourceIconType) {
-    case 0:
+    if (sSourceIconType != 0) {
+        switch (sSourceIconType) {
+        case 3:
+        case 4:
+        case 5:
+        case 6:
+            scale = 0.5f;
+            break;
+        }
+    } else {
         scale = 0.5f;
-        break;
-    case 3:
-    case 4:
-    case 5:
-    case 6:
-        scale = 0.5f;
-        break;
     }
     return scale;
 }
 
 static inline f32 GetLogoHeight() {
     f32 h;
-    f32 height = 4.0f;
+    f32 height = 30.0f;
     if ((u32)(sSourceLayout - 3) <= 3) {
         h = 0.0f;
         if (sSourceIconType == 0) {
@@ -2382,19 +2384,7 @@ static inline f32 GetLogoHeight() {
             }
         }
         if (h > 0.0f) {
-            f32 scale = 1.0f;
-            switch (sSourceIconType) {
-            case 0:
-                scale = 0.5f;
-                break;
-            case 3:
-            case 4:
-            case 5:
-            case 6:
-                scale = 0.5f;
-                break;
-            }
-            height = 20.0f + h * scale;
+            height = 20.0f + h * GetIconScale();
         }
     }
     return height;
@@ -2533,18 +2523,24 @@ void Article_DrawSourceAndDate(const math::VEC2& pos, s32 alpha) {
     }
 }
 
+static inline f32 GetBodyCharWidth() {
+    f32 w = sBodyView->mFont->GetWidth();
+    return w * gTextScale;
+}
+
 void Article_DrawSourceIcon(const math::VEC2& pos, BOOL right, f32 alpha) {
     u32 index = GetSourceIconIndex();
     f32 scale = gTextScale * GetIconScale();
     if (index != -1) {
         ut::Color color(255, 255, 255, 255.0f * alpha);
-        f32 w = scale * TPL_GetWidth(gCommonTpl, index);
-        f32 y = (pos.y - scale * TPL_GetHeight(gCommonTpl, index)) - 5.0f;
+        f32 y;
         f32 x;
+        f32 w = scale * TPL_GetWidth(gCommonTpl, index);
+        y = (pos.y - scale * TPL_GetHeight(gCommonTpl, index)) - 5.0f;
         if (right) {
             x = (sArticleSize.x - 10.0f) - w;
         } else {
-            x = 0.5f * (sBodyView->mFont->GetWidth() * gTextScale);
+            x = 0.5f * GetBodyCharWidth();
         }
         math::VEC3 p(pos.x + x, y, 0.0f);
         SetupTexGX();
@@ -2560,13 +2556,14 @@ void Article_DrawSourceLogo(const math::VEC2& pos, BOOL right, f32 alpha) {
         ut::Color color(255, 255, 255, 255.0f * alpha);
         f32 lw = logo->width;
         f32 lh = logo->height;
-        f32 y = (pos.y - scale * lh) - 5.0f;
         f32 w = scale * lw;
+        f32 h = scale * lh;
+        f32 y = (pos.y - h) - 5.0f;
         f32 x;
         if (right) {
             x = (sArticleSize.x - 10.0f) - w;
         } else {
-            x = 0.5f * (sBodyView->mFont->GetWidth() * gTextScale);
+            x = 0.5f * GetBodyCharWidth();
         }
         math::VEC3 p(pos.x + x, y, 0.0f);
         SetupTexGX();
@@ -2603,15 +2600,16 @@ bool Article_IsBodyScrolling() {
 }
 
 f32 Article_GetScrollOffset() {
-    f32 y = 0.0f;
     s32 headlineLines = lbl_80357568->mNumLines;
     s32 bodyStart = headlineLines + 1;
     s32 creditStart = bodyStart + sBodyView->mNumLines;
+    f32 y = 0.0f;
     for (s32 i = 0; i < sScrollLine; i++) {
         if (i < headlineLines) {
             y += lbl_80357568->mLineHeight;
         } else if (i < bodyStart) {
-            y += GetLogoHeight() * gTextScale;
+            f32 h = GetLogoHeight();
+            y += h * gTextScale;
         } else if (i < creditStart) {
             y += sBodyView->mLineHeight;
         } else {
@@ -2725,20 +2723,21 @@ f32 Article_GetMaxScrollOffset() {
               sLinesPerPage[lbl_80356970];
     f32 line = max & ~(max >> 31);
     if (line > creditStart) {
+        f32 h = GetLogoHeight();
         return -(sBodyView->mLineHeight * sBodyView->mNumLines +
-                 (lbl_80357568->mLineHeight * lbl_80357568->mNumLines +
-                  GetLogoHeight() * gTextScale) +
+                 (lbl_80357568->mLineHeight * lbl_80357568->mNumLines + h * gTextScale) +
                  (line - creditStart) * sCreditView->mLineHeight);
     }
     if (line > bodyStart) {
-        return -(lbl_80357568->mLineHeight * lbl_80357568->mNumLines +
-                 GetLogoHeight() * gTextScale + (line - bodyStart) * sBodyView->mLineHeight);
+        f32 h = GetLogoHeight();
+        return -(lbl_80357568->mLineHeight * lbl_80357568->mNumLines + h * gTextScale +
+                 (line - bodyStart) * sBodyView->mLineHeight);
     }
     if (line > headlineLines) {
-        return -(lbl_80357568->mLineHeight * lbl_80357568->mNumLines +
-                 GetLogoHeight() * gTextScale);
+        f32 h = GetLogoHeight();
+        return -(lbl_80357568->mLineHeight * lbl_80357568->mNumLines + h * gTextScale);
     }
-    return -(line * (lbl_80357568->mLineHeight * headlineLines));
+    return -(line * (headlineLines * lbl_80357568->mLineHeight));
 }
 
 void Article_SetHeight(f32 width) {
@@ -2755,19 +2754,20 @@ void Article_ClampScroll() {
     }
 }
 
-void Article_ScrollTo(f32 offset, f32 dir) {
-    s32 line = 0;
+f32 Article_ScrollTo(f32 offset, f32 dir) {
     s32 headlineLines = lbl_80357568->mNumLines;
     s32 bodyLines = sBodyView->mNumLines;
     f32 y = 0.0f;
     s32 bodyStart = headlineLines + 1;
     s32 total = headlineLines + bodyLines + sCreditView->mNumLines + 1;
     s32 creditStart = bodyStart + bodyLines;
+    s32 line = 0;
     for (; line < total; line++) {
         if (line < headlineLines) {
             y -= lbl_80357568->mLineHeight;
         } else if (line < bodyStart) {
-            y -= GetLogoHeight() * gTextScale;
+            f32 h = GetLogoHeight();
+            y -= h * gTextScale;
         } else if (line < creditStart) {
             y -= sBodyView->mLineHeight;
         } else {
@@ -2781,7 +2781,7 @@ void Article_ScrollTo(f32 offset, f32 dir) {
         line++;
     }
     sScrollLine = line;
-    Article_GetScrollOffset();
+    return Article_GetScrollOffset();
 }
 
 BOOL Article_HitTest(const ut::Rect* rect) {
@@ -2823,8 +2823,8 @@ f32 GetTextScale(s32 size) {
 
 #include <news/MathUtil.h>
 
-BOOL UpdateTextSize(BOOL up, BOOL down) {
-    BOOL changed = FALSE;
+bool UpdateTextSize(BOOL up, BOOL down) {
+    bool changed = false;
     s32 se[10] = {0x2C, 0x2D, 0x2E, 0x2F, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35};
     s32 prev = lbl_80356970;
     if (up) {
@@ -2838,7 +2838,7 @@ BOOL UpdateTextSize(BOOL up, BOOL down) {
     }
     if (prev != lbl_80356970) {
         PlaySE(se[lbl_80356970]);
-        changed = TRUE;
+        changed = true;
     }
     Ease(&gTextScale, lbl_801922D0[lbl_80356970], 0.12f, 1.0f, 0.01f);
     return changed;
