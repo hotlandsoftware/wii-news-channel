@@ -589,8 +589,8 @@ void GlobePin::UpdateCards(f32 alpha) {
             a = 255;
         }
     }
-    mLabelHidden = false;
     mLabelAlpha = a * alpha;
+    mLabelHidden = false;
 }
 
 void GlobePin::StateHidden() {

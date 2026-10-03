@@ -10,7 +10,6 @@ extern s32 gBlinkPhase;
 
 extern "C" {
 void* fn_80040A28(size_t size, MEMAllocator* allocator);
-void* fn_80040A48(size_t size, MEMAllocator* allocator);
 void fn_8004E748(void* decoder);
 void fn_8004E754(void* decoder, s32 flags);
 NewsTexture* fn_8004E794(void* decoder, const void* data, u32 size, MEMAllocator* allocator);
@@ -20,9 +19,7 @@ inline void* operator new(size_t size, MEMAllocator* allocator) {
     return fn_80040A28(size, allocator);
 }
 
-inline void* operator new[](size_t size, MEMAllocator* allocator) {
-    return fn_80040A48(size, allocator);
-}
+void* operator new[](size_t size, MEMAllocator* allocator);
 
 class JPEGDecoder {
 public:
