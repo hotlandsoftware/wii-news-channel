@@ -1299,22 +1299,23 @@ void MainScreen::ModeWait() {
     }
 }
 
-inline bool MainScreen::IsSelectable() {
+BOOL MainScreen::CheckSelect() {
+    bool selectable = false;
     bool noInput = false;
     if (!mZoomInPressed && !mUpPressed && !mZoomOutPressed && !mBackPressed && !mDownPressed &&
         !mSlidePressed)
     {
         noInput = true;
     }
-    return noInput && IsState(&MainScreen::StateList);
-}
-
-BOOL MainScreen::CheckSelect() {
-    if (IsSelectable() && lbl_8035755C != NULL) {
-        s32 sel = lbl_8035755C->mSelected;
-        if (sel >= 0) {
-            mSelected = sel;
-            Ticker* ticker = GetListItem(lbl_8035755C, sel);
+    if (noInput) {
+        if (IsState(&MainScreen::StateList)) {
+            selectable = true;
+        }
+    }
+    if (selectable && lbl_8035755C != NULL) {
+        if (lbl_8035755C->mSelected >= 0) {
+            mSelected = lbl_8035755C->mSelected;
+            Ticker* ticker = GetListItem(lbl_8035755C, mSelected);
             if (ticker != NULL) {
                 u8 flags = ticker->mArticle->mFlags;
                 if ((flags & 2) && !(flags & 1)) {

@@ -186,7 +186,6 @@ public:
     void Sub1D594();
     void Sub1DC30();
     void Globe1DF3C();
-    bool IsSelectable();
     void SetLocation(NewsArticle* article);
 
     f32 GetRowHeight() const { return mUnk24C * mUnk250; }
