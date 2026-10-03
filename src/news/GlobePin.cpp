@@ -462,7 +462,7 @@ void GlobePin::Update(Camera* camera) {
                 if (IsPointerValid(i)) {
                     math::VEC2 cursor(gCursorX[i][0], gCursorY[i][0]);
                     if (cursor.y > minY && cursor.y < maxY) {
-                        math::VEC2 screen = GetScreenPos();
+                        math::VEC2 screen = GetPos();
     f32 maxDist = 35.0f;
                         math::VEC2 d;
                         d.x = cursor.x - screen.x;
