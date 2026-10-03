@@ -72,6 +72,11 @@ s32 NCDGetLinkStatus(void) {
     return result;
 }
 
+// Reading the flags through an inline keeps the config pointer in r4 and the flags in r5.
+static inline u8 GetEntryFlags(NCDiConfigEntry* entry) {
+    return entry->flags;
+}
+
 s32 NCDiGetEnabledConfigList(u32* pEnabled, u32* pWireless, u32* pWired) {
     s32 result;
     u32 enabled = 0;
@@ -86,8 +91,8 @@ s32 NCDiGetEnabledConfigList(u32* pEnabled, u32* pWireless, u32* pWired) {
         for (i = 0; i < NCD_CONFIG_COUNT; i++) {
             NCDiConfigEntry* entry = &ncdConfig->entries[i];
 
-            if (entry->flags & 0x80) {
-                if (entry->flags & 1) {
+            if (GetEntryFlags(entry) & 0x80) {
+                if (GetEntryFlags(entry) & 1) {
                     enabled |= 1 << i;
                 } else {
                     if (entry->type != 1) {

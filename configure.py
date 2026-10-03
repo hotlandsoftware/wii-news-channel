@@ -1075,7 +1075,7 @@ config.libs = [
         "cflags": cflags_rvl,
         "progress_category": "sdk",
         "objects": [
-            Object(NonMatching, "revolution/NCD/ncdsystem.c"),
+            Object(Matching, "revolution/NCD/ncdsystem.c"),
         ],
     },
     {
