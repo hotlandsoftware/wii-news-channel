@@ -37,13 +37,6 @@ extern const wchar_t* gMsgOtherAreasShort[7];
 // Picture shown on the cards of articles without one, per language.
 static const u32 sNoPictureTex[7] = {74, 76, 72, 71, 75, 73, 70};
 
-static inline f32 GetLabelScale(f32 scale) {
-    if (gNewsData->mHeader->language == 0) {
-        return scale * 0.9f;
-    }
-    return scale * 0.75f;
-}
-
 static inline f32 SinIdx(u16 idx) {
     return math::SinFIdx((1.0f / 256.0f) * math::U16ToF32(idx));
 }
@@ -248,11 +241,16 @@ BOOL GlobePin::DrawCards(u8 alpha) {
 
 void GlobePin::DrawLabel() {
     ut::TextWriterBase<wchar_t> writer;
-    f32 t = 0.5f - 0.5f * math::CosFIdx(NW4R_MATH_DEG_TO_FIDX(15.0f * mHoverTime));
+    f32 t = 0.5f - 0.5f * math::CosDeg(15.0f * mHoverTime);
     if (lbl_80357598 == 1) {
         t = 1.0f;
     }
-    f32 scale = GetLabelScale(1.0f);
+    f32 scale = 1.0f;
+    if (gNewsData->mHeader->language == 0) {
+        scale *= 0.9f;
+    } else {
+        scale *= 0.75f;
+    }
     scale *= 1.0f + 0.2f * t;
 
     GlobePin* pin = mNext;
@@ -343,7 +341,12 @@ void GlobePin::DrawLabel() {
 
 void GlobePin::DrawName() {
     ut::TextWriterBase<wchar_t> writer;
-    f32 scale = GetLabelScale(1.1f);
+    f32 scale = 1.1f;
+    if (gNewsData->mHeader->language == 0) {
+        scale *= 0.9f;
+    } else {
+        scale *= 0.75f;
+    }
     writer.SetFont(*lbl_80357748);
     writer.SetDrawFlag(0x11);
     writer.SetScale(scale);
@@ -476,7 +479,7 @@ void GlobePin::UpdateCards(f32 alpha) {
     if (mCount == 0) {
         return;
     }
-    f32 t = 0.5f * (1.0f - math::CosFIdx(NW4R_MATH_DEG_TO_FIDX(15.0f * mHoverTime)));
+    f32 t = 0.5f * (1.0f - math::CosDeg(15.0f * mHoverTime));
     f32 size = 50.0f * (1.0f + 1.3f * t) * zoom;
     math::MTX34 camMtx;
     camera->GetG3dCamera().GetCameraMtx(&camMtx);
