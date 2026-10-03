@@ -1064,23 +1064,23 @@ void MainScreen::ModeMain() {
         }
 
         if (fn_8004DABC(lbl_8035775C)) {
-            mResetButton->mDisabled = false;
+            EnableButton(mResetButton);
         } else {
             DisableButton(mResetButton);
         }
         if (!gNewsData->mEmpty && list != NULL &&
             (list->mMode != HeadlineList::MODE_SECTION || list->mNumItems != 0))
         {
-            mSlideButton->mDisabled = false;
+            EnableButton(mSlideButton);
         } else {
             DisableButton(mSlideButton);
         }
-        mHeadBackButton->mDisabled = false;
+        EnableButton(mHeadBackButton);
 
         if (IsState(&MainScreen::State18770) || IsState(&MainScreen::State195B8)) {
             if (ticker != NULL) {
                 if (article != NULL && article->mLocationName != NULL) {
-                    fn_80048364(mMainLayout, "earth")->mDisabled = false;
+                    EnableButton(fn_80048364(mMainLayout, "earth"));
                 } else {
                     DisableButton(fn_80048364(mMainLayout, "earth"));
                 }
@@ -1089,24 +1089,24 @@ void MainScreen::ModeMain() {
             }
         } else if (IsState(&MainScreen::State1B694) || IsState(&MainScreen::State1BD60)) {
             if (mUnk2FC < mUnk2F8 - sVisibleRows[lbl_80356970]) {
-                mDownButton->mDisabled = false;
+                EnableButton(mDownButton);
             } else {
                 DisableButton(mDownButton);
             }
             if (mUnk2FC != 0) {
-                mUpButton->mDisabled = false;
+                EnableButton(mUpButton);
             } else {
                 DisableButton(mUpButton);
             }
             if (lbl_80356970 <= 0) {
                 DisableButton(mZoomOutButton);
             } else {
-                mZoomOutButton->mDisabled = false;
+                EnableButton(mZoomOutButton);
             }
             if (lbl_80356970 >= 9) {
                 DisableButton(mZoomInButton);
             } else {
-                mZoomInButton->mDisabled = false;
+                EnableButton(mZoomInButton);
             }
             DisableButton(fn_80048364(mMainLayout, "earth"));
         }
@@ -1115,22 +1115,22 @@ void MainScreen::ModeMain() {
             if (globe->mZoom >= 9) {
                 DisableButton(mEarthZoomOutButton);
             } else {
-                mEarthZoomOutButton->mDisabled = false;
+                EnableButton(mEarthZoomOutButton);
             }
             if (globe->mZoom <= 0) {
                 DisableButton(mEarthZoomInButton);
             } else {
-                mEarthZoomInButton->mDisabled = false;
+                EnableButton(mEarthZoomInButton);
             }
             if (globe->mRotation <= 0) {
                 DisableButton(mRotBButton);
             } else {
-                mRotBButton->mDisabled = false;
+                EnableButton(mRotBButton);
             }
             if (globe->mRotation >= 10) {
                 DisableButton(mRotAButton);
             } else {
-                mRotAButton->mDisabled = false;
+                EnableButton(mRotAButton);
             }
         }
 
@@ -1576,12 +1576,12 @@ void MainScreen::State16960(s32* arg) {
         if (lbl_80356970 <= 0) {
             DisableButton(fn_80048364(mHeadLayout, "zoom_out"));
         } else {
-            fn_80048364(mHeadLayout, "zoom_out")->mDisabled = false;
+            EnableButton(fn_80048364(mHeadLayout, "zoom_out"));
         }
         if (lbl_80356970 >= 9) {
             DisableButton(fn_80048364(mHeadLayout, "zoom_in"));
         } else {
-            fn_80048364(mHeadLayout, "zoom_in")->mDisabled = false;
+            EnableButton(fn_80048364(mHeadLayout, "zoom_in"));
         }
         break;
     }
@@ -1682,14 +1682,14 @@ void MainScreen::StateList(s32* arg) {
         lbl_8035697C = true;
         fn_80032464(mUnk14C.x + GetSideMargin());
         UpdateHeadButtons();
-        mHeadBackButton->mDisabled = false;
+        EnableButton(mHeadBackButton);
         if (list != NULL && list->mMode != HeadlineList::MODE_SECTION) {
             SetButtonsEnabled(true);
         }
         if (!gNewsData->mEmpty && list != NULL &&
             (list->mMode != HeadlineList::MODE_SECTION || list->mNumItems != 0))
         {
-            mSlideButton->mDisabled = false;
+            EnableButton(mSlideButton);
         } else {
             DisableButton(mSlideButton);
         }
@@ -1731,12 +1731,12 @@ void MainScreen::StateList(s32* arg) {
                     if (lbl_80356970 <= 0) {
                         DisableButton(mHeadZoomOutButton);
                     } else {
-                        mHeadZoomOutButton->mDisabled = false;
+                        EnableButton(mHeadZoomOutButton);
                     }
                     if (lbl_80356970 >= 9) {
                         DisableButton(mHeadZoomInButton);
                     } else {
-                        mHeadZoomInButton->mDisabled = false;
+                        EnableButton(mHeadZoomInButton);
                     }
                 }
             } else {
@@ -1999,12 +1999,12 @@ void MainScreen::State18770(s32* arg) {
         if (lbl_80356970 <= 0) {
             DisableButton(fn_80048364(mMainLayout, "zoom_out"));
         } else {
-            fn_80048364(mMainLayout, "zoom_out")->mDisabled = false;
+            EnableButton(fn_80048364(mMainLayout, "zoom_out"));
         }
         if (lbl_80356970 >= 9) {
             DisableButton(fn_80048364(mMainLayout, "zoom_in"));
         } else {
-            fn_80048364(mMainLayout, "zoom_in")->mDisabled = false;
+            EnableButton(fn_80048364(mMainLayout, "zoom_in"));
         }
         break;
     default: {
@@ -2236,12 +2236,12 @@ void MainScreen::State195B8(s32* arg) {
         if (lbl_80356970 <= 0) {
             DisableButton(fn_80048364(mMainLayout, "zoom_out"));
         } else {
-            fn_80048364(mMainLayout, "zoom_out")->mDisabled = false;
+            EnableButton(fn_80048364(mMainLayout, "zoom_out"));
         }
         if (lbl_80356970 >= 9) {
             DisableButton(fn_80048364(mMainLayout, "zoom_in"));
         } else {
-            fn_80048364(mMainLayout, "zoom_in")->mDisabled = false;
+            EnableButton(fn_80048364(mMainLayout, "zoom_in"));
         }
         UpdateGlobeCamera();
 
@@ -3004,14 +3004,14 @@ void MainScreen::Func1CAC8() {
             DisableButton(mUpButton);
         } else {
             lbl_803575BA = true;
-            mUpButton->mDisabled = false;
+            EnableButton(mUpButton);
         }
         if (mUnk254 <= min) {
             lbl_803575BB = false;
             DisableButton(mDownButton);
         } else {
             lbl_803575BB = true;
-            mDownButton->mDisabled = false;
+            EnableButton(mDownButton);
         }
         break;
     }
@@ -3085,12 +3085,12 @@ void MainScreen::Sub1D338() {
         if (fn_80034770()) {
             DisableButton(fn_80048364(mMainLayout, "up"));
         } else {
-            fn_80048364(mMainLayout, "up")->mDisabled = false;
+            EnableButton(fn_80048364(mMainLayout, "up"));
         }
         if (fn_80034780()) {
             DisableButton(fn_80048364(mMainLayout, "down"));
         } else {
-            fn_80048364(mMainLayout, "down")->mDisabled = false;
+            EnableButton(fn_80048364(mMainLayout, "down"));
         }
         if (mDownPressed && !fn_80034780()) {
             PlaySE(0x25);
@@ -3173,14 +3173,14 @@ void MainScreen::Sub1D594() {
             DisableButton(mUpButton);
         } else {
             lbl_803575BA = true;
-            mUpButton->mDisabled = false;
+            EnableButton(mUpButton);
         }
         if (mUnk224 <= min) {
             lbl_803575BB = false;
             DisableButton(mDownButton);
         } else {
             lbl_803575BB = true;
-            mDownButton->mDisabled = false;
+            EnableButton(mDownButton);
         }
         break;
     }
@@ -3195,12 +3195,12 @@ void MainScreen::Sub1D9DC() {
         if (fn_800324A0()) {
             DisableButton(mHeadDownButton);
         } else {
-            mHeadDownButton->mDisabled = false;
+            EnableButton(mHeadDownButton);
         }
         if (fn_80032478()) {
             DisableButton(mHeadUpButton);
         } else {
-            mHeadUpButton->mDisabled = false;
+            EnableButton(mHeadUpButton);
         }
         break;
     case -1:
@@ -3236,12 +3236,12 @@ void MainScreen::Sub1D9DC() {
         if (fn_800324A0()) {
             DisableButton(mHeadDownButton);
         } else {
-            mHeadDownButton->mDisabled = false;
+            EnableButton(mHeadDownButton);
         }
         if (fn_80032478()) {
             DisableButton(mHeadUpButton);
         } else {
-            mHeadUpButton->mDisabled = false;
+            EnableButton(mHeadUpButton);
         }
         break;
     }
@@ -3298,14 +3298,14 @@ void MainScreen::Sub1DC30() {
             DisableButton(fn_80048364(mHeadLayout, "down"));
             lbl_803575BB = false;
         } else {
-            fn_80048364(mHeadLayout, "down")->mDisabled = false;
+            EnableButton(fn_80048364(mHeadLayout, "down"));
             lbl_803575BB = true;
         }
         if (fn_80032478()) {
             DisableButton(fn_80048364(mHeadLayout, "up"));
             lbl_803575BA = false;
         } else {
-            fn_80048364(mHeadLayout, "up")->mDisabled = false;
+            EnableButton(fn_80048364(mHeadLayout, "up"));
             lbl_803575BA = true;
         }
         break;
