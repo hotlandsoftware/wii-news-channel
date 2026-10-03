@@ -784,7 +784,8 @@ void GlobePin::LayoutPicture(f32 size) {
     if (tex != NULL) {
         f32 w = tex->width;
         f32 h = tex->height;
-        mPicScale = h / w > 1.0f ? size / h : size / w;
+        f32 one = 1.0f;
+        mPicScale = h / w > one ? size / h : size / w;
         mPicY = -(0.5f * (h * mPicScale));
         mPicX = 0.5f * (size - w * mPicScale);
     }
@@ -792,20 +793,23 @@ void GlobePin::LayoutPicture(f32 size) {
 
 s32 GlobePin::CompareLabel(GlobePin* other) {
     s32 result = 0;
-    if (!mLabelHidden &&
-        __fabsf(other->mLabelPos.x - mLabelPos.x) < 0.5f * (mLabelW + other->mLabelW)) {
-        f32 h1 = other->mLabelH;
-        f32 h0 = mLabelH;
-        if (__fabsf(((other->mLabelPos.y + 0.5f * h1) - mLabelPos.y) - 0.5f * h0) <
-            0.5f * (h0 + h1)) {
-            if (other->mHoverTime > mHoverTime) {
-                result = -1;
-            } else if (other->mHoverTime < mHoverTime) {
-                result = 1;
-            } else {
-                result = 1;
-                if (other->mCount > mCount) {
+    if (!mLabelHidden) {
+        f32 dx = other->mLabelPos.x - mLabelPos.x;
+        f32 w1 = other->mLabelW;
+        if (__fabsf(dx) < 0.5f * (mLabelW + w1)) {
+            f32 h1 = other->mLabelH;
+            f32 h0 = mLabelH;
+            if (__fabsf(((other->mLabelPos.y + 0.5f * h1) - mLabelPos.y) - 0.5f * h0) <
+                0.5f * (h0 + h1)) {
+                if (other->mHoverTime > mHoverTime) {
                     result = -1;
+                } else if (other->mHoverTime < mHoverTime) {
+                    result = 1;
+                } else {
+                    result = 1;
+                    if (other->mCount > mCount) {
+                        result = -1;
+                    }
                 }
             }
         }
