@@ -18,7 +18,7 @@ extern "C" GlobeView* lbl_8035775C;
 extern const f32 gGlobeDotTexCoords[3][2];
 extern const union GlobeDotAngles {
     u8 bytes[GLOBE_DOT_COUNT * 4];
-    u16 angles[GLOBE_DOT_COUNT][2];
+    u16 angles[GLOBE_DOT_COUNT * 2]; // x, y rotation of each dot
 } gGlobeDotAngles;
 extern const u8 gGlobeDotSizes[GLOBE_DOT_COUNT];
 extern const u8 gGlobeDotColorIdx[GLOBE_DOT_COUNT];
@@ -43,11 +43,12 @@ static inline f32 CosIdx(u16 idx) {
 
 GlobeDots::GlobeDots() {
     for (s32 i = 0; i < GLOBE_DOT_COUNT; i++) {
-        s32 idx = i * 3;
+        s32 a = i * 2;
+        s32 idx = i * 9;
+        u16 rotX = gGlobeDotAngles.angles[a];
+        u16 rotY = gGlobeDotAngles.angles[a + 1];
         f32 size = 0.0045f * gGlobeDotSizes[i];
         f32 size3 = 3.0f * size;
-        u16 rotX = gGlobeDotAngles.angles[i][0];
-        u16 rotY = gGlobeDotAngles.angles[i][1];
 
         Mtx mx, my, m;
         PSMTXRotTrig(mx, 'x', SinIdx(rotX), CosIdx(rotX));
@@ -55,13 +56,13 @@ GlobeDots::GlobeDots() {
         PSMTXConcat(my, mx, m);
 
         Vec v0 = {-size, -size, -100.0f};
-        PSMTXMultVec(m, &v0, &mVerts[idx]);
+        PSMTXMultVec(m, &v0, (Vec*)&mVerts[idx]);
 
         Vec v1 = {size3, -size, -100.0f};
-        PSMTXMultVec(m, &v1, &mVerts[idx + 1]);
+        PSMTXMultVec(m, &v1, (Vec*)&mVerts[idx + 3]);
 
         Vec v2 = {-size, size3, -100.0f};
-        PSMTXMultVec(m, &v2, &mVerts[idx + 2]);
+        PSMTXMultVec(m, &v2, (Vec*)&mVerts[idx + 6]);
     }
 }
 
