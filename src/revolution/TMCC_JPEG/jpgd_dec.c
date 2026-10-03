@@ -191,6 +191,7 @@ s32 JPEGDecSetScale(JPEGDecHandle* h, s32 scale) {
 
 
 s32 jpgdSetupScale(JPEGDecContext* ctx) {
+
     JPEGDecHandle* h = ctx->handle;
 
     switch (h->scale) {
@@ -270,26 +271,26 @@ s32 jpgdSetupScale(JPEGDecContext* ctx) {
 
 
 s32 jpgdDecodeMcu(u32 x, u32 y, JPEGDecContext* ctx, s32* work) {
-    s32 coef[64];
-    JPEGDecHandle* h;
-    u8* scan;
     s32* dcPred;
-    u8** pOut;
+    u8* scan;
+    JPEGDecHandle* h;
     u8** outC;
-    u8* nBlocks;
+    JPEGScan* sc;
+    u8** pOut;
     s32* quant;
     s32 i;
+    s32 ret;
     s32 comp;
     s32 j;
+    s32 coef[64];
     u16 stride;
     JPEGFrame* frame;
+    u8* nBlocks;
     JPEGTables* tables;
     u8** out;
     JPEGIdctFunc idctY;
     JPEGIdctFunc idctC;
     JPEGBlockFunc decodeBlock;
-    JPEGScan* sc;
-    s32 ret;
 
     sc = &ctx->scan;
     frame = &ctx->frame;
@@ -347,6 +348,7 @@ static s32 jpgdParseSOF(JPEGDecContext* ctx) {
 
 s32 jpgdReadHeader(JPEGDecContext* ctx) {
     s32 ret;
+
     const u8* zz = jpgdZigzag;
     u16 marker;
     s32 i;
@@ -805,21 +807,21 @@ static s32 jpgdCheckComps(JPEGDecContext* ctx) {
 
 s32 jpgdReadSOF(JPEGDecContext* ctx) {
     const u8* a;
-    u16 v;
-    const u8* pn;
     s32 maxH;
+    const u8* pn;
     s32 ret;
-    u16 maxV;
-    const u8* ph;
     s32 i;
-    const u8* pv;
-    s32 t;
-    JPEGFrame* f;
-    JPEGScan* sc;
-    u8 c;
     s32 hh;
-    s32 j;
+    const u8* ph;
+    const u8* pv;
+    u8 c;
     const u8* bb;
+    u16 maxV;
+    u16 v;
+    JPEGFrame* f;
+    s32 t;
+    JPEGScan* sc;
+    s32 j;
 
     f = &ctx->frame;
     sc = &ctx->scan;
@@ -1002,15 +1004,15 @@ s32 jpgdReadSOS(JPEGDecContext* ctx) {
 }
 
 s32 jpgdResync(JPEGDecContext* ctx) {
-    JPEGDecHandle* h;
-    u8 c;
-    u8 skip;
-    u16 mcusX;
-    u32 pos;
     s32 n;
     u16 x;
+    u8 c;
+    u16 mcusX;
     u16 y;
     s32 ret;
+    JPEGDecHandle* h;
+    u32 pos;
+    u8 skip;
 
     h = ctx->handle;
     ret = jpgdUnreadBits(&ctx->stream);
@@ -1098,23 +1100,23 @@ void jpgdSelectHuffTables(JPEGTables* t, s32 dc, s32 ac) {
 }
 
 s32 jpgdBuildHuffTable(u8* bits, u8* vals, JPEGHuffTable* t) {
-    u32 huffsize[256];
-    u32 huffcode[256];
     u32* ps;
     JPEGHuffLookup* lookup;
     JPEGHuffCode* codes;
-    u8* dstVals;
-    u8 count;
-    s32 i;
-    s32 k;
-    s32 m;
-    u16 code;
-    u8 si;
-    s32 l;
-    s32 n;
     s32 shift;
-    s32 base;
+    u8* dstVals;
+    s32 k;
+    u32 huffsize[256];
+    s32 i;
+    u32 huffcode[256];
+    s32 m;
+    s32 l;
+    u16 code;
     s32 j;
+    u8 si;
+    s32 n;
+    u8 count;
+    s32 base;
 
     lookup = t->lookup;
     codes = t->codes;

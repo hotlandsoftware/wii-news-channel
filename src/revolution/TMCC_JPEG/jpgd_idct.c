@@ -6,10 +6,11 @@
 #define CLAMP_U8(x) (((x) >> 19) == 0 ? ((x) >> 11) : ((x) < 0 ? 0 : 255))
 
 void jpgdIdct8x8Y(s32* in, u8* out, u16 stride, s32 extent) {
-    s32 ws[64];
-    s32* wp;
-    s32 i;
     s32 rows;
+    s32* wp;
+    s32 ws[64];
+    s32 i;
+
     s32 d0, d1, d2, d3, d4, d5, d6, d7;
     s32 tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
     s32 tmp10, tmp11, tmp12, tmp13;
@@ -156,10 +157,11 @@ void jpgdIdct8x8Y(s32* in, u8* out, u16 stride, s32 extent) {
 }
 
 void jpgdIdct8x8C(s32* in, u8* out, u16 stride, s32 extent) {
-    s32 ws[64];
-    s32* wp;
     s32 i;
+    s32 ws[64];
     s32 rows;
+    s32* wp;
+
     s32 d0, d1, d2, d3, d4, d5, d6, d7;
     s32 tmp0, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7;
     s32 tmp10, tmp11, tmp12, tmp13;

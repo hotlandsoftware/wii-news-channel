@@ -5,18 +5,18 @@
 #define CLAMP_S8(v) (((v) < 128 && (v) > -129) ? (v) : ((v) > 0 ? 127 : -128))
 
 void jpgdIdct4x4Y(s32* in, u8* out, u16 stride, s32 extent) {
-    s32 ws[64];
     s32* ip;
-    s32* wp;
     s32 i;
-    s32 t;
-    s32 e0;
-    s32 e1;
+    s32* wp;
     s32 d0;
     s32 d1;
-    s32 d2;
+    s32 e1;
     s32 d3;
+    s32 e0;
+    s32 ws[64];
+    s32 t;
     s32 e13;
+    s32 d2;
 
     ip = in + 24;
     wp = ws + 24;
@@ -58,10 +58,10 @@ void jpgdIdct4x4Y(s32* in, u8* out, u16 stride, s32 extent) {
 
 void jpgdIdct2x2Y(s32* in, u8* out, u16 stride, s32 extent) {
     s32 a;
-    s32 t0;
     s32 t1;
-    s32 t2;
+    s32 t0;
     s32 t3;
+    s32 t2;
 
     a = in[0] + 0x40000;
     t0 = in[1] + a;
@@ -82,14 +82,14 @@ void jpgdIdct4x4C(s32* in, u8* out, u16 stride, s32 extent) {
     s32 ws[64];
     s32* ip;
     s32* wp;
-    s32 i;
-    s32 t;
-    s32 e0;
-    s32 e1;
     s32 d0;
-    s32 d1;
+    s32 t;
+    s32 i;
+    s32 e1;
     s32 d2;
     s32 d3;
+    s32 e0;
+    s32 d1;
     s32 e13;
 
     ip = in + 24;
@@ -131,10 +131,11 @@ void jpgdIdct4x4C(s32* in, u8* out, u16 stride, s32 extent) {
 }
 
 void jpgdIdct2x2C(s32* in, u8* out, u16 stride, s32 extent) {
-    s32 t0;
     s32 t1;
-    s32 t2;
     s32 t3;
+    s32 t0;
+    s32 t2;
+
     s8* o = (s8*)out;
 
     t0 = in[0] + in[1];

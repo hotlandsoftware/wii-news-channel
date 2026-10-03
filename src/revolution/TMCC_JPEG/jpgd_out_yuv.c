@@ -2,6 +2,7 @@
 #include "jpgd_internal.h"
 
 s32 jpgdSetupOutputYUV(JPEGDecContext* ctx) {
+
     JPEGPixelBuffer* pix = &ctx->pix;
     JPEGDecHandle* h = ctx->handle;
 
@@ -81,6 +82,7 @@ s32 jpgdSetupOutputYUV(JPEGDecContext* ctx) {
 
 void jpgdOutYUV411(JPEGDecContext* ctx, u32 x, u32 y) {
     s32 t;
+
     u8* scr = ctx->pix.cr;
     s32 j;
     u32 cx;
@@ -123,35 +125,35 @@ void jpgdOutYUV411(JPEGDecContext* ctx, u32 x, u32 y) {
 }
 
 void jpgdOutYUV411Edge(JPEGDecContext* ctx, u32 x, u32 y) {
-    s32 xe;
-    s32 ye;
-    JPEGDecHandle* h;
-    u8* sy;
-    u8* scb;
+    s32 j;
     u8* scr;
-    u32 tiles;
-    u8* py;
+    s32 w;
     u8* pcb;
     u8* pcr;
-    s32 w;
-    s32 hh;
-    s32 i;
-    s32 j;
-    s32 t;
-    s32 cw;
-    u32 cx;
+    u8* scb;
     u32 ctiles;
+    s32 hh;
+    u32 cx;
+    JPEGDecHandle* h;
+    s32 ye;
+    s32 i;
+    s32 t;
+    u8* sy;
+    u8* py;
+    s32 cw;
+    s32 xe;
+    u32 tiles;
 
     sy = ctx->pix.y;
     scb = ctx->pix.cb;
-    scr = ctx->pix.cr;
     h = ctx->handle;
     tiles = h->strideY >> 3;
     py = h->planeY;
-    pcb = h->planeCb;
     pcr = h->planeCr;
     w = (h->lastX == x) ? h->remX : (u8)(32 / h->scale);
+    scr = ctx->pix.cr;
     hh = (h->lastY == y) ? h->remY : (u8)(8 / h->scale);
+    pcb = h->planeCb;
 
     xe = x + w;
     ye = y + hh;
@@ -179,6 +181,7 @@ void jpgdOutYUV411Edge(JPEGDecContext* ctx, u32 x, u32 y) {
 void jpgdOutYUV422(JPEGDecContext* ctx, u32 x, u32 y) {
     s32 xe;
     s32 ye;
+
     JPEGDecHandle* h = ctx->handle;
     u8* sy = ctx->pix.y;
     u8* scb = ctx->pix.y + 0x80;
@@ -222,35 +225,35 @@ void jpgdOutYUV422(JPEGDecContext* ctx, u32 x, u32 y) {
 }
 
 void jpgdOutYUV422Edge(JPEGDecContext* ctx, u32 x, u32 y) {
-    s32 xe;
-    s32 ye;
+    s32 i;
     JPEGDecHandle* h;
-    u8* sy;
-    u8* scb;
-    u8* scr;
-    u32 tiles;
-    u8* py;
+    s32 w;
+    s32 t;
     u8* pcb;
     u8* pcr;
-    s32 w;
-    s32 hh;
-    s32 i;
+    u8* sy;
     s32 j;
-    s32 t;
-    s32 cw;
-    u32 cx;
+    u8* scb;
+    u32 tiles;
     u32 ctiles;
+    s32 hh;
+    u8* scr;
+    u32 cx;
+    u8* py;
+    s32 xe;
+    s32 ye;
+    s32 cw;
 
+    tiles = h->strideY >> 3;
     sy = ctx->pix.y;
     scb = ctx->pix.y + 0x80;
-    scr = ctx->pix.y + 0xC0;
-    h = ctx->handle;
-    tiles = h->strideY >> 3;
     py = h->planeY;
+    h = ctx->handle;
+    scr = ctx->pix.y + 0xC0;
     pcb = h->planeCb;
+    hh = (h->lastY == y) ? h->remY : (u8)(8 / h->scale);
     pcr = h->planeCr;
     w = (h->lastX == x) ? h->remX : (u8)(16 / h->scale);
-    hh = (h->lastY == y) ? h->remY : (u8)(8 / h->scale);
 
     xe = x + w;
     ye = y + hh;
@@ -278,6 +281,7 @@ void jpgdOutYUV422Edge(JPEGDecContext* ctx, u32 x, u32 y) {
 void jpgdOutYUV420(JPEGDecContext* ctx, u32 x, u32 y) {
     s32 xe;
     s32 ye;
+
     JPEGDecHandle* h = ctx->handle;
     u8* sy = ctx->pix.y;
     u8* scb = ctx->pix.cb;
@@ -322,32 +326,32 @@ void jpgdOutYUV420(JPEGDecContext* ctx, u32 x, u32 y) {
 }
 
 void jpgdOutYUV420Edge(JPEGDecContext* ctx, u32 x, u32 y) {
-    s32 xe;
-    s32 ye;
-    JPEGDecHandle* h;
-    u8* sy;
-    u8* scb;
-    u8* scr;
-    u32 tiles;
-    u8* py;
-    u8* pcb;
-    u8* pcr;
-    s32 w;
+    u32 cx;
     s32 hh;
     s32 i;
-    s32 j;
-    s32 t;
-    s32 cw;
-    s32 ch;
-    u32 cx;
-    u32 cy;
+    u8* py;
     u32 ctiles;
+    JPEGDecHandle* h;
+    s32 ch;
+    s32 xe;
+    s32 t;
+    u8* pcr;
+    u8* pcb;
+    u8* scb;
+    s32 cw;
+    s32 w;
+    u8* sy;
+    u32 tiles;
+    s32 j;
+    s32 ye;
+    u32 cy;
+    u8* scr;
 
     sy = ctx->pix.y;
-    scb = ctx->pix.cb;
-    scr = ctx->pix.cr;
     h = ctx->handle;
     tiles = h->strideY >> 3;
+    scb = ctx->pix.cb;
+    scr = ctx->pix.cr;
     py = h->planeY;
     pcb = h->planeCb;
     pcr = h->planeCr;
@@ -384,26 +388,26 @@ void jpgdOutYUV444(JPEGDecContext* ctx, u32 x, u32 y) {
     u8* pcb;
     u8* scr;
     u8* sy;
-    s32 n;
     s32 t;
-    s32 j;
+    s32 n;
     u8* scb;
+    s32 j;
     u8* pcr;
-    JPEGDecHandle* h;
     s32 i;
     s32 xe;
+    JPEGDecHandle* h;
     s32 ye;
     u32 stride;
 
     sy = ctx->pix.y;
     h = ctx->handle;
-    scr = ctx->pix.y + 0x80;
     stride = h->strideY >> 3;
+    py = h->planeY;
+    scb = ctx->pix.y + 0x40;
+    scr = ctx->pix.y + 0x80;
+    pcb = h->planeCb;
     pcr = h->planeCr;
     n = 8 / h->scale;
-    scb = ctx->pix.y + 0x40;
-    pcb = h->planeCb;
-    py = h->planeY;
     xe = x + n;
     ye = y + n;
     for (j = y; j < ye; j++) {
@@ -420,30 +424,30 @@ void jpgdOutYUV444(JPEGDecContext* ctx, u32 x, u32 y) {
 }
 
 void jpgdOutYUV444Edge(JPEGDecContext* ctx, u32 x, u32 y) {
+    s32 w;
     u8* py;
-    s32 xe;
+    u8* pcr;
     u8* pcb;
     u8* sy;
     u8* scb;
-    s32 w;
     s32 t;
     u8* scr;
-    s32 hh;
     s32 i;
     s32 j;
-    JPEGDecHandle* h;
-    u8* pcr;
+    s32 hh;
+    s32 xe;
     s32 ye;
+    JPEGDecHandle* h;
     u32 stride;
 
     sy = ctx->pix.y;
+    h = ctx->handle;
     scb = ctx->pix.y + 0x40;
     scr = ctx->pix.y + 0x80;
-    h = ctx->handle;
-    stride = h->strideY >> 3;
     py = h->planeY;
-    pcb = h->planeCb;
+    stride = h->strideY >> 3;
     pcr = h->planeCr;
+    pcb = h->planeCb;
     w = (h->lastX == x) ? h->remX : 8 / h->scale;
     hh = (h->lastY == y) ? h->remY : 8 / h->scale;
     xe = x + w;
@@ -464,6 +468,7 @@ void jpgdOutYUV444Edge(JPEGDecContext* ctx, u32 x, u32 y) {
 void jpgdOutYUVGray(JPEGDecContext* ctx, u32 x, u32 y) {
     s32 xe;
     s32 ye;
+
     JPEGDecHandle* h = ctx->handle;
     u8* sy = ctx->pix.y;
     s32 n = 8 / h->scale;
@@ -484,26 +489,26 @@ void jpgdOutYUVGray(JPEGDecContext* ctx, u32 x, u32 y) {
 }
 
 void jpgdOutYUVGrayEdge(JPEGDecContext* ctx, u32 x, u32 y) {
-    s32 xe;
-    s32 ye;
+    s32 w;
+    u8* py;
+    s32 hh;
     JPEGDecHandle* h;
     u8* sy;
-    u8* py;
-    u32 tiles;
-    s32 w;
-    s32 hh;
-    s32 i;
-    s32 j;
     s32 t;
+    s32 i;
+    s32 xe;
+    s32 ye;
+    u32 tiles;
+    s32 j;
 
-    sy = ctx->pix.y;
     h = ctx->handle;
     py = h->planeY;
+    sy = ctx->pix.y;
     tiles = h->strideY >> 3;
     w = (h->lastX == x) ? h->remX : (u8)(8 / h->scale);
     hh = (h->lastY == y) ? h->remY : (u8)(8 / h->scale);
-    xe = x + w;
     ye = y + hh;
+    xe = x + w;
     for (j = y; j < ye; j++) {
         for (i = x; i < xe; i++) {
             PUT_I8(py, i, j, tiles, *sy++);
