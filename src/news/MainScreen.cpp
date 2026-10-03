@@ -2192,6 +2192,8 @@ void MainScreen::State195B8(s32* arg) {
         if (!mZoomInPressed && !mUpPressed && !mZoomOutPressed && !mBackPressed &&
             !mDownPressed && !mSlidePressed)
         {
+            f32 minY = 83.0f;
+            f32 maxY = 373.0f;
             ut::Rect area(0.0f, 0.0f, mScreenRect.right, 456.0f);
             bool anyHit = false;
             for (s32 i = 0; i < 4; i++) {
@@ -2203,12 +2205,10 @@ void MainScreen::State195B8(s32* arg) {
                         f32 y = gCursorY[i][0];
                         bool hit = false;
                         ut::Rect rect(0.0f, 0.0f, 0.0f, 0.0f);
-                        if (Article_GetPictureRect(&rect, mUnk16C.x, 123.0f + mUnk224, 1.0f) &&
-                            gHoverButtons[i] == 0)
-                        {
+                        if (Article_GetPictureRect(&rect, mUnk16C.x, 123.0f + mUnk224, 1.0f)) {
                             f32 x = gCursorX[i][0];
-                            if (x >= rect.left && x < rect.right && y >= rect.top &&
-                                y < rect.bottom)
+                            if (gHoverButtons[i] == 0 && x >= rect.left && x < rect.right &&
+                                y >= rect.top && y < rect.bottom)
                             {
                                 anyHit = true;
                                 hit = true;
@@ -2218,7 +2218,7 @@ void MainScreen::State195B8(s32* arg) {
                             StartRumble(i, 3, 20);
                         }
                         mUnk356[i] = hit;
-                        if (y > 83.0f && y < 373.0f && (gTrig[i] & 0x800)) {
+                        if (y > minY && y < maxY && (gTrig[i] & 0x800)) {
                             if (hit) {
                                 mUnk354 = gHideClock;
                                 mUnk355 = IsStateB(&MainScreen::State195A0);
