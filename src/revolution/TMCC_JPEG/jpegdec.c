@@ -38,7 +38,7 @@ static s32 jpgdBeginScan(JPEGDecContext* ctx) {
     return ret;
 }
 
-s32 JPEGDecInit(JPEGDecHandle* h, JPEGDecParam* p) {
+s32 TMCCJPEGDecInit(JPEGDecHandle* h, JPEGDecParam* p) {
     JPEGDecContext* ctx = p->work;
     s32 ret;
 
@@ -92,7 +92,7 @@ error:
     return ret < 0 ? ret : -2;
 }
 
-s32 JPEGDecDecode(JPEGDecHandle* h, s32 count, void* out) {
+s32 TMCCJPEGDecodeRGB565(JPEGDecHandle* h, s32 count, void* out) {
     s32 work[95];
     u32 py;
     JPEGDecContext* ctx = h->ctx;
@@ -153,7 +153,7 @@ error:
     return ret;
 }
 
-s32 JPEGDecSetScale(JPEGDecHandle* h, s32 scale) {
+s32 TMCCJPEGDecSetResolution(JPEGDecHandle* h, s32 scale) {
     JPEGDecContext* ctx;
     s32 ret;
 

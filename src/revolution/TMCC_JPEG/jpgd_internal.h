@@ -195,9 +195,9 @@ void jpgdIdct8x8Y(s32* in, u8* out, u16 stride, s32 extent);
 void jpgdIdct8x8C(s32* in, u8* out, u16 stride, s32 extent);
 
 // jpgd_dec.c
-s32 JPEGDecInit(JPEGDecHandle* h, JPEGDecParam* p);
-s32 JPEGDecDecode(JPEGDecHandle* h, s32 count, void* out);
-s32 JPEGDecSetScale(JPEGDecHandle* h, s32 scale);
+s32 TMCCJPEGDecInit(JPEGDecHandle* h, JPEGDecParam* p);
+s32 TMCCJPEGDecodeRGB565(JPEGDecHandle* h, s32 count, void* out);
+s32 TMCCJPEGDecSetResolution(JPEGDecHandle* h, s32 scale);
 s32 jpgdSetupScale(JPEGDecContext* ctx);
 s32 jpgdDecodeMcu(u32 x, u32 y, JPEGDecContext* ctx, s32* work);
 s32 jpgdReadHeader(JPEGDecContext* ctx);
