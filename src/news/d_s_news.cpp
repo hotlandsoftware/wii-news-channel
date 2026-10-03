@@ -2571,18 +2571,24 @@ void Article_DrawSourceAndDate(const math::VEC2& pos, s32 alpha) {
     }
 }
 
+static inline f32 GetBodyCharWidth() {
+    f32 w = sBodyView->mFont->GetWidth();
+    return w * gTextScale;
+}
+
 void Article_DrawSourceIcon(const math::VEC2& pos, BOOL right, f32 alpha) {
     u32 index = GetSourceIconIndex();
     f32 scale = gTextScale * GetIconScale();
     if (index != -1) {
         ut::Color color(255, 255, 255, 255.0f * alpha);
-        f32 w = scale * TPL_GetWidth(gCommonTpl, index);
-        f32 y = (pos.y - scale * TPL_GetHeight(gCommonTpl, index)) - 5.0f;
+        f32 y;
         f32 x;
+        f32 w = scale * TPL_GetWidth(gCommonTpl, index);
+        y = (pos.y - scale * TPL_GetHeight(gCommonTpl, index)) - 5.0f;
         if (right) {
             x = (sArticleSize.x - 10.0f) - w;
         } else {
-            x = 0.5f * (sBodyView->mFont->GetWidth() * gTextScale);
+            x = 0.5f * GetBodyCharWidth();
         }
         math::VEC3 p(pos.x + x, y, 0.0f);
         SetupTexGX();
@@ -2598,13 +2604,14 @@ void Article_DrawSourceLogo(const math::VEC2& pos, BOOL right, f32 alpha) {
         ut::Color color(255, 255, 255, 255.0f * alpha);
         f32 lw = logo->width;
         f32 lh = logo->height;
-        f32 y = (pos.y - scale * lh) - 5.0f;
         f32 w = scale * lw;
+        f32 h = scale * lh;
+        f32 y = (pos.y - h) - 5.0f;
         f32 x;
         if (right) {
             x = (sArticleSize.x - 10.0f) - w;
         } else {
-            x = 0.5f * (sBodyView->mFont->GetWidth() * gTextScale);
+            x = 0.5f * GetBodyCharWidth();
         }
         math::VEC3 p(pos.x + x, y, 0.0f);
         SetupTexGX();
