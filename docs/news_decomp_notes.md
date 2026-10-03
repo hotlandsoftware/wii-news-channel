@@ -7,7 +7,7 @@ Project-specific findings. Read this before decompiling a file.
 | Range | Contents |
 | --- | --- |
 | `0x80006FC0`–`0x80051D4C` | News Channel game code (C++). |
-| `0x80051D4C`–`0x800FB9EC` | HOME Menu (HBM), RSO, NW4R (`lyt`, `snd`, `g3d`, `ut`, `math`), and the TMCC JPEG decoder (`0x8007FE28`–`0x8008A0A4`). |
+| `0x80051D4C`–`0x800FB9EC` | HOME Menu (HBM), RSO, NW4R (`lyt`, `snd`, `g3d`, `ut`, `math`), the TMCC JPEG decoder (`0x8007FE28`–`0x8008A0A4`) and the VC manual viewer `vcmv` (`0x80096D2C`–`0x8009D694`, Opera WWW front end; see `docs/platform_layer_map.md`). |
 | `0x800FB9EC`–`0x80179F64` | RVL SDK (May–June 2007 builds). |
 | `0x80179F64`–`0x8018C7C0` | MSL / Runtime.PPCEABI.H. |
 | `0x8018C7C0`–`0x80191F00` | MetroTRK. |
@@ -319,4 +319,18 @@ Globals named from this block: `gHomeMenu`, `gFader`/`gFader2`, `gGlobe` (the si
 - **Header globals with another type.** System.h declares `gSysFont`/`gArticleFont` as `ut::Font*` and `gHighlightColor` as `GXColor`; `d_scene.cpp` defines them as `ut::ArchiveFont*` and `ut::Color` (CodeWarrior does not mangle variable names) by renaming the header declarations with a `#define` around the includes.
 - **`.data` symbols.** dtk's string blobs in `.data` were split at the offsets of our `@NNNN` objects so objdiff pairs each literal; the `GXColor` clear-colour template in `.sdata2` (`lbl_80358F58`) is one 4-byte symbol.
 - `tools/decomp/srcsearch.py` takes `--symbol MANGLED` for C++ functions (the function argument is still the source name, e.g. `Calc` for `Layout::Calc`).
+
+- The base class `Scene` (vtable `0x801B34B8`, ctor `0x80049400`) is in the not yet split block `0x80047B50`–`0x80051D4C`. Its virtual slots are named in `symbols.txt` (`Exit__5SceneFil`, `Calc__5SceneFv`, ...).
+
+## VC manual viewer (`vcmv`, `0x80096D2C–0x8009D694`) findings
+
+Full write-up in `docs/platform_layer_map.md` ("VC manual viewer"). Codegen tricks that may apply elsewhere:
+
+- **Flags.** `cflags_vcmv` adds `-fp_contract on` (fused multiply-adds), `-gen-fsel` (a float `a >= 0 ? b : c` becomes `fsel`; `__fsel` always adds an `frsp`) and `-use_lmw_stmw on` (`stmw`/`lmw`; frames that save FPRs still use `_savegpr_*`) to the HBM flags.
+- **`x += c` on a volatile float** compiles to `fadds`, `frsp`, `stfs`, and a following `if (x > k)` compares the `frsp` result without re-reading; `x = x + c` re-reads `x`.
+- **`const T*` parameters** let MWCC move loads above GX FIFO writes (`vcmvDrawQuad(const vcmvQuad*)`); the FIFO declaration form does not matter.
+- **`.sdata2` order from a dead out-of-line copy:** a global, non-inline helper (`vcmvEase`) defined before its caller pools its literals first; constants that only exist after inlining (here `343.0f` from `frames * frames * frames` with `frames = 7`) come after the int-to-float constant. Same idea as `EaseZoom` in MainScreen.
+- **Data the original link kept but nothing references** (three `.sbss` words, two `.bss` gaps) needs `force_active` in `config.yml`; `#pragma force_active` does not keep data.
+- **Unroll factor.** `while (n-- > 0) { ...; p++; }` unrolls 8× where the equivalent `for` unrolls 16×.
+- **Float register numbering** follows the declaration order of the locals (`f32 u0, u1, …`), not the order of the assignments.
 
