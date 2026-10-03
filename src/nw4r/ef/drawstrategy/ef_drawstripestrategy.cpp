@@ -40,6 +40,20 @@ DrawStripeStrategy::CalcStripeMtx(Particle* pParticle,
                        axisZ.y, rPos.y, axisX.z, rAhead.z, axisZ.z, rPos.z);
 }
 
+// Rotation about the stripe's Y axis around the pivot, scaled by the size
+inline math::MTX34 DrawStripeStrategy::CalcRotateMtx(Particle* pParticle,
+                                                     f32 pivot) {
+    math::VEC3 rot;
+    pParticle->Draw_GetRotate(&rot);
+
+    f32 size = pParticle->Draw_GetSizeX();
+    f32 c = size * math::CosRad(rot.y);
+    f32 s = size * math::SinRad(rot.y);
+
+    return math::MTX34(c, 0.0f, -s, pivot - c * pivot, 0.0f, 1.0f, 0.0f, 0.0f,
+                       s, 0.0f, c, -s * pivot);
+}
+
 #pragma push
 #pragma dont_inline on
 void DrawStripeStrategy::DrawStripe(AheadContextStripe* pContext,
@@ -140,35 +154,28 @@ void DrawStripeStrategy::DrawParticle(Particle* pParticle,
     }
 
     math::VEC3 ahead;
+    math::MTX34 mtx;
+    math::VEC3 p0;
+    math::VEC3 p1;
+
     pCalcAheadFunc(&ahead, pContext, pParticle);
 
     math::MTX34 baseMtx =
         CalcStripeMtx(pParticle, pContext, ahead, rPos, pPrevAxis);
 
-    math::VEC3 rot;
-    pParticle->Draw_GetRotate(&rot);
+    math::MTX34 rotMtx = CalcRotateMtx(pParticle, pivot);
 
-    f32 size = pParticle->Draw_GetSizeX();
-    f32 c = size * math::CosRad(rot.y);
-    f32 s = size * math::SinRad(rot.y);
-
-    math::MTX34 rotMtx(c, 0.0f, -s, pivot - c * pivot, 0.0f, 1.0f, 0.0f, 0.0f,
-                       s, 0.0f, c, -s * pivot);
-
-    math::MTX34 mtx;
     math::MTX34Mult(&mtx, &baseMtx, &rotMtx);
 
-    math::VEC3 p0;
-    math::VEC3 p1;
     math::VEC3Transform(&p0, &mtx, &rVtx0);
     math::VEC3Transform(&p1, &mtx, &rVtx1);
 
-    GXPosition(p0);
+    GXPosition3f32(p0.x, p0.y, p0.z);
     if (useTex) {
         GXTexCoord2f32(1.0f, texCoord);
     }
 
-    GXPosition(p1);
+    GXPosition3f32(p1.x, p1.y, p1.z);
     if (useTex) {
         GXTexCoord2f32(0.0f, texCoord);
     }
@@ -188,13 +195,7 @@ void DrawStripeStrategy::Draw(const DrawInfo& rInfo,
     }
 
     AheadContextStripe context(*rInfo.GetViewMtx(), pManager);
-
-    math::VEC3 axisX(context.mCommon.mEmitterMtx._00,
-                     context.mCommon.mEmitterMtx._10,
-                     context.mCommon.mEmitterMtx._20);
-
-    math::VEC3TransformNormal(&context.mEmitterAxisX,
-                              &context.mCommon.mParticleManagerMtxInv, &axisX);
+    math::MTX34 posMtx;
 
     // Particles that have not been drawn yet start from the emitter axis
     for (Particle* pIt = GetYoungestParticle(pManager); pIt != NULL;
@@ -207,7 +208,7 @@ void DrawStripeStrategy::Draw(const DrawInfo& rInfo,
         pIt->mPrevAxis = context.mCommon.mEmitterAxisY;
     }
 
-    u8 connect = pResource->GetEmitterDesc()->typeOption2 & 7;
+    int connect = pResource->GetEmitterDesc()->typeOption2 & 7;
 
     if ((connect == 1 && numParticle < 3) ||
         (connect == 0 && numParticle < 2)) {
@@ -259,7 +260,6 @@ void DrawStripeStrategy::Draw(const DrawInfo& rInfo,
 
     GXSetCurrentMtx(GX_PNMTX0);
 
-    math::MTX34 posMtx;
     math::MTX34Mult(&posMtx, rInfo.GetViewMtx(),
                     &context.mCommon.mParticleManagerMtx);
     GXLoadPosMtxImm(posMtx, GX_PNMTX0);

@@ -15,7 +15,14 @@ public:
 
         AheadContextStripe(const math::MTX34& rViewMtx,
                            ParticleManager* pManager)
-            : AheadContext(rViewMtx, pManager) {}
+            : AheadContext(rViewMtx, pManager) {
+
+            math::VEC3 axisX(mCommon.mEmitterMtx._00, mCommon.mEmitterMtx._10,
+                             mCommon.mEmitterMtx._20);
+
+            math::VEC3TransformNormal(&mEmitterAxisX,
+                                      &mCommon.mParticleManagerMtxInv, &axisX);
+        }
     };
 
 public:
@@ -55,6 +62,8 @@ public:
                                      const math::VEC3& rAhead,
                                      const math::VEC3& rPos,
                                      math::VEC3* pPrevAxis);
+
+    static math::MTX34 CalcRotateMtx(Particle* pParticle, f32 pivot);
 
     // Older revision (News Channel): steps with GetElderDrawParticle
     static Particle* GetYoungestDrawParticle_Stripe(ParticleManager* pManager) {
