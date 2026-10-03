@@ -648,8 +648,7 @@ void MainScreen::Draw() {
         ut::Color bg(0xDE, 0xDE, 0xDE, bgAlpha);
         Draw2D_FillRect(&mScreenRect, &bg);
     } else {
-        ut::Color c(255, 255, 255, bgAlpha);
-        GXSetTevColor(GX_TEVREG0, c);
+        GXSetTevColor(GX_TEVREG0, ut::Color(255, 255, 255, bgAlpha));
         Draw2D_Tex(gCommonTpl, 0, &pos, scale, 1.0f);
     }
     pos.x = mScreenRect.right - 2.0f;
@@ -665,8 +664,7 @@ void MainScreen::Draw() {
     if (mUnk2BF) {
         Draw2D_SetupGX();
         Draw2D_SetOrtho();
-        ut::Color c(255, 255, 255, mUnk328);
-        GXSetTevColor(GX_TEVREG0, c);
+        GXSetTevColor(GX_TEVREG0, ut::Color(255, 255, 255, mUnk328));
         Draw2D_TexRect(gCommonTpl, 0, &mFadeRect, 0.0f, 0);
     }
     if (mActiveLayout) {
