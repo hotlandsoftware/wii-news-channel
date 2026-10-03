@@ -3494,10 +3494,9 @@ void MainScreen::Hook1ED20() {
 }
 
 void MainScreen::LayoutRelated() {
-    f32 h = mUnk24C;
-    f32 scale = mUnk250;
-    f32 rowHeight = h * scale;
-    f32 charSpace = scale * gCharSpaceScale;
+    f32 rowHeight = mUnk24C * mUnk250;
+    f32 space = gCharSpaceScale;
+    f32 charSpace = mUnk250 * space;
     GlobePin* item = mRelated;
     ut::TextWriterBase<wchar_t> writer;
     writer.SetFont(*gSysFont);
@@ -3520,10 +3519,9 @@ void MainScreen::LayoutRelated() {
 }
 
 void MainScreen::UpdateRelatedScroll() {
-    f32 h = mUnk24C;
-    f32 scale = mUnk250;
-    f32 rowHeight = h * scale;
-    f32 charSpace = scale * gCharSpaceScale;
+    f32 rowHeight = mUnk24C * mUnk250;
+    f32 space = gCharSpaceScale;
+    f32 charSpace = mUnk250 * space;
     GlobePin* item = mRelated;
     ut::TextWriterBase<wchar_t> writer;
     writer.SetFont(*gSysFont);
@@ -3555,9 +3553,9 @@ inline BOOL MainScreen::IsHovered(s32 index) {
 void MainScreen::UpdateRelatedButtons() {
     GlobePin* item = mRelated;
     f32 y = mUnk1A0;
-    f32 maxY = 456.0f;
     s32 i = 0;
     f32 rowHeight = mUnk24C * mUnk250;
+    f32 maxY = 456.0f;
     ut::TextWriterBase<wchar_t> writer;
     y += 5.0f;
     y += mUnk254;
