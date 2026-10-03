@@ -18,8 +18,6 @@ using namespace nw4r;
 void* operator new[](u32 size, MEMAllocator* allocator);
 
 extern "C" void fn_80036358();  // sets up GX for Draw2D_Texture
-extern "C" void fn_80044534(math::VEC2* value, const math::VEC2* target, f32 rate, f32 maxStep,
-                            f32 minStep);
 
 extern "C" ArticleText* lbl_80357574;  // the shared caption text
 extern "C" f32 lbl_803575CC;           // extra line spacing
@@ -612,9 +610,9 @@ void ArticleText::Update(const math::VEC2* pos, bool clip, f32 scroll) {
     TextChar* c = mChars;
     f32 bottom = clip ? 398.0f : 456.0f;
 
-    fn_80044534(&mPicPos, &mPicTarget, 0.2f, 100.0f, 0.01f);
+    Ease(&mPicPos, &mPicTarget, 0.2f, 100.0f, 0.01f);
     Ease(&mPicScale, mPicTargetScale, 0.2f, 1.0f, 0.005f);
-    fn_80044534(&mSubPos, &mSubTarget, 0.2f, 100.0f, 0.01f);
+    Ease(&mSubPos, &mSubTarget, 0.2f, 100.0f, 0.01f);
 
     mLastVisible = 0;
     s32 i = 0;

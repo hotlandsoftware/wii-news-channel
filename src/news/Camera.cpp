@@ -1,5 +1,6 @@
 #include <news/Camera.h>
 #include <news/System.h>
+#include <news/MathUtil.h>
 #include <revolution/mtx.h>
 
 using namespace nw4r;
@@ -7,10 +8,6 @@ using namespace nw4r;
 extern "C" {
 extern math::MTX34 gWorkMtx;
 extern const f32 gModelDepth;
-
-void fn_800450D8(math::MTX34* mtx, f32 angle);
-void fn_80045124(math::MTX34* mtx, f32 angle);
-void fn_80045170(math::MTX34* mtx, f32 angle);
 }
 
 math::VEC3 Camera::sHomeRot(0.0f, 0.0f, 0.0f);
@@ -55,9 +52,9 @@ void Camera::Calc() {
     math::MTX34 mtx;
 
     PSMTXTrans(gWorkMtx.mtx, up.x, up.y, up.z);
-    fn_800450D8(&gWorkMtx, -mTargetRot.x);
-    fn_80045170(&gWorkMtx, mTargetRot.z);
-    fn_80045124(&gWorkMtx, mTargetRot.y);
+    Mtx_RotateXDeg(&gWorkMtx, -mTargetRot.x);
+    Mtx_RotateZDeg(&gWorkMtx, mTargetRot.z);
+    Mtx_RotateYDeg(&gWorkMtx, mTargetRot.y);
     PSMTXCopy(gWorkMtx.mtx, mtx.mtx);
     mTarget.x = mtx._03;
     mTarget.y = mtx._13;
@@ -67,9 +64,9 @@ void Camera::Calc() {
     f32 ey = eye.y;
     f32 ex = eye.x;
     PSMTXTrans(gWorkMtx.mtx, ex, ey, ez);
-    fn_800450D8(&gWorkMtx, mRot.x);
-    fn_80045170(&gWorkMtx, mRot.z);
-    fn_80045124(&gWorkMtx, mRot.y);
+    Mtx_RotateXDeg(&gWorkMtx, mRot.x);
+    Mtx_RotateZDeg(&gWorkMtx, mRot.z);
+    Mtx_RotateYDeg(&gWorkMtx, mRot.y);
     PSMTXConcat(mtx.mtx, gWorkMtx.mtx, gWorkMtx.mtx);
     PSMTXCopy(gWorkMtx.mtx, mtx.mtx);
     mPos.x = mtx._03;

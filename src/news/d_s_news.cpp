@@ -40,6 +40,8 @@ using namespace nw4r;
 
 class GlobePin;
 
+u32 GetCurrentMinutes(); // MathUtil.h
+
 extern "C" {
 // Heap helpers (0x80040764..)
 void fn_80040764(s32 chan, s32 dpd);
@@ -103,7 +105,6 @@ void fn_8003D168(void* obj);
 void fn_8003D178(void* obj, f32 x, f32 y);
 void fn_8003D21C(void* obj);
 void fn_8003FB54(const math::VEC3& pos, const math::VEC3& size, const GXColor& color);
-s32 fn_80044F08(void);
 
 // Faders (0x80048C80..)
 void fn_80048C80(void* fader, s32 frames);
@@ -509,7 +510,7 @@ NewsScene::NewsScene()
       mLogoPos(0.0f, 0.0f, 0.0f), mLogoAlpha(0), mLogoTargetAlpha(0), mStep(0) {
     u32 size;
 
-    gCurrentTime = fn_80044F08();
+    gCurrentTime = GetCurrentMinutes();
     if (gFatalError) {
         return;
     }

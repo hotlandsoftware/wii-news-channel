@@ -145,7 +145,6 @@ void fn_800360EC(const ut::Rect* rect, u8 alpha, f32 z);
 void fn_80036328(u8 alpha, u32 y);
 void fn_8003633C(s32 arg);
 void fn_80040778(s32 chan, s32 arg1, s32 arg2);
-f32 fn_800449A0(u16 angle);
 }
 
 // OSu16tof32: u16 to f32 through the paired-single unit (GQR3 = u16).
@@ -665,7 +664,7 @@ void SlideShow::Calc() {
         if (mGlobeAngle > 0x8000) {
             mGlobeAngle = 0x8000;
         }
-        f32 t = range * fn_800449A0(mGlobeAngle);
+        f32 t = range * CosineEase(mGlobeAngle);
         mGlobeZoom = mGlobeZoomFrom + t;
         globe->mZoom = mGlobeZoom;
         fn_8004D1D4(globe, lbl_80192370, t);
@@ -674,7 +673,7 @@ void SlideShow::Calc() {
         if (g != NULL) {
             GlobeCamera* camera = g->mCamera;
             if (camera != NULL) {
-                f32 s = fn_800449A0(mGlobeAngle);
+                f32 s = CosineEase(mGlobeAngle);
                 f32 lon = mGlobeFrom.x + (mGlobeTo.x - mGlobeFrom.x) * s;
                 camera->mLon = lon;
                 camera->mLat = mGlobeFrom.y + (mGlobeTo.y - mGlobeFrom.y) * s;
@@ -1177,7 +1176,7 @@ BOOL SlideShow::StateZoom(const s32* arg) {
         if (mZoomAngle > 0x8000) {
             mZoomAngle = 0x8000;
         }
-        f32 t = fn_800449A0(mZoomAngle);
+        f32 t = CosineEase(mZoomAngle);
         mView.left = mZoomFrom[0] + mZoomFrom[1] * t;
         mView.top = mZoomFrom[2] + mZoomFrom[3] * t;
         mText.left = mZoomFrom[4] + mZoomFrom[5] * t;
@@ -1435,7 +1434,7 @@ BOOL SlideShow::StateMove(const s32* arg) {
                 SetViewToTarget(this);
                 return TRUE;
             }
-            f32 t = fn_800449A0(mZoomAngle);
+            f32 t = CosineEase(mZoomAngle);
             mView.left = mZoomFrom[0] + mZoomFrom[1] * t;
             mView.top = mZoomFrom[2] + mZoomFrom[3] * t;
             mText.left = mZoomFrom[4] + mZoomFrom[5] * t;

@@ -2,10 +2,6 @@
 #include <news/MathUtil.h>
 #include <news/System.h>
 
-// Eases *value towards target (both components), see Ease(). Returns the
-// remaining distance.
-extern "C" f32 fn_80044534(nw4r::math::VEC2* value, const nw4r::math::VEC2* target, f32 rate,
-                           f32 maxStep, f32 minStep);
 
 #pragma explicit_zero_data on
 static f32 sStartX = 0.0f;
@@ -68,7 +64,7 @@ void TextChar::StateMove() {
     case -1:
         break;
     default:
-        fn_80044534(&mPos, &mTarget, 0.12f, 1000.0f, 0.1f);
+        Ease(&mPos, &mTarget, 0.12f, 1000.0f, 0.1f);
         break;
     }
 }
@@ -86,7 +82,7 @@ void TextChar::StateDrop() {
         f32 dist = __fabsf(mTarget.x - mPos.x);
         f32 k = 0.0625f * (mWordChar & 0xF);
         target.y += (0.0025f + 0.0025f * k) * (dist * dist);
-        if (IsNearlyZero(fn_80044534(&mPos, &target, 0.2f - 0.11f * k, 1000.0f, 0.1f))) {
+        if (IsNearlyZero(Ease(&mPos, &target, 0.2f - 0.11f * k, 1000.0f, 0.1f))) {
             ChangeState(&TextChar::StateMove);
         }
         break;

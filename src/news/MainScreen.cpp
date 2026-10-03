@@ -99,7 +99,6 @@ void fn_80032644(void);
 BOOL fn_8004DABC(Globe* globe);
 void fn_8004D0B0(Globe* globe);
 void fn_8004D170(Globe* globe);
-f32 fn_800449A0(u16 t);
 void fn_800329CC(void);
 BOOL fn_8003251C(void);
 void fn_80048D20(void* obj, s32 frames);
@@ -1246,7 +1245,7 @@ void MainScreen::ModeMain() {
             if (mUnk32C > 0x8000) {
                 mUnk32C = 0x8000;
             }
-            g->mHeight = mUnk270 = mUnk274 + range * fn_800449A0(mUnk32C);
+            g->mHeight = mUnk270 = mUnk274 + range * CosineEase(mUnk32C);
             if (lbl_8035775C != NULL && mUnk11C) {
                 (this->*mUnk11C)();
             }
@@ -1586,7 +1585,7 @@ void MainScreen::State16960(s32* arg) {
         if (mUnk338 > 0x8000) {
             mUnk338 = 0x8000;
         }
-        f32 t = fn_800449A0(mUnk338);
+        f32 t = CosineEase(mUnk338);
         mScreenRect.right = mUnk290 + mUnk294 * t;
         mUnk23C += 1.0f / 18.0f;
         if (mUnk23C > 1.0f) {
@@ -1795,7 +1794,7 @@ inline void MainScreen::UpdateGlobeCamera() {
     if (globe != NULL) {
         GlobeCamera* camera = globe->mCamera;
         if (camera != NULL) {
-            f32 t = fn_800449A0(mUnk32C);
+            f32 t = CosineEase(mUnk32C);
             f32 dx = mUnk194.x - mUnk18C.x;
             camera->mX = mUnk18C.x + dx * t;
             f32 dy = mUnk194.y - mUnk18C.y;
@@ -1889,7 +1888,7 @@ void MainScreen::State17E6C(s32* arg) {
         if (mUnk338 > 0x8000) {
             mUnk338 = 0x8000;
         }
-        f32 t = fn_800449A0(mUnk338);
+        f32 t = CosineEase(mUnk338);
         mUnk244 += 1.0f / 12.0f;
         if (mUnk244 > 1.0f) {
             mUnk244 = 1.0f;
@@ -2021,7 +2020,7 @@ void MainScreen::State18770(s32* arg) {
         if (mUnk338 > 0x8000) {
             mUnk338 = 0x8000;
         }
-        f32 t = fn_800449A0(mUnk338);
+        f32 t = CosineEase(mUnk338);
         f32 x = mUnk280 + mUnk284 * t;
         f32 right = mUnk290 + mUnk294 * t;
         mUnk240 -= 1.0f / 18.0f;
@@ -2449,7 +2448,7 @@ void MainScreen::State1A750(s32* arg) {
             ChangeState(&MainScreen::State1B134, NULL);
             return;
         }
-        f32 t = fn_800449A0(mUnk338);
+        f32 t = CosineEase(mUnk338);
         mFadeRect.left = mUnk280 + t * (fn_8000D6A0(item).x - mUnk280);
         mFadeRect.right = mUnk284 + t * (fn_8000D6A0(item).x - mUnk284);
         mFadeRect.top = mUnk288 + t * (fn_8000D6A0(item).y - mUnk288);
@@ -2496,7 +2495,7 @@ void MainScreen::State1AC60(s32* arg) {
             ChangeState(&MainScreen::State1B134, NULL);
             return;
         }
-        f32 t = fn_800449A0(mUnk338);
+        f32 t = CosineEase(mUnk338);
         mUnk164.x = mUnk280 + mUnk284 * t;
         mScreenRect.right = mUnk290 + mUnk294 * t;
         if (globe != NULL) {

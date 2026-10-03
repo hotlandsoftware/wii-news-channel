@@ -4,6 +4,7 @@
 #include <news/PaneLayout.h>
 #include <news/NewsData.h>
 #include <news/System.h>
+#include <news/MathUtil.h>
 #include <nw4r/math/math_types.h>
 #include <nw4r/ut/ut_TextWriterBase.h>
 #include <revolution/nand.h>
@@ -21,7 +22,6 @@ void OnExitRequested();
 extern "C" {
 void fn_80048C80(Fader* fader, s32 frames); // fade in
 void fn_80048D20(Fader* fader, s32 frames); // fade out
-u32 fn_80044F08(); // current time in minutes
 }
 
 #define SAVE_PERM (NAND_PERM_RUSR | NAND_PERM_WUSR | NAND_PERM_RGRP | NAND_PERM_WGRP | NAND_PERM_ROTH)
@@ -432,7 +432,7 @@ void FormatSaveTime(wchar_t* buf, u32 size, OSTime time, s32 msgType, u8 languag
 s32 CheckNewsFiles(NewsHeader** files, u32* sizes, s32* current, u32* mask) {
     s32 result = 0;
     u32 bad = 0;
-    u32 now = fn_80044F08();
+    u32 now = GetCurrentMinutes();
     OSGetTick();
 
     NewsHeader* headers[NEWS_FILE_MAX];
