@@ -76,9 +76,6 @@ struct LayoutScroll {
 void DrawScreenFade(s32 alpha);
 
 extern "C" {
-void fn_8004BD60(Layout* layout, u32 arg);
-s32 fn_8004C000(const char* name, u32 button);
-s32 fn_8004C13C(const char* name, u32 button);
 void fn_800323D8(f32* scale, s32 arg);
 void fn_80032414(math::VEC2* pos, const bool* held, f32 scale, f32 delta);
 void fn_80032464(f32 x);
@@ -1109,7 +1106,7 @@ void MainScreen::ModeMain() {
 
         if (!IsState(&MainScreen::State1C600)) {
             if (mActiveLayout) {
-                fn_8004BD60(mActiveLayout, 0x23);
+                UpdateLayoutButtons(mActiveLayout, 0x23);
             }
             for (s32 i = 0; i < 4; i++) {
                 if (lbl_801F0908[i] & 0x400) {
@@ -1123,14 +1120,14 @@ void MainScreen::ModeMain() {
             if (lbl_80357598 == 1) {
                 return;
             }
-            if (!gNewsData->mEmpty && fn_8004C13C("slide", 0x800) >= 0) {
+            if (!gNewsData->mEmpty && CheckButtonTrig("slide", 0x800) >= 0) {
                 mSlidePressed = true;
                 PlaySE(0x36);
                 lbl_80357598 = 1;
                 return;
             }
             if (!held) {
-                if (fn_8004C000("up", 0x800) >= 0) {
+                if (CheckButtonHold("up", 0x800) >= 0) {
                     mUpPressed = true;
                 } else if (lbl_80357698 & 8) {
                     mUpPressed = true;
@@ -1140,7 +1137,7 @@ void MainScreen::ModeMain() {
                         mHeadUpButton->SetPressed(true);
                     }
                 }
-                if (fn_8004C000("down", 0x800) >= 0) {
+                if (CheckButtonHold("down", 0x800) >= 0) {
                     mDownPressed = true;
                 } else if (lbl_80357698 & 4) {
                     mDownPressed = true;
@@ -1151,7 +1148,7 @@ void MainScreen::ModeMain() {
                     }
                 }
             }
-            if (fn_8004C000("zoom_out", 0x800) >= 0) {
+            if (CheckButtonHold("zoom_out", 0x800) >= 0) {
                 mZoomOutPressed = true;
             } else if (lbl_80357698 & 0x1000) {
                 mZoomOutPressed = true;
@@ -1163,7 +1160,7 @@ void MainScreen::ModeMain() {
                     mEarthZoomOutButton->SetPressed(true);
                 }
             }
-            if (fn_8004C000("zoom_in", 0x800) >= 0) {
+            if (CheckButtonHold("zoom_in", 0x800) >= 0) {
                 mZoomInPressed = true;
             } else if (lbl_80357698 & 0x10) {
                 mZoomInPressed = true;
@@ -1175,25 +1172,25 @@ void MainScreen::ModeMain() {
                     mEarthZoomInButton->SetPressed(true);
                 }
             }
-            if (fn_8004C13C("back", 0x800) >= 0) {
+            if (CheckButtonTrig("back", 0x800) >= 0) {
                 mBackPressed = true;
             }
-            if (fn_8004C13C("earth", 0x800) >= 0) {
+            if (CheckButtonTrig("earth", 0x800) >= 0) {
                 mEarthPressed = true;
             }
-            if (fn_8004C000("rot_a", 0x800) >= 0) {
+            if (CheckButtonHold("rot_a", 0x800) >= 0) {
                 mRotAPressed = true;
             } else if (lbl_80357698 & 8) {
                 mRotAPressed = true;
                 mRotAButton->SetPressed(true);
             }
-            if (fn_8004C000("rot_b", 0x800) >= 0) {
+            if (CheckButtonHold("rot_b", 0x800) >= 0) {
                 mRotBPressed = true;
             } else if (lbl_80357698 & 4) {
                 mRotBPressed = true;
                 mRotBButton->SetPressed(true);
             }
-            if (fn_8004C13C("reset", 0x800) >= 0) {
+            if (CheckButtonTrig("reset", 0x800) >= 0) {
                 mResetPressed = true;
             }
             if (lbl_80357698 & 1) {

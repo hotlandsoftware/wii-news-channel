@@ -29,9 +29,6 @@ extern u32 lbl_801F0908[4];        // held buttons
 extern f32 lbl_8020E468[];         // pointer movement
 
 extern "C" {
-void fn_8004BD60(Layout* layout, u32 arg);
-s32 fn_8004C000(const char* name, u32 button);
-s32 fn_8004C13C(const char* name, u32 button);
 }
 
 static ut::Color sFillColor(255, 255, 255, 64);
@@ -372,30 +369,30 @@ void LanguageSelect::StateConfirm(Item* item) {
 }
 
 void LanguageSelect::CheckInput() {
-    fn_8004BD60(mActiveLayout, 0x23);
+    UpdateLayoutButtons(mActiveLayout, 0x23);
     if (lbl_80357688 & 0x400) {
         mDragHeld = true;
     } else {
-        if (fn_8004C000("down", 0x800) >= 0) {
+        if (CheckButtonHold("down", 0x800) >= 0) {
             mDownPressed = true;
         } else if (lbl_80357698 & 4) {
             mDownPressed = true;
             mDownButton->SetPressed(true);
         }
-        if (fn_8004C000("up", 0x800) >= 0) {
+        if (CheckButtonHold("up", 0x800) >= 0) {
             mUpPressed = true;
         } else if (lbl_80357698 & 8) {
             mUpPressed = true;
             mUpButton->SetPressed(true);
         }
     }
-    if (fn_8004C13C("yes", 0x800) >= 0) {
+    if (CheckButtonTrig("yes", 0x800) >= 0) {
         mYesPressed = true;
     }
-    if (fn_8004C13C("no", 0x800) >= 0) {
+    if (CheckButtonTrig("no", 0x800) >= 0) {
         mNoPressed = true;
     }
-    if (fn_8004C13C("back", 0x800) >= 0) {
+    if (CheckButtonTrig("back", 0x800) >= 0) {
         mBackPressed = true;
     }
 }

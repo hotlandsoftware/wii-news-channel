@@ -187,7 +187,7 @@ void SaveErrorDialog::Open(s32 type) {
     mNotice->Reset();
     mError->Reset();
     mNotice2->Reset();
-    fn_8004BFE0();
+    ClearButtonHover();
     PressButton(mQuestion, "yes");
     PressButton(mQuestion, "no");
     PressButton(mNotice, "next");
@@ -214,12 +214,12 @@ void SaveErrorDialog::Update() {
     case STATE_INPUT:
         switch (mType) {
         case 1:
-            fn_8004BD60(mQuestion, 0x23);
-            if (fn_8004C13C("yes", 0x800) >= 0) {
+            UpdateLayoutButtons(mQuestion, 0x23);
+            if (CheckButtonTrig("yes", 0x800) >= 0) {
                 mFader->FadeOut(25);
                 mState = STATE_WAIT_FADE_OUT;
                 PlaySE(0x1A);
-            } else if (fn_8004C13C("no", 0x800) >= 0) {
+            } else if (CheckButtonTrig("no", 0x800) >= 0) {
                 mFader->FadeOut(25);
                 mState = STATE_WAIT_NO;
                 PlaySE(0x1B);
@@ -227,8 +227,8 @@ void SaveErrorDialog::Update() {
             break;
         case 2:
         case 3:
-            fn_8004BD60(mNotice, 0x23);
-            if (fn_8004C13C("next", 0x800) >= 0) {
+            UpdateLayoutButtons(mNotice, 0x23);
+            if (CheckButtonTrig("next", 0x800) >= 0) {
                 mFader->FadeOut(25);
                 mState = STATE_WAIT_FADE_OUT;
                 PlaySE(0x1A);
@@ -238,16 +238,16 @@ void SaveErrorDialog::Update() {
         case 5:
         case 7:
         case 8:
-            fn_8004BD60(mError, 0x23);
-            if (fn_8004C13C("next", 0x800) >= 0) {
+            UpdateLayoutButtons(mError, 0x23);
+            if (CheckButtonTrig("next", 0x800) >= 0) {
                 mTimer = 0;
                 mState = STATE_WAIT_RETURN;
                 PlaySE(0x1A);
             }
             break;
         case 6:
-            fn_8004BD60(mNotice2, 0x23);
-            if (fn_8004C13C("next", 0x800) >= 0) {
+            UpdateLayoutButtons(mNotice2, 0x23);
+            if (CheckButtonTrig("next", 0x800) >= 0) {
                 mTimer = 0;
                 mState = STATE_WAIT_CLOSE;
                 PlaySE(0x1A);

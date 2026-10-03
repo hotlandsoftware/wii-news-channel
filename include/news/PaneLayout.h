@@ -58,12 +58,11 @@ struct Layout {
     s32 mAlpha;                                   // at 0x430
 };
 
-// Scene input helpers (d_scene.cpp).
-extern "C" {
-void fn_8004BD60(Layout* layout, u32 arg);
-void fn_8004BFE0();
-s32 fn_8004C000(const char* name, u32 button);
-s32 fn_8004C13C(const char* name, u32 button);
-}
+// Scene input helpers (d_scene.cpp): button hover/press handling of a Layout
+// for every pointer.
+void UpdateLayoutButtons(Layout* layout, u32 se);
+void ClearButtonHover();
+s32 CheckButtonHold(const char* name, u32 button);
+s32 CheckButtonTrig(const char* name, u32 button);
 
 #endif

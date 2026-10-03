@@ -129,7 +129,7 @@ Connect::~Connect() {
     if (mTipsLayout != NULL) {
         delete mTipsLayout;
         mTipsLayout = NULL;
-        fn_8004BFE0();
+        ClearButtonHover();
     }
     delete mMascot;
     delete mErrorLayout;
@@ -177,7 +177,7 @@ void Connect::Reset(s32 country, s32 language) {
     mLayout->Reset();
     mErrorLayout->Reset();
     PressButton(mErrorLayout, "next");
-    fn_8004BFE0();
+    ClearButtonHover();
     mMascot->Reset();
 }
 
@@ -350,7 +350,7 @@ void Connect::Update() {
     case STATE_TIPS: {
         PaneButton* button = mTipsLayout->FindButton("next");
         mTipsLayout->Calc();
-        fn_8004BD60(mTipsLayout, 0x23);
+        UpdateLayoutButtons(mTipsLayout, 0x23);
         if (mTipsTimer > 0) {
             mTipsTimer--;
         } else if (mTipsOpen < 20) {
@@ -390,7 +390,7 @@ void Connect::Update() {
                 button->mToggle = false;
             }
             button->mDisabled = false;
-            if (fn_8004C13C("next", 0x800) >= 0) {
+            if (CheckButtonTrig("next", 0x800) >= 0) {
                 PlaySE(0x1A);
                 if (mTips->IsLastPage()) {
                     mTipsTimer = 15;
@@ -425,14 +425,14 @@ void Connect::Update() {
                 if (mTipsLayout != NULL) {
                     delete mTipsLayout;
                     mTipsLayout = NULL;
-                    fn_8004BFE0();
+                    ClearButtonHover();
                 }
             }
         }
         break;
     case STATE_ERROR:
-        fn_8004BD60(mErrorLayout, 0x23);
-        if (mFader->mBusy == 0 && fn_8004C13C("next", 0x800) >= 0) {
+        UpdateLayoutButtons(mErrorLayout, 0x23);
+        if (mFader->mBusy == 0 && CheckButtonTrig("next", 0x800) >= 0) {
             PlaySE(0x1A);
             mTimer = 0;
             mState = STATE_RETURN;

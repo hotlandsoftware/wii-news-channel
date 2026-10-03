@@ -108,15 +108,8 @@ s32 fn_80044F08(void);
 
 // Faders (0x80048C80..)
 
-// Scene (0x80049400..)
-void fn_80049D18(Scene* scene);
-void fn_8004A3A0(void);
-void fn_8004B960(void);
-void fn_8004BFE0(s32 type);
-void fn_8004C294(void);
 
 // Globe (0x8004C240..)
-void fn_8004C240(u16 x, u16 y, math::VEC2* out);
 void fn_8004C69C(void* globe, math::VEC3* pos, u8 zoom);
 void fn_8004C890(void* globe, math::VEC3* rot);
 void fn_8004CA10(void* globe);
@@ -515,7 +508,7 @@ NewsScene::NewsScene()
     sHeaderFontData = LoadArcFile(gArchive, "/font_news_date.brfnt.LZ", 32, NULL, lbl_80357640);
     if (sHeaderFontData == NULL) {
         OSReport("%s[%d]\n", "d_s_news.cpp", 413);
-        fn_80049D18(this);
+        SetFatalError();
         return;
     }
 
@@ -622,7 +615,7 @@ NewsScene::NewsScene()
     mLayoutArc = LoadArcFile(gArchive, "news_layout.arc.LZ", 32, &size, gSubHeap);
     if (mLayoutArc == NULL) {
         OSReport("%s[%d]:news_layout.arc.LZ size(%d)\n", "d_s_news.cpp", 538, size);
-        fn_80049D18(this);
+        SetFatalError();
         return;
     }
 
@@ -815,7 +808,7 @@ void NewsScene::OnHomeMenuClose() {
 }
 
 void NewsScene::RestoreDPD() {
-    fn_8004A3A0();
+    Scene::Execute();
     s32 i = 0;
     s32* dpd = lbl_801EDFD0;
     for (; i < 4; i++, dpd++) {
@@ -981,7 +974,7 @@ void NewsScene::Calc() {
         return;
     }
 
-    fn_8004C294();
+    UpdatePointerScroll();
     if (mLogoAlpha > mLogoTargetAlpha) {
         mLogoAlpha -= 12;
         if (mLogoAlpha < mLogoTargetAlpha) {
@@ -1040,7 +1033,7 @@ void NewsScene::OnHomeMenuOpen() {
 
 BOOL NewsScene::InitNews() {
     lbl_80356CA0 = gUpdateMsgType == 1;
-    fn_8004BFE0(gUpdateMsgType);
+    ClearButtonHover();
 
     NewsData* data = gNewsData;
     u32 numCategories = 14;
@@ -1191,7 +1184,7 @@ BOOL NewsScene::InitNews() {
     }
 
     mSlideshow->Start();
-    fn_8004B960();
+    LoadEarth();
     sSettingsReady = true;
     BOOL selectLanguage = FALSE;
     if (!selectLanguage) {
@@ -2023,7 +2016,7 @@ void HeadlineList_SetIndex(const s32& index) {
 
 void GetArticleLocation(math::VEC2* out, NewsArticle* article) {
     NewsLocationRec* loc = article->mLocation;
-    fn_8004C240(*(u16*)&loc->unk4[0], *(u16*)&loc->unk4[2], out);
+    LatLonToDegrees(*(u16*)&loc->unk4[0], *(u16*)&loc->unk4[2], out);
 }
 
 void Globe_FocusArticle(NewsArticle* article, s32 arg, f32 x, f32 y) {
@@ -2031,7 +2024,7 @@ void Globe_FocusArticle(NewsArticle* article, s32 arg, f32 x, f32 y) {
     if (lbl_8035775C) {
         math::VEC2 loc;
         NewsLocationRec* rec = article->mLocation;
-        fn_8004C240(*(u16*)&rec->unk4[0], *(u16*)&rec->unk4[2], &loc);
+        LatLonToDegrees(*(u16*)&rec->unk4[0], *(u16*)&rec->unk4[2], &loc);
         f32 py = loc.y;
         f32 px = loc.x;
         math::VEC3 pos(px, py, 0.0f);

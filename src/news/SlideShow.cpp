@@ -81,9 +81,6 @@ void DrawScreenFade(s32 alpha);
 extern "C" void SetBlend__6LayoutFlll(Layout* layout, s32 alpha);
 
 extern "C" {
-void fn_8004BD60(Layout* layout, u32 arg);
-s32 fn_8004C000(const char* name, u32 button);
-s32 fn_8004C13C(const char* name, u32 button);
 
 void fn_8004CBE0(Globe* globe);
 void fn_8004CC20(Globe* globe, GlobeCamera* camera);
@@ -955,7 +952,7 @@ BOOL SlideShow::CheckInput() {
     }
 
     if (!IsState(&SlideShow::StateMessage)) {
-        fn_8004BD60(mCurLayout, 0x23);
+        UpdateLayoutButtons(mCurLayout, 0x23);
         if (lbl_801F0908[0] & 0x400) {
             mDragging[0] = true;
             dragging = true;
@@ -975,35 +972,35 @@ BOOL SlideShow::CheckInput() {
 
         CheckPointer();
 
-        if (fn_8004C000("zoom_out", 0x800) >= 0) {
+        if (CheckButtonHold("zoom_out", 0x800) >= 0) {
             mZoomOutPressed = true;
         } else if (lbl_80357698 & 0x1000) {
             mZoomOutPressed = true;
             mZoomOutButton->SetPressed(true);
         }
 
-        if (fn_8004C000("zoom_in", 0x800) >= 0) {
+        if (CheckButtonHold("zoom_in", 0x800) >= 0) {
             mZoomInPressed = true;
         } else if (lbl_80357698 & 0x10) {
             mZoomInPressed = true;
             mZoomInButton->SetPressed(true);
         }
 
-        if (fn_8004C000("prev", 0x800) >= 0 || (gTrigAll & 1)) {
+        if (CheckButtonHold("prev", 0x800) >= 0 || (gTrigAll & 1)) {
             mPrevPressed = true;
         }
-        if (fn_8004C000("next", 0x800) >= 0 || (gTrigAll & 2)) {
+        if (CheckButtonHold("next", 0x800) >= 0 || (gTrigAll & 2)) {
             mNextPressed = true;
         }
 
         if (!dragging) {
-            if (fn_8004C000("up", 0x800) >= 0) {
+            if (CheckButtonHold("up", 0x800) >= 0) {
                 mUpPressed = true;
             } else if (lbl_80357698 & 8) {
                 mUpPressed = true;
                 mUpButton->SetPressed(true);
             }
-            if (fn_8004C000("down", 0x800) >= 0) {
+            if (CheckButtonHold("down", 0x800) >= 0) {
                 mDownPressed = true;
             } else if (lbl_80357698 & 4) {
                 mDownPressed = true;
@@ -1011,16 +1008,16 @@ BOOL SlideShow::CheckInput() {
             }
         }
 
-        if (fn_8004C13C("main", 0x800) >= 0) {
+        if (CheckButtonTrig("main", 0x800) >= 0) {
             mMainPressed = true;
         }
-        if (fn_8004C13C("end", 0x800) >= 0) {
+        if (CheckButtonTrig("end", 0x800) >= 0) {
             mEndButton->mToggle = true;
             PlaySE(0x22);
             lbl_80357598 = 0;
             return TRUE;
         }
-        if (fn_8004C13C("back", 0x800) >= 0) {
+        if (CheckButtonTrig("back", 0x800) >= 0) {
             mBackPressed = true;
         }
     }

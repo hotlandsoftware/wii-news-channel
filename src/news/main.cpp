@@ -1,5 +1,6 @@
 #include <news/Fader.h>
 #include <news/HomeMenu.h>
+#include <news/Scene.h>
 #include <news/Draw2D.h>
 #include <news/System.h>
 #include <revolution/gx.h>
@@ -28,10 +29,6 @@ void* fn_8003F7B4(u32 arc, const char* path, s32 align, u32* size, MEMHeapHandle
 void fn_8003FD24(bool progressive, bool widescreen, bool blackOut);
 void fn_800409EC(void* block);
 void fn_800409F8(void* block);
-BOOL fn_8004A074(void);
-void fn_8004A2D4(void);
-void fn_8004B960(void);
-void fn_8004BC70(void);
 
 // Browser (Opera) library
 void fn_8009C504(MEMAllocator* allocator1, MEMAllocator* allocator2);
@@ -302,18 +299,18 @@ s32 HomeMenu::Calc() {
     }
 
     if (mOpenManual && mManualEnabled) {
-        fn_8004A2D4();
+        FreeFonts();
         if (mSuspendMusic) {
-            fn_8004BC70();
+            UnloadEarth();
         }
 
         if (!RunManual()) {
             mResult = RESULT_ERROR;
         } else {
             if (mSuspendMusic) {
-                fn_8004B960();
+                LoadEarth();
             }
-            if (fn_8004A074()) {
+            if (LoadFonts()) {
                 mResult = RESULT_ERROR;
             }
             lbl_8035772C->FadeIn(15);
