@@ -2662,8 +2662,8 @@ void MainScreen::State1B694(s32* arg) {
                 mUnk2FC = 0;
             }
         }
-        mUnk25C = 0.0f;
         mUnk254 = mUnk258 = -(rowHeight * mUnk2FC);
+        mUnk25C = 0.0f;
         lbl_803575FC = sShadowColor;
         lbl_803575FC.a = sShadowColor.a * mUnk25C;
         LayoutRelated();
@@ -2676,12 +2676,13 @@ void MainScreen::State1B694(s32* arg) {
             mUnk244 = 0.0f;
         }
         mUnk248 = mUnk244;
-        mUnk250 = GetFontScale() * gTextScale;
+        f32 fs = GetFontScale();
+        mUnk250 = fs * gTextScale;
         lbl_803575A8 = 1;
         mUnk25C += 0.1f;
         if (mUnk25C >= 1.0f) {
             mUnk25C = 1.0f;
-            lbl_803575FC.a = sShadowColor.a * 1.0f;
+            lbl_803575FC.a = sShadowColor.a * mUnk25C;
             ChangeState(&MainScreen::State1BD60, NULL);
             return;
         }
