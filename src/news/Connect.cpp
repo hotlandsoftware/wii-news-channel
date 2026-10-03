@@ -549,6 +549,12 @@ void Connect::Update() {
     }
 }
 
+static inline f32 GetAspect() { return gWidescreen ? 1.3684211f : 1.0f; }
+
+static inline f32 EaseSin(f32 t) {
+    return math::SinFIdx(NW4R_MATH_RAD_TO_FIDX(1.5707964f * t));
+}
+
 void Connect::Draw() {
     fn_80031BE0();
     switch (mState) {
@@ -564,9 +570,10 @@ void Connect::Draw() {
         case STATE_TIPS:
         case STATE_CLOSE_TIPS: {
             if (mTipsOpen < 20) {
-                DrawProgress(mAlpha * (1.0f - math::SinRad(1.5707964f * (mTipsOpen / 20.0f))));
+                f32 a = 1.0f - EaseSin(mTipsOpen / 20.0f);
+                DrawProgress(a * mAlpha);
             }
-            f32 t = math::SinRad(1.5707964f * (mTipsOpen / 20.0f));
+            f32 t = EaseSin(mTipsOpen / 20.0f);
             fn_80035CD0(192.0f * t);
             f32 mx = mMascot->mX;
             f32 my = mMascot->mY;
@@ -575,8 +582,7 @@ void Connect::Draw() {
             f32 y = my + t * (228.0f - my);
             s32 alpha = 255.0f * t;
             math::VEC3 scale(t, t, 1.0f);
-            f32 aspect = gWidescreen ? 1.3684211f : 1.0f;
-            math::VEC3 trans((x - 0.5f * GetScreenWidth()) / aspect, -(y - 228.0f), 0.0f);
+            math::VEC3 trans((x - 0.5f * GetScreenWidth()) / GetAspect(), -(y - 228.0f), 0.0f);
             Mtx mtx;
             PSMTXIdentity(mtx);
             PSMTXScaleApply(mtx, mtx, scale.x, scale.y, scale.z);
@@ -587,12 +593,13 @@ void Connect::Draw() {
 
             Draw2D_SetupGX();
             Draw2D_SetOrtho();
+            f32 s = 0.5f + 0.5f * t;
             f32 px = mx - 4.0f;
             f32 py = my - 10.0f;
-            f32 s = 0.5f + 0.5f * t;
-            TPL_GetWidth(gCommonTpl, 11);
+            f32 w = s * TPL_GetWidth(gCommonTpl, 11);
             f32 h = s * TPL_GetHeight(gCommonTpl, 11);
-            GXSetTevColor(GX_TEVREG0, ut::Color(255, 255, 255, 128.0f * t));
+            u8 a = 128.0f * t;
+            GXSetTevColor(GX_TEVREG0, ut::Color(255, 255, 255, a));
             math::VEC3 pos0(px, py - h, 0.0f);
             Draw2D_Tex(gCommonTpl, 11, &pos0, -s, s);
             math::VEC3 pos1(px, py - h, 0.0f);
@@ -613,8 +620,9 @@ void Connect::Draw() {
     }
     case STATE_ERROR:
     case STATE_RETURN: {
+        PaneButton* button;
         s32 code = 0;
-        PaneButton* button = fn_80048364(mErrorLayout, "text");
+        button = fn_80048364(mErrorLayout, "text");
         switch (mTaskResult) {
         case -11:
             button->SetSelIndex(0);
