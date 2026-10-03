@@ -735,8 +735,8 @@ void Connect::DrawProgress(f32 alpha) {
 }
 
 void Connect::ShowErrorCode(s32 errorCode, s32 code) {
-    const wchar_t* prefix;
     s32 value;
+    const wchar_t* prefix;
     if (errorCode != 0) {
         value = errorCode;
         prefix = L"";
@@ -747,7 +747,10 @@ void Connect::ShowErrorCode(s32 errorCode, s32 code) {
         return;
     }
 
-    value = __abs(value);
+    if (value < 0) {
+        value = -value;
+    }
+    PaneButton* button;
     const wchar_t* label;
     switch (gLanguage) {
     case 0:
@@ -772,7 +775,7 @@ void Connect::ShowErrorCode(s32 errorCode, s32 code) {
         label = L"Fout:";
         break;
     }
-    PaneButton* button = fn_80048364(mErrorLayout, "error_code");
+    button = fn_80048364(mErrorLayout, "error_code");
     wchar_t buf[128];
     swprintf(buf, 128, L"%ls %ls%06d", label, prefix, value);
     button->SetText(buf);
