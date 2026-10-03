@@ -1113,12 +1113,14 @@ void SetRenderMode(GXRenderModeObj* rm) {
     }
 }
 
+// Screen units per framebuffer pixel, horizontally.
+static inline f32 GetXScale(u16 fbWidth) {
+    return (f32)GetScreenWidth() / (s32)fbWidth;
+}
+
 void Draw2D_SetScissor(u32 x, u32 y, u32 width, u32 height) {
-    u16 fb = gRenderMode.fbWidth;
-    f32 scale = (f32)GetScreenWidth() / (s32)fb;
-    u32 sx = x / scale;
-    f32 scale2 = (f32)GetScreenWidth() / (s32)fb;
-    u32 sw = width / scale2;
+    u32 sx = x / GetXScale(gRenderMode.fbWidth);
+    u32 sw = width / GetXScale(gRenderMode.fbWidth);
     GXSetScissor(sx, y, sw, height);
 }
 
