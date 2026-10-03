@@ -580,25 +580,27 @@ FxVoice::FxVoice() {
         s32 b = 4096.0f * SinIdx((0x100 * i) << 3);
         s32 v = ((a - b) << 12) / (0x3243 * i);
         f[5 - i] = v;
-        f[5 + i] = v;
+        f[i + 5] = v;
     }
 
-    mFilterB[10] = 0x366 - 0x100;
+    f = mFilterB;
+    f[10] = 0x366 - 0x100;
     for (s32 i = 1; i <= 10; i++) {
         s32 a = 4096.0f * SinIdx((0x366 * i) << 3);
         s32 b = 4096.0f * SinIdx((0x100 * i) << 3);
         s32 v = ((a - b) << 12) / (0x3243 * i);
-        mFilterB[10 - i] = v;
-        mFilterB[10 + i] = v;
+        f[10 - i] = v;
+        f[i + 10] = v;
     }
 
-    mFilterC[5] = 0x900 - 0;
+    f = mFilterC;
+    f[5] = 0x900 - 0;
     for (s32 i = 1; i <= 5; i++) {
         s32 a = 4096.0f * SinIdx((0x900 * i) << 3);
         s32 b = 4096.0f * SinIdx((0 * i) << 3);
         s32 v = ((a - b) << 12) / (0x3243 * i);
-        mFilterC[5 - i] = v;
-        mFilterC[5 + i] = v;
+        f[5 - i] = v;
+        f[i + 5] = v;
     }
 
     for (s32 i = 0; i < FX_LFO_SIZE; i++) {
