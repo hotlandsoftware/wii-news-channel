@@ -1,3 +1,14 @@
+// GXDrawTorus and GXDrawSphere keep the texture-coordinate attribute type (a stack variable
+// whose address was passed to GXGetVtxDesc) in a register for a whole triangle strip. For
+// that the compiler has to know that neither the FIFO writes nor cos/sin can change it:
+// - the FIFO is the absolute-address variable (not a pointer cast);
+// - cos and sin have no side effects, so the original <math.h> must have declared them that
+//   way. They are declared here, ahead of the shared header, so that no other unit changes
+//   (the attribute only counts on the first declaration).
+#define GXVERT_FIFO_VARIABLE
+double cos(double) __attribute__((const));
+double sin(double) __attribute__((const));
+
 #include <math.h>
 #include <revolution/gx.h>
 
@@ -116,9 +127,7 @@ void GXDrawTorus(f32 rc, u8 numc, u8 numt) {
     }
 
     for (i = 0; i < numc; i++) {
-        GXAttrType ttype_copy;
         GXBegin(GX_TRIANGLESTRIP, GX_VTXFMT3, (numt + 1) * 2);
-        ttype_copy = ttype;
         for (j = 0; j <= numt; j++) {
             for (k = 1; k >= 0; k--) {
                 s = (i + k) % numc;
@@ -131,7 +140,7 @@ void GXDrawTorus(f32 rc, u8 numc, u8 numt) {
                 y = -sinf(t * twopi / numt) * cosf(s * twopi / numc);
                 z = sinf(s * twopi / numc);
                 GXNormal3f32(x, y, z);
-                if (ttype_copy != GX_NONE) {
+                if (ttype != GX_NONE) {
                     GXTexCoord2f32((i + k) / (f32)numc, j / (f32)numt);
                 }
             }
@@ -142,7 +151,7 @@ void GXDrawTorus(f32 rc, u8 numc, u8 numt) {
 }
 
 void GXDrawSphere(u32 stacks, u32 sectors) {
-    GXAttrType tex0, tex0_copy;
+    GXAttrType tex0;
     f32 radius;
     f32 stackStep, sectorStep;
     f32 stackAngle, stackAngleNext;
@@ -187,7 +196,6 @@ void GXDrawSphere(u32 stacks, u32 sectors) {
 
         GXBegin(GX_TRIANGLESTRIP, GX_VTXFMT3, (sectors + 1) * 2);
         {
-            tex0_copy = tex0;
 
             for (j = 0; j <= (int)sectors; j++) {
                 sectorAngle = j * sectorStep;
@@ -201,7 +209,7 @@ void GXDrawSphere(u32 stacks, u32 sectors) {
                                next_z / radius);
 
                 // Vertex 2 texcoord (S,T)
-                if (tex0_copy != GX_NONE) {
+                if (tex0 != GX_NONE) {
                     GXTexCoord2f32((f32)j / sectors, (f32)(i + 1) / stacks);
                 }
 
@@ -212,7 +220,7 @@ void GXDrawSphere(u32 stacks, u32 sectors) {
                                now_z / radius);
 
                 // Vertex 1 texcoord (S,T)
-                if (tex0_copy != GX_NONE) {
+                if (tex0 != GX_NONE) {
                     GXTexCoord2f32((f32)j / sectors, (f32)i / stacks);
                 }
             }

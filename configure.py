@@ -777,7 +777,7 @@ config.libs = [
             Object(Matching, "revolution/GX/GXBump.c"),
             Object(Matching, "revolution/GX/GXTev.c"),
             Object(Matching, "revolution/GX/GXPixel.c"),
-            Object(NonMatching, "revolution/GX/GXDraw.c"),
+            Object(Matching, "revolution/GX/GXDraw.c"),
             Object(Matching, "revolution/GX/GXDisplayList.c"),
             Object(Matching, "revolution/GX/GXTransform.c"),
             Object(Matching, "revolution/GX/GXPerf.c"),

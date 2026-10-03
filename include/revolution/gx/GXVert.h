@@ -12,7 +12,15 @@ extern "C" {
 // game code is built with -inline noauto and was matched against
 // `static inline` functions that write through a pointer cast, so that form
 // is kept here (it also matches ogws's GXVert.h).
+//
+// GXVERT_FIFO_VARIABLE (opt-in, define before including this header) selects the
+// absolute-address variable instead. The compiler then knows that a FIFO write cannot
+// alias a local variable (GXDraw.c needs that).
+#ifdef GXVERT_FIFO_VARIABLE
+volatile PPCWGPipe GXWGFifo : 0xCC008000;
+#else
 #define GXWGFifo (*(volatile PPCWGPipe*)0xCC008000)
+#endif
 
 #define __GXCDEF(prfx, n, t) __GXCDEF##n(prfx##n##t, t, t)
 #define __GXCDEFX(func, n, t) __GXCDEF##n(func, t, t)
