@@ -1,4 +1,5 @@
 #define NW4R_UT_COLOR_WORD_COPY
+#include <news/PaneLayout.h>
 #include <news/MainScreen.h>
 #include <news/Common.h>
 #include <news/Draw2D.h>
@@ -75,13 +76,6 @@ struct LayoutScroll {
 void DrawScreenFade(s32 alpha);
 
 extern "C" {
-Layout* fn_80047B50(void* mem, u32 arc, const char* name, void* resAccessor, u32 arg);
-void fn_80047DE8(Layout* layout, s32 flags);
-void fn_80047EFC(Layout* layout);
-void fn_80047F70(Layout* layout);
-void fn_80048154(Layout* layout);
-PaneButton* fn_80048364(Layout* layout, const char* name);
-void fn_80048444(Layout* layout, s32 arg);
 void fn_8004BD60(Layout* layout, u32 arg);
 s32 fn_8004C000(const char* name, u32 button);
 s32 fn_8004C13C(const char* name, u32 button);
@@ -158,9 +152,6 @@ void fn_8004E0E8(Globe* globe, s32 arg);
 void fn_8004F8E0(u32 id, f32 pitch, f32 volume, f32 pan);
 RelatedItem* fn_80032B60(s32* section, s32* index);
 BOOL fn_80048854(void* history, s32 chan, f32* x, f32* y);
-void fn_80048418(Layout* layout, s32 frames);
-void fn_800483EC(Layout* layout, s32 frames);
-void fn_80048470(Layout* layout, s32 alpha, s32 frame, s32 frames);
 f32 fn_8000F73C(RelatedItem* item, const wchar_t* text, ut::Font* font, f32 scale, f32 space);
 void fn_8000F8A8(RelatedItem* item, f32 rowHeight);
 void fn_8000EFFC(RelatedItem* item, ut::TextWriterBase<wchar_t>* writer);
@@ -343,85 +334,76 @@ MainScreen::MainScreen(u32 arc, ut::TextWriterBase<wchar_t>* writer, math::VEC2&
     mHeld[2] = false;
     mHeld[3] = false;
 
-    Layout* layout = (Layout*)operator new(0x434);
-    if (layout != NULL) {
-        layout = fn_80047B50(layout, arc, "main.brlyt", lbl_801EE270, 0);
-    }
+    Layout* layout = new Layout((void*)arc, "main.brlyt", (PaneButtonColors*)lbl_801EE270, false);
     mMainLayout = layout;
     if (mMainLayout == NULL) {
         gAllocFailed = true;
         return;
     }
-    layout = (Layout*)operator new(0x434);
-    if (layout != NULL) {
-        layout = fn_80047B50(layout, arc, "head.brlyt", lbl_801EE270, 0);
-    }
+    layout = new Layout((void*)arc, "head.brlyt", (PaneButtonColors*)lbl_801EE270, false);
     mHeadLayout = layout;
     if (mHeadLayout == NULL) {
         gAllocFailed = true;
         return;
     }
-    layout = (Layout*)operator new(0x434);
-    if (layout != NULL) {
-        layout = fn_80047B50(layout, arc, "earth.brlyt", lbl_801EE270, 0);
-    }
+    layout = new Layout((void*)arc, "earth.brlyt", (PaneButtonColors*)lbl_801EE270, false);
     mEarthLayout = layout;
     if (mEarthLayout == NULL) {
         gAllocFailed = true;
         return;
     }
 
-    mUpButton = fn_80048364(mMainLayout, "up");
+    mUpButton = mMainLayout->FindButton("up");
     if (mUpButton == NULL) {
         gFatalError = true;
         return;
     }
-    mDownButton = fn_80048364(mMainLayout, "down");
+    mDownButton = mMainLayout->FindButton("down");
     if (mDownButton == NULL) {
         gFatalError = true;
         return;
     }
-    mZoomInButton = fn_80048364(mMainLayout, "zoom_in");
+    mZoomInButton = mMainLayout->FindButton("zoom_in");
     if (mZoomInButton == NULL) {
         gFatalError = true;
         return;
     }
-    mZoomOutButton = fn_80048364(mMainLayout, "zoom_out");
+    mZoomOutButton = mMainLayout->FindButton("zoom_out");
     if (mZoomOutButton == NULL) {
         gFatalError = true;
         return;
     }
-    mHeadBackButton = fn_80048364(mHeadLayout, "back");
+    mHeadBackButton = mHeadLayout->FindButton("back");
     if (mHeadBackButton == NULL) {
         gFatalError = true;
         return;
     }
-    mHeadUpButton = fn_80048364(mHeadLayout, "up");
+    mHeadUpButton = mHeadLayout->FindButton("up");
     if (mHeadUpButton == NULL) {
         gFatalError = true;
         return;
     }
-    mHeadDownButton = fn_80048364(mHeadLayout, "down");
+    mHeadDownButton = mHeadLayout->FindButton("down");
     if (mHeadDownButton == NULL) {
         gFatalError = true;
         return;
     }
-    mTextButton = fn_80048364(mHeadLayout, "text");
+    mTextButton = mHeadLayout->FindButton("text");
     if (mTextButton == NULL) {
         gFatalError = true;
         return;
     }
-    mHeadZoomOutButton = fn_80048364(mHeadLayout, "zoom_out");
+    mHeadZoomOutButton = mHeadLayout->FindButton("zoom_out");
     if (mHeadZoomOutButton == NULL) {
         gFatalError = true;
         return;
     }
-    mHeadZoomInButton = fn_80048364(mHeadLayout, "zoom_in");
+    mHeadZoomInButton = mHeadLayout->FindButton("zoom_in");
     if (mHeadZoomInButton == NULL) {
         gFatalError = true;
         return;
     }
-    mSlideButton = fn_80048364(mHeadLayout, "slide");
+    mSlideButton = mHeadLayout->FindButton("slide");
     if (mSlideButton == NULL) {
         gFatalError = true;
         return;
@@ -429,14 +411,14 @@ MainScreen::MainScreen(u32 arc, ut::TextWriterBase<wchar_t>* writer, math::VEC2&
 
     mUpButton->mUnk91 = true;
     mDownButton->mUnk91 = true;
-    PaneButton* button = fn_80048364(mMainLayout, "zoom_out");
+    PaneButton* button = mMainLayout->FindButton("zoom_out");
     if (button != NULL) {
         button->mUnk91 = true;
         button->mTextColorCallback = fn_8001F730;
     }
-    fn_80048364(mMainLayout, "zoom_in")->mUnk91 = true;
-    fn_80048364(mMainLayout, "back")->mUnk91 = true;
-    fn_80048364(mMainLayout, "earth")->mUnk91 = true;
+    mMainLayout->FindButton("zoom_in")->mUnk91 = true;
+    mMainLayout->FindButton("back")->mUnk91 = true;
+    mMainLayout->FindButton("earth")->mUnk91 = true;
     mHeadBackButton->mUnk91 = true;
     DisableButton(mHeadBackButton);
     mHeadUpButton->mUnk91 = true;
@@ -448,38 +430,38 @@ MainScreen::MainScreen(u32 arc, ut::TextWriterBase<wchar_t>* writer, math::VEC2&
     DisableButton(mSlideButton);
     mTextButton->Hide();
 
-    mRotAButton = fn_80048364(mEarthLayout, "rot_a");
+    mRotAButton = mEarthLayout->FindButton("rot_a");
     if (mRotAButton == NULL) {
         gFatalError = true;
         return;
     }
     mRotAButton->mUnk91 = true;
-    mRotBButton = fn_80048364(mEarthLayout, "rot_b");
+    mRotBButton = mEarthLayout->FindButton("rot_b");
     if (mRotBButton == NULL) {
         gFatalError = true;
         return;
     }
     mRotBButton->mUnk91 = true;
-    mEarthZoomOutButton = fn_80048364(mEarthLayout, "zoom_out");
+    mEarthZoomOutButton = mEarthLayout->FindButton("zoom_out");
     if (mEarthZoomOutButton == NULL) {
         gFatalError = true;
         return;
     }
     mEarthZoomOutButton->mUnk91 = true;
     mEarthZoomOutButton->mTextColorCallback = fn_8001F730;
-    mEarthZoomInButton = fn_80048364(mEarthLayout, "zoom_in");
+    mEarthZoomInButton = mEarthLayout->FindButton("zoom_in");
     if (mEarthZoomInButton == NULL) {
         gFatalError = true;
         return;
     }
     mEarthZoomInButton->mUnk91 = true;
-    mEarthBackButton = fn_80048364(mEarthLayout, "back");
+    mEarthBackButton = mEarthLayout->FindButton("back");
     if (mEarthBackButton == NULL) {
         gFatalError = true;
         return;
     }
     mEarthBackButton->mUnk91 = true;
-    mResetButton = fn_80048364(mEarthLayout, "reset");
+    mResetButton = mEarthLayout->FindButton("reset");
     if (mResetButton == NULL) {
         gFatalError = true;
         return;
@@ -550,20 +532,20 @@ MainScreen::~MainScreen() {
         }
     }
     if (mEarthLayout != NULL) {
-        fn_80047DE8(mEarthLayout, 1);
+        delete mEarthLayout;
     }
     if (mHeadLayout != NULL) {
-        fn_80047DE8(mHeadLayout, 1);
+        delete mHeadLayout;
     }
     if (mMainLayout != NULL) {
-        fn_80047DE8(mMainLayout, 1);
+        delete mMainLayout;
     }
 }
 
 void MainScreen::Start() {
-    fn_80047EFC(mMainLayout);
-    fn_80047EFC(mHeadLayout);
-    fn_80047EFC(mEarthLayout);
+    mMainLayout->Reset();
+    mHeadLayout->Reset();
+    mEarthLayout->Reset();
     for (u32 i = 0; i < lbl_803575E0; i++) {
         mLists[i]->SetScale(gTextScale);
     }
@@ -666,7 +648,7 @@ void MainScreen::Draw() {
         if (inList && lbl_8035755C != NULL && lbl_8035755C->mNumItems == 0) {
             mTextButton->SetAlpha((s32)(255.0f * mUnk240));
         }
-        fn_80048154(mActiveLayout);
+        mActiveLayout->Draw();
     }
     if (IsState(&MainScreen::State1C600)) {
         DrawCursor();
@@ -1068,12 +1050,12 @@ void MainScreen::ModeMain() {
         if (IsState(&MainScreen::State18770) || IsState(&MainScreen::State195B8)) {
             if (ticker != NULL) {
                 if (article != NULL && article->mLocationName != NULL) {
-                    EnableButton(fn_80048364(mMainLayout, "earth"));
+                    EnableButton(mMainLayout->FindButton("earth"));
                 } else {
-                    DisableButton(fn_80048364(mMainLayout, "earth"));
+                    DisableButton(mMainLayout->FindButton("earth"));
                 }
             } else {
-                DisableButton(fn_80048364(mMainLayout, "earth"));
+                DisableButton(mMainLayout->FindButton("earth"));
             }
         } else if (IsState(&MainScreen::State1B694) || IsState(&MainScreen::State1BD60)) {
             if (mUnk2FC < mUnk2F8 - sVisibleRows[lbl_80356970]) {
@@ -1096,7 +1078,7 @@ void MainScreen::ModeMain() {
             } else {
                 EnableButton(mZoomInButton);
             }
-            DisableButton(fn_80048364(mMainLayout, "earth"));
+            DisableButton(mMainLayout->FindButton("earth"));
         }
 
         if (globe != NULL) {
@@ -1122,12 +1104,12 @@ void MainScreen::ModeMain() {
             }
         }
 
-        fn_80048444(mMainLayout, 15);
-        fn_80048444(mHeadLayout, 15);
-        fn_80048444(mEarthLayout, 15);
-        fn_80047F70(mMainLayout);
-        fn_80047F70(mHeadLayout);
-        fn_80047F70(mEarthLayout);
+        mMainLayout->FadeIn(15);
+        mHeadLayout->FadeIn(15);
+        mEarthLayout->FadeIn(15);
+        mMainLayout->Calc();
+        mHeadLayout->Calc();
+        mEarthLayout->Calc();
 
         if (!IsState(&MainScreen::State1C600)) {
             if (mActiveLayout) {
@@ -1564,14 +1546,14 @@ void MainScreen::State16960(s32* arg) {
         mUnk294 = mUnk238 - mUnk290;
         UpdateHeadButtons();
         if (lbl_80356970 <= 0) {
-            DisableButton(fn_80048364(mHeadLayout, "zoom_out"));
+            DisableButton(mHeadLayout->FindButton("zoom_out"));
         } else {
-            EnableButton(fn_80048364(mHeadLayout, "zoom_out"));
+            EnableButton(mHeadLayout->FindButton("zoom_out"));
         }
         if (lbl_80356970 >= 9) {
-            DisableButton(fn_80048364(mHeadLayout, "zoom_in"));
+            DisableButton(mHeadLayout->FindButton("zoom_in"));
         } else {
-            EnableButton(fn_80048364(mHeadLayout, "zoom_in"));
+            EnableButton(mHeadLayout->FindButton("zoom_in"));
         }
         break;
     }
@@ -1829,7 +1811,7 @@ void MainScreen::State17E6C(s32* arg) {
         mUnk334 = 1;
         mUnk2BE = true;
         mActiveLayout = mMainLayout;
-        DisableButton(fn_80048364(mMainLayout, "earth"));
+        DisableButton(mMainLayout->FindButton("earth"));
         DisableButton(mUpButton);
         SetSubState(NULL);
         SetInputHook(&MainScreen::Hook1E758);
@@ -1984,14 +1966,14 @@ void MainScreen::State18770(s32* arg) {
         }
         UpdateScrollBar();
         if (lbl_80356970 <= 0) {
-            DisableButton(fn_80048364(mMainLayout, "zoom_out"));
+            DisableButton(mMainLayout->FindButton("zoom_out"));
         } else {
-            EnableButton(fn_80048364(mMainLayout, "zoom_out"));
+            EnableButton(mMainLayout->FindButton("zoom_out"));
         }
         if (lbl_80356970 >= 9) {
-            DisableButton(fn_80048364(mMainLayout, "zoom_in"));
+            DisableButton(mMainLayout->FindButton("zoom_in"));
         } else {
-            EnableButton(fn_80048364(mMainLayout, "zoom_in"));
+            EnableButton(mMainLayout->FindButton("zoom_in"));
         }
         break;
     default: {
@@ -2221,14 +2203,14 @@ void MainScreen::State195B8(s32* arg) {
         lbl_803575A8 = 1;
         BOOL zoomed = fn_8003519C(mZoomInPressed, mZoomOutPressed);
         if (lbl_80356970 <= 0) {
-            DisableButton(fn_80048364(mMainLayout, "zoom_out"));
+            DisableButton(mMainLayout->FindButton("zoom_out"));
         } else {
-            EnableButton(fn_80048364(mMainLayout, "zoom_out"));
+            EnableButton(mMainLayout->FindButton("zoom_out"));
         }
         if (lbl_80356970 >= 9) {
-            DisableButton(fn_80048364(mMainLayout, "zoom_in"));
+            DisableButton(mMainLayout->FindButton("zoom_in"));
         } else {
-            EnableButton(fn_80048364(mMainLayout, "zoom_in"));
+            EnableButton(mMainLayout->FindButton("zoom_in"));
         }
         UpdateGlobeCamera();
 
@@ -3072,14 +3054,14 @@ void MainScreen::Sub1D338() {
             }
         }
         if (fn_80034770()) {
-            DisableButton(fn_80048364(mMainLayout, "up"));
+            DisableButton(mMainLayout->FindButton("up"));
         } else {
-            EnableButton(fn_80048364(mMainLayout, "up"));
+            EnableButton(mMainLayout->FindButton("up"));
         }
         if (fn_80034780()) {
-            DisableButton(fn_80048364(mMainLayout, "down"));
+            DisableButton(mMainLayout->FindButton("down"));
         } else {
-            EnableButton(fn_80048364(mMainLayout, "down"));
+            EnableButton(mMainLayout->FindButton("down"));
         }
         if (mDownPressed && !fn_80034780()) {
             PlaySE(0x25);
@@ -3286,17 +3268,17 @@ void MainScreen::Sub1DC30() {
             fn_800324F4(velocity / count);
         }
         if (fn_800324A0()) {
-            DisableButton(fn_80048364(mHeadLayout, "down"));
+            DisableButton(mHeadLayout->FindButton("down"));
             lbl_803575BB = false;
         } else {
-            EnableButton(fn_80048364(mHeadLayout, "down"));
+            EnableButton(mHeadLayout->FindButton("down"));
             lbl_803575BB = true;
         }
         if (fn_80032478()) {
-            DisableButton(fn_80048364(mHeadLayout, "up"));
+            DisableButton(mHeadLayout->FindButton("up"));
             lbl_803575BA = false;
         } else {
-            EnableButton(fn_80048364(mHeadLayout, "up"));
+            EnableButton(mHeadLayout->FindButton("up"));
             lbl_803575BA = true;
         }
         break;
@@ -3472,8 +3454,8 @@ inline void MainScreen::UpdateLayoutAlpha() {
     s32 alpha = 0;
     f32 t = math::SinRad((1.5708f * (15 - mUnk2F4)) / 15.0f);
     alpha += (s32)(255.0f - alpha) * t;
-    fn_80048470(mEarthLayout, alpha, mUnk2F4, 15);
-    fn_80048470(mMainLayout, alpha, mUnk2F4, 15);
+    mEarthLayout->SetBlend(alpha, mUnk2F4, 15);
+    mMainLayout->SetBlend(alpha, mUnk2F4, 15);
 }
 
 void MainScreen::Hook1E758() {
@@ -3548,18 +3530,18 @@ void MainScreen::Hook1E758() {
         mUnk2F0++;
     }
     if (held) {
-        fn_80048418(mEarthLayout, 10);
-        fn_80048418(mMainLayout, 10);
+        mEarthLayout->SlideOut(10);
+        mMainLayout->SlideOut(10);
         showButtons = true;
     } else if (mUnk2EC < 10 && mUnk2F0 < 90) {
-        fn_800483EC(mEarthLayout, 15);
-        fn_800483EC(mMainLayout, 15);
+        mEarthLayout->SlideIn(15);
+        mMainLayout->SlideIn(15);
     } else {
-        fn_80048418(mEarthLayout, 30);
-        fn_80048418(mMainLayout, 30);
+        mEarthLayout->SlideOut(30);
+        mMainLayout->SlideOut(30);
         showButtons = true;
     }
-    fn_800483EC(mHeadLayout, 15);
+    mHeadLayout->SlideIn(15);
     if (dragging && !mUnk2B8) {
         if (mUnk2F4 > 0) {
             mUnk2F4--;
@@ -3579,9 +3561,9 @@ void MainScreen::Hook1E758() {
 void MainScreen::Hook1ED20() {
     mUnk2EC = 0;
     mUnk2F0 = 0;
-    fn_800483EC(mMainLayout, 15);
-    fn_800483EC(mHeadLayout, 15);
-    fn_800483EC(mEarthLayout, 15);
+    mMainLayout->SlideIn(15);
+    mHeadLayout->SlideIn(15);
+    mEarthLayout->SlideIn(15);
     if (mUnk2F4 > 0) {
         mUnk2F4--;
     }

@@ -1,3 +1,4 @@
+#include <news/PaneLayout.h>
 #include <news/LanguageSelect.h>
 #include <news/Common.h>
 #include <news/Draw2D.h>
@@ -28,12 +29,6 @@ extern u32 lbl_801F0908[4];        // held buttons
 extern f32 lbl_8020E468[];         // pointer movement
 
 extern "C" {
-Layout* fn_80047B50(void* mem, u32 arc, const char* name, void* resAccessor, u32 arg);
-void fn_80047DE8(Layout* layout, s32 flags);
-void fn_80047EFC(Layout* layout);
-void fn_80047F70(Layout* layout);
-void fn_80048154(Layout* layout);
-PaneButton* fn_80048364(Layout* layout, const char* name);
 void fn_8004BD60(Layout* layout, u32 arg);
 s32 fn_8004C000(const char* name, u32 button);
 s32 fn_8004C13C(const char* name, u32 button);
@@ -43,7 +38,7 @@ static ut::Color sFillColor(255, 255, 255, 64);
 static ut::Color sTextColor(0, 0, 0, 255);
 
 static inline void PressButton(Layout* layout, const char* name) {
-    PaneButton* button = fn_80048364(layout, name);
+    PaneButton* button = layout->FindButton(name);
     button->mToggle = true;
 }
 
@@ -98,38 +93,32 @@ LanguageSelect::LanguageSelect(u32 arc)
         return;
     }
 
-    Layout* layout = (Layout*)operator new(0x434);
-    if (layout != NULL) {
-        layout = fn_80047B50(layout, arc, "set_language1.brlyt", lbl_801EE270, 0);
-    }
+    Layout* layout = new Layout((void*)arc, "set_language1.brlyt", (PaneButtonColors*)lbl_801EE270, false);
     mLayout1 = layout;
     if (mLayout1 == NULL) {
         gAllocFailed = true;
         return;
     }
-    layout = (Layout*)operator new(0x434);
-    if (layout != NULL) {
-        layout = fn_80047B50(layout, arc, "set_language2.brlyt", lbl_801EE270, 0);
-    }
+    layout = new Layout((void*)arc, "set_language2.brlyt", (PaneButtonColors*)lbl_801EE270, false);
     mLayout2 = layout;
     if (mLayout2 == NULL) {
         gAllocFailed = true;
         return;
     }
 
-    mBackButton = fn_80048364(mLayout1, "back");
+    mBackButton = mLayout1->FindButton("back");
     if (mBackButton == NULL) {
         gFatalError = true;
         return;
     }
     DisableButton(mBackButton);
 
-    mUpButton = fn_80048364(mLayout1, "up");
+    mUpButton = mLayout1->FindButton("up");
     if (mUpButton == NULL) {
         gFatalError = true;
         return;
     }
-    mDownButton = fn_80048364(mLayout1, "down");
+    mDownButton = mLayout1->FindButton("down");
     if (mDownButton == NULL) {
         gFatalError = true;
         return;
@@ -191,16 +180,16 @@ LanguageSelect::~LanguageSelect() {
         delete[] mItems;
     }
     if (mLayout2 != NULL) {
-        fn_80047DE8(mLayout2, 1);
+        delete mLayout2;
     }
     if (mLayout1 != NULL) {
-        fn_80047DE8(mLayout1, 1);
+        delete mLayout1;
     }
 }
 
 void LanguageSelect::Start() {
-    fn_80047EFC(mLayout1);
-    fn_80047EFC(mLayout2);
+    mLayout1->Reset();
+    mLayout2->Reset();
     ChangeState(&LanguageSelect::StateList);
 }
 
@@ -223,8 +212,8 @@ void LanguageSelect::Update(bool arg) {
     mYesPressed = false;
     mNoPressed = false;
     mBackPressed = false;
-    fn_80047F70(mLayout1);
-    fn_80047F70(mLayout2);
+    mLayout1->Calc();
+    mLayout2->Calc();
     if (mState) {
         (this->*mState)(NULL);
     }
@@ -262,7 +251,7 @@ void LanguageSelect::DrawList() {
     }
 
     Draw2D_SetScissor(0, 0, GetScreenWidth(), 456);
-    fn_80048154(mLayout1);
+    mLayout1->Draw();
 }
 
 void LanguageSelect::DrawConfirm() {
@@ -283,7 +272,7 @@ void LanguageSelect::DrawConfirm() {
     mWriter.SetScale(mSelected->scaleX, mSelected->scaleY);
     mWriter.SetCursor(pos.x, pos.y);
     mWriter.Print(mSelected->name);
-    fn_80048154(mLayout2);
+    mLayout2->Draw();
 }
 
 void LanguageSelect::StateIdle(Item* item) {
@@ -344,7 +333,7 @@ void LanguageSelect::StateConfirm(Item* item) {
         if (item == NULL) {
             mSelected = mItems;
         }
-        fn_80047EFC(mLayout2);
+        mLayout2->Reset();
         ChangeScroll(&LanguageSelect::ScrollIdle);
         break;
     case -1:

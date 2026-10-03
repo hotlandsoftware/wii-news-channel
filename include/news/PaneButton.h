@@ -63,7 +63,7 @@ public:
     void SetSelIndex(s32 idx);
     void SetText(const wchar_t* text);
     void Hide();
-    void SetAlpha(u8 alpha);
+    void SetAlpha(s32 alpha);
     nw4r::lyt::Pane* FindPane(const char* name);
 
     s32 mUnk00;                              // at 0x00

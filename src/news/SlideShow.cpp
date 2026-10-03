@@ -3,6 +3,7 @@
 #define NW4R_UT_COLOR_DEFAULT_WHITE
 #define NW4R_UT_COLOR_WORD_COPY
 
+#include <news/PaneLayout.h>
 #include <news/SlideShow.h>
 #include <news/ArticleText.h>
 #include <news/Common.h>
@@ -73,18 +74,13 @@ extern "C" Globe* lbl_8035775C;
 
 void DrawScreenFade(s32 alpha);
 
+// The original calls Layout::SetBlend(s32, s32, s32) with only the first
+// argument set (r5/r6 are left as they are), as if through an older
+// one-argument declaration. Declaring the mangled name with C linkage
+// reproduces that call.
+extern "C" void SetBlend__6LayoutFlll(Layout* layout, s32 alpha);
+
 extern "C" {
-Layout* fn_80047B50(void* mem, u32 arc, const char* name, void* resAccessor, u32 arg);
-void fn_80047DE8(Layout* layout, s32 flags);
-void fn_80047EFC(Layout* layout);
-void fn_80047F70(Layout* layout);
-void fn_80048154(Layout* layout);
-PaneButton* fn_80048364(Layout* layout, const char* name);
-void fn_800483EC(Layout* layout, s32 frames);
-void fn_80048418(Layout* layout, s32 frames);
-void fn_80048444(Layout* layout, s32 frames);
-void fn_80048470(Layout* layout, s32 alpha);
-void fn_800484A4(Layout* layout, s32 alpha);
 BOOL fn_80048854(void* history, s32 chan, f32* x, f32* y);
 void fn_8004BD60(Layout* layout, u32 arg);
 s32 fn_8004C000(const char* name, u32 button);
@@ -304,65 +300,56 @@ SlideShow::SlideShow(u32 arc)
     mDragging[2] = false;
     mDragging[3] = false;
 
-    Layout* layout = (Layout*)operator new(0x434);
-    if (layout != NULL) {
-        layout = fn_80047B50(layout, arc, "slide_main.brlyt", lbl_801EE270, 0);
-    }
+    Layout* layout = new Layout((void*)arc, "slide_main.brlyt", (PaneButtonColors*)lbl_801EE270, false);
     mMainLayout = layout;
     if (mMainLayout == NULL) {
         gAllocFailed = true;
         return;
     }
 
-    layout = (Layout*)operator new(0x434);
-    if (layout != NULL) {
-        layout = fn_80047B50(layout, arc, "slide.brlyt", lbl_801EE270, 0);
-    }
+    layout = new Layout((void*)arc, "slide.brlyt", (PaneButtonColors*)lbl_801EE270, false);
     mSlideLayout = layout;
     if (mMainLayout == NULL) {
         gAllocFailed = true;
         return;
     }
 
-    layout = (Layout*)operator new(0x434);
-    if (layout != NULL) {
-        layout = fn_80047B50(layout, arc, "slide_belt.brlyt", lbl_801EE270, 0);
-    }
+    layout = new Layout((void*)arc, "slide_belt.brlyt", (PaneButtonColors*)lbl_801EE270, false);
     mBeltLayout = layout;
     if (mMainLayout == NULL) {
         gAllocFailed = true;
         return;
     }
 
-    mUpButton = fn_80048364(mMainLayout, "up");
+    mUpButton = mMainLayout->FindButton("up");
     if (mUpButton == NULL) {
         gFatalError = true;
         return;
     }
     mUpButton->mUnk91 = true;
 
-    mDownButton = fn_80048364(mMainLayout, "down");
+    mDownButton = mMainLayout->FindButton("down");
     if (mDownButton == NULL) {
         gFatalError = true;
         return;
     }
     mDownButton->mUnk91 = true;
 
-    mBackButton = fn_80048364(mMainLayout, "back");
+    mBackButton = mMainLayout->FindButton("back");
     if (mBackButton == NULL) {
         gFatalError = true;
         return;
     }
     mBackButton->mUnk91 = true;
 
-    mZoomInButton = fn_80048364(mMainLayout, "zoom_in");
+    mZoomInButton = mMainLayout->FindButton("zoom_in");
     if (mZoomInButton == NULL) {
         gFatalError = true;
         return;
     }
     mZoomInButton->mUnk91 = true;
 
-    mZoomOutButton = fn_80048364(mMainLayout, "zoom_out");
+    mZoomOutButton = mMainLayout->FindButton("zoom_out");
     if (mZoomOutButton == NULL) {
         gFatalError = true;
         return;
@@ -370,7 +357,7 @@ SlideShow::SlideShow(u32 arc)
     mZoomOutButton->mUnk91 = true;
     mZoomOutButton->mTextColorCallback = (PaneButton::TextColorCallback)fn_8001F730;
 
-    mEndButton = fn_80048364(mMainLayout, "end");
+    mEndButton = mMainLayout->FindButton("end");
     if (mEndButton == NULL) {
         gFatalError = true;
         return;
@@ -416,9 +403,9 @@ SlideShow::SlideShow(u32 arc)
 }
 
 SlideShow::~SlideShow() {
-    fn_80047DE8(mBeltLayout, 1);
-    fn_80047DE8(mSlideLayout, 1);
-    fn_80047DE8(mMainLayout, 1);
+    delete mBeltLayout;
+    delete mSlideLayout;
+    delete mMainLayout;
 }
 
 static inline void ApplyView(SlideShow* s) {
@@ -538,9 +525,9 @@ void SlideShow::LoadArticle() {
 }
 
 void SlideShow::Start() {
-    fn_80047EFC(mMainLayout);
-    fn_80047EFC(mSlideLayout);
-    fn_80047EFC(mBeltLayout);
+    mMainLayout->Reset();
+    mSlideLayout->Reset();
+    mBeltLayout->Reset();
     mArticleIdx = 0;
     mTextVisible = true;
     mTextMoving = false;
@@ -749,8 +736,8 @@ void SlideShow::Calc() {
 
 void SlideShow::Draw() {
     if (mAlpha != 0) {
-        fn_800484A4(mSlideLayout, mAlpha);
-        fn_80048154(mSlideLayout);
+        mSlideLayout->SetAlpha(mAlpha);
+        mSlideLayout->Draw();
         fn_80036328(mAlpha, mView.top);
         if (mFooterAlpha != 0 && mDrawFooter) {
             Draw2D_SetupGX();
@@ -782,14 +769,14 @@ void SlideShow::Draw() {
     DrawPictures();
 
     if (IsState(&SlideShow::StateShow) || IsState(&SlideShow::StateMove)) {
-        fn_80048154(mMainLayout);
+        mMainLayout->Draw();
     }
 
     if (mBeltFade > 0) {
         f32 t = 1.0f - math::CosFIdx(FIdxRad((1.5707964f * mBeltFade) / 15.0f));
         s32 alpha = 255.0f * t;
-        fn_800484A4(mBeltLayout, alpha);
-        fn_80048154(mBeltLayout);
+        mBeltLayout->SetAlpha(alpha);
+        mBeltLayout->Draw();
 
         if (mHasTitle) {
             Draw2D_SetupGX();
@@ -957,12 +944,12 @@ BOOL SlideShow::CheckInput() {
         return FALSE;
     }
 
-    fn_80048444(mMainLayout, 15);
+    mMainLayout->FadeIn(15);
     if (mShowMain) {
-        fn_80047F70(mMainLayout);
+        mMainLayout->Calc();
     }
-    fn_80047F70(mSlideLayout);
-    fn_80047F70(mBeltLayout);
+    mSlideLayout->Calc();
+    mBeltLayout->Calc();
 
     if (lbl_80357598 != 1) {
         return TRUE;
@@ -1566,18 +1553,18 @@ void SlideShow::SubStateScroll() {
         }
 
         if (fn_80034770()) {
-            PaneButton* button = fn_80048364(mMainLayout, "up");
+            PaneButton* button = mMainLayout->FindButton("up");
             button->mDisabled = true;
             button->Press();
         } else {
-            fn_80048364(mMainLayout, "up")->mDisabled = false;
+            mMainLayout->FindButton("up")->mDisabled = false;
         }
         if (fn_80034780()) {
-            PaneButton* button = fn_80048364(mMainLayout, "down");
+            PaneButton* button = mMainLayout->FindButton("down");
             button->mDisabled = true;
             button->Press();
         } else {
-            fn_80048364(mMainLayout, "down")->mDisabled = false;
+            mMainLayout->FindButton("down")->mDisabled = false;
         }
 
         if (mDownPressed && !fn_80034780()) {
@@ -2006,12 +1993,12 @@ void SlideShow::CheckPointer() {
     }
 
     if (dragging) {
-        fn_80048418(mCurLayout, 10);
+        mCurLayout->SlideOut(10);
         outside = true;
     } else if (mPointerOutTimer < 10 && mIdleTimer < 90) {
-        fn_800483EC(mCurLayout, 15);
+        mCurLayout->SlideIn(15);
     } else {
-        fn_80048418(mCurLayout, 30);
+        mCurLayout->SlideOut(30);
         outside = true;
     }
 
@@ -2030,7 +2017,7 @@ void SlideShow::CheckPointer() {
     lbl_80356CA0 = flag;
 
     s32 lo = 32;
-    fn_80048470(mCurLayout,
+    SetBlend__6LayoutFlll(mCurLayout,
                 lo + (s32)(255.0f - lo) *
                          math::SinFIdx(FIdxRad((1.5708f * (15 - mFooterFade)) / 15.0f)));
 }
