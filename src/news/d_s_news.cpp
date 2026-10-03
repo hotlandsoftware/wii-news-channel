@@ -1443,9 +1443,10 @@ BOOL NewsScene::StateSlideshow() {
         static f32 sMarkZ = 0.0f;
 #pragma pop
         f32 x = 4.0f + GetSideMargin();
+        f32 y2 = y - h;
         lbl_801EDF70.y = y;
         lbl_801EDF70.z = sMarkZ;
-        lbl_801EDF88.y = y - h;
+        lbl_801EDF88.y = y2;
         lbl_801EDF88.x = lbl_801EDF70.x = x;
         lbl_801EDF88.z = sMarkZ;
         break;
