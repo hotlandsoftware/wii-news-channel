@@ -191,9 +191,10 @@ void jpgdOutRGB565_411Edge(JPEGDecContext* ctx, u32 x, u32 y) {
     scr = ctx->pix.cr;
     tiles = TILES();
     hh = (h->lastY == y) ? h->remY : 8 / h->scale;
-    xe = x + w;
     w = (h->lastX == x) ? h->remX : 32 / h->scale;
+    xe = x + w;
     ye = y + hh;
+
     for (j = y; j < ye; j++) {
         for (i = x; i < xe; i++) {
             if (((i - x) & 3) == 0) {
