@@ -85,6 +85,12 @@ static inline void jpgdPutI8(u8* p, s32 x, s32 y, u32 tiles, u8 v) {
     p[(t << 5) + ((y & 3) << 3) + (x & 7)] = v;
 }
 
+static inline void jpgdPutC8(u8* pb, u8* pr, s32 x, s32 y, u32 tiles, u8 b, u8 r) {
+    s32 t = (x >> 3) + (y >> 2) * tiles;
+    pb[(t << 5) + ((y & 3) << 3) + (x & 7)] = b;
+    pr[(t << 5) + ((y & 3) << 3) + (x & 7)] = r;
+}
+
 void jpgdOutYUV411(JPEGDecContext* ctx, u32 x, u32 y) {
     s32 i;
     u32 stride;
