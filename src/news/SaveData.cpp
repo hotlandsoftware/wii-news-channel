@@ -155,7 +155,7 @@ s32 WriteSaveData() {
 }
 
 SaveErrorDialog::SaveErrorDialog(u32 arc) {
-    mFader = lbl_8035772C;
+    mFader = gFader;
 
     Layout* layout = new Layout((void*)arc, "error3.brlyt", (PaneButtonColors*)lbl_801EE270, false);
     mQuestion = layout;

@@ -6,7 +6,7 @@
 #include <nw4r/ut/ut_Color.h>
 
 // Full-screen colour fade drawn as a gradient quad (Fader.cpp, 0x800488B0).
-// The scene owns two of them (lbl_8035772C and lbl_80357730, "m_pFade" and
+// The scene owns two of them (gFader and gFader2, "m_pFade" and
 // "m_pFade2" in d_scene.cpp).
 class Fader {
 public:
@@ -64,7 +64,7 @@ public:
     f32 mSpeed;                     // at 0x60
 };
 
-extern Fader* lbl_8035772C; // m_pFade
-extern Fader* lbl_80357730; // m_pFade2
+extern Fader* gFader; // m_pFade
+extern Fader* gFader2; // m_pFade2
 
 #endif

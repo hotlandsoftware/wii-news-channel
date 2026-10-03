@@ -313,7 +313,7 @@ s32 HomeMenu::Calc() {
             if (LoadFonts()) {
                 mResult = RESULT_ERROR;
             }
-            lbl_8035772C->FadeIn(15);
+            gFader->FadeIn(15);
             VISetBlack(FALSE);
             VIFlush();
             mOpenManual = false;

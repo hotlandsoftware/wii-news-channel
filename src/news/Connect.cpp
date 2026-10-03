@@ -38,7 +38,7 @@ struct DownloadTask {
 extern u8 lbl_801EE270[];         // layout resource accessor
 extern u32 lbl_801F0908[4];       // held buttons
 extern DownloadTask lbl_8020CEB8[8];
-extern u8 lbl_80357729;
+extern u8 gExitRequested;
 extern u32 lbl_80357688;          // pointer button hold
 
 void AdvanceLoadingFrame();
@@ -101,7 +101,7 @@ Connect::Connect(u32 arg, u32 arc, NewsData* newsData) {
     m00C = arg;
     mArc = arc;
     mNewsData = newsData;
-    mFader = lbl_8035772C;
+    mFader = gFader;
     mHeapMem = fn_80040994(0x800000, 0x20);
     if (mHeapMem == NULL) {
         OSPanic("Connect.cpp", 41, "MEMORY ERROR");
@@ -284,7 +284,7 @@ void Connect::Update() {
         }
         if (mDownloadState == DL_TEST) {
             if (mTaskStatus == 0) {
-                lbl_80357729 = 1;
+                gExitRequested = 1;
             }
         } else if (mDownloadState == DL_DONE) {
             s32 cur = mCurrentFile;

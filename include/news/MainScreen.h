@@ -65,7 +65,7 @@ struct Globe {
 
 extern HeadlineList* lbl_8035755C; // headline list being shown
 extern u32 lbl_803575E0;           // number of news sections
-extern Globe* lbl_8035775C;
+extern Globe* gGlobe;
 
 extern "C" void fn_800323F8(nw4r::math::VEC2* pos, f32 scale, f32 alpha);
 

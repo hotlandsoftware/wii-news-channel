@@ -79,9 +79,9 @@ BOOL LoadCommonResources();
 void RestoreRetraceCallbacks();
 
 // Globals (d_scene.cpp).
-f32 lbl_80356C98 = 1.0f;
-s32 lbl_80356C9C = 255;
-bool lbl_80356CA0 = true;
+f32 gTopLayoutAlpha = 1.0f;
+s32 sEarthFadeAlpha = 255;
+bool gHideClock = true;
 const char* sEarthPath = "/earth.brres.LZ";
 
 static const char* sManualArcs[] = {"html-jp.arc", "html-us.arc", "html-eu.arc"};
@@ -116,50 +116,50 @@ struct CursorTex {
 };
 
 PointerHistory gPointerHistory;
-OSCalendarTime lbl_8020E008;
-CursorTex lbl_8020E030[89];
-PointerScroll lbl_8020E468;
-PaneButton* lbl_8020E4A0[4];
-ut::TextWriterBase<wchar_t> lbl_8020E4C0;
-wchar_t lbl_8020E520[0x180];
-MEMAllocator lbl_8020E820;
-MEMAllocator lbl_8020E830;
+OSCalendarTime gClockTime;
+CursorTex sCursorTex[89];
+PointerScroll gPointerScroll;
+PaneButton* gHoverButtons[4];
+ut::TextWriterBase<wchar_t> gTextWriter;
+wchar_t gTextBuf[0x180];
+MEMAllocator sBrowserAllocator;
+MEMAllocator sAppAllocator;
 
-HomeMenu* lbl_80357710;
+HomeMenu* gHomeMenu;
 f32 gCharSpaceScale;
-u32 lbl_80357718;
-s32 lbl_8035771C;
-s32 lbl_80357720;
-s32 lbl_80357724;
+u32 sFrameCount;
+s32 sBlink;
+s32 sCycleA;
+s32 sCycleB;
 bool gFatalError;
-bool lbl_80357729;
-bool lbl_8035772A;
-bool lbl_8035772B;
-Fader* lbl_8035772C;
-Fader* lbl_80357730;
-void* lbl_80357734;
-void* lbl_80357738;
-void* lbl_8035773C;
-void* lbl_80357740;
+bool gExitRequested;
+bool gPointerOverClock;
+bool sEarthLoading;
+Fader* gFader;
+Fader* gFader2;
+void* sSysFontBuf;
+void* sTimeFontData;
+void* sArticleFontBuf;
+void* sCityFontData;
 ut::ArchiveFont* gArticleFont;
-ut::ResFont* lbl_80357748;
+ut::ResFont* gCityFont;
 ut::ArchiveFont* gSysFont;
-ut::ResFont* lbl_80357750;
-void* lbl_80357754;
-void* lbl_80357758;
-Globe* lbl_8035775C;
-Model* lbl_80357760;
-u32 lbl_80357764;
-u32 lbl_80357768;
-u32 lbl_8035776C;
+ut::ResFont* sTimeFont;
+void* gSoundPlayer;
+void* sEarthData;
+Globe* gGlobe;
+Model* gEarthModel;
+u32 sEarthFileSize;
+u32 sEarthSize;
+u32 sEarthChunkSize;
 TPLPalette* gCursorTpl;
-void* lbl_80357774;
-void* lbl_80357778;
-MEMHeapHandle lbl_8035777C;
-MEMHeapHandle lbl_80357780;
-Thread* lbl_80357784;
-void* lbl_80357788;
-void* lbl_8035778C;
+void* sBrowserHeapBuf;
+void* sAppHeapBuf;
+MEMHeapHandle sBrowserHeap;
+MEMHeapHandle sAppHeap;
+Thread* sEarthThread;
+void* sEarthBuf;
+void* sEarthReadBuf;
 ut::Color gHighlightColor(140, 180, 180, 255);
 
 #define SCENE_ERROR(line)                                                                          \
@@ -169,7 +169,7 @@ ut::Color gHighlightColor(140, 180, 180, 255);
     } while (0)
 
 static inline BOOL IsHomeMenuActive() {
-    return lbl_80357710->IsOpen();
+    return gHomeMenu->IsOpen();
 }
 
 Scene::Scene(bool arg)
@@ -177,9 +177,9 @@ Scene::Scene(bool arg)
       mClockBottom(0.0f), mUnk8C(0.0f), mUnk90(0.0f), mClockSuffixY(0.0f), mStep(0),
       mClockAlpha(0), mColonPhase(0), mUnkA4(arg), mLayoutArc(NULL) {
     gFatalError = false;
-    lbl_80357758 = NULL;
-    lbl_8035772B = false;
-    OSTicksToCalendarTime(OSGetTime(), &lbl_8020E008);
+    sEarthData = NULL;
+    sEarthLoading = false;
+    OSTicksToCalendarTime(OSGetTime(), &gClockTime);
     GXColor clear = {0, 0, 0, 255};
     GXSetCopyClear(clear, 0xFFFFFF);
 
@@ -188,21 +188,21 @@ Scene::Scene(bool arg)
         return;
     }
 
-    lbl_80357774 = fn_80040994(0x700000, 0);
-    lbl_80357778 = SubHeapAlloc(0x1B00000, 0);
-    lbl_8035777C = MEMCreateExpHeapEx(lbl_80357774, 0x700000, 0);
-    lbl_80357780 = MEMCreateExpHeapEx(lbl_80357778, 0x1B00000, 0);
-    MEMInitAllocatorForExpHeap(&lbl_8020E820, lbl_8035777C, 32);
-    MEMInitAllocatorForExpHeap(&lbl_8020E830, lbl_80357780, 32);
-    lbl_8020E468.Reset();
+    sBrowserHeapBuf = fn_80040994(0x700000, 0);
+    sAppHeapBuf = SubHeapAlloc(0x1B00000, 0);
+    sBrowserHeap = MEMCreateExpHeapEx(sBrowserHeapBuf, 0x700000, 0);
+    sAppHeap = MEMCreateExpHeapEx(sAppHeapBuf, 0x1B00000, 0);
+    MEMInitAllocatorForExpHeap(&sBrowserAllocator, sBrowserHeap, 32);
+    MEMInitAllocatorForExpHeap(&sAppAllocator, sAppHeap, 32);
+    gPointerScroll.Reset();
     gPointerHistory.Reset();
 
-    lbl_80357718 = 0;
-    lbl_8035772C = NULL;
-    lbl_80357730 = NULL;
-    lbl_8035773C = NULL;
+    sFrameCount = 0;
+    gFader = NULL;
+    gFader2 = NULL;
+    sArticleFontBuf = NULL;
     gArticleFont = NULL;
-    lbl_80357729 = false;
+    gExitRequested = false;
     ClearButtonHover();
     lyt::Layout::SetAllocator(&gLytAllocator);
 
@@ -219,35 +219,35 @@ Scene::Scene(bool arg)
         break;
     }
 
-    lbl_80357710 = new HomeMenu(8, sManualArcs[gUpdateMsgType], manualPath, &lbl_8020E820,
-                                &lbl_8020E830, &gLytAllocator);
-    if (lbl_80357710 == NULL || !lbl_80357710->mInitialized) {
+    gHomeMenu = new HomeMenu(8, sManualArcs[gUpdateMsgType], manualPath, &sBrowserAllocator,
+                                &sAppAllocator, &gLytAllocator);
+    if (gHomeMenu == NULL || !gHomeMenu->mInitialized) {
         SCENE_ERROR(388);
         goto end;
     }
 
-    lbl_80357710->Init();
-    lbl_80357710->mManualEnabled = false;
-    lbl_80357710->mSuspendMusic = false;
+    gHomeMenu->Init();
+    gHomeMenu->mManualEnabled = false;
+    gHomeMenu->mSuspendMusic = false;
 
     switch (gLanguage) {
     case 0:
-        lbl_80357738 = LoadArcFile(gArchive, "font_weather_time.brfnt.LZ", 32, NULL, lbl_80357640);
+        sTimeFontData = LoadArcFile(gArchive, "font_weather_time.brfnt.LZ", 32, NULL, lbl_80357640);
         break;
     default:
-        lbl_80357738 = LoadArcFile(gArchive, "font_weather_timeWW.brfnt.LZ", 32, NULL, lbl_80357640);
+        sTimeFontData = LoadArcFile(gArchive, "font_weather_timeWW.brfnt.LZ", 32, NULL, lbl_80357640);
         break;
     }
-    if (lbl_80357738 == NULL) {
+    if (sTimeFontData == NULL) {
         SCENE_ERROR(413);
         goto end;
     }
 
-    lbl_80357750 = new ut::ResFont();
-    if (lbl_80357750 == NULL) {
+    sTimeFont = new ut::ResFont();
+    if (sTimeFont == NULL) {
         OSPanic(__FILE__, 421, "m_pTimeFont\n");
     }
-    if (!lbl_80357750->SetResource(lbl_80357738)) {
+    if (!sTimeFont->SetResource(sTimeFontData)) {
         OSPanic(__FILE__, 425, "nw4r::ut::ResFont::SetResource() failed.\n");
     }
 
@@ -256,20 +256,20 @@ Scene::Scene(bool arg)
         goto end;
     }
 
-    lbl_80357740 = LoadArcFile(gArchive, "/font_weather_city.brfnt.LZ", 32, NULL, gSubHeap);
-    if (lbl_80357740 == NULL) {
+    sCityFontData = LoadArcFile(gArchive, "/font_weather_city.brfnt.LZ", 32, NULL, gSubHeap);
+    if (sCityFontData == NULL) {
         SCENE_ERROR(439);
         goto end;
     }
 
-    lbl_80357748 = new ut::ResFont();
-    if (lbl_80357748 == NULL) {
+    gCityFont = new ut::ResFont();
+    if (gCityFont == NULL) {
         OSPanic(__FILE__, 448, "m_pFutiFont\n");
     }
-    if (!lbl_80357748->SetResource(lbl_80357740)) {
+    if (!gCityFont->SetResource(sCityFontData)) {
         OSPanic(__FILE__, 454, "m_pFutiFont->SetResource() failed.\n");
     }
-    lbl_80357748->SetAlternateChar(0xE06B);
+    gCityFont->SetAlternateChar(0xE06B);
 
     gCursorTpl = (TPLPalette*)LoadArcFile(gArchive, "TPLCommon.tpl.LZ", 32, NULL, lbl_80357640);
     if (gCursorTpl == NULL) {
@@ -278,12 +278,12 @@ Scene::Scene(bool arg)
     }
     TPLBind(gCursorTpl);
 
-    lbl_8035772C = new Fader(ut::Color(0, 0, 0, 255));
-    if (lbl_8035772C == NULL) {
+    gFader = new Fader(ut::Color(0, 0, 0, 255));
+    if (gFader == NULL) {
         OSPanic(__FILE__, 473, "m_pFade\n");
     }
-    lbl_80357730 = new Fader(ut::Color(0, 0, 0, 160));
-    if (lbl_80357730 == NULL) {
+    gFader2 = new Fader(ut::Color(0, 0, 0, 160));
+    if (gFader2 == NULL) {
         OSPanic(__FILE__, 481, "m_pFade2\n");
     }
     {
@@ -291,19 +291,20 @@ Scene::Scene(bool arg)
         if (globe != NULL) {
             globe = fn_8004C43C(globe);
         }
-        lbl_8035775C = globe;
+        gGlobe = globe;
     }
-    if (lbl_8035775C == NULL) {
+    if (gGlobe == NULL) {
         OSPanic(__FILE__, 488, "m_pSimpleGlobe\n");
     }
 
-    mBaseWriter.SetFont(*lbl_80357748);
+    mBaseWriter.SetFont(*gCityFont);
     mBaseWriter.SetCharSpace(0.0f);
 
     for (s32 i = 0; i < 89; i++) {
-        lbl_8020E030[i].id = sCursorTexIds[i];
-        lbl_8020E030[i].width = TPL_GetWidth(gCursorTpl, lbl_8020E030[i].id);
-        lbl_8020E030[i].height = TPL_GetHeight(gCursorTpl, lbl_8020E030[i].id);
+        CursorTex* tex = &sCursorTex[i];
+        tex->id = sCursorTexIds[i];
+        tex->width = TPL_GetWidth(gCursorTpl, tex->id);
+        tex->height = TPL_GetHeight(gCursorTpl, tex->id);
     }
 
     if (gLanguage == 0) {
@@ -316,7 +317,7 @@ Scene::Scene(bool arg)
         mClockY = gWidescreen ? 19 : 34;
         mClockRight = 165.0f + mClockX;
         mClockBottom = 36.0f + mClockY;
-        f32 h = lbl_80357750->GetHeight();
+        f32 h = sTimeFont->GetHeight();
         mClockSuffixY = h - 0.75f * h;
     }
 
@@ -361,66 +362,66 @@ void Scene::SetFatalError() {
 Scene::~Scene() {
     Exit(FALSE, 0);
 
-    if (lbl_80357760 != NULL) {
-        delete lbl_80357760;
-        lbl_80357760 = NULL;
+    if (gEarthModel != NULL) {
+        delete gEarthModel;
+        gEarthModel = NULL;
     }
-    if (lbl_80357758 != NULL) {
-        MEMFreeToExpHeap(lbl_80357780, lbl_80357758);
-        lbl_80357758 = NULL;
+    if (sEarthData != NULL) {
+        MEMFreeToExpHeap(sAppHeap, sEarthData);
+        sEarthData = NULL;
     }
-    if (lbl_80357784 != NULL) {
-        delete lbl_80357784;
-        lbl_80357784 = NULL;
+    if (sEarthThread != NULL) {
+        delete sEarthThread;
+        sEarthThread = NULL;
     }
-    if (lbl_80357754 != NULL) {
-        fn_8004EA2C(lbl_80357754, 1);
-        lbl_80357754 = NULL;
+    if (gSoundPlayer != NULL) {
+        fn_8004EA2C(gSoundPlayer, 1);
+        gSoundPlayer = NULL;
     }
-    if (lbl_8035775C != NULL) {
-        fn_8004C5F0(lbl_8035775C, 1);
-        lbl_8035775C = NULL;
+    if (gGlobe != NULL) {
+        fn_8004C5F0(gGlobe, 1);
+        gGlobe = NULL;
     }
-    if (lbl_80357730 != NULL) {
-        delete lbl_80357730;
-        lbl_80357730 = NULL;
+    if (gFader2 != NULL) {
+        delete gFader2;
+        gFader2 = NULL;
     }
-    if (lbl_8035772C != NULL) {
-        delete lbl_8035772C;
-        lbl_8035772C = NULL;
+    if (gFader != NULL) {
+        delete gFader;
+        gFader = NULL;
     }
     if (gCursorTpl != NULL) {
         fn_800409EC(gCursorTpl);
         gCursorTpl = NULL;
     }
-    if (lbl_80357748 != NULL) {
-        delete lbl_80357748;
-        lbl_80357748 = NULL;
+    if (gCityFont != NULL) {
+        delete gCityFont;
+        gCityFont = NULL;
     }
-    if (lbl_80357740 != NULL) {
-        fn_800409F8(lbl_80357740);
-        lbl_80357740 = NULL;
+    if (sCityFontData != NULL) {
+        fn_800409F8(sCityFontData);
+        sCityFontData = NULL;
     }
-    if (lbl_80357750 != NULL) {
-        delete lbl_80357750;
-        lbl_80357750 = NULL;
+    if (sTimeFont != NULL) {
+        delete sTimeFont;
+        sTimeFont = NULL;
     }
-    if (lbl_80357738 != NULL) {
-        fn_800409EC(lbl_80357738);
-        lbl_80357738 = NULL;
+    if (sTimeFontData != NULL) {
+        fn_800409EC(sTimeFontData);
+        sTimeFontData = NULL;
     }
     FreeFonts();
-    if (lbl_8035778C != NULL) {
-        MEMFreeToExpHeap(lbl_80357780, lbl_8035778C);
-        lbl_8035778C = NULL;
+    if (sEarthReadBuf != NULL) {
+        MEMFreeToExpHeap(sAppHeap, sEarthReadBuf);
+        sEarthReadBuf = NULL;
     }
-    if (lbl_80357710 != NULL) {
-        delete lbl_80357710;
+    if (gHomeMenu != NULL) {
+        delete gHomeMenu;
     }
-    MEMDestroyExpHeap(lbl_80357780);
-    MEMDestroyExpHeap(lbl_8035777C);
-    fn_800409F8(lbl_80357778);
-    fn_800409EC(lbl_80357774);
+    MEMDestroyExpHeap(sAppHeap);
+    MEMDestroyExpHeap(sBrowserHeap);
+    fn_800409F8(sAppHeapBuf);
+    fn_800409EC(sBrowserHeapBuf);
 }
 
 void Scene::Exit(BOOL toMenu, s32 arg) {
@@ -434,14 +435,14 @@ void Scene::Exit(BOOL toMenu, s32 arg) {
 }
 
 BOOL LoadFonts() {
-    void* brfna = fn_8003F7B4(5, "wbf1.brfna", -32, NULL, lbl_8035777C);
+    void* brfna = fn_8003F7B4(5, "wbf1.brfna", -32, NULL, sBrowserHeap);
     if (brfna == NULL) {
         return TRUE;
     }
 
     u32 size = ut::ArchiveFont::GetRequireBufferSize(brfna, ut::ArchiveFont::LOAD_GLYPH_ALL);
-    lbl_80357734 = MEMAllocFromAllocator(&lbl_8020E830, size);
-    if (lbl_80357734 == NULL) {
+    sSysFontBuf = MEMAllocFromAllocator(&sAppAllocator, size);
+    if (sSysFontBuf == NULL) {
         fn_800409EC(brfna);
         OSPanic(__FILE__, 725, "m_pSysFontBuf\n");
     }
@@ -449,21 +450,21 @@ BOOL LoadFonts() {
     if (gSysFont == NULL) {
         OSPanic(__FILE__, 732, "m_pSysFont\n");
     }
-    if (!gSysFont->Construct(lbl_80357734, size, brfna, ut::ArchiveFont::LOAD_GLYPH_ALL)) {
+    if (!gSysFont->Construct(sSysFontBuf, size, brfna, ut::ArchiveFont::LOAD_GLYPH_ALL)) {
         fn_800409EC(brfna);
         OSPanic(__FILE__, 737, "nw4r::ut::ArchiveFont::Construct() failed.\n");
     }
     gSysFont->SetAlternateChar(0xE06B);
-    MEMFreeToExpHeap(lbl_8035777C, brfna);
+    MEMFreeToExpHeap(sBrowserHeap, brfna);
 
-    brfna = fn_8003F7B4(5, "wbf2.brfna", -32, NULL, lbl_8035777C);
+    brfna = fn_8003F7B4(5, "wbf2.brfna", -32, NULL, sBrowserHeap);
     if (brfna == NULL) {
         return TRUE;
     }
 
     size = ut::ArchiveFont::GetRequireBufferSize(brfna, ut::ArchiveFont::LOAD_GLYPH_ALL);
-    lbl_8035773C = MEMAllocFromAllocator(&lbl_8020E830, size);
-    if (lbl_8035773C == NULL) {
+    sArticleFontBuf = MEMAllocFromAllocator(&sAppAllocator, size);
+    if (sArticleFontBuf == NULL) {
         fn_800409EC(brfna);
         OSPanic(__FILE__, 756, "m_pFontBuffer\n");
     }
@@ -472,12 +473,12 @@ BOOL LoadFonts() {
         fn_800409EC(brfna);
         OSPanic(__FILE__, 764, "m_pFont\n");
     }
-    if (!gArticleFont->Construct(lbl_8035773C, size, brfna, ut::ArchiveFont::LOAD_GLYPH_ALL)) {
+    if (!gArticleFont->Construct(sArticleFontBuf, size, brfna, ut::ArchiveFont::LOAD_GLYPH_ALL)) {
         fn_800409EC(brfna);
         OSPanic(__FILE__, 771, "m_pFont->Construct() failed.\n");
     }
     gArticleFont->SetAlternateChar(0xE06B);
-    MEMFreeToExpHeap(lbl_8035777C, brfna);
+    MEMFreeToExpHeap(sBrowserHeap, brfna);
     return FALSE;
 }
 
@@ -487,18 +488,18 @@ void FreeFonts() {
         delete gArticleFont;
         gArticleFont = NULL;
     }
-    if (lbl_8035773C != NULL) {
-        MEMFreeToAllocator(&lbl_8020E830, lbl_8035773C);
-        lbl_8035773C = NULL;
+    if (sArticleFontBuf != NULL) {
+        MEMFreeToAllocator(&sAppAllocator, sArticleFontBuf);
+        sArticleFontBuf = NULL;
     }
     if (gSysFont != NULL) {
         gSysFont->Destroy();
         delete gSysFont;
         gSysFont = NULL;
     }
-    if (lbl_80357734 != NULL) {
-        MEMFreeToAllocator(&lbl_8020E830, lbl_80357734);
-        lbl_80357734 = NULL;
+    if (sSysFontBuf != NULL) {
+        MEMFreeToAllocator(&sAppAllocator, sSysFontBuf);
+        sSysFontBuf = NULL;
     }
 }
 
@@ -522,24 +523,24 @@ void Scene::Execute() {
     }
 
     g3d::G3dReset();
-    OSTicksToCalendarTime(OSGetTime(), &lbl_8020E008);
-    lbl_80357718++;
+    OSTicksToCalendarTime(OSGetTime(), &gClockTime);
+    sFrameCount++;
     UpdateSound();
 
-    if (lbl_8035772B && lbl_80357758 != NULL) {
-        if (lbl_8035778C != NULL) {
-            MEMFreeToExpHeap(lbl_80357780, lbl_8035778C);
-            lbl_8035778C = NULL;
+    if (sEarthLoading && sEarthData != NULL) {
+        if (sEarthReadBuf != NULL) {
+            MEMFreeToExpHeap(sAppHeap, sEarthReadBuf);
+            sEarthReadBuf = NULL;
         }
-        if (lbl_80357760 == NULL) {
-            lbl_80357760 = new (-32) Model(lbl_80357758);
+        if (gEarthModel == NULL) {
+            gEarthModel = new (-32) Model(sEarthData);
         }
     }
 
-    lbl_8035772A = false;
+    gPointerOverClock = false;
     for (s32 i = 0; i < 4; i++) {
         if (IsPointerValid(i) && gCursorY[i][0] < mClockBottom) {
-            lbl_8035772A = true;
+            gPointerOverClock = true;
             break;
         }
     }
@@ -550,46 +551,46 @@ void Scene::Execute() {
 
     if (!gFatalError) {
         UpdateClock();
-        u32 frame = lbl_80357718;
+        u32 frame = sFrameCount;
         mColonPhase = (frame >> 8) & 1;
         if ((frame & 0x1F) == 0) {
-            lbl_8035771C ^= 1;
+            sBlink ^= 1;
         }
         if ((frame & 0xF) == 0) {
-            if (++lbl_80357720 > 2) {
-                lbl_80357720 = 0;
+            if (++sCycleA > 2) {
+                sCycleA = 0;
             }
-            if (++lbl_80357724 > 2) {
-                lbl_80357724 = 0;
+            if (++sCycleB > 2) {
+                sCycleB = 0;
             }
         }
-        if (lbl_8035772C != NULL) {
-            lbl_8035772C->Calc();
+        if (gFader != NULL) {
+            gFader->Calc();
         }
-        if (lbl_80357730 != NULL) {
-            lbl_80357730->Calc();
+        if (gFader2 != NULL) {
+            gFader2->Calc();
         }
         vf2C();
-        if (lbl_80357754 != NULL) {
+        if (gSoundPlayer != NULL) {
             fn_8004EAA0();
         }
     }
 }
 
 void Scene::UpdateSound() {
-    if (lbl_80357754 != NULL) {
+    if (gSoundPlayer != NULL) {
         fn_8004EA9C();
     }
 }
 
 void Scene::vf2C() {
-    if (lbl_80357760 != NULL) {
-        lbl_80356C9C -= 6;
-        if (lbl_80356C9C < 0) {
-            lbl_80356C9C = 0;
+    if (gEarthModel != NULL) {
+        sEarthFadeAlpha -= 6;
+        if (sEarthFadeAlpha < 0) {
+            sEarthFadeAlpha = 0;
         }
     } else {
-        lbl_80356C9C = 255;
+        sEarthFadeAlpha = 255;
     }
 }
 
@@ -604,14 +605,14 @@ void Scene::Draw() {
 
 void Scene::vf34() {
     if (!gFatalError) {
-        if (lbl_8035772C != NULL) {
-            lbl_8035772C->Draw();
+        if (gFader != NULL) {
+            gFader->Draw();
         }
-        if (lbl_80357730 != NULL) {
-            lbl_80357730->Draw();
+        if (gFader2 != NULL) {
+            gFader2->Draw();
         }
         DrawOverlay();
-        lbl_80357710->Draw();
+        gHomeMenu->Draw();
     }
 }
 
@@ -624,21 +625,21 @@ void Scene::UpdatePointers() {
 static inline void DrawClockText(Scene* scene, ut::TextWriterBase<wchar_t>& writer) {
     Draw2D_SetupGX();
     Draw2D_SetOrtho();
-    writer.SetFont(*lbl_80357750);
+    writer.SetFont(*sTimeFont);
     writer.SetDrawFlag(0);
     writer.SetupGX();
     writer.SetTextColor(ut::Color(255, 255, 255, scene->mClockAlpha));
     writer.SetScale(1.0f);
     writer.SetCharSpace(0.0f);
     writer.SetCursor(scene->mClockX, scene->mClockY);
-    writer.Print(lbl_8020E520);
+    writer.Print(gTextBuf);
 }
 
 void Scene::DrawClockJapanese() {
     if (mClockAlpha != 0) {
-        wchar_t* p = fn_80044C80(lbl_8020E008.hour % 12, lbl_8020E520, 2, FALSE);
+        wchar_t* p = fn_80044C80(gClockTime.hour % 12, gTextBuf, 2, FALSE);
         *p = L':';
-        fn_80044C80(lbl_8020E008.min, p + 1, 2, TRUE);
+        fn_80044C80(gClockTime.min, p + 1, 2, TRUE);
 
         ut::TextWriterBase<wchar_t> writer;
         DrawClockText(this, writer);
@@ -647,20 +648,20 @@ void Scene::DrawClockJapanese() {
 
 void Scene::DrawClock12h() {
     if (mClockAlpha != 0) {
-        s32 hour = lbl_8020E008.hour % 12;
+        s32 hour = gClockTime.hour % 12;
         if (hour == 0) {
             hour = 12;
         }
-        wchar_t* p = fn_80044C80(hour, lbl_8020E520, 2, FALSE);
+        wchar_t* p = fn_80044C80(hour, gTextBuf, 2, FALSE);
         *p = L':';
-        fn_80044C80(lbl_8020E008.min, p + 1, 2, TRUE);
+        fn_80044C80(gClockTime.min, p + 1, 2, TRUE);
 
         ut::TextWriterBase<wchar_t> writer;
         DrawClockText(this, writer);
-        f32 width = writer.CalcStringWidth(lbl_8020E520);
+        f32 width = writer.CalcStringWidth(gTextBuf);
         writer.SetScale(0.75f);
         writer.SetCursor(mClockX + width, mClockY + mClockSuffixY);
-        if (lbl_8020E008.hour < 12) {
+        if (gClockTime.hour < 12) {
             writer.Print(L" a.m.");
         } else {
             writer.Print(L" p.m.");
@@ -671,11 +672,11 @@ void Scene::DrawClock12h() {
 #define DEFINE_DRAW_CLOCK_24H(name)                                                                \
     void Scene::name() {                                                                           \
         if (mClockAlpha != 0) {                                                                    \
-            s32 hour = lbl_8020E008.hour;                                                          \
+            s32 hour = gClockTime.hour;                                                          \
             fn_80044508(&hour);                                                                    \
-            wchar_t* p = fn_80044C80(hour, lbl_8020E520, 2, TRUE);                                 \
+            wchar_t* p = fn_80044C80(hour, gTextBuf, 2, TRUE);                                 \
             *p = L':';                                                                             \
-            fn_80044C80(lbl_8020E008.min, p + 1, 2, TRUE);                                         \
+            fn_80044C80(gClockTime.min, p + 1, 2, TRUE);                                         \
                                                                                                    \
             ut::TextWriterBase<wchar_t> writer;                                                    \
             DrawClockText(this, writer);                                                           \
@@ -692,16 +693,16 @@ DEFINE_DRAW_CLOCK_24H(DrawClockDutch)
 void Scene::vf40() {}
 
 void Scene::UpdateClock() {
-    if (lbl_8035772A || lbl_80356CA0) {
+    if (gPointerOverClock || gHideClock) {
         if (mClockAlpha != 0) {
             mClockAlpha -= 20;
             if (mClockAlpha < 0) {
                 mClockAlpha = 0;
             }
         }
-        lbl_80356C98 += 0.1f;
-        if (lbl_80356C98 > 1.0f) {
-            lbl_80356C98 = 1.0f;
+        gTopLayoutAlpha += 0.1f;
+        if (gTopLayoutAlpha > 1.0f) {
+            gTopLayoutAlpha = 1.0f;
         }
     } else {
         if (mClockAlpha != 255) {
@@ -710,9 +711,9 @@ void Scene::UpdateClock() {
                 mClockAlpha = 255;
             }
         }
-        lbl_80356C98 -= 0.1f;
-        if (lbl_80356C98 < 0.2f) {
-            lbl_80356C98 = 0.2f;
+        gTopLayoutAlpha -= 0.1f;
+        if (gTopLayoutAlpha < 0.2f) {
+            gTopLayoutAlpha = 0.2f;
         }
     }
 }
@@ -725,14 +726,14 @@ BOOL Scene::StateMain() {
     case -1:
         break;
     default:
-        if (lbl_80357729) {
+        if (gExitRequested) {
             ChangeState(&Scene::StateExit);
             return TRUE;
         }
 
-        lbl_80357710->mManualEnabled = lbl_80357760 != NULL || !lbl_8035772B;
-        lbl_80357710->mSuspendMusic = lbl_8035772B;
-        switch (lbl_80357710->Calc()) {
+        gHomeMenu->mManualEnabled = gEarthModel != NULL || !sEarthLoading;
+        gHomeMenu->mSuspendMusic = sEarthLoading;
+        switch (gHomeMenu->Calc()) {
         case HomeMenu::RESULT_WII_MENU:
             ChangeState(&Scene::StateExit);
             return TRUE;
@@ -768,8 +769,8 @@ BOOL Scene::StateReset() {
         break;
     case 1:
         if (Shutdown()) {
-            lbl_8035772C->FadeOut(30);
-            if (lbl_80357729) {
+            gFader->FadeOut(30);
+            if (gExitRequested) {
                 ChangeState(&Scene::StateExit);
             } else {
                 mStep = 2;
@@ -777,7 +778,7 @@ BOOL Scene::StateReset() {
         }
         break;
     case 2:
-        if (lbl_8035772C->mBusy == 0) {
+        if (gFader->mBusy == 0) {
             mStep = 3;
         }
         break;
@@ -799,7 +800,7 @@ BOOL Scene::StateExit() {
     switch (mStep) {
     case 0:
         if (CanOpenHomeMenu()) {
-            lbl_8035772C->FadeOut(30);
+            gFader->FadeOut(30);
             mStep = 2;
         } else {
             mStep = 1;
@@ -807,7 +808,7 @@ BOOL Scene::StateExit() {
         break;
     case 1:
         if (Shutdown()) {
-            lbl_8035772C->FadeOut(30);
+            gFader->FadeOut(30);
             mStep = 2;
         }
         break;
@@ -815,11 +816,11 @@ BOOL Scene::StateExit() {
         break;
     case 2:
     default:
-        if (lbl_8035772C->mBusy == 0) {
-            if (!lbl_8035772B) {
+        if (gFader->mBusy == 0) {
+            if (!sEarthLoading) {
                 Exit(TRUE, 5);
                 ::ReturnToMenu();
-            } else if (lbl_80357760 != NULL) {
+            } else if (gEarthModel != NULL) {
                 Exit(TRUE, 5);
                 ::ReturnToMenu();
             }
@@ -856,35 +857,35 @@ BOOL LoadEarth() {
     CNTFileInfo info;
     u8 header[32] ATTRIBUTE_ALIGN(32);
 
-    lbl_8035772B = true;
+    sEarthLoading = true;
     s32 result = contentOpenNAND(&lbl_801F09C8.mHandle, sEarthPath, &info);
     switch (result) {
     case 0:
-        lbl_80357764 = OSRoundUp32B(contentGetLengthNAND(&info));
+        sEarthFileSize = OSRoundUp32B(contentGetLengthNAND(&info));
         result = contentReadNAND(&info, header, sizeof(header), 0);
         contentCloseNAND(&info);
         if (result == 0) {
             OSReport("Error!! (%s) CNTRead() failed. %d\n", sEarthPath, result);
             return FALSE;
         }
-        lbl_80357768 = CXGetUncompressedSize(header);
+        sEarthSize = CXGetUncompressedSize(header);
         break;
     default:
         OSReport("Error!! (%s) CNTOpen() failed. %d\n", sEarthPath, result);
         return FALSE;
     }
 
-    lbl_8035776C = 0x10000;
-    lbl_80357788 = MEMAllocFromExpHeapEx(lbl_80357780, lbl_80357768, -32);
-    lbl_8035778C = MEMAllocFromExpHeapEx(lbl_80357780, lbl_8035776C, -32);
-    if (lbl_80357784 == NULL) {
-        lbl_80357784 = new Thread(EarthLoadThread);
-        if (lbl_80357784 == NULL) {
-            OSPanic(__FILE__, 1699, "メモリが足りない！！\n");
+    sEarthChunkSize = 0x10000;
+    sEarthBuf = MEMAllocFromExpHeapEx(sAppHeap, sEarthSize, -32);
+    sEarthReadBuf = MEMAllocFromExpHeapEx(sAppHeap, sEarthChunkSize, -32);
+    if (sEarthThread == NULL) {
+        sEarthThread = new Thread(EarthLoadThread);
+        if (sEarthThread == NULL) {
+            OSPanic(__FILE__, 1699, "メモリがない！！\n");
             return FALSE;
         }
     } else {
-        lbl_80357784->Restart(EarthLoadThread);
+        sEarthThread->Restart(EarthLoadThread);
     }
     return TRUE;
 }
@@ -900,20 +901,20 @@ static void* EarthLoadThread(void* arg) {
     s32 result = contentOpenNAND(&lbl_801F09C8.mHandle, sEarthPath, &info);
     switch (result) {
     case 0:
-        CXInitUncompContextLZ(&ctx, lbl_80357788);
-        for (u32 offset = 0; offset < lbl_80357764; offset += lbl_8035776C) {
-            u32 size = lbl_80357764 - offset;
-            if (size > lbl_8035776C) {
-                size = lbl_8035776C;
+        CXInitUncompContextLZ(&ctx, sEarthBuf);
+        for (u32 offset = 0; offset < sEarthFileSize; offset += sEarthChunkSize) {
+            u32 size = sEarthFileSize - offset;
+            if (size > sEarthChunkSize) {
+                size = sEarthChunkSize;
             }
-            result = contentReadNAND(&info, lbl_8035778C, size, offset);
+            result = contentReadNAND(&info, sEarthReadBuf, size, offset);
             if (result == 0) {
                 contentCloseNAND(&info);
                 OSReport("Error!! (%s) CNTRead() failed. %d\n", sEarthPath, result);
                 gFatalError = true;
                 return NULL;
             }
-            CXReadUncompLZ(&ctx, lbl_8035778C, size);
+            CXReadUncompLZ(&ctx, sEarthReadBuf, size);
         }
         contentCloseNAND(&info);
         if (IsUncompUnfinished(&ctx)) {
@@ -928,30 +929,30 @@ static void* EarthLoadThread(void* arg) {
         return NULL;
     }
 
-    lbl_80357758 = lbl_80357788;
-    lbl_80357788 = NULL;
+    sEarthData = sEarthBuf;
+    sEarthBuf = NULL;
     return NULL;
 }
 
 BOOL UnloadEarth() {
-    if (lbl_8035772B) {
-        if (lbl_80357760 != NULL) {
-            if (lbl_80357760 != NULL) {
-                if (lbl_8035775C != NULL) {
-                    g3d::ScnRoot* root = lbl_8035775C->mScnRoot;
+    if (sEarthLoading) {
+        if (gEarthModel != NULL) {
+            if (gEarthModel != NULL) {
+                if (gGlobe != NULL) {
+                    g3d::ScnRoot* root = gGlobe->mScnRoot;
                     if (root != NULL) {
                         root->Clear();
                     }
-                    fn_8004D170(lbl_8035775C);
+                    fn_8004D170(gGlobe);
                 }
-                delete lbl_80357760;
-                lbl_80357760 = NULL;
+                delete gEarthModel;
+                gEarthModel = NULL;
             }
-            if (lbl_80357758 != NULL) {
-                MEMFreeToExpHeap(lbl_80357780, lbl_80357758);
-                lbl_80357758 = NULL;
+            if (sEarthData != NULL) {
+                MEMFreeToExpHeap(sAppHeap, sEarthData);
+                sEarthData = NULL;
             }
-            lbl_8035772B = false;
+            sEarthLoading = false;
             return TRUE;
         }
         return FALSE;
@@ -965,8 +966,8 @@ static inline BOOL IsButtonInactive(PaneButton* button) {
 
 void UpdateLayoutButtons(Layout* layout, u32 se) {
     f32 width = GetScreenWidth();
-    f32 baseWidth = 608.0f;
     f32 centerX = 0.5f * width;
+    f32 baseWidth = 608.0f;
     f32 halfWidth = 0.5f * baseWidth;
     f32 scale = baseWidth / width;
     f32 halfHeight = 0.5f * (s32)gRenderMode.efbHeight;
@@ -995,32 +996,32 @@ void UpdateLayoutButtons(Layout* layout, u32 se) {
         }
 
         PaneButton* button = layout->HitTest(x, y);
-        if (lbl_8020E4A0[i] != button) {
-            if (lbl_8020E4A0[i] != NULL) {
-                lbl_8020E4A0[i]->Press();
-                lbl_8020E4A0[i]->mUnk91 = false;
+        if (gHoverButtons[i] != button) {
+            if (gHoverButtons[i] != NULL) {
+                gHoverButtons[i]->Press();
+                gHoverButtons[i]->mUnk91 = false;
             }
-            lbl_8020E4A0[i] = button;
+            gHoverButtons[i] = button;
             if (button != NULL && !IsButtonInactive(button)) {
                 PlaySE(se);
                 fn_80040778(i, 3, 20);
             }
         }
-        if (lbl_8020E4A0[i] != NULL) {
+        if (gHoverButtons[i] != NULL) {
             if (lbl_801F0928[i] & 0x800) {
-                lbl_8020E4A0[i]->Press();
-                lbl_8020E4A0[i]->mUnk91 = false;
+                gHoverButtons[i]->Press();
+                gHoverButtons[i]->mUnk91 = false;
             }
-            lbl_8020E4A0[i]->SetHover();
+            gHoverButtons[i]->SetHover();
         }
     }
 }
 
 void ClearButtonHover() {
-    lbl_8020E4A0[0] = NULL;
-    lbl_8020E4A0[1] = NULL;
-    lbl_8020E4A0[2] = NULL;
-    lbl_8020E4A0[3] = NULL;
+    gHoverButtons[0] = NULL;
+    gHoverButtons[1] = NULL;
+    gHoverButtons[2] = NULL;
+    gHoverButtons[3] = NULL;
 }
 
 static inline BOOL IsButtonNamed(PaneButton* button, const char* name) {
@@ -1030,7 +1031,7 @@ static inline BOOL IsButtonNamed(PaneButton* button, const char* name) {
 s32 CheckButtonHold(const char* name, u32 button) {
     for (s32 i = 0; i < 4; i++) {
         if (IsPointerValid(i)) {
-            PaneButton* b = lbl_8020E4A0[i];
+            PaneButton* b = gHoverButtons[i];
             if (b != NULL && !b->mDisabled && IsButtonNamed(b, name)) {
                 u32 pressed;
                 if (b->mUnk91) {
@@ -1039,8 +1040,8 @@ s32 CheckButtonHold(const char* name, u32 button) {
                     pressed = (u16)button & gTrig[i];
                 }
                 if (pressed) {
-                    lbl_8020E4A0[i]->mUnk91 = true;
-                    lbl_8020E4A0[i]->SetPressed(false);
+                    gHoverButtons[i]->mUnk91 = true;
+                    gHoverButtons[i]->SetPressed(false);
                     return i;
                 }
             }
@@ -1052,9 +1053,9 @@ s32 CheckButtonHold(const char* name, u32 button) {
 s32 CheckButtonTrig(const char* name, u32 button) {
     for (s32 i = 0; i < 4; i++) {
         if (IsPointerValid(i)) {
-            PaneButton* b = lbl_8020E4A0[i];
+            PaneButton* b = gHoverButtons[i];
             if (b != NULL && ((u16)button & gTrig[i]) && !b->mDisabled && IsButtonNamed(b, name)) {
-                lbl_8020E4A0[i]->SetPressed(false);
+                gHoverButtons[i]->SetPressed(false);
                 return i;
             }
         }
@@ -1069,7 +1070,7 @@ void LatLonToDegrees(u16 lat, u16 lon, math::VEC2* out) {
 }
 
 void UpdatePointerScroll() {
-    lbl_8020E468.Update();
+    gPointerScroll.Update();
 }
 
 void Scene::ReturnToMenu() {
@@ -1077,14 +1078,14 @@ void Scene::ReturnToMenu() {
 }
 
 void Scene::OnReset() {
-    if (lbl_80357710 != NULL) {
-        lbl_80357710->Quit();
+    if (gHomeMenu != NULL) {
+        gHomeMenu->Quit();
     }
 }
 
 void Scene::OnPowerOff() {
-    if (lbl_80357710 != NULL) {
-        lbl_80357710->Quit();
+    if (gHomeMenu != NULL) {
+        gHomeMenu->Quit();
     }
 }
 

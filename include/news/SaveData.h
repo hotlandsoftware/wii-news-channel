@@ -21,7 +21,7 @@ void SetSaveBuffer(void* buffer, u32 size);
 s32 LoadSaveData();
 s32 WriteSaveData();
 
-extern Fader* lbl_8035772C;
+extern Fader* gFader;
 
 // Message window for NAND/save errors (error2..error5 layouts).
 class SaveErrorDialog {

@@ -26,7 +26,7 @@ extern f32 lbl_801EDFB8[6];
 extern f32 lbl_803575D8;
 extern GXColor lbl_80357600;
 extern u32 lbl_801F0908[4];        // held buttons
-extern f32 lbl_8020E468[];         // pointer movement
+extern f32 gPointerScroll[];         // pointer movement
 
 extern "C" {
 }
@@ -489,7 +489,7 @@ void LanguageSelect::ScrollDrag() {
         lbl_801EDFD0[i] = 1;
         if (lbl_801F0908[i] & 0x400) {
             lbl_801EDFD0[i] = 5;
-            f32 v = lbl_8020E468[i];
+            f32 v = gPointerScroll[i];
             mDragVelocity = 0.1f * v;
             break;
         }

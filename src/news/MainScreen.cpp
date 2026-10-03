@@ -28,7 +28,7 @@ extern u32 lbl_80357698;           // D-pad trigger
 extern u32 lbl_801F0908[4];        // held buttons
 extern s32 lbl_80356970;           // text zoom level (0-9)
 extern u8 lbl_8035697C;
-extern s32 lbl_80357760;
+extern s32 gEarthModel;
 extern const wchar_t* lbl_801B0D08[];
 extern const wchar_t* lbl_801B0E30[];
 // Rows visible / rows scrolled per step for each text zoom level.
@@ -37,15 +37,15 @@ static const s32 sScrollRows[10] = {3, 2, 2, 2, 2, 1, 1, 1, 1, 1};
 // Sound effect per article region.
 static const u32 sRegionSE[10] = {75, 76, 77, 78, 79, 80, 81, 82, 83, 84};
 extern u8 lbl_803575BC;
-extern bool lbl_80356CA0;
-extern u8 lbl_80357729;
+extern bool gHideClock;
+extern u8 gExitRequested;
 extern u8 lbl_803575BD;
 extern s32 lbl_803575A8;
 extern NewsArticle* lbl_80357560;  // article being read
 extern f32 lbl_803575C8;
 extern s32 lbl_801EDFD0[4];        // pointer cursor shape per channel
 extern s32 lbl_80357580;
-extern s32 lbl_8020E4A0[4];
+extern s32 gHoverButtons[4];
 extern f32 lbl_801F0888[4];        // pointer x per channel
 extern f32 lbl_801F0898[4];        // pointer y per channel
 extern u32 lbl_80357688;           // pointer button hold
@@ -57,12 +57,12 @@ extern f32 lbl_803575D4;
 extern f32 lbl_803575D0;
 extern const f32 lbl_801922D0[];   // text scale per zoom level
 extern const s32 lbl_80192370[];
-extern f32 lbl_80356C98;           // layout alpha
+extern f32 gTopLayoutAlpha;           // layout alpha
 const char* GetLanguageSuffix();
 extern const s32 lbl_80192398[];
 extern f32 lbl_803575D8;
 extern GXColor lbl_80357600;
-extern f32 lbl_8020E468[];         // pointer movement
+extern f32 gPointerScroll[];         // pointer movement
 extern u8 lbl_803575BB;
 extern ut::Color lbl_803575FC;
 
@@ -981,7 +981,7 @@ static inline void SetButtonEnabled(PaneButton* button, BOOL enabled) {
 
 void MainScreen::ModeMain() {
     HeadlineList* list = lbl_8035755C;
-    Globe* globe = lbl_8035775C;
+    Globe* globe = gGlobe;
     Ticker* ticker = NULL;
     NewsArticle* article = NULL;
     BOOL held = FALSE;
@@ -1026,7 +1026,7 @@ void MainScreen::ModeMain() {
             }
         }
 
-        if (fn_8004DABC(lbl_8035775C)) {
+        if (fn_8004DABC(gGlobe)) {
             EnableButton(mResetButton);
         } else {
             DisableButton(mResetButton);
@@ -1214,7 +1214,7 @@ void MainScreen::ModeMain() {
             }
         }
 
-        Globe* g = lbl_8035775C;
+        Globe* g = gGlobe;
         if (g != NULL) {
             mUnk32C += 0x200;
             f32 range = mUnk278 - mUnk274;
@@ -1222,11 +1222,11 @@ void MainScreen::ModeMain() {
                 mUnk32C = 0x8000;
             }
             g->mHeight = mUnk270 = mUnk274 + range * fn_800449A0(mUnk32C);
-            if (lbl_8035775C != NULL && mUnk11C) {
+            if (gGlobe != NULL && mUnk11C) {
                 (this->*mUnk11C)();
             }
             fn_800329CC();
-            if (lbl_8035775C != NULL && mUnk128) {
+            if (gGlobe != NULL && mUnk128) {
                 (this->*mUnk128)();
             }
             fn_8004D0B0(g);
@@ -1245,14 +1245,14 @@ void MainScreen::ModeWait() {
     switch (mModeStep) {
     case 0: {
         mModeStep++;
-        lbl_80357730->FadeOut(30);
+        gFader2->FadeOut(30);
         ut::Color color(0, 0, 0, 0xA0);
-        *(GXColor*)((u8*)lbl_80357730 + 0x10) = color;
-        lbl_80357730->SetColor(color, 0);
+        *(GXColor*)((u8*)gFader2 + 0x10) = color;
+        gFader2->SetColor(color, 0);
     }
     default:
-        if (*(s32*)((u8*)lbl_80357730 + 0x50) == 0 && lbl_80357760 != 0) {
-            lbl_80357730->FadeIn(30);
+        if (*(s32*)((u8*)gFader2 + 0x50) == 0 && gEarthModel != 0) {
+            gFader2->FadeIn(30);
             OpenSelected();
             SetMode(&MainScreen::ModeMain);
         }
@@ -1286,7 +1286,7 @@ BOOL MainScreen::CheckSelect() {
                 } else {
                     PlaySE(0x3D);
                 }
-                if (lbl_80357760 == 0) {
+                if (gEarthModel == 0) {
                     SetMode(&MainScreen::ModeWait);
                     return FALSE;
                 }
@@ -1397,7 +1397,7 @@ inline void MainScreen::SetSubState(Func func) {
 
 inline void MainScreen::SetInputHook(Func func) {
     if (!func) {
-        lbl_80356CA0 = gUpdateMsgType == 1;
+        gHideClock = gUpdateMsgType == 1;
     }
     mUnk134 = func;
 }
@@ -1554,7 +1554,7 @@ void MainScreen::State16960(s32* arg) {
         UpdateHeadButtons();
         if (mBackPressed && list != NULL && list->mMode != HeadlineList::MODE_SECTION) {
             PlaySE(0x21);
-            lbl_80357729 = true;
+            gExitRequested = true;
             return;
         }
         mUnk338 += mUnk33C;
@@ -1668,7 +1668,7 @@ void MainScreen::StateList(s32* arg) {
                     PlaySE(0x22);
                 } else {
                     PlaySE(0x21);
-                    lbl_80357729 = true;
+                    gExitRequested = true;
                     return;
                 }
                 mUnk338 = 8;
@@ -1715,7 +1715,7 @@ void MainScreen::StateList(s32* arg) {
                 break;
             }
             if (lbl_8035755C != NULL && lbl_8035755C->mMode != HeadlineList::MODE_SECTION) {
-                lbl_80357729 = true;
+                gExitRequested = true;
                 return;
             }
             ReturnToTop();
@@ -1760,13 +1760,13 @@ inline void MainScreen::SetGlobeFunc(Func func) {
     }
     mUnk11C = func;
     mUnk2D8 = 0;
-    if (lbl_8035775C != NULL && mUnk11C) {
+    if (gGlobe != NULL && mUnk11C) {
         (this->*mUnk11C)();
     }
 }
 
 inline void MainScreen::UpdateGlobeCamera() {
-    Globe* globe = lbl_8035775C;
+    Globe* globe = gGlobe;
     if (globe != NULL) {
         GlobeCamera* camera = globe->mCamera;
         if (camera != NULL) {
@@ -1842,7 +1842,7 @@ void MainScreen::State17E6C(s32* arg) {
         fn_80032A94(1);
         fn_80032B04(mUnk2C4, mSelected, 1);
         SetGlobeFunc(&MainScreen::Globe1DF3C);
-        Globe* globe = lbl_8035775C;
+        Globe* globe = gGlobe;
         if (globe != NULL) {
             mUnk274 = globe->mHeight;
             mUnk278 = gWidescreen ? -0.7125f : -0.625f;
@@ -1877,7 +1877,7 @@ void MainScreen::State17E6C(s32* arg) {
         if (mStateStep == 1) {
             fn_80032B04(mUnk2C4, mSelected, 1);
             UpdateGlobeCamera();
-            Globe* globe = lbl_8035775C;
+            Globe* globe = gGlobe;
             if (mUnk2BF) {
                 mFadeRect.left = mUnk280 + mUnk290 * t;
                 mFadeRect.right = mUnk284 + mUnk294 * t;
@@ -1936,7 +1936,7 @@ void MainScreen::State18770(s32* arg) {
             fn_80032AC0(mUnk2C4, mSelected, 1);
             fn_80032B04(mUnk2C4, mSelected, 1);
             SetGlobeFunc(&MainScreen::Globe1DF3C);
-            Globe* globe = lbl_8035775C;
+            Globe* globe = gGlobe;
             if (globe != NULL) {
                 mUnk274 = globe->mHeight;
                 mUnk278 = gWidescreen ? -0.7125f : -0.625f;
@@ -2024,7 +2024,7 @@ void MainScreen::State18770(s32* arg) {
         default:
             fn_80032B04(mUnk2C4, mSelected, 1);
             UpdateGlobeCamera();
-            if (lbl_8035775C == NULL || mUnk338 >= 0x8000) {
+            if (gGlobe == NULL || mUnk338 >= 0x8000) {
                 mUnk164.x = mUnk234;
                 if (IsState(&MainScreen::State17E6C)) {
                     ChangeState(&MainScreen::State195A0, NULL);
@@ -2282,7 +2282,7 @@ void MainScreen::State195B8(s32* arg) {
                         bool hit = false;
                         ut::Rect rect(0.0f, 0.0f, 0.0f, 0.0f);
                         if (fn_8003567C(&rect, mUnk16C.x, 123.0f + mUnk224, 1.0f) &&
-                            lbl_8020E4A0[i] == 0)
+                            gHoverButtons[i] == 0)
                         {
                             f32 x = gCursorX[i][0];
                             if (x >= rect.left && x < rect.right && y >= rect.top &&
@@ -2298,7 +2298,7 @@ void MainScreen::State195B8(s32* arg) {
                         mUnk356[i] = hit;
                         if (y > 83.0f && y < 373.0f && (gTrig[i] & 0x800)) {
                             if (hit) {
-                                mUnk354 = lbl_80356CA0;
+                                mUnk354 = gHideClock;
                                 mUnk355 = IsState(&MainScreen::State195A0);
                                 ChangeState(&MainScreen::State1C600, NULL);
                                 return;
@@ -2377,7 +2377,7 @@ inline void MainScreen::ResetGlobe(Globe* globe) {
 }
 
 void MainScreen::State1A750(s32* arg) {
-    Globe* globe = lbl_8035775C;
+    Globe* globe = gGlobe;
     switch (mStateStep) {
     case 0:
         mUnk2BE = true;
@@ -2436,7 +2436,7 @@ void MainScreen::State1A750(s32* arg) {
 }
 
 void MainScreen::State1AC60(s32* arg) {
-    Globe* globe = lbl_8035775C;
+    Globe* globe = gGlobe;
     switch (mStateStep) {
     case 0:
         mStateStep++;
@@ -2486,7 +2486,7 @@ void MainScreen::State1AC60(s32* arg) {
 }
 
 void MainScreen::State1B134(s32* arg) {
-    Globe* globe = lbl_8035775C;
+    Globe* globe = gGlobe;
     switch (mStateStep) {
     case -1:
         mUnk128 = NULL;
@@ -2566,7 +2566,7 @@ static inline f32 GetFontScale() {
 }
 
 void MainScreen::State1B694(s32* arg) {
-    Globe* globe = lbl_8035775C;
+    Globe* globe = gGlobe;
     switch (mStateStep) {
     case -1:
         mUnk128 = NULL;
@@ -2798,7 +2798,7 @@ void MainScreen::State1C600(s32* arg) {
     switch (mStateStep) {
     case 0:
         PlaySE(0x40);
-        lbl_80356CA0 = true;
+        gHideClock = true;
         lbl_803575BD = true;
         lbl_803575A8 = 1;
         fn_80032A94(1);
@@ -2814,7 +2814,7 @@ void MainScreen::State1C600(s32* arg) {
         if (gTrigAll & 0x800) {
             PlaySE(0x41);
             bool show = mUnk354;
-            lbl_80356CA0 = gUpdateMsgType == 1 ? true : show;
+            gHideClock = gUpdateMsgType == 1 ? true : show;
             mStateStep = 2;
         }
         break;
@@ -2948,7 +2948,7 @@ void MainScreen::Func1CAC8() {
             if (mHeld[i]) {
                 count++;
                 lbl_801EDFD0[i] = 5;
-                velocity += 0.1f * lbl_8020E468[i];
+                velocity += 0.1f * gPointerScroll[i];
             }
         }
         if (count != 0) {
@@ -2990,7 +2990,7 @@ BOOL MainScreen::OpenRelated(RelatedItem* item, s32* arg) {
     lbl_8035755C = mLists[mUnk2C4];
     HeadlineList* list = lbl_8035755C;
     if (list != NULL) {
-        Globe* globe = lbl_8035775C;
+        Globe* globe = gGlobe;
         Ticker* ticker = GetListItem(list, mSelected);
         if (ticker != NULL) {
             NewsArticle* article = ticker->mArticle;
@@ -3119,7 +3119,7 @@ void MainScreen::Sub1D594() {
             if (lbl_801F0908[i] & 0x400) {
                 count++;
                 lbl_801EDFD0[i] = 5;
-                velocity += 0.1f * lbl_8020E468[i];
+                velocity += 0.1f * gPointerScroll[i];
             }
         }
         if (count != 0) {
@@ -3254,7 +3254,7 @@ void MainScreen::Sub1DC30() {
             if (lbl_801F0908[i] & 0x400) {
                 count++;
                 lbl_801EDFD0[i] = 5;
-                velocity += 0.1f * lbl_8020E468[i];
+                velocity += 0.1f * gPointerScroll[i];
             }
         }
         if (count != 0) {
@@ -3280,7 +3280,7 @@ void MainScreen::Sub1DC30() {
 }
 
 void MainScreen::Globe1DF3C() {
-    Globe* globe = lbl_8035775C;
+    Globe* globe = gGlobe;
     switch (mUnk2D8) {
     case 0:
         mUnk2D8++;
@@ -3298,7 +3298,7 @@ void MainScreen::Globe1DF3C() {
 }
 
 void MainScreen::Globe1DFD0() {
-    Globe* globe = lbl_8035775C;
+    Globe* globe = gGlobe;
     switch (mUnk2D8) {
     case 0:
         mUnk2D8++;
@@ -3324,7 +3324,7 @@ static inline f32 GetGlobeDistance(Globe* globe) {
 }
 
 void MainScreen::UpdateGlobeInput() {
-    Globe* globe = lbl_8035775C;
+    Globe* globe = gGlobe;
     f32 maxY = 393.0f;
     f32 prevDistance = GetGlobeDistance(globe);
     bool moving = false;
@@ -3347,7 +3347,7 @@ void MainScreen::UpdateGlobeInput() {
     if (!moving) {
         mUnk268 = 0.0f;
     }
-    f32 delta = __fabsf(GetGlobeDistance(lbl_8035775C) - prevDistance);
+    f32 delta = __fabsf(GetGlobeDistance(gGlobe) - prevDistance);
     if (!IsNearlyZero(delta) && IsNearlyZero(mUnk268)) {
         f32 s = delta > 2.0f ? 2.0f : delta;
         s *= 0.5f;
@@ -3399,7 +3399,7 @@ BOOL MainScreen::ExitGlobe(BOOL related) {
     }
     HeadlineList* list = lbl_8035755C;
     if (list != NULL) {
-        Globe* globe = lbl_8035775C;
+        Globe* globe = gGlobe;
         Ticker* ticker = GetListItem(list, mSelected);
         if (ticker != NULL) {
             NewsArticle* article = ticker->mArticle;
@@ -3456,7 +3456,7 @@ void MainScreen::Hook1E758() {
     f32 right = 16.0f + GetScreenWidth();
     f32 minY = 63.0f;
     f32 maxY = 393.0f;
-    Globe* globe = lbl_8035775C;
+    Globe* globe = gGlobe;
     f32 minDist = 900.0f;
     bool moved = false;
     bool inside = false;
@@ -3486,7 +3486,7 @@ void MainScreen::Hook1E758() {
         if (x >= left && x < right) {
             inside = true;
         }
-        if (lbl_8020E4A0[i] != 0) {
+        if (gHoverButtons[i] != 0) {
             dragging = true;
         }
         bool inArticle = !IsState(&MainScreen::State1B134) && !IsState(&MainScreen::State1AC60);
@@ -3547,7 +3547,7 @@ void MainScreen::Hook1E758() {
             mUnk2F4++;
         }
     }
-    lbl_80356CA0 = gUpdateMsgType == 1 ? true : showButtons;
+    gHideClock = gUpdateMsgType == 1 ? true : showButtons;
     UpdateLayoutAlpha();
 }
 
@@ -3561,7 +3561,7 @@ void MainScreen::Hook1ED20() {
         mUnk2F4--;
     }
     UpdateLayoutAlpha();
-    lbl_80356CA0 = gUpdateMsgType == 1;
+    gHideClock = gUpdateMsgType == 1;
 }
 
 void MainScreen::LayoutRelated() {
@@ -3709,7 +3709,7 @@ void MainScreen::SetLocation(NewsArticle* article) {
     if (mUnk194.y > 180.0f) {
         mUnk194.y -= 360.0f;
     }
-    Globe* globe = lbl_8035775C;
+    Globe* globe = gGlobe;
     if (globe != NULL) {
         GlobeCamera* camera = globe->mCamera;
         if (camera != NULL) {
@@ -3737,7 +3737,7 @@ extern "C" void fn_8001F730(lyt::Pane* pane, const ut::Color& color) {
     if (found != NULL) {
         lyt::TextBox* textBox = ut::DynamicCast<lyt::TextBox*>(found);
         ut::Color c = color;
-        f32 alpha = lbl_80356C98;
+        f32 alpha = gTopLayoutAlpha;
         c.a = c.a * alpha;
         textBox->SetTextColor(c, c);
     }

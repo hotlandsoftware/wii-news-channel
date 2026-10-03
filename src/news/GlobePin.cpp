@@ -27,9 +27,9 @@ extern s32 lbl_80357598;           // view mode (1: pins only)
 extern s32 lbl_803575A8;
 extern u8 lbl_803575BD;            // input locked
 extern f32 lbl_803575DC;           // maximum location name width
-extern ut::Font* lbl_80357748;     // label font
-extern GlobeView* lbl_8035775C;
-extern wchar_t lbl_8020E520[392];  // label text buffer
+extern ut::Font* gCityFont;     // label font
+extern GlobeView* gGlobe;
+extern wchar_t gTextBuf[392];  // label text buffer
 
 extern const wchar_t* gMsgOtherAreas[7];
 extern const wchar_t* gMsgOtherAreasShort[7];
@@ -174,7 +174,7 @@ static inline void SetTevWhite(GXTevRegID reg, u8 a) {
 
 BOOL GlobePin::DrawCards(u8 alpha) {
     BOOL drawn = FALSE;
-    Camera* camera = lbl_8035775C->mCamera;
+    Camera* camera = gGlobe->mCamera;
     camera->GetG3dCamera().GXSetViewport();
     camera->GetG3dCamera().GXSetProjection();
     math::MTX34 viewMtx;
@@ -270,18 +270,18 @@ void GlobePin::DrawLabel() {
             pin = pin->mNext;
         } while (pin != NULL);
         if (same) {
-            swprintf(lbl_8020E520, 256, L"%ls [%d]", name, mCount);
+            swprintf(gTextBuf, 256, L"%ls [%d]", name, mCount);
         } else {
             switch (gLanguage) {
             case 1:
             case 3:
             case 4:
                 if (gUpdateMsgType == 1) {
-                    wcscpy(lbl_8020E520, name);
-                    wcscat(lbl_8020E520, gMsgOtherAreas[gLanguage]);
+                    wcscpy(gTextBuf, name);
+                    wcscat(gTextBuf, gMsgOtherAreas[gLanguage]);
                 } else {
-                    wcscpy(lbl_8020E520, name);
-                    wcscat(lbl_8020E520, gMsgOtherAreasShort[gLanguage]);
+                    wcscpy(gTextBuf, name);
+                    wcscat(gTextBuf, gMsgOtherAreasShort[gLanguage]);
                 }
                 break;
             case 0:
@@ -289,23 +289,23 @@ void GlobePin::DrawLabel() {
             case 5:
             case 6:
             default:
-                wcscpy(lbl_8020E520, name);
-                wcscat(lbl_8020E520, gMsgOtherAreasShort[gLanguage]);
+                wcscpy(gTextBuf, name);
+                wcscat(gTextBuf, gMsgOtherAreasShort[gLanguage]);
                 break;
             }
-            swprintf(lbl_8020E520, 256, L"%ls [%d]", lbl_8020E520, mCount);
+            swprintf(gTextBuf, 256, L"%ls [%d]", gTextBuf, mCount);
         }
     } else {
-        wcscpy(lbl_8020E520, mArticle->mLocationName);
+        wcscpy(gTextBuf, mArticle->mLocationName);
     }
 
-    writer.SetFont(*lbl_80357748);
+    writer.SetFont(*gCityFont);
     writer.SetDrawFlag(0x11);
     writer.SetScale(scale);
     writer.SetCharSpace(0.0f);
     writer.SetTextColor(ut::Color(255, 255, 255, mLabelAlpha));
-    mLabelW = writer.CalcStringWidth(lbl_8020E520);
-    mLabelH = writer.CalcStringHeight(lbl_8020E520);
+    mLabelW = writer.CalcStringWidth(gTextBuf);
+    mLabelH = writer.CalcStringHeight(gTextBuf);
 
     if (mHoverTime != 0) {
         f32 x = mLabelPos.x;
@@ -351,7 +351,7 @@ void GlobePin::DrawLabel() {
     Draw2D_SetOrtho();
     writer.SetupGX();
     GXSetZMode(GX_FALSE, GX_LEQUAL, GX_FALSE);
-    writer.Print(lbl_8020E520);
+    writer.Print(gTextBuf);
 }
 
 void GlobePin::DrawName() {
@@ -362,7 +362,7 @@ void GlobePin::DrawName() {
     } else {
         scale *= 0.75f;
     }
-    writer.SetFont(*lbl_80357748);
+    writer.SetFont(*gCityFont);
     writer.SetDrawFlag(0x11);
     writer.SetScale(scale);
     writer.SetCharSpace(0.0f);
@@ -376,12 +376,12 @@ void GlobePin::DrawName() {
     Draw2D_SetupGX();
     Draw2D_SetOrtho();
     writer.SetupGX();
-    wcscpy(lbl_8020E520, mArticle->mLocationName);
-    f32 width = writer.CalcStringWidth(lbl_8020E520);
+    wcscpy(gTextBuf, mArticle->mLocationName);
+    f32 width = writer.CalcStringWidth(gTextBuf);
     if (width > lbl_803575DC) {
         writer.SetScale(scale * (lbl_803575DC / width), scale);
     }
-    writer.Print(lbl_8020E520);
+    writer.Print(gTextBuf);
 }
 
 void GlobePin::DrawHeadline(ut::CharWriter* writer) {
@@ -498,7 +498,7 @@ void GlobePin::Update(Camera* camera) {
 void GlobePin::UpdateCards(f32 alpha) {
     math::MTX34* mtx;
     Quaternion* quat;
-    Camera* camera = lbl_8035775C->mCamera;
+    Camera* camera = gGlobe->mCamera;
     s32 picIndex = -1;
     f32 zoom = 0.00019f * camera->mDistance;
     if (mCount == 0) {
@@ -570,7 +570,7 @@ void GlobePin::UpdateCards(f32 alpha) {
         mtx->m[2][3] = z;
         math::VEC3 labelPos(x - 0.5f * (mtx->m[0][1] * size), y - 0.5f * (mtx->m[1][1] * size),
                             z - 0.5f * (mtx->m[2][1] * size));
-        lbl_8035775C->mCamera->Project(&mLabelPos, &labelPos);
+        gGlobe->mCamera->Project(&mLabelPos, &labelPos);
     }
 
     s32 a = mLabelAlpha;
