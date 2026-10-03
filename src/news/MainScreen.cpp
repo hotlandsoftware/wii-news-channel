@@ -671,7 +671,7 @@ void MainScreen::Draw() {
     if (mActiveLayout) {
         bool inList = IsState(&MainScreen::State16960) || IsState(&MainScreen::StateList);
         if (inList && lbl_8035755C != NULL && lbl_8035755C->mNumItems == 0) {
-            mTextButton->SetAlpha(255.0f * mUnk240);
+            mTextButton->SetAlpha((s32)(255.0f * mUnk240));
         }
         fn_80048154(mActiveLayout);
     }
@@ -1766,14 +1766,14 @@ void MainScreen::ReturnToTop() {
 
 BOOL MainScreen::CheckSectionButtons() {
     FrameTextButton** button = &mButtons[1];
-    s32 i = 0;
     s32 count = lbl_803575E0 - 1;
-    for (; i < count; i++, button++) {
+    for (s32 i = 0; i < count; i++, button++) {
         if ((*button)->GetPressedChan() >= 0) {
             s32 dir = 1;
             mUnk330 = *fn_80032538();
-            mUnk2C4 = i + 1;
-            lbl_8035755C = mLists[i + 1];
+            s32 section = i + 1;
+            mUnk2C4 = section;
+            lbl_8035755C = mLists[section];
             ResetListPos();
             ChangeState(&MainScreen::State16960, &dir);
             PlaySE(0x21);
@@ -2479,8 +2479,9 @@ void MainScreen::State1AC60(s32* arg) {
         SetSubState(NULL);
         SetInputHook(&MainScreen::Hook1E758);
         mDraw = &MainScreen::DrawGlobe;
+        f32 w = GetScreenWidth();
         mUnk238 = 0.0f;
-        mUnk234 = -(f32)GetScreenWidth();
+        mUnk234 = -w;
         fn_80032A94(1);
         lbl_80357580 = 0;
         ResetGlobe(globe);
@@ -3615,8 +3616,10 @@ void MainScreen::LayoutRelated() {
 }
 
 void MainScreen::UpdateRelatedScroll() {
-    f32 rowHeight = mUnk24C * mUnk250;
-    f32 charSpace = mUnk250 * gCharSpaceScale;
+    f32 h = mUnk24C;
+    f32 scale = mUnk250;
+    f32 rowHeight = h * scale;
+    f32 charSpace = scale * gCharSpaceScale;
     RelatedItem* item = mRelated;
     ut::TextWriterBase<wchar_t> writer;
     writer.SetFont(*gSysFont);
@@ -3733,7 +3736,8 @@ void MainScreen::SetLocation(NewsArticle* article) {
         GlobeCamera* camera = globe->mCamera;
         if (camera != NULL) {
             f32 y = camera->mY;
-            mUnk18C.x = camera->mX;
+            f32 x = camera->mX;
+            mUnk18C.x = x;
             mUnk18C.y = y;
             if (y > 180.0f) {
                 mUnk18C.y -= 360.0f;
