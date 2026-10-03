@@ -171,6 +171,7 @@ public:
     void OpenGlobe();
     void OpenSelected();
     void SetListHook();
+    void EaseZoom();
     void ReturnToTop();
     BOOL StartDrag(s32 chan, const nw4r::ut::Rect* rect);
     s32 UpdateDrag(s32 chan, const nw4r::ut::Rect* rect);

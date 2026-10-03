@@ -794,8 +794,8 @@ void MainScreen::DrawRelated() {
         Draw2D_TexRect(gCommonTpl, 1, &rect, 0.0f, 0);
         f32 textX;
         f32 textY;
-        textY = 22.5f + rect.top;
         textX = 20.0f + rect.left;
+        textY = 22.5f + rect.top;
         rect.top = rect.bottom;
         rect.bottom = 11.0f + rect.bottom;
         GXSetTevColor(GX_TEVREG0, titleColor1);
@@ -814,8 +814,8 @@ void MainScreen::DrawRelated() {
         }
     }
 
-    pos.y += 72.0f;
     pos.x += 5.0f;
+    pos.y += 72.0f;
     u32 clipTop = pos.y;
     u32 clipBottom = mUnk1B0 - 10.0f;
     Draw2D_SetupGX();
@@ -1486,6 +1486,11 @@ void MainScreen::SetListHook() {
     SetInputHook(&MainScreen::Hook1ED20);
 }
 
+void MainScreen::EaseZoom() {
+    Ease(&mUnk23C, mUnk288, 0.2f, 1.0f, 0.01f);
+    mUnk244 = 1.0f - mUnk23C;
+}
+
 void MainScreen::State16960(s32* arg) {
     HeadlineList* list = lbl_8035755C;
     switch (mStateStep) {
@@ -2036,8 +2041,7 @@ void MainScreen::State18770(s32* arg) {
         }
         switch (mStateStep) {
         case 1:
-            Ease(&mUnk23C, mUnk288, 0.2f, 1.0f, 0.01f);
-            mUnk244 = 1.0f - mUnk23C;
+            EaseZoom();
             if (mUnk338 >= 0x8000 && IsNearlyZero(mUnk288 - mUnk23C)) {
                 mUnk164.x = mUnk234;
                 SetArticleWidth();
