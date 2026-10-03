@@ -135,7 +135,6 @@ class HbmSound {
 public:
     HbmSound() {
         mInitialized = false;
-        mUnk1 = false;
         mArchive = NULL;
         mPlayer = NULL;
         mHandle = NULL;
@@ -269,6 +268,7 @@ void InitSound(bool fromMemory, const void* data, const char* path, const void* 
         snd::detail::AxManager::GetInstance().SetOutputMode(snd::OUTPUT_MODE_MONO);
         break;
     case 1:
+    case 2:
     default:
         snd::detail::AxManager::GetInstance().SetOutputMode(snd::OUTPUT_MODE_STEREO);
         break;
@@ -359,6 +359,7 @@ void SetSoundMode(u8 mode) {
         snd::detail::AxManager::GetInstance().SetOutputMode(snd::OUTPUT_MODE_MONO);
         break;
     case 1:
+    case 2:
     default:
         snd::detail::AxManager::GetInstance().SetOutputMode(snd::OUTPUT_MODE_STEREO);
         break;
@@ -468,15 +469,11 @@ static inline void StartSound(snd::SoundHandle* handle, u32 id) {
     }
 }
 
-static inline bool IsSeqSound(snd::SoundHandle* handle) {
-    return sArchive->GetSoundType(handle->GetId()) == snd::SOUND_TYPE_SEQ;
-}
-
 void PlaySE(u32 id) {
     snd::SoundHandle* handle = sSeHandle;
     StartSound(handle, id);
     handle->SetVolume(1.0f, 0);
-    if (IsSeqSound(handle)) {
+    if (sArchive->GetSoundType(handle->GetId()) == snd::SOUND_TYPE_SEQ) {
         snd::SeqSoundHandle seq(handle);
         seq.SetTrackMute(0xFFFFFFFF, false);
     }
@@ -488,9 +485,10 @@ void PlaySE(u32 id, f32 volume, f32 pitch, f32 pan) {
     snd::SoundHandle* handle = sSeHandle;
     StartSound(handle, id);
     handle->SetVolume(volume, 0);
-    if (IsSeqSound(handle)) {
+    if (sArchive->GetSoundType(handle->GetId()) == snd::SOUND_TYPE_SEQ) {
         snd::SeqSoundHandle seq(handle);
-        seq.SetTrackMute(0xFFFFFFFF, volume < 0.05f);
+        bool mute = volume < 0.05f;
+        seq.SetTrackMute(0xFFFFFFFF, mute);
     }
     handle->SetPitch(pitch);
     handle->SetPan(pan);
@@ -518,9 +516,10 @@ bool IsSoundPaused(snd::SoundHandle* handle) {
 
 void SetSoundVolume(snd::SoundHandle* handle, f32 volume) {
     handle->SetVolume(volume, 0);
-    if (IsSeqSound(handle)) {
+    if (sArchive->GetSoundType(handle->GetId()) == snd::SOUND_TYPE_SEQ) {
         snd::SeqSoundHandle seq(handle);
-        seq.SetTrackMute(0xFFFFFFFF, volume < 0.05f);
+        bool mute = volume < 0.05f;
+        seq.SetTrackMute(0xFFFFFFFF, mute);
     }
 }
 
@@ -556,17 +555,6 @@ static inline f32 CosIdx(u16 idx) {
     return math::CosFIdx(0.00390625f * U16ToF32(&idx));
 }
 
-static inline void MakeFilter(s32* filter, s32 half, s32 high, s32 low) {
-    filter[half] = high - low;
-    for (s32 i = 1; i <= half; i++) {
-        s32 a = 4096.0f * SinIdx((high * i) << 3);
-        s32 b = 4096.0f * SinIdx((low * i) << 3);
-        s32 v = ((a - b) << 12) / (0x3243 * i);
-        filter[half - i] = v;
-        filter[half + i] = v;
-    }
-}
-
 FxVoice::FxVoice() {
     mEnabled = mPitchUp = false;
     mMode = MODE_NONE;
@@ -585,9 +573,33 @@ FxVoice::FxVoice() {
     }
     mTicks = 0;
 
-    MakeFilter(mFilterA, 5, 0xE00, 0x100);
-    MakeFilter(mFilterB, 10, 0x366, 0x100);
-    MakeFilter(mFilterC, 5, 0x900, 0);
+    s32* f = mFilterA;
+    f[5] = 0xE00 - 0x100;
+    for (s32 i = 1; i <= 5; i++) {
+        s32 a = 4096.0f * SinIdx((0xE00 * i) << 3);
+        s32 b = 4096.0f * SinIdx((0x100 * i) << 3);
+        s32 v = ((a - b) << 12) / (0x3243 * i);
+        f[5 - i] = v;
+        f[5 + i] = v;
+    }
+
+    mFilterB[10] = 0x366 - 0x100;
+    for (s32 i = 1; i <= 10; i++) {
+        s32 a = 4096.0f * SinIdx((0x366 * i) << 3);
+        s32 b = 4096.0f * SinIdx((0x100 * i) << 3);
+        s32 v = ((a - b) << 12) / (0x3243 * i);
+        mFilterB[10 - i] = v;
+        mFilterB[10 + i] = v;
+    }
+
+    mFilterC[5] = 0x900 - 0;
+    for (s32 i = 1; i <= 5; i++) {
+        s32 a = 4096.0f * SinIdx((0x900 * i) << 3);
+        s32 b = 4096.0f * SinIdx((0 * i) << 3);
+        s32 v = ((a - b) << 12) / (0x3243 * i);
+        mFilterC[5 - i] = v;
+        mFilterC[5 + i] = v;
+    }
 
     for (s32 i = 0; i < FX_LFO_SIZE; i++) {
         s32 s = 4096.0f * SinIdx((s64)i * 0x10000 / FX_LFO_SIZE);
@@ -782,31 +794,35 @@ void FxVoice::PitchUp(s32** buffers) {
     }
 }
 
+#define FX_DIV(a, b) ((b) == 0 ? 0 : (a) / (b))
+
 static void MakeWindow(s32* window, s32 n, s32 type) {
-    s32 i;
     switch (type) {
     case 0:
-        for (i = 0; i < n; i++) {
-            s32 c = 4096.0f * CosIdx(n == 0 ? 0 : (s64)i * 0x10000 / n);
-            *window++ = -c * 0x75C / 4096 + 0x8A3;
+        for (s32 i = 0; i < n; i++) {
+            s32 c = 4096.0f * CosIdx(FX_DIV((s64)i * 0x10000, n));
+            window[i] = -c * 0x75C / 4096 + 0x8A3;
         }
         break;
     case 1:
-        for (i = 0; i < n; i++) {
-            s32 c = 4096.0f * CosIdx(n == 0 ? 0 : (s64)i * 0x10000 / n);
-            *window++ = -c / 2 + 0x800;
+        for (s32 i = 0; i < n; i++) {
+            s32 c = 4096.0f * CosIdx(FX_DIV((s64)i * 0x10000, n));
+            window[i] = -c / 2 + 0x800;
         }
         break;
     case 2: {
         s32 half = n / 2;
+        s32 a = half + 1;
+        s32 b = n - half;
+        s32 i;
         for (i = 0; i < n; i++) {
             s32 v;
             if (i < half) {
-                v = half + 1 == 0 ? 0 : ((s64)(i + 1) << 12) / (half + 1);
+                v = half == -1 ? 0 : ((s64)(i + 1) << 12) / a;
             } else {
-                v = n - half == 0 ? 0x1000 : (s64)(i - half) * -0x1000 / (n - half) + 0x1000;
+                v = n == half ? 0x1000 : (s32)(((s64)(i - half) * -0x1000) / b) + 0x1000;
             }
-            *window++ = v;
+            window[i] = v;
         }
         break;
     }
