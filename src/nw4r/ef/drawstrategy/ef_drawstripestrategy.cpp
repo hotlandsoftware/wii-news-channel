@@ -186,9 +186,9 @@ static void GXEnd() {}
 void DrawStripeStrategy::Draw(const DrawInfo& rInfo,
                               ParticleManager* pManager) {
     int numParticle = pManager->mActivityList.mActiveList.numObjects;
-    EmitterResource* pResource = pManager->mResource;
     const EmitterDrawSetting& rSetting =
-        pResource->GetEmitterDesc()->drawSetting;
+        pManager->mResource->GetEmitterDesc()->drawSetting;
+    EmitterResource* pResource = pManager->mResource;
 
     if (numParticle == 0) {
         return;
