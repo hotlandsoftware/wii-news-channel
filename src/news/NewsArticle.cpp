@@ -1,9 +1,10 @@
 #include <news/NewsArticle.h>
+#include <news/Resource.h>
 #include <news/System.h>
 #include <revolution/mem.h>
 #include <wchar.h>
 
-// Not yet decompiled: allocators and the JPEG decoder in other files.
+// Not yet decompiled: allocators in other files.
 extern MEMAllocator gNewsAllocator; // general allocator
 extern MEMAllocator gPictureAllocator; // picture allocator
 extern s32 gBlinkPhase;
@@ -11,9 +12,6 @@ extern s32 gBlinkPhase;
 extern "C" {
 void* fn_80040A28(size_t size, MEMAllocator* allocator);
 void* fn_80040A48(size_t size, MEMAllocator* allocator);
-void fn_8004E748(void* decoder);
-void fn_8004E754(void* decoder, s32 flags);
-NewsTexture* fn_8004E794(void* decoder, const void* data, u32 size, MEMAllocator* allocator);
 }
 
 inline void* operator new(size_t size, MEMAllocator* allocator) {
@@ -23,19 +21,6 @@ inline void* operator new(size_t size, MEMAllocator* allocator) {
 inline void* operator new[](size_t size, MEMAllocator* allocator) {
     return fn_80040A48(size, allocator);
 }
-
-class JPEGDecoder {
-public:
-    JPEGDecoder() { fn_8004E748(this); }
-    ~JPEGDecoder() { fn_8004E754(this, -1); }
-
-    NewsTexture* Decode(const void* data, u32 size, MEMAllocator* allocator) {
-        return fn_8004E794(this, data, size, allocator);
-    }
-
-private:
-    u8 mWork[0x1C38];
-};
 
 static const u32 sIconLocal[4][2] = {
     {67, 67},

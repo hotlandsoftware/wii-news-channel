@@ -6,6 +6,7 @@
 #include <news/MathUtil.h>
 #include <news/NewsArticle.h>
 #include <news/PaneButton.h>
+#include <news/SoundManager.h>
 #include <news/System.h>
 #include <news/TextButton.h>
 #include <news/Ticker.h>
@@ -155,7 +156,6 @@ void fn_8004CC20(Globe* globe);
 s32 fn_8004D628(Globe* globe, s32 chan);
 BOOL fn_8004D300(Globe* globe, s32 chan);
 void fn_8004E0E8(Globe* globe, s32 arg);
-void fn_8004F8E0(u32 id, f32 pitch, f32 volume, f32 pan);
 RelatedItem* fn_80032B60(s32* section, s32* index);
 BOOL fn_80048854(void* history, s32 chan, f32* x, f32* y);
 void fn_80048418(Layout* layout, s32 frames);
@@ -3376,7 +3376,7 @@ void MainScreen::UpdateGlobeInput() {
     if (!IsNearlyZero(delta) && IsNearlyZero(mUnk268)) {
         f32 s = delta > 2.0f ? 2.0f : delta;
         s *= 0.5f;
-        fn_8004F8E0(0x12, 0.5f + 0.5f * s, 1.0f + s, 0.0f);
+        PlaySE(0x12, 0.5f + 0.5f * s, 1.0f + s, 0.0f);
     }
     mUnk268 += delta;
     if (mUnk268 > 10.0f) {

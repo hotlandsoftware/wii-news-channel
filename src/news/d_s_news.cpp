@@ -18,6 +18,8 @@
 #include <news/PaneButton.h>
 #include <news/SlideShow.h>
 #include <news/SmoothValue.h>
+#include <news/Resource.h>
+#include <news/SoundManager.h>
 #undef gSeparatorColor
 #include <news/Common.h>
 #include <nw4r/math/math_arithmetic.h>
@@ -131,11 +133,6 @@ void fn_8004DB4C(void* globe, s32 arg);
 void fn_8004E0B8(void* globe, s32 level);
 void fn_8004E0D4(void* globe, f32 arg);
 
-// Sound (0x8004E9A4..)
-void* fn_8004E9A4(void* mem, const char* path, void* heap);
-void fn_8004EA2C(void* sound, s32 arg);
-void fn_8004FAB0(snd::SoundHandle* handle, s32 frames);
-void fn_8004FB44(snd::SoundHandle* handle, f32 volume);
 }
 
 // Faders, HOME Menu, sound system and globe (other files)
@@ -165,7 +162,7 @@ struct Globe {
 extern HomeMenuInfo* lbl_80357710;
 extern Fader* lbl_8035772C;
 extern Fader* lbl_80357730;
-extern void* lbl_80357754;     // sound system
+extern SoundResource* lbl_80357754; // sound system
 extern Globe* lbl_8035775C;
 extern BOOL lbl_80357760;
 extern MEMHeapHandle lbl_80357640;
@@ -177,7 +174,6 @@ extern bool lbl_80356CA0;
 extern f32 gModelDepth;
 extern OSCalendarTime lbl_8020E008;
 extern ut::TextWriterBase<wchar_t> lbl_8020E4C0;
-extern snd::SoundHandle lbl_8021E8CC[4];
 extern const f32 lbl_801A6648[];
 extern const wchar_t* lbl_801B04EC[];
 extern const wchar_t* lbl_801B05E8[];
@@ -517,11 +513,7 @@ NewsScene::NewsScene()
     SetDPDAll(1);
     sIsNight = !(lbl_8020E008.hour >= 5 && lbl_8020E008.hour < 22);
 
-    void* sound = operator new(8);
-    if (sound) {
-        sound = fn_8004E9A4(sound, "rev_news.brsar", lbl_80357710->mHeap);
-    }
-    lbl_80357754 = sound;
+    lbl_80357754 = new SoundResource("rev_news.brsar", lbl_80357710->mHeap);
     if (lbl_80357754 == NULL) {
         gAllocFailed = true;
         return;
@@ -810,7 +802,7 @@ NewsScene::~NewsScene() {
 }
 
 void NewsScene::Exit(BOOL toMenu, s32 arg) {
-    fn_8004EA2C(lbl_80357754, 1);
+    delete lbl_80357754;
     Scene::Exit(toMenu, arg);
 }
 
@@ -976,12 +968,12 @@ static inline void PlayPinHoverSE() {
 }
 
 static inline void UpdateBgmVolume() {
-    snd::SoundHandle* handle = lbl_8021E8CC;
+    snd::SoundHandle* handle = gBgmHandles;
     SmoothValue* volume = sBgmVolume;
     for (s32 i = 0; i < 4; i++, volume++, handle++) {
         if (IsSoundPlaying(handle)) {
             volume->Update();
-            fn_8004FB44(handle, volume->mValue);
+            SetSoundVolume(handle, volume->mValue);
         }
     }
 }
@@ -1018,12 +1010,12 @@ void NewsScene::Calc() {
             PlayPinHoverSE();
         }
         SmoothValue* volume = sBgmVolume;
-        snd::SoundHandle* handle = lbl_8021E8CC;
+        snd::SoundHandle* handle = gBgmHandles;
         s32 i = 0;
         for (; i < 4; i++, handle++, volume++) {
             if (IsSoundPlaying(handle)) {
                 volume->Update();
-                fn_8004FB44(handle, volume->mValue);
+                SetSoundVolume(handle, volume->mValue);
             }
         }
         if (++sBlinkTimer >= 40) {
@@ -1035,9 +1027,9 @@ void NewsScene::Calc() {
 
 void NewsScene::OnHomeMenuOpen() {
     s32 i = 0;
-    snd::SoundHandle* handle = lbl_8021E8CC;
+    snd::SoundHandle* handle = gBgmHandles;
     for (; i < 4; i++, handle++) {
-        fn_8004FB44(handle, 0.0f);
+        SetSoundVolume(handle, 0.0f);
     }
     if (mIntro) {
         fn_800096B0(mIntro, 1);
@@ -1240,10 +1232,10 @@ BOOL NewsScene::StateLanguageSelect() {
                 mStep++;
                 fn_80048D20(lbl_8035772C, 25);
                 if (mSettings->mNewsLanguage != gSelectedNewsLanguage) {
-                    snd::SoundHandle* handle = lbl_8021E8CC;
+                    snd::SoundHandle* handle = gBgmHandles;
                     for (s32 i = 0; i < 4; i++, handle++) {
                         if (IsSoundPlaying(handle)) {
-                            fn_8004FAB0(handle, 25);
+                            StopSound(handle, 25);
                         }
                     }
                 }
@@ -1291,11 +1283,11 @@ static inline void SetBgmTargetP(SmoothValue* v, f32 target, f32 frames) {
 }
 
 void Bgm_MuteMain() {
-    if (!IsSoundPlaying(&lbl_8021E8CC[0])) {
-        PlaySound(&lbl_8021E8CC[0], 0x1C);
+    if (!IsSoundPlaying(&gBgmHandles[0])) {
+        PlaySound(&gBgmHandles[0], 0x1C);
     }
-    if (!IsSoundPlaying(&lbl_8021E8CC[1])) {
-        PlaySound(&lbl_8021E8CC[1], 0x1D);
+    if (!IsSoundPlaying(&gBgmHandles[1])) {
+        PlaySound(&gBgmHandles[1], 0x1D);
     }
     sBgmVolume[0].mTarget = 0.0f;
     sBgmVolume[1].mTarget = 0.0f;
@@ -1303,26 +1295,26 @@ void Bgm_MuteMain() {
     sBgmVolume[3].mTarget = 0.0f;
     sBgmVolume[0].mStep = Abs(sBgmVolume[0].mTarget - sBgmVolume[0].mValue) / 120.0f;
     sBgmVolume[1].mStep = Abs(sBgmVolume[1].mTarget - sBgmVolume[1].mValue) / 120.0f;
-    if (IsSoundPlaying(&lbl_8021E8CC[2])) {
-        fn_8004FAB0(&lbl_8021E8CC[2], 120);
+    if (IsSoundPlaying(&gBgmHandles[2])) {
+        StopSound(&gBgmHandles[2], 120);
     }
-    if (IsSoundPlaying(&lbl_8021E8CC[3])) {
-        fn_8004FAB0(&lbl_8021E8CC[3], 120);
+    if (IsSoundPlaying(&gBgmHandles[3])) {
+        StopSound(&gBgmHandles[3], 120);
     }
     sBgmVolume[2].mStep = 1.0f / 120.0f;
     sBgmVolume[3].mStep = 1.0f / 120.0f;
 }
 
 void Bgm_PlayArticle() {
-    PlaySound(&lbl_8021E8CC[2], 0x1E);
-    if (!IsSoundPlaying(&lbl_8021E8CC[0])) {
-        PlaySound(&lbl_8021E8CC[0], 0x1C);
+    PlaySound(&gBgmHandles[2], 0x1E);
+    if (!IsSoundPlaying(&gBgmHandles[0])) {
+        PlaySound(&gBgmHandles[0], 0x1C);
     }
-    if (!IsSoundPlaying(&lbl_8021E8CC[1])) {
-        PlaySound(&lbl_8021E8CC[1], 0x1D);
+    if (!IsSoundPlaying(&gBgmHandles[1])) {
+        PlaySound(&gBgmHandles[1], 0x1D);
     }
-    if (IsSoundPlaying(&lbl_8021E8CC[3])) {
-        fn_8004FAB0(&lbl_8021E8CC[3], 120);
+    if (IsSoundPlaying(&gBgmHandles[3])) {
+        StopSound(&gBgmHandles[3], 120);
     }
     sBgmVolume[0].mTarget = 1.0f;
     sBgmVolume[1].mTarget = 0.0f;
@@ -1336,21 +1328,21 @@ void Bgm_PlayArticle() {
 
 void Bgm_PlayMain(BOOL restart) {
     if (restart) {
-        PlaySound(&lbl_8021E8CC[0], 0x1C);
-        PlaySound(&lbl_8021E8CC[1], 0x1D);
+        PlaySound(&gBgmHandles[0], 0x1C);
+        PlaySound(&gBgmHandles[1], 0x1D);
     } else {
-        if (!IsSoundPlaying(&lbl_8021E8CC[0])) {
-            PlaySound(&lbl_8021E8CC[0], 0x1C);
+        if (!IsSoundPlaying(&gBgmHandles[0])) {
+            PlaySound(&gBgmHandles[0], 0x1C);
         }
-        if (!IsSoundPlaying(&lbl_8021E8CC[1])) {
-            PlaySound(&lbl_8021E8CC[1], 0x1D);
+        if (!IsSoundPlaying(&gBgmHandles[1])) {
+            PlaySound(&gBgmHandles[1], 0x1D);
         }
     }
-    if (IsSoundPlaying(&lbl_8021E8CC[2])) {
-        fn_8004FAB0(&lbl_8021E8CC[2], 60);
+    if (IsSoundPlaying(&gBgmHandles[2])) {
+        StopSound(&gBgmHandles[2], 60);
     }
-    if (IsSoundPlaying(&lbl_8021E8CC[3])) {
-        fn_8004FAB0(&lbl_8021E8CC[3], 60);
+    if (IsSoundPlaying(&gBgmHandles[3])) {
+        StopSound(&gBgmHandles[3], 60);
     }
     sBgmVolume[0].mTarget = 1.0f;
     sBgmVolume[1].mTarget = 1.0f;
@@ -1364,18 +1356,18 @@ void Bgm_PlayMain(BOOL restart) {
 
 void Bgm_PlaySlideshow() {
     if (!sIsNight) {
-        PlaySound(&lbl_8021E8CC[3], 0x1F);
+        PlaySound(&gBgmHandles[3], 0x1F);
     } else {
-        PlaySound(&lbl_8021E8CC[3], 0x20);
+        PlaySound(&gBgmHandles[3], 0x20);
     }
-    if (IsSoundPlaying(&lbl_8021E8CC[0])) {
-        fn_8004FAB0(&lbl_8021E8CC[0], 60);
+    if (IsSoundPlaying(&gBgmHandles[0])) {
+        StopSound(&gBgmHandles[0], 60);
     }
-    if (IsSoundPlaying(&lbl_8021E8CC[1])) {
-        fn_8004FAB0(&lbl_8021E8CC[1], 60);
+    if (IsSoundPlaying(&gBgmHandles[1])) {
+        StopSound(&gBgmHandles[1], 60);
     }
-    if (IsSoundPlaying(&lbl_8021E8CC[2])) {
-        fn_8004FAB0(&lbl_8021E8CC[2], 60);
+    if (IsSoundPlaying(&gBgmHandles[2])) {
+        StopSound(&gBgmHandles[2], 60);
     }
     sBgmVolume[0].mTarget = 0.0f;
     sBgmVolume[0].mStep = 1.0f / 60.0f;
