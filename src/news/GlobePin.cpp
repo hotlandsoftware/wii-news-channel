@@ -496,6 +496,8 @@ void GlobePin::Update(Camera* camera) {
 }
 
 void GlobePin::UpdateCards(f32 alpha) {
+    math::MTX34* mtx;
+    Quaternion* quat;
     Camera* camera = lbl_8035775C->mCamera;
     s32 picIndex = -1;
     f32 zoom = 0.00019f * camera->mDistance;
@@ -521,8 +523,8 @@ void GlobePin::UpdateCards(f32 alpha) {
 
     i = 0;
     for (GlobePin* pin = this; pin != NULL; pin = pin->mNext, i++) {
-        Quaternion* quat = &pin->mCurQuat;
-        math::MTX34* mtx = &pin->mCardMtx;
+        quat = &pin->mCurQuat;
+        mtx = &pin->mCardMtx;
         NewsTexture* tex = GetPictureTexture(pin->mArticle);
         f32 w;
         f32 h;
@@ -552,7 +554,8 @@ void GlobePin::UpdateCards(f32 alpha) {
         } else {
             order = i;
         }
-        f32 dist = 0.9f * pin->mCardDist + 0.1f * ((1.0f + 0.5f * (zoom * ((mCount - order) - 1.0f))) * mRadius);
+        f32 target = (1.0f + 0.5f * (zoom * ((mCount - order) - 1.0f))) * mRadius;
+        f32 dist = 0.9f * pin->mCardDist + 0.1f * target;
         pin->mCardDist = dist;
         C_QUATSlerp(quat, &mQuat, quat, 0.1f);
         PSMTXQuat(mtx->mtx, quat);
@@ -570,14 +573,14 @@ void GlobePin::UpdateCards(f32 alpha) {
         lbl_8035775C->mCamera->Project(&mLabelPos, &labelPos);
     }
 
-    s32 a;
+    s32 a = mLabelAlpha;
     if (mLabelHidden) {
-        a = mLabelAlpha - 32;
+        a -= 32;
         if (a < 0) {
             a = 0;
         }
     } else {
-        a = mLabelAlpha + 32;
+        a += 32;
         if (a > 255) {
             a = 255;
         }
