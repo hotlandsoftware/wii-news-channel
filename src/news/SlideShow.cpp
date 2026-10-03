@@ -161,8 +161,11 @@ static inline s32 ClampZero(s32 x) {
 }
 
 static inline ut::Color operator-(const ut::Color& a, const ut::Color& b) {
-    return ut::Color(ClampZero(a.r - b.r), ClampZero(a.g - b.g), ClampZero(a.b - b.b),
-                     ClampZero(a.a - b.a));
+    s32 al = ClampZero(a.a - b.a);
+    s32 bl = ClampZero(a.b - b.b);
+    s32 g = ClampZero(a.g - b.g);
+    s32 r = ClampZero(a.r - b.r);
+    return ut::Color(r, g, bl, al);
 }
 
 SlideShow::SlideShow(u32 arc)
