@@ -241,11 +241,11 @@ BOOL GlobePin::DrawCards(u8 alpha) {
 
 void GlobePin::DrawLabel() {
     ut::TextWriterBase<wchar_t> writer;
+    f32 scale = 1.0f;
     f32 t = 0.5f - 0.5f * math::CosDeg(15.0f * mHoverTime);
     if (lbl_80357598 == 1) {
         t = 1.0f;
     }
-    f32 scale = 1.0f;
     if (gNewsData->mHeader->language == 0) {
         scale *= 0.9f;
     } else {
@@ -253,10 +253,10 @@ void GlobePin::DrawLabel() {
     }
     scale *= 1.0f + 0.2f * t;
 
-    GlobePin* pin = mNext;
-    if (pin != NULL) {
+    if (mNext != NULL) {
         BOOL same = TRUE;
         const wchar_t* name = mArticle->mLocationName;
+        GlobePin* pin = mNext;
         do {
             if (wcscmp(name, pin->mArticle->mLocationName) != 0) {
                 same = FALSE;
@@ -279,6 +279,10 @@ void GlobePin::DrawLabel() {
                     wcscat(lbl_8020E520, gMsgOtherAreasShort[gLanguage]);
                 }
                 break;
+            case 0:
+            case 2:
+            case 5:
+            case 6:
             default:
                 wcscpy(lbl_8020E520, name);
                 wcscat(lbl_8020E520, gMsgOtherAreasShort[gLanguage]);
@@ -299,16 +303,22 @@ void GlobePin::DrawLabel() {
     mLabelH = writer.CalcStringHeight(lbl_8020E520);
 
     if (mHoverTime != 0) {
-        f32 h = mLabelH;
         f32 x = mLabelPos.x;
         f32 y = mLabelPos.y;
-        f32 halfW = 64.0f + 0.5f * mLabelW;
         u8 a = mLabelAlpha * t;
+        f32 h = mLabelH;
+        f32 halfW = 64.0f + 0.5f * mLabelW;
         ut::Color colors[4];
-        colors[0] = ut::Color(255, 136, 75, a);
+        colors[0].r = 255;
+        colors[0].g = 136;
+        colors[0].b = 75;
         colors[1] = ut::Color(255, 136, 75, 0);
         colors[2] = ut::Color(255, 136, 75, 0);
-        colors[3] = ut::Color(255, 136, 75, a);
+        colors[3].r = 255;
+        colors[3].g = 136;
+        colors[3].b = 75;
+        colors[0].a = a;
+        colors[3].a = a;
         Draw2D_SetupGX();
         Draw2D_SetOrtho();
         GXSetZMode(GX_FALSE, GX_LEQUAL, GX_FALSE);
@@ -322,7 +332,7 @@ void GlobePin::DrawLabel() {
         quad[3].x = x;
         quad[3].y = y + h;
         Draw2D_FillQuadGradient(quad, colors);
-        quad[1].x = quad[2].x = x - halfW;
+        quad[2].x = quad[1].x = x - halfW;
         Draw2D_FillQuadGradient(quad, colors);
     }
 
