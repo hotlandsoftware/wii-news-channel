@@ -1720,7 +1720,7 @@ void SlideShow::DrawSelection() {
 }
 
 void SlideShow::DrawFooterA() {
-    f32 width = TPL_GetWidth(gCommonTpl, 0x42) + TPL_GetWidth(gCommonTpl, 0x41);
+    f32 width = TPL_GetWidth(gCommonTpl, 0x41) + TPL_GetWidth(gCommonTpl, 0x42);
     f32 y = mPicCenter[1] - 0.5f * TPL_GetHeight(gCommonTpl, 0x41);
     math::VEC3 pos(GetScreenWidth() / 2 - 0.5f * width, y, 0.0f);
     Draw2D_Tex(gCommonTpl, 0x42, &pos, 1.0f, 1.0f);
@@ -1729,7 +1729,7 @@ void SlideShow::DrawFooterA() {
 }
 
 void SlideShow::DrawFooterB() {
-    f32 width = TPL_GetWidth(gCommonTpl, 0x42) + TPL_GetWidth(gCommonTpl, 0x41);
+    f32 width = TPL_GetWidth(gCommonTpl, 0x41) + TPL_GetWidth(gCommonTpl, 0x42);
     f32 y = mPicCenter[1] - 0.5f * TPL_GetHeight(gCommonTpl, 0x41);
     math::VEC3 pos(GetScreenWidth() / 2 - 0.5f * width, y, 0.0f);
     Draw2D_Tex(gCommonTpl, 0x41, &pos, 1.0f, 1.0f);
