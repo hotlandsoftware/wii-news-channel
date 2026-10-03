@@ -123,17 +123,24 @@ void jpgdIdct4x4C(s32* in, u8* out, u16 stride, s32 extent) {
 }
 
 void jpgdIdct2x2C(s32* in, u8* out, u16 stride, s32 extent) {
-    s32 t1;
-    s32 t3;
+    s32 d1;
+    s32 d0;
+    s32 d9;
     s32 t0;
+    s32 t1;
+    s32 d8;
     s32 t2;
-
+    s32 t3;
     s8* o = (s8*)out;
 
-    t0 = in[0] + in[1];
-    t1 = in[0] - in[1];
-    t2 = in[8] + in[9];
-    t3 = in[8] - in[9];
+    d1 = in[1];
+    d9 = in[9];
+    d8 = in[8];
+    d0 = in[0];
+    t3 = d8 - d9;
+    t1 = d0 - d1;
+    t2 = d8 + d9;
+    t0 = d1 + d0;
     o[0] = CLAMP_S8((t0 + t2) >> 11);
     o[8] = CLAMP_S8((t0 - t2) >> 11);
     o[1] = CLAMP_S8((t1 + t3) >> 11);
