@@ -690,6 +690,7 @@ void GlobePin::TruncateHeadline(ut::CharWriter* writer) {
         u32 n = 0;
         f32 width = 0.0f;
         f32 maxWidth = mHeadlineScroller.mViewWidth - 30.0f * scale;
+        f32 limit;
         if (gLanguage == 0) {
             while (*src != 0) {
                 *dst = *src++;
@@ -703,11 +704,15 @@ void GlobePin::TruncateHeadline(ut::CharWriter* writer) {
                 width += cw;
                 *++dst = 0;
                 if (width > maxWidth) {
-                    f32 ellipsis = scale * font->GetCharWidth(0x2026);
+                    f32 s = scale;
+                    if (n < mHeadlineLen) {
+                        s = scale;
+                    }
+                    limit = s * font->GetCharWidth(0x2026);
                     dst[-1] = 0;
                     dst -= 2;
                     f32 cut = scale * font->GetCharWidth(*dst);
-                    while (cut < ellipsis) {
+                    while (cut < limit) {
                         cut += space + scale * font->GetCharWidth(*--dst);
                     }
                     dst[0] = 0x2026;
@@ -730,7 +735,11 @@ void GlobePin::TruncateHeadline(ut::CharWriter* writer) {
                 width += cw;
                 *++dst = 0;
                 if (width > maxWidth) {
-                    f32 limit = 2.0f * space + scale * (3.0f * font->GetCharWidth(L'.'));
+                    f32 s = scale;
+                    if (n < mHeadlineLen) {
+                        s = scale;
+                    }
+                    limit = 2.0f * space + s * (3.0f * font->GetCharWidth(L'.'));
                     dst[-1] = 0;
                     dst -= 2;
                     f32 cut = scale * font->GetCharWidth(*dst);
@@ -752,24 +761,29 @@ void GlobePin::TruncateHeadline(ut::CharWriter* writer) {
 
 void GlobePin::TruncateLocation(ut::CharWriter* writer) {
     if (mLocationScroller.mMode == Scroller::MODE_WAIT) {
+        f32 width;
+        f32 maxWidth;
+        f32 limit;
+        f32 scale;
+        f32 space;
         const ut::Font* font = writer->GetFont();
-        f32 maxWidth = mLocationScroller.mViewWidth;
+        maxWidth = mLocationScroller.mViewWidth;
         const wchar_t* src = mArticle->mLocationName;
         wchar_t* dst = mArticle->unk40;
-        f32 scale = writer->GetScaleH();
-        f32 space = ((ut::TextWriterBase<wchar_t>*)writer)->GetCharSpace();
-        f32 width = 0.0f;
+        scale = writer->GetScaleH();
+        space = ((ut::TextWriterBase<wchar_t>*)writer)->GetCharSpace();
+        width = 0.0f;
         if (gLanguage == 0) {
             while (*src != 0) {
                 *dst = *src++;
                 width += scale * font->GetCharWidth(*dst);
                 *++dst = 0;
                 if (width > maxWidth) {
-                    f32 ellipsis = scale * font->GetCharWidth(0x2026);
+                    limit = scale * font->GetCharWidth(0x2026);
                     dst[-1] = 0;
                     dst -= 2;
                     f32 cut = scale * font->GetCharWidth(*dst);
-                    while (cut < ellipsis) {
+                    while (cut < limit) {
                         cut += space + scale * font->GetCharWidth(*--dst);
                     }
                     dst[0] = 0x2026;
@@ -784,7 +798,7 @@ void GlobePin::TruncateLocation(ut::CharWriter* writer) {
                 width += scale * font->GetCharWidth(*dst);
                 *++dst = 0;
                 if (width > maxWidth) {
-                    f32 limit = 2.0f * space + scale * (3.0f * font->GetCharWidth(L'.'));
+                    limit = 2.0f * space + scale * (3.0f * font->GetCharWidth(L'.'));
                     dst[-1] = 0;
                     dst -= 2;
                     f32 cut = scale * font->GetCharWidth(*dst);
