@@ -327,7 +327,7 @@ s32 NewsData::Init(NewsHeader** files, s32 current) {
 
     // Link articles that appear in several topics.
     topic = mCategories;
-    for (u32 i = 0; i < mNumCategories; i++, topic++) {
+    for (s32 i = 0; i < mNumCategories; topic++, i++) {
         slot = topic->mArticles;
         for (j = 0; j < topic->mNumArticles; j++, slot++) {
             same = FindArticle((*slot)->mText, i, j + 1);
