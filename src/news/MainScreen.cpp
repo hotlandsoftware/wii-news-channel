@@ -1526,8 +1526,8 @@ void MainScreen::State16960(s32* arg) {
         if (arg != NULL) {
             mStateStep = 2;
             mDraw = &MainScreen::DrawButtons2;
-            mUnk33C = 0x71C;
             mUnk230 = -GetScreenWidth();
+            mUnk33C = 0x71C;
             switch (*arg) {
             case 0:
                 mUnk154.x = mUnk230 - 150.0f;
@@ -1536,8 +1536,8 @@ void MainScreen::State16960(s32* arg) {
             case 1:
             default:
                 mUnk154.x = 150.0f + mUnk230;
-                mUnk240 = 0.0f;
                 mUnk14C.x = mUnk154.x + GetScreenWidth();
+                mUnk240 = 0.0f;
                 if (list != NULL && list->mNumItems == 0) {
                     mTextButton->mHidden = false;
                 }
@@ -1555,11 +1555,11 @@ void MainScreen::State16960(s32* arg) {
             if (list != NULL) {
                 Ticker* ticker = GetListItem(list, mSelected);
                 if (ticker != NULL) {
+                    math::VEC2 origin;
                     f32 dy = list->mScroll - mUnk224;
                     math::VEC2 thumbPos = ticker->GetThumbPos();
                     math::VEC2 pos(mUnk16C.x, 123.0f + mUnk224);
                     dy -= 40.0f;
-                    math::VEC2 origin;
                     ticker->GetOrigin(origin);
                     origin.y += dy;
                     thumbPos.y += dy;
@@ -1572,10 +1572,9 @@ void MainScreen::State16960(s32* arg) {
             }
         }
         fn_80032464(mUnk14C.x + GetSideMargin());
-        f32 right = mScreenRect.right;
-        mUnk290 = right;
         mUnk238 = GetScreenWidth();
-        mUnk294 = mUnk238 - right;
+        mUnk290 = mScreenRect.right;
+        mUnk294 = mUnk238 - mUnk290;
         UpdateHeadButtons();
         if (lbl_80356970 <= 0) {
             DisableButton(fn_80048364(mHeadLayout, "zoom_out"));
@@ -1601,8 +1600,8 @@ void MainScreen::State16960(s32* arg) {
             mUnk338 = 0x8000;
         }
         f32 t = fn_800449A0(mUnk338);
-        mUnk23C += 1.0f / 18.0f;
         mScreenRect.right = mUnk290 + mUnk294 * t;
+        mUnk23C += 1.0f / 18.0f;
         if (mUnk23C > 1.0f) {
             mUnk23C = 1.0f;
         }
@@ -1868,8 +1867,8 @@ void MainScreen::State17E6C(s32* arg) {
             mUnk288 = 0.0f;
             mUnk28C = 456.0f;
             math::VEC2 a = fn_8000D6A0(item);
-            math::VEC2 b = fn_8000D6A0(item);
             math::VEC2 c = fn_8000D6A0(item);
+            math::VEC2 b = fn_8000D6A0(item);
             mUnk280 = mUnk284 = mFadeRect.left = mFadeRect.right = c.x;
             math::VEC2 d = fn_8000D6A0(item);
             mUnk288 = mUnk28C = mFadeRect.top = mFadeRect.bottom = d.y;
@@ -2295,8 +2294,8 @@ void MainScreen::State195B8(s32* arg) {
                 return;
             }
         } else if (IsState(&MainScreen::State195A0)) {
-            s32 dir = 0;
             RelatedItem* item = mCurRelated;
+            s32 dir = 0;
             if (item != NULL) {
                 if (mUnk2B7 && item->mNext != NULL) {
                     OpenRelated(item->mNext, &dir);
