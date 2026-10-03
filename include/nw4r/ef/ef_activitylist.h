@@ -48,6 +48,12 @@ public:
         return mActiveList.numObjects;
     }
 
+    // Older revision (News Channel): out of line in ef_drawstripestrategy
+    // (name unknown)
+    u32 GetNumActiveCount() const {
+        return mNumActive;
+    }
+
     void ToActive(void* pObject) {
         ut::List_Append(&mActiveList, pObject);
         mNumActive++;
