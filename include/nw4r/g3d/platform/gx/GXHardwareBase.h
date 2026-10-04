@@ -46,6 +46,10 @@ extern "C" {
 #define GX_BITGET_TRUNC(field, pos, size)                                      \
     ((field) & (((1 << (size)) - 1) << (32 - (pos) - (size))))
 
+#ifdef TARGET_PC
+// PC: writes go to the backend through write-only ports (pc/gx_fifo.h)
+#define WGPIPE gPCGXFifo
+#else
 extern volatile union {
     // 1-byte
     char c;
@@ -59,6 +63,7 @@ extern volatile union {
     void* p;
     float f;
 } WGPIPE DECL_ADDRESS(0xCC008000);
+#endif
 
 /**
  * FIFO commands

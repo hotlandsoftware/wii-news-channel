@@ -66,6 +66,11 @@ struct VEC3 : public Vec {
 };
 
 inline VEC3* VEC3Add(register VEC3* pOut, register const VEC3* p1, register const VEC3* p2) {
+#ifdef TARGET_PC
+    pOut->x = p1->x + p2->x;
+    pOut->y = p1->y + p2->y;
+    pOut->z = p1->z + p2->z;
+#else
     register f32 a, b, c;
     asm {
         psq_l a, 0(p1), 0, 0
@@ -77,6 +82,7 @@ inline VEC3* VEC3Add(register VEC3* pOut, register const VEC3* p1, register cons
         ps_add c, a, b
         psq_st c, 8(pOut), 1, 0
     }
+#endif
     return pOut;
 }
 
@@ -87,6 +93,11 @@ inline VEC3 VEC3::operator+(const VEC3& rhs) const {
 }
 
 inline VEC3& VEC3::operator+=(register const VEC3& rhs) {
+#ifdef TARGET_PC
+    x += rhs.x;
+    y += rhs.y;
+    z += rhs.z;
+#else
     register VEC3* self = this;
     register f32 b, a;
     asm {
@@ -99,6 +110,7 @@ inline VEC3& VEC3::operator+=(register const VEC3& rhs) {
         ps_add b, a, b
         psq_st b, 8(self), 1, 0
     }
+#endif
     return *this;
 }
 

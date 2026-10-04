@@ -7,6 +7,9 @@ namespace nw4r {
 namespace math {
 
 f32 FrSqrt(register f32 x) {
+#ifdef TARGET_PC
+    return 1.0f / sqrtf(x);
+#else
     register f32 rsqrt;
     register f32 c_half = 0.5f, c_three = 3.0f;
     register f32 work0, work1;
@@ -23,6 +26,7 @@ f32 FrSqrt(register f32 x) {
     }
 
     return work1;
+#endif
 }
 
 u32 CntBit1(u32 x) {

@@ -30,7 +30,10 @@ OSTime __OSGetSystemTime(void);
 OSTime __OSTimeToSystemTime(OSTime);
 void OSTicksToCalendarTime(OSTime, OSCalendarTime*);
 
-#ifdef __MWERKS__
+#if defined(TARGET_PC)
+// PC: low-memory globals are ordinary variables (src/pc/sdk/lowmem.cpp)
+extern vu32 OS_BUS_CLOCK_SPEED;
+#elif defined(__MWERKS__)
 vu32 OS_BUS_CLOCK_SPEED : 0x800000F8;
 #else
 vu32 OS_BUS_CLOCK_SPEED;

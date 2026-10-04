@@ -1,7 +1,7 @@
 #include <nw4r/ef.h>
 #include <nw4r/math.h>
 
-#include <revolution/GX.h>
+#include <revolution/gx.h>
 
 // Older revision (News Channel). Written from the DOL: no reference
 // decompilation has ef_drawstripestrategy.cpp. The function names come from

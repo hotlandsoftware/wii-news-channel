@@ -25,4 +25,8 @@ typedef union uPPCWGPipe {
 }
 #endif
 
+#ifdef TARGET_PC
+#include <pc/gx_fifo.h>
+#endif
+
 #endif  //__PPCWGPIPE_H__

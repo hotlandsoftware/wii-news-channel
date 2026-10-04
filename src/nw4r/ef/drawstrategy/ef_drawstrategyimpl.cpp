@@ -1,6 +1,6 @@
 #include <nw4r/ef.h>
 
-#include <revolution/GX.h>
+#include <revolution/gx.h>
 
 #include <cmath>
 

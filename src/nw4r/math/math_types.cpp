@@ -3,6 +3,20 @@
 
 #define ASM asm
 
+#ifdef TARGET_PC
+// fsel work, dt, fx, fy: work = (dt >= 0) ? fx : fy
+#define FSEL_MAX(_fx, _fy)                                                     \
+    fx = (_fx);                                                                \
+    fy = (_fy);                                                                \
+    dt = fx - fy;                                                              \
+    work = (dt >= 0.0f) ? fx : fy
+
+#define FSEL_MIN(_fx, _fy)                                                     \
+    fx = (_fx);                                                                \
+    fy = (_fy);                                                                \
+    dt = fy - fx;                                                              \
+    work = (dt >= 0.0f) ? fx : fy
+#else
 #define FSEL_MAX(_fx, _fy)                                                     \
     fx = (_fx);                                                                \
     fy = (_fy);                                                                \
@@ -14,6 +28,7 @@
     fy = (_fy);                                                                \
     dt = fy - fx;                                                              \
     ASM ( fsel work, dt, fx, fy )
+#endif
 
 namespace nw4r {
 namespace math {
@@ -51,6 +66,11 @@ VEC3* VEC3Minimize(VEC3* pOut, const VEC3* pA, const VEC3* pB) {
 }
 
 MTX33* MTX33Identity(register MTX33* pMtx) {
+#ifdef TARGET_PC
+    pMtx->_00 = 1.0f; pMtx->_01 = 0.0f; pMtx->_02 = 0.0f;
+    pMtx->_10 = 0.0f; pMtx->_11 = 1.0f; pMtx->_12 = 0.0f;
+    pMtx->_20 = 0.0f; pMtx->_21 = 0.0f; pMtx->_22 = 1.0f;
+#else
     register f32 c_00 = 0.0f, c_10 = 1.0f;
     register f32 c_11;
 
@@ -64,11 +84,17 @@ MTX33* MTX33Identity(register MTX33* pMtx) {
 
         stfs c_10,   MTX33._22(pMtx)       // _22=1
     )
+#endif
 
     return pMtx;
 }
 
 MTX33* MTX34ToMTX33(register MTX33* pOut, register const MTX34* pIn) {
+#ifdef TARGET_PC
+    pOut->_00 = pIn->_00; pOut->_01 = pIn->_01; pOut->_02 = pIn->_02;
+    pOut->_10 = pIn->_10; pOut->_11 = pIn->_11; pOut->_12 = pIn->_12;
+    pOut->_20 = pIn->_20; pOut->_21 = pIn->_21; pOut->_22 = pIn->_22;
+#else
     register f32 row0a, row0b, row1a, row1b, row2a, row2b;
 
     ASM (
@@ -86,10 +112,34 @@ MTX33* MTX34ToMTX33(register MTX33* pOut, register const MTX34* pIn) {
         psq_st row2a, MTX33._20(pOut), 0, 0
         psq_st row2b, MTX33._22(pOut), 1, 0
     )
+#endif
 
     return pOut;
 }
 
+#ifdef TARGET_PC
+// Inverse transpose of the upper 3x3 (the cofactor matrix over the determinant)
+u32 MTX34InvTranspose(MTX33* pOut, const MTX34* pIn) {
+    f32 a = pIn->_00, b = pIn->_01, c = pIn->_02;
+    f32 d = pIn->_10, e = pIn->_11, f = pIn->_12;
+    f32 g = pIn->_20, h = pIn->_21, i = pIn->_22;
+
+    f32 c00 = e * i - h * f, c01 = f * g - i * d, c02 = d * h - e * g;
+    f32 c10 = h * c - b * i, c11 = i * a - c * g, c12 = b * g - a * h;
+    f32 c20 = b * f - e * c, c21 = c * d - f * a, c22 = a * e - b * d;
+
+    f32 det = a * c00 + d * c10 + g * c20;
+    if (det == 0.0f) {
+        return FALSE;
+    }
+
+    f32 inv = 1.0f / det;
+    pOut->_00 = c00 * inv; pOut->_01 = c01 * inv; pOut->_02 = c02 * inv;
+    pOut->_10 = c10 * inv; pOut->_11 = c11 * inv; pOut->_12 = c12 * inv;
+    pOut->_20 = c20 * inv; pOut->_21 = c21 * inv; pOut->_22 = c22 * inv;
+    return TRUE;
+}
+#else
 #define nofralloc
 #undef PURE_ASM
 
@@ -167,8 +217,14 @@ inverse_exists:
     blr
     // clang-format on
 }
+#endif
 
 MTX34* MTX34Zero(register MTX34* pMtx) {
+#ifdef TARGET_PC
+    for (int i = 0; i < 12; i++) {
+        pMtx->a[i] = 0.0f;
+    }
+#else
     register f32 c_zero = 0.0f;
 
     ASM (
@@ -179,12 +235,23 @@ MTX34* MTX34Zero(register MTX34* pMtx) {
         psq_st c_zero, MTX34._20(pMtx), 0, 0
         psq_st c_zero, MTX34._22(pMtx), 0, 0
     )
+#endif
 
     return pMtx;
 }
 
 MTX34* MTX34Scale(register MTX34* pOut, register const MTX34* pIn,
                   register const VEC3* pScale) {
+#ifdef TARGET_PC
+    f32 x = pScale->x, y = pScale->y, z = pScale->z;
+    for (int i = 0; i < 3; i++) {
+        f32 m0 = pIn->m[i][0], m1 = pIn->m[i][1], m2 = pIn->m[i][2], m3 = pIn->m[i][3];
+        pOut->m[i][0] = m0 * x;
+        pOut->m[i][1] = m1 * y;
+        pOut->m[i][2] = m2 * z;
+        pOut->m[i][3] = m3;
+    }
+#else
     register f32 xy, z;
     register f32 row0a, row0b;
     register f32 row1a, row1b;
@@ -215,12 +282,23 @@ MTX34* MTX34Scale(register MTX34* pOut, register const MTX34* pIn,
         psq_st row2a, MTX34._20(pOut), 0, 0
         psq_st row2b, MTX34._22(pOut), 0, 0
     )
+#endif
 
     return pOut;
 }
 
 MTX34* MTX34Trans(register MTX34* pOut, register const MTX34* pIn,
                   register const VEC3* pTrans) {
+#ifdef TARGET_PC
+    f32 x = pTrans->x, y = pTrans->y, z = pTrans->z;
+    for (int i = 0; i < 3; i++) {
+        f32 m0 = pIn->m[i][0], m1 = pIn->m[i][1], m2 = pIn->m[i][2], m3 = pIn->m[i][3];
+        pOut->m[i][0] = m0;
+        pOut->m[i][1] = m1;
+        pOut->m[i][2] = m2;
+        pOut->m[i][3] = (m2 * z + m0 * x) + (m3 + m1 * y);
+    }
+#else
     register f32 xy, z;
     register f32 row0a, row0b;
     register f32 row1a, row1b;
@@ -268,6 +346,7 @@ MTX34* MTX34Trans(register MTX34* pOut, register const MTX34* pIn,
         ps_sum0 work2, work1, work2, work1
         psq_st  work2, MTX34._23(pOut), 1, 0
     )
+#endif
 
     return pOut;
 }
@@ -322,6 +401,13 @@ VEC3* VEC3TransformNormal(VEC3* pOut, const MTX34* pMtx, const VEC3* pVec) {
 }
 
 MTX44* MTX44Identity(register MTX44* pMtx) {
+#ifdef TARGET_PC
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
+            pMtx->m[i][j] = (i == j) ? 1.0f : 0.0f;
+        }
+    }
+#else
     register f32 c_zero = 0.0f, c_one = 1.0f;
     register f32 c_01, c_10;
 
@@ -338,11 +424,17 @@ MTX44* MTX44Identity(register MTX44* pMtx) {
         psq_st c_zero, MTX44._30(pMtx), 0, 0  // _30=0, _31=0
         psq_st c_01,   MTX44._32(pMtx), 0, 0  // _32=0, _33=1
     )
+#endif
 
     return pMtx;
 }
 
 MTX44* MTX44Copy(register MTX44* pDst, register const MTX44* pSrc) {
+#ifdef TARGET_PC
+    for (int i = 0; i < 16; i++) {
+        pDst->a[i] = pSrc->a[i];
+    }
+#else
     register f32 row0a, row0b;
     register f32 row1a, row1b;
     register f32 row2a, row2b;
@@ -367,6 +459,7 @@ MTX44* MTX44Copy(register MTX44* pDst, register const MTX44* pSrc) {
         psq_st row3a, MTX44._30(pDst), 0, 0
         psq_st row3b, MTX44._32(pDst), 0, 0
     )
+#endif
 
     return pDst;
 }

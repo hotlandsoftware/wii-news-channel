@@ -29,7 +29,13 @@ public:
     }
 
     template <typename T> void StepStrm(int offset) {
+#ifdef TARGET_PC
+        // (a cast is not an lvalue outside CodeWarrior; the plain form does
+        // not compile to the same code there)
+        mCharStrm = static_cast<const T*>(mCharStrm) + offset;
+#else
         static_cast<const T*>(mCharStrm) += offset;
+#endif
     }
 
     const void* mCharStrm;    // at 0x0

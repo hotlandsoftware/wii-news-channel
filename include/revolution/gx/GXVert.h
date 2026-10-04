@@ -16,7 +16,10 @@ extern "C" {
 // GXVERT_FIFO_VARIABLE (opt-in, define before including this header) selects the
 // absolute-address variable instead. The compiler then knows that a FIFO write cannot
 // alias a local variable (GXDraw.c needs that).
-#ifdef GXVERT_FIFO_VARIABLE
+#if defined(TARGET_PC)
+// PC: writes go to the backend through write-only ports (pc/gx_fifo.h)
+#define GXWGFifo gPCGXFifo
+#elif defined(GXVERT_FIFO_VARIABLE)
 volatile PPCWGPipe GXWGFifo : 0xCC008000;
 #else
 #define GXWGFifo (*(volatile PPCWGPipe*)0xCC008000)

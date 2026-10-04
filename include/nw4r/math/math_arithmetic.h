@@ -10,21 +10,33 @@ namespace nw4r {
 namespace math {
 
 inline f32 FSelect(register f32 cond, register f32 ifPos, register f32 ifNeg) {
+#ifdef TARGET_PC
+    return cond >= 0.0f ? ifPos : ifNeg;
+#else
     register f32 ret;
     asm { fsel ret, cond, ifPos, ifNeg }
     return ret;
+#endif
 }
 
 inline f32 FAbs(register f32 x) {
+#ifdef TARGET_PC
+    return __builtin_fabsf(x);
+#else
     register f32 ret;
     asm { fabs ret, x }
     return ret;
+#endif
 }
 
 inline f32 FNAbs(register f32 x) {
+#ifdef TARGET_PC
+    return -__builtin_fabsf(x);
+#else
     register f32 ret;
     asm { fnabs ret, x }
     return ret;
+#endif
 }
 
 // Added for g3d (Task 10), from ogws math_arithmetic.h
@@ -43,6 +55,9 @@ inline f32 FExp(f32 x) {
 }
 
 inline f32 FInv(register f32 x) {
+#ifdef TARGET_PC
+    return 1.0f / x; // fres is an estimate; the exact value is fine
+#else
     register f32 work0, work1;
 
     asm {
@@ -51,6 +66,7 @@ inline f32 FInv(register f32 x) {
     }
 
     return work0;
+#endif
 }
 
 // as MSL's std::fmodf/floorf/ceilf (math_double.h)
@@ -80,31 +96,47 @@ inline f32 FLog(f32 x) {
 
 // Fast casts (as ogws's OSFastCast.h inlines; our os/OSFastCast.h has macros)
 inline f32 U16ToF32(u16 arg) {
+#ifdef TARGET_PC
+    return PCFastCastU16ToF32(arg);
+#else
     register u16* pArg = &arg;
     register f32 ret;
     asm { psq_l ret, 0(pArg), 1, 3 }
     return ret;
+#endif
 }
 
 inline u16 F32ToU16(register f32 arg) {
+#ifdef TARGET_PC
+    return PCFastCastF32ToU16(arg);
+#else
     f32 a;
     register f32* ptr = &a;
     asm { psq_st arg, 0(ptr), 1, 3 }
     return *reinterpret_cast<u16*>(ptr);
+#endif
 }
 
 inline f32 S16ToF32(s16 arg) {
+#ifdef TARGET_PC
+    return PCFastCastS16ToF32(arg);
+#else
     register s16* pArg = &arg;
     register f32 ret;
     asm { psq_l ret, 0(pArg), 1, 5 }
     return ret;
+#endif
 }
 
 inline s16 F32ToS16(register f32 arg) {
+#ifdef TARGET_PC
+    return PCFastCastF32ToS16(arg);
+#else
     f32 a;
     register f32* ptr = &a;
     asm { psq_st arg, 0(ptr), 1, 5 }
     return *reinterpret_cast<s16*>(ptr);
+#endif
 }
 
 inline u32 F32AsU32(f32 arg) {

@@ -107,6 +107,9 @@ VEC3* VEC3Minimize(VEC3* pOut, const VEC3* pA, const VEC3* pB);
 VEC3* VEC3TransformNormal(VEC3* pOut, const MTX34* pMtx, const VEC3* pVec);
 
 inline f32 VEC3Dot(register const VEC3* pA, register const VEC3* pB) {
+#ifdef TARGET_PC
+    return pA->x * pB->x + pA->y * pB->y + pA->z * pB->z;
+#else
     register f32 dot;
     register f32 work0, work1, work2, work3;
 
@@ -123,9 +126,13 @@ inline f32 VEC3Dot(register const VEC3* pA, register const VEC3* pB) {
     }
 
     return dot;
+#endif
 }
 
 inline f32 VEC3LenSq(register const VEC3* pVec) {
+#ifdef TARGET_PC
+    return pVec->x * pVec->x + pVec->y * pVec->y + pVec->z * pVec->z;
+#else
     register f32 work0, work1, work2;
 
     ASM {
@@ -139,10 +146,16 @@ inline f32 VEC3LenSq(register const VEC3* pVec) {
     }
 
     return work2;
+#endif
 }
 
 inline VEC3* VEC3Scale(register VEC3* pOut, register const VEC3* pIn,
                        register f32 scale) {
+#ifdef TARGET_PC
+    pOut->x = pIn->x * scale;
+    pOut->y = pIn->y * scale;
+    pOut->z = pIn->z * scale;
+#else
     register f32 work0, work1;
 
     ASM {
@@ -154,12 +167,18 @@ inline VEC3* VEC3Scale(register VEC3* pOut, register const VEC3* pIn,
         ps_muls0 work1, work0, scale
         psq_st   work1, VEC3.z(pOut), 1, 0
     }
+#endif
 
     return pOut;
 }
 
 inline VEC3* VEC3Sub(register VEC3* pOut, register const VEC3* pA,
                      register const VEC3* pB) {
+#ifdef TARGET_PC
+    pOut->x = pA->x - pB->x;
+    pOut->y = pA->y - pB->y;
+    pOut->z = pA->z - pB->z;
+#else
     register f32 work0, work1, work2;
 
     ASM {
@@ -173,6 +192,7 @@ inline VEC3* VEC3Sub(register VEC3* pOut, register const VEC3* pA,
         ps_sub work2, work0, work1
         psq_st work2, VEC3.z(pOut), 1, 0
     }
+#endif
 
     return pOut;
 }

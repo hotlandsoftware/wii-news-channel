@@ -11,7 +11,11 @@ extern "C" {
 
 #define OSHalt(msg) OSPanic(__FILE__, __LINE__, msg)
 
-#ifdef __MWERKS__
+#if defined(TARGET_PC)
+// PC: low-memory globals are ordinary variables (src/pc/sdk/lowmem.cpp)
+extern u32 __OSBusClock;
+extern u32 __MEM2End;
+#elif defined(__MWERKS__)
 u32 __OSBusClock : (0x8000 << 16 | 0x00F8);
 u32 __MEM2End : (0x8000 << 16 | 0x3128);
 #else

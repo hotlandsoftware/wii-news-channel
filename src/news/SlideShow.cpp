@@ -97,11 +97,15 @@ void fn_80036328(u8 alpha, u32 y);
 
 // OSu16tof32: u16 to f32 through the paired-single unit (GQR3 = u16).
 static inline f32 U16ToF32(register u16* in) {
+#ifdef TARGET_PC
+    return PCFastCastU16ToF32(*in);
+#else
     register f32 ret;
     asm {
         psq_l ret, 0(in), 1, 3
     }
     return ret;
+#endif
 }
 
 static inline f32 SinIdx(u16 idx) {

@@ -16,11 +16,15 @@ static const wchar_t sDigits[] = L"0123456789";
 
 // The SDK fast cast (OSu16tof32).
 static inline f32 U16ToF32(register u16* in) {
+#ifdef TARGET_PC
+    return PCFastCastU16ToF32(*in);
+#else
     register f32 ret;
     asm {
         psq_l ret, 0(in), 1, 3
     }
     return ret;
+#endif
 }
 
 static inline BOOL IsLeapYear(s32 year) {

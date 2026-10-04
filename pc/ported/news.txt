@@ -1,0 +1,5 @@
+# Files of this library that are built into newschannel (see docs/pc_port.md).
+Locale.cpp
+MathUtil.cpp
+PointerHistory.cpp
+SmoothValue.cpp
