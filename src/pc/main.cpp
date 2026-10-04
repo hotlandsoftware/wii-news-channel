@@ -19,6 +19,8 @@
 #include <nw4r/math.h>
 #include <nw4r/ut.h>
 
+#include <pc/files.h>
+
 #include "pc_selftest.h"
 
 // The game's main() (src/news/main.cpp), renamed by pc/CMakeLists.txt.
@@ -43,6 +45,12 @@ void PrintHelp(const char* program) {
     std::printf("  --selftest    run only the self-test of the ported code\n");
     std::printf("  --boot        call the game's main() (experimental: most of the SDK is\n");
     std::printf("                still stubs, so expect \"unimplemented\" lines and a crash)\n");
+    std::printf("  --contents-dir DIR\n");
+    std::printf("                the channel's WAD contents, NN.app (default: $NEWSCHANNEL_CONTENTS,\n");
+    std::printf("                orig/HAGE/contents)\n");
+    std::printf("  --nand-dir DIR\n");
+    std::printf("                the directory used as the Wii's NAND: save data (default:\n");
+    std::printf("                $NEWSCHANNEL_NAND, ~/.local/share/newschannel/nand)\n");
     std::printf("  --version     print build information\n");
     std::printf("  --help        this text\n\n");
     std::printf("The game itself does not run yet; see docs/pc_port.md for the milestones.\n");
@@ -56,6 +64,7 @@ void PCSelfTestMtx(); // selftest_mtx.cpp
 void PCSelfTestG3d(); // selftest_g3d.cpp
 void PCSelfTestMem(); // selftest_os.cpp
 void PCSelfTestOS();  // selftest_os.cpp
+void PCSelfTestFiles(); // selftest_files.cpp
 
 static int sFailures;
 
@@ -136,6 +145,7 @@ static int RunSelfTest() {
     PCSelfTestG3d();
     PCSelfTestMem();
     PCSelfTestOS();
+    PCSelfTestFiles();
 
     if (sFailures == 0) {
         std::printf("self-test: all checks passed\n");
@@ -159,6 +169,10 @@ int main(int argc, char** argv) {
             selftest_only = true;
         } else if (std::strcmp(argv[i], "--boot") == 0) {
             boot = true;
+        } else if (std::strcmp(argv[i], "--contents-dir") == 0 && i + 1 < argc) {
+            PCSetContentsDir(argv[++i]);
+        } else if (std::strcmp(argv[i], "--nand-dir") == 0 && i + 1 < argc) {
+            PCSetNandDir(argv[++i]);
         } else {
             std::fprintf(stderr, "%s: unknown option '%s'\n", argv[0], argv[i]);
             PrintHelp(argv[0]);
