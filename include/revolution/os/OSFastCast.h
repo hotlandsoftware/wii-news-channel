@@ -8,7 +8,11 @@
 extern "C" {
 #endif
 
-#ifdef __MWERKS__
+#if defined(TARGET_PC)
+// PC: C versions of the paired-single conversions (pc/fastcast.h)
+#define OSf32tou16(in, out) (*(out) = PCFastCastF32ToU16(*(in)))
+#define OSu16tof32(in, out) (*(out) = PCFastCastU16ToF32(*(in)))
+#elif defined(__MWERKS__)
 static inline u16 __OSf32tou16(register f32 in) {
     f32 a;
     register f32* ptr = &a;
@@ -26,7 +30,9 @@ static inline void OSf32tou16(register f32* in, volatile register u16* out) {
 #else
 #define OSf32tou16(in, out) asm volatile("psq_st   %1, 0(%0), 1, 3 " : : "b"(out), "f"(*(in)) : "memory")
 #endif
+#ifndef TARGET_PC
 #define OSu16tof32(in, out) asm volatile("psq_l   %0, 0(%1), 1, 3  " : "=f"(*(out)) : "b"(in))
+#endif
 
 static inline void OSInitFastCast(void) {
 #ifdef __MWERKS__

@@ -11,8 +11,15 @@ static const int CHANNEL_MAX = 2;
 static const int REMOTE_FILTER_MAX = 127;
 
 // Volume in range [-90.4db, 6.0db]
+#ifdef TARGET_PC
+// (used in integral constant expressions in snd_Util.h; standard C++ needs
+// constexpr for a floating-point constant there)
+static constexpr f32 VOLUME_MIN_DB = -90.4f;
+static constexpr f32 VOLUME_MAX_DB = 6.0f;
+#else
 static const f32 VOLUME_MIN_DB = -90.4f;
 static const f32 VOLUME_MAX_DB = 6.0f;
+#endif
 static const f32 VOLUME_RANGE_DB = -(VOLUME_MIN_DB - VOLUME_MAX_DB);
 static const int VOLUME_RANGE_MB = static_cast<int>(10 * VOLUME_RANGE_DB);
 

@@ -147,10 +147,12 @@ public:
                    u32 blockSize) {
         return LoadGroup(static_cast<u32>(id), pAllocatable, blockSize);
     }
+#ifndef TARGET_PC // u32 is `unsigned int` on PC: same signature as the first
     bool LoadGroup(unsigned int id, SoundMemoryAllocatable* pAllocatable,
                    u32 blockSize) {
         return LoadGroup(static_cast<u32>(id), pAllocatable, blockSize);
     }
+#endif
 
     u32 GetSoundPlayerCount() const {
         return mSoundPlayerCount;

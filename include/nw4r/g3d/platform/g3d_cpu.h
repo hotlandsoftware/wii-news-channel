@@ -24,22 +24,33 @@ namespace fastcast {
 namespace detail {
 
 inline f32 OSu8tof32_(register u8* in) {
+#ifdef TARGET_PC
+    return PCFastCastU8ToF32(*in);
+#else
     register f32 ret;
     ASM (
         psq_l ret, 0(in), 1, 2
     )
     return ret;
+#endif
 }
 
 inline f32 OSu16tof32_(register u16* in) {
+#ifdef TARGET_PC
+    return PCFastCastU16ToF32(*in);
+#else
     register f32 ret;
     ASM (
         psq_l ret, 0(in), 1, 3
     )
     return ret;
+#endif
 }
 
 inline u8 OSf32tou8_(register f32 arg) {
+#ifdef TARGET_PC
+    return PCFastCastF32ToU8(arg);
+#else
     f32 a;
     register f32* ptr = &a;
     u8 r;
@@ -48,6 +59,7 @@ inline u8 OSf32tou8_(register f32 arg) {
     )
     r = *(u8*)ptr;
     return r;
+#endif
 }
 
 inline void u8tof32(u8* in, volatile f32* out) {
@@ -92,6 +104,9 @@ inline f32 U16_0ToF32(const u16* pPtr) {
  *
  ******************************************************************************/
 inline f32 S7_8ToF32(register const s16* pPtr) {
+#ifdef TARGET_PC
+    return PCFastCastS16ToF32(*pPtr) * (1.0f / 256.0f); // GQR7: s16, 8 fraction bits
+#else
     register f32 f;
 
     ASM (
@@ -99,9 +114,13 @@ inline f32 S7_8ToF32(register const s16* pPtr) {
     )
 
     return f;
+#endif
 }
 
 inline f32 S10_5ToF32(register const s16* pPtr) {
+#ifdef TARGET_PC
+    return PCFastCastS16ToF32(*pPtr) * (1.0f / 32.0f); // GQR6: s16, 5 fraction bits
+#else
     register f32 f;
 
     ASM (
@@ -109,6 +128,7 @@ inline f32 S10_5ToF32(register const s16* pPtr) {
     )
 
     return f;
+#endif
 }
 
 /******************************************************************************
@@ -123,6 +143,9 @@ inline u8 F32ToU8_0(f32 f) {
 }
 
 inline s16 F32ToS10_5(register f32 f) {
+#ifdef TARGET_PC
+    return PCFastCastF32ToS16(f * 32.0f); // GQR6: s16, 5 fraction bits
+#else
     s16 x;
     register s16* pPtr = &x;
 
@@ -131,6 +154,7 @@ inline s16 F32ToS10_5(register f32 f) {
     )
 
     return x;
+#endif
 }
 
 /******************************************************************************
@@ -142,17 +166,29 @@ inline s16 F32ToS10_5(register f32 f) {
 namespace detail {
 
 inline void SetGQR6(register u32 type, register u32 scale) {
+#ifdef TARGET_PC
+    // The quantisation registers do not exist on PC; the conversions above
+    // have the scales built in.
+    (void)type;
+    (void)scale;
+#else
     register u32 val = ((scale << 8 | type) << 16) | ((scale << 8) | type);
     ASM (
         mtspr 0x396, val
     )
+#endif
 }
 
 inline void SetGQR7(register u32 type, register u32 scale) {
+#ifdef TARGET_PC
+    (void)type;
+    (void)scale;
+#else
     register u32 val = ((scale << 8 | type) << 16) | ((scale << 8) | type);
     ASM (
         mtspr 0x397, val
     )
+#endif
 }
 
 } // namespace detail

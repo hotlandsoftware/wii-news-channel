@@ -65,10 +65,12 @@ public:
         return detail_StartSound(pHandle, id, NULL, NULL, NULL) ==
                START_SUCCESS;
     }
+#ifndef TARGET_PC // u32 is `unsigned int` on PC: same signature as above
     bool StartSound(SoundHandle* pHandle, unsigned int id) {
         return detail_StartSound(pHandle, id, NULL, NULL, NULL) ==
                START_SUCCESS;
     }
+#endif
     bool StartSound(SoundHandle* pHandle, int id) {
         return detail_StartSound(pHandle, id, NULL, NULL, NULL) ==
                START_SUCCESS;
@@ -77,9 +79,11 @@ public:
     bool HoldSound(SoundHandle* pHandle, u32 id) {
         return detail_HoldSound(pHandle, id, NULL, NULL, NULL) == START_SUCCESS;
     }
+#ifndef TARGET_PC // as above
     bool HoldSound(SoundHandle* pHandle, unsigned int id) {
         return detail_HoldSound(pHandle, id, NULL, NULL, NULL) == START_SUCCESS;
     }
+#endif
     bool HoldSound(SoundHandle* pHandle, int id) {
         return detail_HoldSound(pHandle, id, NULL, NULL, NULL) == START_SUCCESS;
     }
@@ -88,10 +92,12 @@ public:
         return detail_PrepareSound(pHandle, id, NULL, NULL, NULL) ==
                START_SUCCESS;
     }
+#ifndef TARGET_PC // as above
     bool PrepareSound(SoundHandle* pHandle, unsigned int id) {
         return detail_PrepareSound(pHandle, id, NULL, NULL, NULL) ==
                START_SUCCESS;
     }
+#endif
     bool PrepareSound(SoundHandle* pHandle, int id) {
         return detail_PrepareSound(pHandle, id, NULL, NULL, NULL) ==
                START_SUCCESS;

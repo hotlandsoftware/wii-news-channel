@@ -10,12 +10,18 @@
 # (<types.h>, <macros.h>, <revolution/...>, <nw4r/...>, <news/...>, <pc/...>)
 # come from it.
 # ------------------------------------------------------------------------------
-set(NEWS_INCLUDE_FLAGS "-idirafter" "${REPO}/include")
+#
+# build/HAGE/include holds the tables that the Wii build extracts from the
+# user's DOL (news/GlobeDot*.inc, included by src/news/GlobeDots.cpp). They are
+# never committed; run the Wii build once to create them.
+set(NEWS_INCLUDE_FLAGS
+    "SHELL:-idirafter \"${REPO}/include\""
+    "SHELL:-idirafter \"${REPO}/build/HAGE/include\"")
 
 # Every translation unit sees include/pc/compat.h first.
 set(NEWS_COMMON_FLAGS
     ${NEWS_INCLUDE_FLAGS}
-    -include "${REPO}/include/pc/compat.h"
+    "SHELL:-include \"${REPO}/include/pc/compat.h\""
     -DTARGET_PC=1
     # glibc's fortified swprintf() etc. would bypass src/pc/libc/wchar16.cpp
     -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0

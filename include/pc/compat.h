@@ -83,6 +83,9 @@ static inline int __abs(int x) {
     return x < 0 ? -x : x;
 }
 
+/* CodeWarrior's spelling of decltype/typeof */
+#define __decltype__(x) __typeof__(x)
+
 /* MSL's name for alloca() */
 #define __alloca(n) __builtin_alloca(n)
 
