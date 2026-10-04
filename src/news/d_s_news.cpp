@@ -141,11 +141,11 @@ extern f32 gModelDepth;
 extern OSCalendarTime gClockTime;
 extern ut::TextWriterBase<wchar_t> gTextWriter;
 extern const f32 gGlobeTiltAngle[];
-extern const wchar_t* lbl_801B04EC[];
-extern const wchar_t* lbl_801B05E8[];
-extern const wchar_t* lbl_801B0F38[];
-extern const wchar_t* lbl_801B1050[];
-extern const wchar_t* lbl_801B1100[];
+extern const wchar_t* gMsgToSectionSelect[];
+extern const wchar_t* gMsgSectionSelect[];
+extern const wchar_t* gMsgUpdated[];
+extern const wchar_t* gMsgLastUpdated[];
+extern const wchar_t* gMsgToTop[];
 extern const wchar_t* lbl_801B2958[][7];
 
 void* operator new(size_t size, MEMAllocator* allocator);
@@ -2888,15 +2888,15 @@ BOOL NewsScene::Shutdown() {
 }
 
 const wchar_t* GetMsgSectionSelect() {
-    return lbl_801B05E8[gLanguage];
+    return gMsgSectionSelect[gLanguage];
 }
 
 const wchar_t* GetMsgToSectionSelect() {
-    return lbl_801B04EC[gLanguage];
+    return gMsgToSectionSelect[gLanguage];
 }
 
 const wchar_t* GetMsgToTop() {
-    return lbl_801B1100[gLanguage];
+    return gMsgToTop[gLanguage];
 }
 
 void Draw2D_Icon(u32 index, math::VEC3* pos, f32 scaleX, f32 scaleY, u32 flags) {
@@ -3036,42 +3036,42 @@ void DrawScreenFade(s32 alpha) {
 }
 
 void FormatElapsedA_EN(s32 minutes, wchar_t* buf, u32 size) {
-    swprintf(buf, size, L"%ls %02d:%02d ago", lbl_801B0F38[gLanguage], minutes / 60, minutes % 60);
+    swprintf(buf, size, L"%ls %02d:%02d ago", gMsgUpdated[gLanguage], minutes / 60, minutes % 60);
 }
 
 void FormatElapsedB_EN(s32 minutes, wchar_t* buf, u32 size) {
-    swprintf(buf, size, L"%ls %02dh %02dm ago", lbl_801B1050[gLanguage], minutes / 60,
+    swprintf(buf, size, L"%ls %02dh %02dm ago", gMsgLastUpdated[gLanguage], minutes / 60,
              minutes % 60);
 }
 
 void FormatElapsedB_DE(s32 minutes, wchar_t* buf, u32 size) {
-    swprintf(buf, size, L"%ls %02d Std. %02d Min.", lbl_801B1050[gLanguage], minutes / 60,
+    swprintf(buf, size, L"%ls %02d Std. %02d Min.", gMsgLastUpdated[gLanguage], minutes / 60,
              minutes % 60);
 }
 
 void FormatElapsedA_FR(s32 minutes, wchar_t* buf, u32 size) {
-    swprintf(buf, size, L"%ls %02d:%02d", lbl_801B0F38[gLanguage], minutes / 60, minutes % 60);
+    swprintf(buf, size, L"%ls %02d:%02d", gMsgUpdated[gLanguage], minutes / 60, minutes % 60);
 }
 
 void FormatElapsedB_FR(s32 minutes, wchar_t* buf, u32 size) {
-    swprintf(buf, size, L"%ls %02d:%02d", lbl_801B1050[gLanguage], minutes / 60, minutes % 60);
+    swprintf(buf, size, L"%ls %02d:%02d", gMsgLastUpdated[gLanguage], minutes / 60, minutes % 60);
 }
 
 void FormatElapsedA_ES(s32 minutes, wchar_t* buf, u32 size) {
-    swprintf(buf, size, L"%ls %d h y %d min", lbl_801B0F38[gLanguage], minutes / 60, minutes % 60);
+    swprintf(buf, size, L"%ls %d h y %d min", gMsgUpdated[gLanguage], minutes / 60, minutes % 60);
 }
 
 void FormatElapsedB_ES(s32 minutes, wchar_t* buf, u32 size) {
-    swprintf(buf, size, L"%ls %d h y %d min", lbl_801B1050[gLanguage], minutes / 60, minutes % 60);
+    swprintf(buf, size, L"%ls %d h y %d min", gMsgLastUpdated[gLanguage], minutes / 60, minutes % 60);
 }
 
 void FormatElapsedB_IT(s32 minutes, wchar_t* buf, u32 size) {
-    swprintf(buf, size, L"%ls %02d h e %02d m", lbl_801B1050[gLanguage], minutes / 60,
+    swprintf(buf, size, L"%ls %02d h e %02d m", gMsgLastUpdated[gLanguage], minutes / 60,
              minutes % 60);
 }
 
 void FormatElapsedB_NL(s32 minutes, wchar_t* buf, u32 size) {
-    swprintf(buf, size, L"%ls %02d:%02d uur geleden.", lbl_801B1050[gLanguage], minutes / 60,
+    swprintf(buf, size, L"%ls %02d:%02d uur geleden.", gMsgLastUpdated[gLanguage], minutes / 60,
              minutes % 60);
 }
 

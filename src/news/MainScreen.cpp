@@ -1142,6 +1142,7 @@ void MainScreen::ModeMain() {
             }
         }
 
+        {
         Globe* g = gGlobe;
         if (g != NULL) {
             mUnk32C += 0x200;
@@ -1164,6 +1165,7 @@ void MainScreen::ModeMain() {
             }
         }
         break;
+        }
     case -1:
         break;
     }
@@ -2366,6 +2368,7 @@ void MainScreen::State1AC60(s32* arg) {
         SetSubState(NULL);
         SetInputHook(&MainScreen::Hook1E758);
         mDraw = &MainScreen::DrawGlobe;
+        {
         f32 w = GetScreenWidth();
         mUnk238 = 0.0f;
         mUnk234 = -w;
@@ -2380,6 +2383,7 @@ void MainScreen::State1AC60(s32* arg) {
         mUnk294 = mUnk238 - mScreenRect.right;
         UpdateScrollBar();
         break;
+        }
     case -1:
         break;
     default: {
@@ -2829,6 +2833,7 @@ void MainScreen::Func1CAC8() {
         break;
     case 0:
         mUnk2DC++;
+        {
         f32 x = lbl_803575D4;
         f32 y = lbl_803575D8;
         lbl_801EDFA0[1] = x;
@@ -2836,6 +2841,7 @@ void MainScreen::Func1CAC8() {
         lbl_80357600.a = 255;
         PlaySE(0x16);
         break;
+        }
     default: {
         s32 visible = sVisibleRows[lbl_80356970];
         if (mUnk2F8 <= visible) {
@@ -3019,12 +3025,14 @@ void MainScreen::Sub1D594() {
     case 0:
         mUnk2D4++;
         lbl_801EDFA0[1] = gWidescreen ? 19 : 34;
+        {
         f32 y = 456 - (gWidescreen ? 19 : 34);
         f32 d = lbl_803575D0;
         lbl_801EDFB8[1] = y - d;
         lbl_80357600.a = 100;
         PlaySE(0x16);
         break;
+        }
     default: {
         if (Article_IsShort()) {
             SetSubState(&MainScreen::Sub1D338);
@@ -3154,6 +3162,7 @@ void MainScreen::Sub1DC30() {
         break;
     case 0:
         mUnk2D4++;
+        {
         f32 x = lbl_803575D4;
         f32 y = lbl_803575D8;
         lbl_801EDFA0[1] = x;
@@ -3161,6 +3170,7 @@ void MainScreen::Sub1DC30() {
         lbl_80357600.a = 100;
         PlaySE(0x16);
         break;
+        }
     default: {
         if (mHeld[0]) {
             held = true;
@@ -3237,11 +3247,13 @@ void MainScreen::Globe1DFD0() {
         globe->UpdateSpin(0);
         globe->Calc();
         globe->CalcPoles();
+        {
         GlobeCamera* camera = globe->mCamera;
         globe->mX = camera->mX;
         globe->mY = camera->mY;
         globe->ApplyCamera();
         break;
+        }
     case -1:
         break;
     }

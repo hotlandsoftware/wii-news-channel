@@ -466,10 +466,12 @@ void LanguageSelect::ScrollDrag() {
         mDragMin = -(mRowHeight * (mMaxScroll - 1));
         PlaySE(0x16);
         mDragging = true;
+        {
         f32 y = lbl_803575D8;
         lbl_801EDFA0[1] = 138.0f;
         lbl_801EDFB8[1] = y;
         lbl_80357600.a = 255;
+        }
     default:
         break;
     }

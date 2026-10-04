@@ -7,6 +7,7 @@
 // See docs/pc_port.md, "Dead-stripped definitions".
 
 #include <nw4r/ut.h>
+#include <nw4r/ut/ut_ArchiveFontBase.h>
 #include <nw4r/ut/ut_NandFileStream.h>
 
 namespace nw4r {
@@ -18,6 +19,13 @@ void FileStream::Seek(s32 offset, u32 origin) {
     (void)offset;
     (void)origin;
 }
+
+// The glyph group string that loads every glyph: an empty string. This one is
+// in the DOL (.sbss2, 0x8035A6B0, all zero) but no decompiled source file
+// defines it yet; the game's d_scene.cpp passes it to ArchiveFont.
+namespace detail {
+const char ArchiveFontBase::LOAD_GLYPH_ALL[1] = "";
+} // namespace detail
 
 // ut_NandFileStream.cpp is not in the DOL; snd::NandSoundArchive refers to the
 // class's type information. Its member functions are still stubs.

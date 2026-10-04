@@ -1099,6 +1099,7 @@ BOOL SlideShow::StateZoom(const s32* arg) {
         mStateFrame++;
         mUpButton->mDisabled = true;
         mUpButton->Press();
+        {
         f32 volume = 0.0f;
         Bgm_SetSlideshowVolume(volume);
         mZoomed = true;
@@ -1116,6 +1117,7 @@ BOOL SlideShow::StateZoom(const s32* arg) {
         StartZoom(this);
         mBeltVisible = false;
         break;
+        }
     default: {
         mZoomAngle += mZoomSpeed;
         if (mZoomAngle > 0x8000) {
@@ -1974,9 +1976,18 @@ void SlideShow::CheckPointer() {
     gHideClock = flag;
 
     s32 lo = 32;
+#ifdef TARGET_PC
+    // A two-argument thunk cannot supply the other two arguments. At this call
+    // the original has mFooterFade in r5 and 15 in r6, so that is what
+    // Layout::SetBlend(alpha, blend, blendMax) receives.
+    mCurLayout->SetBlend(lo + (s32)(255.0f - lo) *
+                                  math::SinFIdx(FIdxRad((1.5708f * (15 - mFooterFade)) / 15.0f)),
+                         mFooterFade, 15);
+#else
     SetBlend__6LayoutFlll(mCurLayout,
                 lo + (s32)(255.0f - lo) *
                          math::SinFIdx(FIdxRad((1.5708f * (15 - mFooterFade)) / 15.0f)));
+#endif
 }
 
 BOOL SlideShow::StartGrab(s32 chan, const ut::Rect* rect) {

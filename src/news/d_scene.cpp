@@ -832,10 +832,12 @@ BOOL Scene::StateFatal() {
     switch (mStep) {
     case 0:
         mStep++;
+        {
         GXColor clear = {0, 0, 0, 0};
         GXSetCopyClear(clear, 0xFFFFFF);
         StartFade(2, 20, 0, 0);
         break;
+        }
     case -1:
         break;
     default:
