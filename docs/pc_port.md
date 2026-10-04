@@ -17,6 +17,7 @@ Contents:
 8. [Milestones](#8-milestones)
 9. [Known hazards for later milestones](#9-known-hazards-for-later-milestones)
 10. [Data still taken from the DOL](#10-data-still-taken-from-the-dol)
+11. [Milestone 2: window, settings, input, placeholders](#11-milestone-2-window-settings-input-placeholders)
 
 ## 1. Decisions
 
@@ -38,6 +39,8 @@ pc/                         build system and tools of the PC port
   CMakeLists.txt            the build (out-of-tree, in build/pc)
   cmake/NewsLibrary.cmake   compiler flags, news_library()
   ported/<library>.txt      which files of each library are built into the program
+                            (sdk_*.txt: SDK source compiled natively, section 11)
+  cmake/private_symbols.ver keeps the game's operator new/delete out of shared libraries
   tools/status.py           which files compile
   tools/gen_stubs.py        writes src/pc/sdk/stubs_generated.cpp
   tools/wii_report_diff.py  proves the Wii build did not change
@@ -48,8 +51,12 @@ include/pc/                 PC-only headers (included as <pc/...>)
   stub.h                    macros of the generated stubs
   thunk.h                   macros for CodeWarrior-mangled extern "C" names
 src/pc/                     PC-only sources
-  main.cpp                  process entry point, self-test, `--boot`
+  main.cpp                  process entry point, self-test, `--boot` driver
   pc_report.cpp             PCUnimplemented()
+  pc_config.h/.cpp          settings: defaults, config file, environment, command line
+  pc_video.h, pc_input.h    what the VI and WPAD backends offer to other PC code
+  pc_noop.h                 PC_NOOP: weak, silent placeholder functions
+  pc_gx_objects.h           PC layout of GXTexObj, GXTlutObj, GXLightObj
   sdk/<library>.cpp         SDK replacement, one file per SDK library (gx_fifo.cpp, lowmem.cpp, ...)
   sdk/stubs_generated.cpp   generated; never edit
   libc/wchar16.cpp          16-bit wcslen(), swprintf() and so on
@@ -120,7 +127,8 @@ build/pc/newschannel --help
 ```
 
 `newschannel` currently prints its build information, initialises SDL, runs a self-test of natively compiled game and NW4R code and exits with status 0.
-`newschannel --boot` calls the game's own `main()` (renamed to `NewsMain` by the build). It gets a few SDK calls into the game's start-up code and then crashes, because the SDK is still stubs; making it work is milestone 2.
+`newschannel --boot` calls the game's own `main()` (renamed to `NewsMain` by the build); section 11 lists its options (`--frames N`, `--contents DIR`, `--nand-dir DIR`, `--lang`, `--wide`, `--no-window`). The window, settings, input and the placeholder libraries are in place; until the OS, MEM and file-loading backends of milestone 2 are merged it still stops in the first heap call.
+`newschannel --window-test` opens the window and runs empty frames without the game.
 
 `extract_wad.py --contents` writes `orig/HAGE/contents/NN.app` (NN = content index: 00, 02 to 11). The game's archive number `n` is content `n + 2`.
 
@@ -282,3 +290,97 @@ The first four are in address ranges that `config/HAGE/splits.txt` does not assi
 The message tables that do have source (`gMsgToSectionSelect`, `gMsgSectionSelect`, `gMsgUpdated`, `gMsgLastUpdated`, `gMsgToTop` in `src/news/msg`) are used under their real names and need nothing.
 
 `ut::ArchiveFont::LOAD_GLYPH_ALL` (`0x8035A6B0`, `.sbss2`) is also in the DOL without a source definition, but it is an empty string, so `src/pc/deadstripped/nw4r_ut.cpp` defines it.
+
+## 11. Milestone 2: window, settings, input, placeholders
+
+This part of milestone 2 gives the game a screen to wait on, the console's settings, one pointer, and silence from every library that is not written yet.
+OS, MEM and file loading are separate work; until they are merged, `--boot` still stops in the first heap call.
+
+### What is implemented
+
+| File | Library | State |
+| --- | --- | --- |
+| `src/pc/sdk/vi.cpp` | VI | real: SDL3 window with an OpenGL context, retrace pacing, shadow registers latched by `VIFlush()`, pre/post-retrace callbacks, shutdown on window close |
+| `src/pc/sdk/sc.cpp` | SC | real: values from `PCConfig` |
+| `src/pc/pc_config.cpp` | (PC) | settings: defaults, `newschannel.ini`, `NEWSCHANNEL_*` variables, command line |
+| `src/pc/sdk/kpad.cpp`, `wpad.cpp` | KPAD, WPAD | placeholder for milestone 4: one remote on channel 0, no buttons, pointing at the mouse |
+| `src/pc/sdk/gx_noop.cpp` | GX | placeholder for milestone 3 |
+| `src/pc/sdk/ax_noop.cpp` | AX, AI, AXFX hooks | placeholder for milestone 6 |
+| `src/pc/sdk/nwc24_noop.cpp` | NWC24, SO, VF, NCD, `NETGetUniversalCalendar` | placeholder for milestone 5 |
+| `src/pc/sdk/hbm.cpp` | HBM, vcmv | placeholder for milestone 7 |
+| `src/pc/sdk/misc.cpp` | `PPCMfhid4`/`PPCMthid4`/`PPCSync`, `stricmp` | real, weak |
+| `pc/ported/sdk_*.txt` | TMCC JPEG, AXFX reverb, WENC, NET (`netcrc.c`, `neterror.c`) | the SDK's own C source, compiled natively |
+| `src/pc/selftest_backend.cpp` | | self-test of all of the above |
+
+Function stubs went from 404 to 130 (data stubs from 9 to 5). What is left belongs to the other milestone 2 tasks: OS 54, MEM 19, ARC 10, NAND 10, `ut::NandFileStream` 9, CNT 7, CX 7, DVD 7 and `DVDCancelAsync`, TPL 3, and three `nw4r::g3d` functions.
+
+### Placeholders are weak and silent
+
+A placeholder is marked `PC_NOOP` (`src/pc/pc_noop.h`), which makes it a weak definition.
+It prints nothing, and it is not listed by `gen_stubs.py` because the symbol is defined.
+To implement a function for real, define it in another file (`src/pc/sdk/gx.cpp`, say): the strong definition wins and the placeholder can be deleted later.
+Each placeholder file starts with a `TODO(milestone N)` that names the milestone that replaces it.
+
+What each placeholder promises:
+
+- **GX.** Functions that only touch the application's own objects work as in the SDK, because the game and NW4R read the results back while they build a frame: `GXInitTexObj*`/`GXGetTexObj*`, `GXInitTlutObj`, `GXInitLight*`/`GXGetLight*`, `GXInitFogAdjTable`, `GXGetYScaleFactor`, `GXSetDispCopyYScale` (returns the XFB line count), `GXSetVtxDesc`/`GXGetVtxDesc`, `GXSetVtxAttrFmt`/`GXGetVtxAttrFmt`. `GXInit` returns a FIFO object. The four default render modes (`GXNtsc480IntDf`...) are defined. Everything that would reach the graphics processor does nothing.
+  The PC layout of `GXTexObj`, `GXTlutObj` and `GXLightObj` is in `src/pc/pc_gx_objects.h` (plain values instead of register images, same sizes); milestone 3 should keep using it.
+- **AX, AI.** Initialisation succeeds and registered callbacks can be read back, but no callback is ever called: there is no audio frame. `AXAcquireVoice` returns `NULL` ("no voice free"), so `nw4r::snd` fails to start each sound and carries on.
+- **NWC24, SO, VF.** A console that has never been online. The library opens and passes `NWC24Check`; download tasks can be created, registered, read back and deleted, in memory only. `SOStartup` fails with `SO_ERR_LINK_UP_TIMEOUT`, which the SDK's `NETGetStartupErrorCode` (compiled natively) turns into error 51099. No VF drive mounts. The game therefore takes its own "could not connect" path.
+- **HBM, vcmv.** `HBMCalc` answers "HOME pressed again" at once, so a HOME Menu that is opened closes on the next frame. `VCMVLoadLibrary` fails, so the Operations Guide is skipped.
+
+### SDK code compiled natively
+
+`pc/ported/sdk_<library>.txt` lists SDK source files that are compiled as they are, like the game's (`news_library(sdk_... DIR src/revolution/...)` in `pc/CMakeLists.txt`). Use this only for files with no hardware access.
+
+- C files that include `<revolution/os.h>` or `<revolution/gx.h>` must be compiled as C++ (`news_library(... CXX)`), because the PC versions of those headers contain C++ (the GX FIFO object). A file that defines a function without including the header that declares it then needs the header force-included, or the definition gets a C++ name (`sdk_net` does this for `<revolution/net.h>`).
+- TMCC JPEG is compiled as C. It writes each RGB565 texel as a `u16` in host byte order (the self-test decodes a 16x16 picture and checks this). On the Wii that is big-endian, which is what GX reads; the texture decoder of milestone 3 must treat TMCC output as host-order, unlike texels that come from `.tpl` files.
+- `AXFXHooks.c` is not compiled: its default allocator uses the OSAlloc heap, which this program never creates. `ax_noop.cpp` defines the hooks with the host heap as the default.
+
+### Video (VI)
+
+- `VIInit()` opens the window: 640x456, or 810x456 with `aspect = 16:9`, resizable. It first asks for an OpenGL 3.3 core context and falls back to whatever the driver has. Without a display, with `--no-window`, or with `SDL_VIDEODRIVER=dummy`, everything still runs, without a window or without a context.
+- `VIWaitForRetrace()` is the retrace. It sleeps until the next retrace time (59.94 Hz; 50 Hz if the configured TV mode is PAL), increments the count, calls the pre-retrace callback, latches the registers if `VIFlush()` was called, calls the post-retrace callback, pumps SDL events and presents. There is no interrupt, so a retrace only happens while the application waits for one. The swap interval is 0: pacing is ours, not the driver's.
+- Only the thread that called `VIInit()` runs retraces. Another thread that calls `VIWaitForRetrace()` waits for the count to change.
+- The picture is not drawn yet (milestone 3): the window is cleared to black. `PCVIGetWindow()`, `PCVIGetGLContext()`, `PCVIGetPictureRect()` (the window letterboxed to 4:3 or 16:9) and `PCVIGetRenderMode()` in `src/pc/pc_video.h` are what the GX layer needs.
+- `VIGetDTVStatus()` is 1 (a monitor is "component cable") and `progressive` defaults to on, so the game selects its progressive mode and skips the 98-frame black wait of a mode switch.
+- **Shutdown.** Closing the window, SIGINT and SIGTERM arrive as an SDL quit event. The retrace then calls the close handler, which the boot driver sets to the game's `PowerCallback()` (`src/news/System.cpp`): the game's own power-button path, ending in `OSShutdownSystem()`. If the game has not ended the process 300 retraces later, or the user closes the window a second time, `PCExit(0)` ends it.
+- `PCExit()` closes the window, shuts SDL down and calls `_exit()`. Global destructors are not run: other OS threads may still be in game code. `OSShutdownSystem()`, `OSReturnToMenu()` and `OSRestart()` should end in `PCExit(0)`.
+
+### Settings (SC)
+
+`src/pc/pc_config.h` documents the keys. Defaults: English, 4:3, progressive, stereo, product area USA, country not set, WiiConnect24 standby on, NTSC.
+`SCSetLanguage()` changes the value in memory; `SCFlush()` writes the settings back only if a config file is in use.
+`PCGetContentsDir()` and `PCGetNandDir()` give the two directories (`orig/HAGE/contents`, `orig/HAGE/nand` by default); the boot driver also exports them as `NEWSCHANNEL_CONTENTS` and `NEWSCHANNEL_NAND`.
+`PCGetConfig()` works during static initialisation.
+
+### Input (KPAD, WPAD)
+
+`PCInputPoll()` in `wpad.cpp` (declared in `src/pc/pc_input.h`) is the one place that reads host input; `KPADRead()` turns its `PCPadState` into a `KPADStatus` (button edges, pointer, a remote held level and still).
+Milestone 4 fills `PCPadState::buttons` and adds devices there; KPAD does not change.
+
+`KPADStatus::pos` is in sensor units, not screen coordinates: the game multiplies it through `KPADGetProjectionPos()` and its own factors. `kpad.cpp` applies the inverse of that projection, so the edges of the picture map to the edges of the game's screen (608 units in 4:3, 832 in 16:9); the self-test checks both.
+
+### The game's operator new must stay private
+
+`src/news/System.cpp` replaces the global `operator new`/`delete` with versions that allocate from the game's heaps. libstdc++ declares these operators with default visibility, so the linker exported the game's versions and every C++ shared library in the process used them: Mesa's LLVM crashed in its static constructors as soon as a window was opened.
+`pc/cmake/private_symbols.ver` (a linker version script) makes them local to the executable.
+
+For backend code the consequence remains: `new`, `std::string`, `std::vector` and so on in `src/pc` allocate from the game's main heap, and fail before the game has created it. Backend code uses `malloc()` and fixed-size state.
+
+### Boot driver
+
+`newschannel --boot` parses the options, registers the close handler and calls `NewsMain()` on the main thread. It does not run the self-test first (the self-test initialises VI without a window).
+
+| Option | Meaning |
+| --- | --- |
+| `--frames N` | end the process after N retraces (automated runs) |
+| `--no-window` | no window; pacing and callbacks only |
+| `--contents DIR`, `--nand-dir DIR` | the two directories |
+| `--lang LANG`, `--wide` | language (`en ja de fr es it nl`), 16:9 |
+| `--config FILE` | settings file (default `./newschannel.ini` if it exists) |
+| `--window-test` | the video path without the game: open the window, run `--frames` empty frames (default 120), print the rate |
+
+### Self-test
+
+`newschannel --selftest` now also runs `PCSelfTestBackend()`: SC and config parsing, VI (callbacks, `VIFlush` latching, 59.94 Hz timing, the quit event), WPAD/KPAD and the pointer calibration, the GX object functions, AX registration and one buffer through the native AXFX reverb, the NWC24 task sequence the game uses, the SO/NET error path, `NETCalcCRC32`, VF, HBM, vcmv, and a JPEG decoded by the native TMCC decoder.
