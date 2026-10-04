@@ -21,6 +21,17 @@ struct PCPadState {
     f32 pointerY;      // -1 = top edge, 1 = bottom edge
 };
 
+// Scripted input for automated runs (`newschannel --boot --input SCRIPT`),
+// applied on top of the host devices. SCRIPT is a comma-separated list of
+//   BUTTON@FRAME[+FRAMES]   hold A, B, 1, 2, PLUS, MINUS, HOME, UP, DOWN, LEFT
+//                           or RIGHT from retrace FRAME for FRAMES retraces
+//                           (default 2)
+//   Px:y@FRAME              from retrace FRAME on the remote points at (x, y);
+//                           -1:-1 is the top left of the picture, 1:1 the
+//                           bottom right
+// for example "P0:0@1,A@300,A@420+10". Returns false on a syntax error.
+bool PCInputSetScript(const char* script);
+
 // Current state of the remote on `chan` (0..3).
 void PCInputPoll(s32 chan, PCPadState* state);
 

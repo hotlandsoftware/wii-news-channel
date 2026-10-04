@@ -31,6 +31,7 @@
 
 #include "dol_data.h"
 #include "pc_config.h"
+#include "pc_input.h"
 #include "pc_selftest.h"
 #include "pc_video.h"
 
@@ -71,6 +72,8 @@ void PrintHelp(const char* program) {
     std::printf("Options for --boot:\n");
     std::printf("  --frames N       exit after N frames (for automated runs)\n");
     std::printf("  --no-window      do not open a window\n");
+    std::printf("  --input SCRIPT   scripted remote for automated runs, e.g. \"P0:0@1,A@300\":\n");
+    std::printf("                   point at the centre from frame 1, press A at frame 300\n");
     std::printf("  --contents DIR   the channel's WAD contents, NN.app (default orig/HAGE/contents)\n");
     std::printf("  --nand-dir DIR   directory used as the Wii's NAND (default $NEWSCHANNEL_NAND,\n");
     std::printf("                   ~/.local/share/newschannel/nand)\n");
@@ -304,6 +307,12 @@ int main(int argc, char** argv) {
             config->noWindow = true;
         } else if (std::strcmp(arg, "--contents") == 0) {
             SetOption(argv[0], arg, "contents", OptionValue(argc, argv, &i));
+        } else if (std::strcmp(arg, "--input") == 0) {
+            const char* script = OptionValue(argc, argv, &i);
+            if (!PCInputSetScript(script)) {
+                std::fprintf(stderr, "%s: bad value '%s' for --input (see src/pc/pc_input.h)\n", argv[0], script);
+                return 2;
+            }
         } else if (std::strcmp(arg, "--dol") == 0) {
             PCDolDataSetPath(OptionValue(argc, argv, &i));
         } else if (std::strcmp(arg, "--nand-dir") == 0) {
