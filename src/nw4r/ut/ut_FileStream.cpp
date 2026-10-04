@@ -6,15 +6,6 @@ namespace ut {
 
 NW4R_UT_RTTI_DEF_DERIVED(FileStream, IOStream);
 
-#ifdef TARGET_PC
-// Not in the DOL (never called, dead-stripped), but it is the class's first
-// out-of-line virtual function, which is where gcc emits the vtable.
-void FileStream::Seek(s32 offset, u32 origin) {
-    (void)offset;
-    (void)origin;
-}
-#endif
-
 void FileStream::Cancel() {}
 
 bool FileStream::CancelAsync(StreamCallback pCallback, void* pCallbackArg) {

@@ -1,9 +1,10 @@
 // Entry point of the native PC build.
 //
-// Milestone 0/1: the game's own main() (src/news/main.cpp) is not in the build
-// yet. This program proves the toolchain end to end: it links the natively
-// compiled game/NW4R code that is ported so far (pc/ported/*.txt) with the PC
-// backend, SDL3 and libcurl, runs a few checks on that code and exits.
+// Milestone 0/1: the game does not run yet. This program proves the toolchain
+// end to end: it links the natively compiled game and NW4R code (the files in
+// pc/ported/*.txt) with the PC backend, SDL3 and libcurl, runs a few checks on
+// that code and exits. `--boot` calls the game's own main() (src/news/main.cpp,
+// renamed to NewsMain by the build), which is what milestone 2 will make work.
 
 #include <cmath>
 #include <cstdio>
@@ -19,6 +20,9 @@
 #include <nw4r/ut.h>
 
 #include "pc_selftest.h"
+
+// The game's main() (src/news/main.cpp), renamed by pc/CMakeLists.txt.
+int NewsMain();
 
 namespace {
 
@@ -37,6 +41,8 @@ void PrintHelp(const char* program) {
     std::printf("Usage: %s [option]\n\n", program);
     std::printf("  (no option)   print build information, initialise SDL, run the self-test\n");
     std::printf("  --selftest    run only the self-test of the ported code\n");
+    std::printf("  --boot        call the game's main() (experimental: most of the SDK is\n");
+    std::printf("                still stubs, so expect \"unimplemented\" lines and a crash)\n");
     std::printf("  --version     print build information\n");
     std::printf("  --help        this text\n\n");
     std::printf("The game itself does not run yet; see docs/pc_port.md for the milestones.\n");
@@ -131,6 +137,7 @@ static int RunSelfTest() {
 
 int main(int argc, char** argv) {
     bool selftest_only = false;
+    bool boot = false;
     for (int i = 1; i < argc; i++) {
         if (std::strcmp(argv[i], "--help") == 0 || std::strcmp(argv[i], "-h") == 0) {
             PrintHelp(argv[0]);
@@ -140,6 +147,8 @@ int main(int argc, char** argv) {
             return 0;
         } else if (std::strcmp(argv[i], "--selftest") == 0) {
             selftest_only = true;
+        } else if (std::strcmp(argv[i], "--boot") == 0) {
+            boot = true;
         } else {
             std::fprintf(stderr, "%s: unknown option '%s'\n", argv[0], argv[i]);
             PrintHelp(argv[0]);
@@ -162,7 +171,13 @@ int main(int argc, char** argv) {
 
     int result = RunSelfTest();
 
+    if (boot && result == 0) {
+        std::printf("Calling the game's main()...\n");
+        result = NewsMain();
+    } else {
+        std::printf("The game does not run yet (see docs/pc_port.md); exiting.\n");
+    }
+
     SDL_Quit();
-    std::printf("The game does not run yet (milestone 1 in progress); exiting.\n");
     return result;
 }

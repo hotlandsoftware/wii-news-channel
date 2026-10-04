@@ -78,5 +78,18 @@ decomp-toolkit, the CodeWarrior compilers, binutils and objdiff-cli are download
 
 Project layout follows [dtk-template](https://github.com/encounter/dtk-template).
 
+## Native PC port (branch `pc-port`)
+
+A native build of the game and NW4R code is in progress: 32-bit x86 Linux with SDL3, OpenGL and libcurl, with a PC backend in place of the Wii SDK.
+It compiles and links 207 of 217 game and NW4R files; the program starts and runs a self-test, but the game does not run yet.
+[docs/pc_port.md](docs/pc_port.md) has the architecture, the build instructions, the rules for changing shared code and the milestones.
+
+```sh
+.venv/bin/python tools/extract_wad.py --contents "path/to/News Channel (USA) (v7) (Channel).wad"
+python3 configure.py && ninja          # the Wii build, needed once
+cmake -S pc -B build/pc -G Ninja && ninja -C build/pc
+build/pc/newschannel
+```
+
 # DISCLAIMER
 This is "vibecoded" (in the sense I am telling an AI Agent what to do, reviewing its code, and if it looks good, continuing). I am making this because I want to run the Wii News Channel (and eventually Wii Forecast Channel) on my PC. If this bothers you, please do not use it. Thank you!

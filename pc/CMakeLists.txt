@@ -79,6 +79,11 @@ news_library(nw4r_ef   DIR src/nw4r/ef)
 news_library(nw4r_snd  DIR src/nw4r/snd)
 news_library(news      DIR src/news)
 
+# The game's own main() (src/news/main.cpp) becomes NewsMain(); the process
+# entry point is src/pc/main.cpp, which calls it (`newschannel --boot`).
+set_source_files_properties("${REPO}/src/news/main.cpp" PROPERTIES
+    COMPILE_DEFINITIONS "main=NewsMain")
+
 # ------------------------------------------------------------------------------
 # PC backend (src/pc): SDK replacement, libc glue, thunks, main()
 # ------------------------------------------------------------------------------
@@ -104,7 +109,14 @@ if(PC_THUNK_SOURCES)
         COMPILE_OPTIONS "-fno-access-control")
 endif()
 
-set(PC_OBJECT_LIBS pc_backend ${NEWS_LIBRARIES})
+# Definitions the DOL's linker dead-stripped but gcc needs (vtable anchors,
+# static members). They include the decompiled headers, so they are built with
+# the same lenient flags as the decompiled code.
+file(GLOB PC_DEADSTRIPPED_SOURCES CONFIGURE_DEPENDS "${REPO}/src/pc/deadstripped/*.cpp")
+add_library(pc_deadstripped OBJECT ${PC_DEADSTRIPPED_SOURCES})
+target_compile_options(pc_deadstripped PRIVATE ${NEWS_DECOMP_FLAGS})
+
+set(PC_OBJECT_LIBS pc_backend pc_deadstripped ${NEWS_LIBRARIES})
 
 function(news_executable name)
     add_executable(${name} ${ARGN})

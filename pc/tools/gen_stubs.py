@@ -62,15 +62,25 @@ def demangle(symbols: list) -> dict:
     return dict(zip(symbols, result.stdout.splitlines()))
 
 
-def load_wii_symbols() -> dict:
-    """name -> (type, size) from the decompilation's symbol table."""
-    table = {}
-    pattern = re.compile(r"^(\S+) = \S+; // type:(\w+)(?: size:0x([0-9A-Fa-f]+))?")
+def load_wii_symbols():
+    """(name -> (type, size), address -> (type, size)) from the decompilation's symbol table."""
+    by_name, by_address = {}, {}
+    pattern = re.compile(r"^(\S+) = \S+:0x([0-9A-Fa-f]+); // type:(\w+)(?: size:0x([0-9A-Fa-f]+))?")
     for line in SYMBOLS_TXT.read_text().splitlines():
         match = pattern.match(line)
         if match:
-            table[match[1]] = (match[2], int(match[3], 16) if match[3] else 0)
-    return table
+            entry = (match[3], int(match[4], 16) if match[4] else 0)
+            by_name[match[1]] = entry
+            by_address[int(match[2], 16)] = entry
+    return by_name, by_address
+
+
+# Names that only link with CodeWarrior's ABI: placeholders for an address
+# (fn_80012345, lbl_80012345) and CodeWarrior-mangled C++ names declared
+# extern "C" (Calc__5GlobeFv, __ct__5GlobeFv, __nw__FUlP12MEMAllocator).
+PLACEHOLDER_RE = re.compile(r"^(fn|lbl)_([0-9A-F]{8})$")
+CW_MANGLED_RE = re.compile(r"^(?:__\w+?|\w+?)__(?:\d+\w+|Q\d\w+)?F\w*$")
+THUNK_GROUP = "CodeWarrior names: need a thunk in src/pc/thunks (docs/pc_port.md)"
 
 
 def load_headers() -> dict:
@@ -99,7 +109,7 @@ def classify(symbols: list):
     data:      [(symbol, size)]
     problems:  [(symbol, reason)]
     """
-    wii = load_wii_symbols()
+    wii, wii_by_address = load_wii_symbols()
     headers = load_headers()
     names = demangle(symbols)
     functions, data, problems = [], [], []
@@ -119,6 +129,11 @@ def classify(symbols: list):
 
         if not mangled:
             kind, size = wii.get(symbol, (None, 0))
+            placeholder = PLACEHOLDER_RE.match(symbol)
+            if placeholder:
+                kind, size = wii_by_address.get(int(placeholder[2], 16), (kind, size))
+                if placeholder[1] == "lbl":
+                    kind = "object"
             if kind == "object":
                 if size:
                     data.append((symbol, size))
@@ -133,6 +148,9 @@ def classify(symbols: list):
             short = head.split("::")[-1].split(" ")[-1]
             namespace_match = re.match(r"(?:\w+ )*(nw4r::\w+)::", head)
             group = namespace_match[1] if namespace_match else "C++"
+        elif PLACEHOLDER_RE.match(symbol) or CW_MANGLED_RE.match(symbol):
+            functions.append((THUNK_GROUP, symbol, text, False))
+            continue
         else:
             short = symbol
             group = None

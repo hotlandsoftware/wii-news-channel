@@ -96,16 +96,19 @@ def categorize(message: str) -> str:
     """Rough kind of a first error, for the --categories table."""
     msg = message.split(": ", 1)[1] if ": " in message else message
     rules = [
-        (r"expected .* before 'asm'|'asm'|expected '\(' before '\{'|inline asm", "inline asm / asm function"),
-        (r"register", "register / asm operands"),
+        (r"expected .\(. before|expected string-literal or constexpr in parentheses|\basm\b",
+         "inline asm / asm function (needs a C version under TARGET_PC)"),
+        (r"jump to case label|crosses initialization", "jump over an initialisation (switch case needs braces)"),
         (r"No such file or directory", "missing header"),
-        (r"lvalue required|cast.*lvalue", "cast used as lvalue"),
-        (r"was not declared in this scope|has not been declared|not a member of", "undeclared name"),
-        (r"does not name a type|has not been declared", "unknown type"),
-        (r"conflicting declaration|redeclared|redefinition|ambiguating|conflicts with", "conflicting declaration"),
-        (r"cannot convert|invalid conversion|no matching function|could not convert|invalid cast|invalid static_cast|invalid initialization", "type conversion"),
+        (r"lvalue required", "cast used as lvalue"),
+        (r"cannot be overloaded|redeclared|redefinition|conflicting declaration|ambiguating|conflicts with",
+         "conflicting declaration (often u32 vs unsigned int)"),
+        (r"cannot convert|invalid conversion|no matching function|could not convert|invalid cast|"
+         r"invalid .static_cast.|invalid initialization", "type conversion CodeWarrior accepts"),
+        (r"not usable in a constant expression|is not a constant expression", "constant expression"),
+        (r"was not declared in this scope|has not been declared|not a member of|does not name a type",
+         "undeclared name"),
         (r"changes meaning", "name changes meaning"),
-        (r"narrowing", "narrowing conversion"),
         (r"template|dependent|typename", "template / dependent name"),
         (r"expected", "syntax"),
     ]

@@ -1,1 +1,15 @@
 # Files of this library that are built into newschannel (see docs/pc_port.md).
+lyt_animation.cpp
+lyt_arcResourceAccessor.cpp
+lyt_bounding.cpp
+lyt_common.cpp
+lyt_drawInfo.cpp
+lyt_group.cpp
+lyt_init.cpp
+lyt_layout.cpp
+lyt_material.cpp
+lyt_pane.cpp
+lyt_picture.cpp
+lyt_resourceAccessor.cpp
+lyt_textBox.cpp
+lyt_window.cpp
