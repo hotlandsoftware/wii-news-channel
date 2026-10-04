@@ -1,0 +1,3 @@
+# The SDK's MEM library (src/revolution/MEM), compiled natively: it is plain C
+# on top of OS mutexes (see docs/pc_port.md, "MEM").
+*

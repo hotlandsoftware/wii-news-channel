@@ -54,6 +54,8 @@ void PrintHelp(const char* program) {
 
 void PCSelfTestMtx(); // selftest_mtx.cpp
 void PCSelfTestG3d(); // selftest_g3d.cpp
+void PCSelfTestMem(); // selftest_os.cpp
+void PCSelfTestOS();  // selftest_os.cpp
 
 static int sFailures;
 
@@ -132,6 +134,8 @@ static int RunSelfTest() {
 
     PCSelfTestMtx();
     PCSelfTestG3d();
+    PCSelfTestMem();
+    PCSelfTestOS();
 
     if (sFailures == 0) {
         std::printf("self-test: all checks passed\n");

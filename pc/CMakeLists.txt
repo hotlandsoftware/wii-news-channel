@@ -79,6 +79,14 @@ news_library(nw4r_ef   DIR src/nw4r/ef)
 news_library(nw4r_snd  DIR src/nw4r/snd)
 news_library(news      DIR src/news)
 
+# SDK libraries that are portable C and are compiled as they are instead of
+# being rewritten in src/pc/sdk (expanded, frame and unit heaps, allocators).
+# They are built as C++ like everything else, because the SDK headers they
+# include are only C++-clean on PC (<pc/gx_fifo.h>).
+news_library(rvl_mem   DIR src/revolution/MEM)
+file(GLOB PC_SDK_C_SOURCES CONFIGURE_DEPENDS "${REPO}/src/revolution/MEM/*.c")
+set_source_files_properties(${PC_SDK_C_SOURCES} PROPERTIES LANGUAGE CXX)
+
 # The game's own main() (src/news/main.cpp) becomes NewsMain(); the process
 # entry point is src/pc/main.cpp, which calls it (`newschannel --boot`).
 set_source_files_properties("${REPO}/src/news/main.cpp" PROPERTIES
