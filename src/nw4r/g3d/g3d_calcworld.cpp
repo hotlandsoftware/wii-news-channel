@@ -198,6 +198,44 @@ void CalcSkinning(math::MTX34* pModelMtxArray, u32* pModelMtxAttribArray,
 
             pByteCode += sizeof(ResByteCodeData::WeightParams);
 
+#ifdef TARGET_PC
+            // C version of the paired-single blend in the #else branch: the
+            // 12 elements start at zero and accumulate T * weight with
+            // ps_madds0, which is fused (one rounding), hence fmaf().
+            f32 M[3 * 4];
+            for (int k = 0; k < 3 * 4; k++) {
+                M[k] = 0.0f;
+            }
+
+            for (u32 i = 0; i < numBlendMtx; i++) {
+                u32 mtxID =
+                    (pWeightEntry->mtxIdHi << 8) + pWeightEntry->mtxIdLo;
+
+                u32 iraito = pWeightEntry->fWeight0 << 24 |
+                             pWeightEntry->fWeight1 << 16 |
+                             pWeightEntry->fWeight2 << 8 |
+                             pWeightEntry->fWeight3;
+
+                f32 R = *reinterpret_cast<f32*>(&iraito);
+
+                const math::MTX34* pT = &pSkinMtxArray[mtxID];
+
+                for (int k = 0; k < 3 * 4; k++) {
+                    M[k] = __builtin_fmaf(pT->a[k], R, M[k]);
+                }
+
+                pModelMtxAttribArray[targetMtxID] &=
+                    pModelMtxAttribArray[mtxID];
+
+                pByteCode += sizeof(ResByteCodeData::WeightEntry);
+            }
+
+            math::MTX34* pTargetMtx = &pModelMtxArray[targetMtxID];
+
+            for (int k = 0; k < 3 * 4; k++) {
+                pTargetMtx->a[k] = M[k];
+            }
+#else
             register f32 M00, M02;
             register f32 M10, M12;
             register f32 M20, M22;
@@ -262,6 +300,7 @@ void CalcSkinning(math::MTX34* pModelMtxArray, u32* pModelMtxAttribArray,
                 psq_st M20, MTX34._20(pTargetMtx), 0, 0
                 psq_st M22, MTX34._22(pTargetMtx), 0, 0
             )
+#endif // TARGET_PC
 
         } else /* Assume EVPMTX */ {
             u32 mtxID = (pEvpMtxCmd->mtxIdHi << 8) + pEvpMtxCmd->mtxIdLo;

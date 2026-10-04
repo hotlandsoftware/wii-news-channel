@@ -22,7 +22,13 @@ union {
 } // namespace
 
 math::VEC3* GetScaleTemporary() {
+#ifdef TARGET_PC
+    // gcc does not let static_cast convert the array itself to a pointer to
+    // the derived class; the pointer to its first element is the same thing.
+    return static_cast<math::VEC3*>(&sTemp.tmpScale[0]);
+#else
     return static_cast<math::VEC3*>(sTemp.tmpScale);
+#endif
 }
 
 u32* GetMtxIDTemporary() {

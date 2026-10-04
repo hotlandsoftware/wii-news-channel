@@ -16,6 +16,156 @@ namespace {
 using nw4r::math::MTX34;
 using nw4r::math::VEC3;
 
+#ifdef TARGET_PC
+// C versions of the paired-single routines in the #else branch. They follow
+// the instructions one by one: ps_madd, ps_msub and fmadds are fused (one
+// rounding), so they are fmaf() here; the fres + Newton step is the exact
+// reciprocal (docs/pc_port.md, R4).
+
+// The part GetModelLocalAxisY2 and GetModelLocalAxisY3 share: the cofactors of
+// the parent's rotation that make up column 1 of its inverse, and the
+// determinant.
+struct PCLocalAxisWork {
+    f32 f9_0, f9_1;     // P01*P20 - P00*P21, P02 - P22 (slot 1: no cofactor)
+    f32 f11_0, f11_1;   // P21*P02 - P01*P22, P22*P00 - P02*P20
+    f32 zero_0, zero_1; // ps_sub f6, f6, f6
+    f32 det;
+};
+
+inline void PCLocalAxisSetup(PCLocalAxisWork* pWork, const math::MTX34* pP) {
+    const f32 f12_0 = __builtin_fmaf(pP->_11, pP->_22, -(pP->_21 * pP->_12));
+    const f32 f10_0 = __builtin_fmaf(pP->_01, pP->_12, -(pP->_11 * pP->_02));
+
+    pWork->f11_0 = __builtin_fmaf(pP->_21, pP->_02, -(pP->_01 * pP->_22));
+    pWork->f11_1 = __builtin_fmaf(pP->_22, pP->_00, -(pP->_02 * pP->_20));
+
+    pWork->f9_0 = __builtin_fmaf(pP->_01, pP->_20, -(pP->_00 * pP->_21));
+    // Slot 1 of f0 and f4 is the 1.0f that a single-element psq_l loads
+    pWork->f9_1 = pP->_02 - pP->_22;
+
+    pWork->zero_0 = pP->_02 - pP->_02;
+    pWork->zero_1 = pP->_00 - pP->_00;
+
+    f32 det = pP->_00 * f12_0;
+    det = __builtin_fmaf(pP->_10, pWork->f11_0, det);
+    det = __builtin_fmaf(pP->_20, f10_0, det);
+    pWork->det = det;
+}
+
+void GetModelLocalAxisY2(math::VEC3* pVec, const math::MTX34* pModelMtx,
+                         const math::MTX34* pParentModelMtx) {
+    PCLocalAxisWork w;
+    PCLocalAxisSetup(&w, pParentModelMtx);
+
+    pVec->z = w.zero_0;
+
+    // bne after ps_cmpo0: the branch is also taken when the operands are
+    // unordered
+    if (!(w.det != w.zero_0)) {
+        pVec->x = w.zero_0;
+        pVec->y = w.zero_1;
+        return;
+    }
+
+    const f32 inv = 1.0f / w.det;
+    const f32 f11_0 = w.f11_0 * inv;
+    const f32 f11_1 = w.f11_1 * inv;
+    const f32 f9_0 = w.f9_0 * inv;
+
+    f32 x = pModelMtx->_00 * f11_0;
+    f32 y = pModelMtx->_10 * f11_0;
+    x = __builtin_fmaf(pModelMtx->_01, f11_1, x);
+    y = __builtin_fmaf(pModelMtx->_11, f11_1, y);
+    x = __builtin_fmaf(pModelMtx->_02, f9_0, x);
+    y = __builtin_fmaf(pModelMtx->_12, f9_0, y);
+
+    pVec->x = x;
+    pVec->y = y;
+}
+
+void GetModelLocalAxisY3(math::VEC3* pVec, const math::MTX34* pModelMtx,
+                         const math::MTX34* pParentModelMtx) {
+    PCLocalAxisWork w;
+    PCLocalAxisSetup(&w, pParentModelMtx);
+
+    if (!(w.det != w.zero_0)) {
+        pVec->x = w.zero_0;
+        pVec->y = w.zero_1;
+        pVec->z = w.zero_0;
+        return;
+    }
+
+    const f32 inv = 1.0f / w.det;
+    const f32 f11_0 = w.f11_0 * inv;
+    const f32 f11_1 = w.f11_1 * inv;
+    const f32 f9_0 = w.f9_0 * inv;
+    const f32 f9_1 = w.f9_1 * inv;
+
+    f32 x = pModelMtx->_00 * f11_0;
+    f32 y = pModelMtx->_10 * f11_0;
+    x = __builtin_fmaf(pModelMtx->_01, f11_1, x);
+    y = __builtin_fmaf(pModelMtx->_11, f11_1, y);
+    x = __builtin_fmaf(pModelMtx->_02, f9_0, x);
+    y = __builtin_fmaf(pModelMtx->_12, f9_0, y);
+
+    // The original multiplies row 2 by f9 (ps_mul f1, f1, f9), not by f11 as
+    // it does for rows 0 and 1, so z is not the third component of the same
+    // matrix product. Kept exactly as the original computes it.
+    f32 z = pModelMtx->_20 * f9_0 + pModelMtx->_21 * f9_1; // ps_mul, ps_sum0
+    z = __builtin_fmaf(pModelMtx->_22, f9_0, z);
+
+    pVec->x = x;
+    pVec->y = y;
+    pVec->z = z;
+}
+
+// The three SetMdlViewMtxSR leave column 3 (the translation) untouched.
+inline void SetMdlViewMtxSR(math::MTX34* pViewPos, const math::VEC3& rRY,
+                            f32 s) {
+    const f32 x = rRY.x * s;
+    const f32 y = rRY.y * s;
+
+    pViewPos->_00 = y;
+    pViewPos->_01 = x;
+    pViewPos->_10 = -x;
+    pViewPos->_11 = y;
+    pViewPos->_02 = 0.0f;
+    pViewPos->_12 = 0.0f;
+    pViewPos->_20 = 0.0f;
+    pViewPos->_21 = 0.0f;
+    pViewPos->_22 = s;
+}
+
+inline void SetMdlViewMtxSR(math::MTX34* pViewPos, const math::VEC3& rRY,
+                            f32 sx, f32 sy, f32 sz) {
+    const f32 x = rRY.x;
+    const f32 y = rRY.y;
+
+    pViewPos->_00 = y * sx;
+    pViewPos->_01 = x * sy;
+    pViewPos->_10 = -x * sx;
+    pViewPos->_11 = y * sy;
+    pViewPos->_02 = 0.0f;
+    pViewPos->_12 = 0.0f;
+    pViewPos->_20 = 0.0f;
+    pViewPos->_21 = 0.0f;
+    pViewPos->_22 = sz;
+}
+
+inline void SetMdlViewMtxSR(math::MTX34* pViewPos, const math::VEC3& rRX,
+                            const math::VEC3& rRY, const math::VEC3& rRZ,
+                            f32 sx, f32 sy, f32 sz) {
+    pViewPos->_00 = rRX.x * sx;
+    pViewPos->_01 = rRY.x * sy;
+    pViewPos->_10 = rRX.y * sx;
+    pViewPos->_11 = rRY.y * sy;
+    pViewPos->_02 = rRZ.x * sz;
+    pViewPos->_12 = rRZ.y * sz;
+    pViewPos->_20 = rRX.z * sx;
+    pViewPos->_21 = rRY.z * sy;
+    pViewPos->_22 = rRZ.z * sz;
+}
+#else
 asm void GetModelLocalAxisY2(register math::VEC3* pVec,
                              register const math::MTX34* pModelMtx,
                              register const math::MTX34* pParentModelMtx) {
@@ -213,8 +363,39 @@ inline void SetMdlViewMtxSR(register math::MTX34* pViewPos,
         stfs       work0, MTX34._22(pViewPos)
     )
 }
+#endif // TARGET_PC
 
 } // namespace
+
+#ifdef TARGET_PC
+// Entry points for the self-test (src/pc/selftest_g3d.cpp): the routines above
+// are local to this file.
+void PCTestGetModelLocalAxisY2(math::VEC3* pVec, const math::MTX34* pModelMtx,
+                               const math::MTX34* pParentModelMtx) {
+    GetModelLocalAxisY2(pVec, pModelMtx, pParentModelMtx);
+}
+
+void PCTestGetModelLocalAxisY3(math::VEC3* pVec, const math::MTX34* pModelMtx,
+                               const math::MTX34* pParentModelMtx) {
+    GetModelLocalAxisY3(pVec, pModelMtx, pParentModelMtx);
+}
+
+void PCTestSetMdlViewMtxSR(math::MTX34* pViewPos, const math::VEC3& rRY,
+                           f32 s) {
+    SetMdlViewMtxSR(pViewPos, rRY, s);
+}
+
+void PCTestSetMdlViewMtxSR(math::MTX34* pViewPos, const math::VEC3& rRY,
+                           f32 sx, f32 sy, f32 sz) {
+    SetMdlViewMtxSR(pViewPos, rRY, sx, sy, sz);
+}
+
+void PCTestSetMdlViewMtxSR(math::MTX34* pViewPos, const math::VEC3& rRX,
+                           const math::VEC3& rRY, const math::VEC3& rRZ,
+                           f32 sx, f32 sy, f32 sz) {
+    SetMdlViewMtxSR(pViewPos, rRX, rRY, rRZ, sx, sy, sz);
+}
+#endif
 
 /******************************************************************************
  *

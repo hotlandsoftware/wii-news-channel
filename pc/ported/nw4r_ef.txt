@@ -16,6 +16,7 @@ ef_emitter.cpp
 ef_emitterform.cpp
 ef_memorymanager.cpp
 ef_particle.cpp
+ef_particlemanager.cpp
 ef_resource.cpp
 ef_util.cpp
 emform/ef_cube.cpp
