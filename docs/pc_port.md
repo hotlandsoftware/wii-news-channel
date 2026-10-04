@@ -18,9 +18,10 @@ Contents:
 9. [Known hazards for later milestones](#9-known-hazards-for-later-milestones)
 10. [Data still taken from the DOL](#10-data-still-taken-from-the-dol)
 11. [OS, MEM and BASE backends](#11-os-mem-and-base-backends)
-11. [Byte order](#11-byte-order)
-12. [File loading (CNT, ARC, NAND, DVD, CX, TPL)](#12-file-loading-cnt-arc-nand-dvd-cx-tpl)
-11. [Milestone 2: window, settings, input, placeholders](#11-milestone-2-window-settings-input-placeholders)
+12. [Byte order](#12-byte-order)
+13. [File loading (CNT, ARC, NAND, DVD, CX, TPL)](#13-file-loading-cnt-arc-nand-dvd-cx-tpl)
+14. [Window, settings, input, placeholders](#14-window-settings-input-placeholders)
+15. [Milestone 2: the boot](#15-milestone-2-the-boot)
 
 ## 1. Decisions
 
@@ -42,15 +43,15 @@ pc/                         build system and tools of the PC port
   CMakeLists.txt            the build (out-of-tree, in build/pc)
   cmake/NewsLibrary.cmake   compiler flags, news_library()
   ported/<library>.txt      which files of each library are built into the program
-                            (sdk_*.txt: SDK source compiled natively, section 11)
+                            (sdk_*.txt, rvl_mem.txt: SDK source compiled natively, sections 11, 14)
   cmake/private_symbols.ver keeps the game's operator new/delete out of shared libraries
   tools/status.py           which files compile
   tools/gen_stubs.py        writes src/pc/sdk/stubs_generated.cpp
   tools/wii_report_diff.py  proves the Wii build did not change
 include/pc/                 PC-only headers (included as <pc/...>)
   compat.h                  force-included first in every file: CodeWarrior compatibility
-  endian.h                  byte order: PCEndianFixFile(), swap helpers (section 11)
-  files.h                   the contents and NAND directories (section 12)
+  endian.h                  byte order: PCEndianFixFile(), swap helpers (section 12)
+  files.h                   the contents and NAND directories (section 13)
   fastcast.h                C versions of the psq_l/psq_st conversions
   gx_fifo.h                 the GX write-gather pipe as an object with write ports
   stub.h                    macros of the generated stubs
@@ -64,7 +65,7 @@ src/pc/                     PC-only sources
   pc_gx_objects.h           PC layout of GXTexObj, GXTlutObj, GXLightObj
   sdk/<library>.cpp         SDK replacement, one file per SDK library (gx_fifo.cpp, lowmem.cpp, ...)
   sdk/stubs_generated.cpp   generated; never edit
-  endian/fmt_<format>.cpp   byte order: one converter per asset format, and the registry (section 11)
+  endian/fmt_<format>.cpp   byte order: one converter per asset format, and the registry (section 12)
   libc/wchar16.cpp          16-bit wcslen(), swprintf() and so on
   deadstripped/<library>.cpp  definitions the DOL's linker removed but gcc needs
   thunks/<File>.cpp         thunks for CodeWarrior-mangled names, one file per game source file that defines the targets
@@ -130,15 +131,18 @@ cmake -S pc -B build/pc -G Ninja
 ninja -C build/pc
 build/pc/newschannel            # build information, SDL start-up, self-test
 build/pc/newschannel --help
-build/pc/newschannel --selftest --contents-dir path/to/contents --nand-dir path/to/nand
+build/pc/newschannel --selftest
+build/pc/newschannel --boot     # the game; close the window to quit
+build/pc/newschannel --boot --contents path/to/contents --nand-dir path/to/nand --dol path/to/main.dol
 ```
 
-`newschannel` currently prints its build information, initialises SDL, runs a self-test of natively compiled game and NW4R code and exits with status 0.
-`newschannel --boot` calls the game's own `main()` (renamed to `NewsMain` by the build); section 11 lists its options (`--frames N`, `--contents DIR`, `--nand-dir DIR`, `--lang`, `--wide`, `--no-window`). The window, settings, input and the placeholder libraries are in place; until the OS, MEM and file-loading backends of milestone 2 are merged it still stops in the first heap call.
+`newschannel` without options prints its build information, initialises SDL, runs the self-test and exits with status 0.
+`newschannel --boot` calls the game's own `main()` (renamed to `NewsMain` by the build). The game starts, loads its assets, creates its news scene and runs its frame loop in a window that stays black (drawing is milestone 3); closing the window shuts it down through the game's own power-button path. Section 15 describes how far it gets and section 14 lists the options (`--frames N`, `--contents DIR`, `--nand-dir DIR`, `--dol FILE`, `--lang`, `--wide`, `--no-window`, `--input SCRIPT`).
 `newschannel --window-test` opens the window and runs empty frames without the game.
 
 `extract_wad.py --contents` writes `orig/HAGE/contents/NN.app` (NN = content index: 00, 02 to 11). The game's archive number `n` is content `n + 2`.
-The program looks for them in `--contents-dir`, `$NEWSCHANNEL_CONTENTS`, `./orig/HAGE/contents` and next to the build tree; save data goes to `--nand-dir`, `$NEWSCHANNEL_NAND` or `~/.local/share/newschannel/nand` (section 12).
+The program looks for them in `--contents` (or `--contents-dir`, or `contents =` in the settings file), `$NEWSCHANNEL_CONTENTS`, `./orig/HAGE/contents` and next to the build tree; save data goes to `--nand-dir`, `$NEWSCHANNEL_NAND` or `~/.local/share/newschannel/nand` (section 13).
+`--boot` also needs the channel's `main.dol` (`--dol`, `$NEWSCHANNEL_DOL`, `orig/HAGE/sys/main.dol`) for the data of section 10.
 
 | Content | Holds |
 | --- | --- |
@@ -149,7 +153,7 @@ The program looks for them in `--contents-dir`, `$NEWSCHANNEL_CONTENTS`, `./orig
 | 08 | globe model (`earth.brres.LZ`) |
 | 09 | main assets: layouts, textures, fonts, effects, sound |
 | 10 | Operations Guide pages |
-| 00, 04, 05, 11 | not named by the game code (banner, two small archives, one opened without a file name). 11 is not a U8 archive; CNT refuses it (section 12) |
+| 00, 04, 05, 11 | not named by the game code (banner, two small archives, one opened without a file name). 11 is not a U8 archive; CNT refuses it (section 13) |
 
 ## 4. Rules for shared code
 
@@ -237,34 +241,36 @@ Adding a file to the build: fix it until `status.py -f <name>` passes, add it to
 
 `pc/tools/status.py` (all compiling files are also linked into `newschannel`):
 
-| Library | Compiles | Total |
+| Library | Compiles | Total | |
+| --- | --- | --- | --- |
+| `news` | 57 | 57 | the game |
+| `nw4r_ef` | 28 | 28 | |
+| `nw4r_g3d` | 39 | 39 | |
+| `nw4r_lyt` | 14 | 14 | |
+| `nw4r_math` | 3 | 3 | |
+| `nw4r_snd` | 58 | 58 | |
+| `nw4r_ut` | 18 | 18 | |
+| `rvl_mem` | 6 | 6 | SDK source compiled as it is (section 11) |
+| `sdk_tmcc_jpeg`, `sdk_axfx`, `sdk_net`, `sdk_wenc` | 17 | 17 | SDK source compiled as it is (section 14); 13 of the files are in the build |
+| **Total** | **240** | **240** | |
+
+Stubs (`gen_stubs.py`): **12 functions, 0 data** (after milestone 1: 404 and 9). What is left:
+
+| Stub | Why | When |
 | --- | --- | --- |
-| `news` | 57 | 57 |
-| `nw4r_ef` | 27 | 28 |
-| `nw4r_g3d` | 34 | 39 |
-| `nw4r_lyt` | 14 | 14 |
-| `nw4r_math` | 3 | 3 |
-| `nw4r_snd` | 58 | 58 |
-| `nw4r_ut` | 18 | 18 |
-| **Total** | **211** | **217** (97.2%) |
+| `nw4r::ut::NandFileStream` (9 functions) | `ut_NandFileStream.cpp` is not in the build | when something opens a NAND stream through NW4R (`snd::NandSoundArchive`; the game uses memory archives) |
+| `nw4r::g3d::ResAnmClr::GetAnmResult`, `ResAnmTexSrt::GetAnmResult`, `ResAnmVis::GetAnmResult` | not decompiled | milestone 6 (globe), if the model has such animations |
 
-The 6 files that do not compile yet:
+None of them is called during the boot of section 15: the boot log has no `unimplemented:` line.
+No CodeWarrior name is stubbed: the 44 names the game calls have thunks in `src/pc/thunks`.
 
-| File | First error |
-| --- | --- |
-| `src/nw4r/ef/ef_particlemanager.cpp` | inline asm (R4) |
-| `src/nw4r/g3d/g3d_calcview.cpp`, `g3d_calcworld.cpp`, `g3d_fog.cpp`, `platform/g3d_cpu.cpp` | inline asm / asm functions (R4) |
-| `src/nw4r/g3d/g3d_workmem.cpp` | `static_cast` from `Vec[]` to `VEC3*` (R8) |
-
-The link needs 456 function stubs and 9 data stubs (`gen_stubs.py` prints the count per library). The largest groups: GX 109, OS 54, AX 35, NWC24 29, MTX 28, MEM 19; 38 are C++ functions of the files above or of `ut::NandFileStream`. No CodeWarrior name is stubbed: the 44 names the game calls have thunks in `src/pc/thunks`. Of the data stubs, 4 are SDK render modes (`GXNtsc480IntDf`...) and 5 are game data without source (section 10).
-
-What "compiles" does not mean: nothing has been run except the self-test in `src/pc/main.cpp` (`nw4r::math`, parts of `nw4r::ut`, `MathUtil`, `SmoothValue`, the wide-character functions). Code that reads big-endian files will not work until milestone 2 deals with byte order.
+Stubs are not the whole picture: GX, AX/AI, NWC24/SO/VF, KPAD/WPAD buttons and HBM are hand-written placeholders that are silent by design (section 14, "Placeholders are weak and silent"). They are the work of milestones 3 to 7.
 
 ## 8. Milestones
 
 - [x] **0. Scaffolding.** CMake build, backend skeleton, compatibility layer, content extraction, this document.
-- [ ] **1. It compiles.** Every file of `src/news` and `src/nw4r` compiles and links (211 / 217; `src/news` is complete). Thunks for the CodeWarrior names (done).
-- [ ] **2. It boots.** `--boot` runs the game's `main()` up to its main loop: OS (threads, mutexes, message queues, time, arenas), MEM heaps, MTX, CNT/ARC/NAND file access on `orig/HAGE/contents`, CX decompression, SC settings, byte order of every file format (section 9), a window.
+- [x] **1. It compiles.** Every file of `src/news` and `src/nw4r` compiles and links (217 / 217). Thunks for the CodeWarrior names.
+- [x] **2. It boots.** `--boot` runs the game's `main()` and its main loop in a window, and shuts down cleanly when the window is closed (section 15): OS (threads, mutexes, message queues, alarms, time, arenas), MEM heaps, MTX, CNT/ARC/NAND file access on `orig/HAGE/contents`, CX decompression, SC settings, a window, byte order of the formats the boot parses (archives, palettes, fonts, layouts, layout animations, the sound archive's tables). Formats of later milestones are not converted yet and their loaders are guarded (section 15, "Bypasses").
 - [ ] **3. It draws.** GX to OpenGL layer (state, TEV, textures, the FIFO), VI frame pacing; layouts and fonts on screen.
 - [ ] **4. Input.** KPAD/WPAD from mouse, keyboard and game controllers; the pointer and buttons work.
 - [ ] **5. News.** NWC24 download tasks, VF and NET replaced by libcurl and host files; a news file loads, articles and slide show work, JPEG pictures decode.
@@ -273,23 +279,32 @@ What "compiles" does not mean: nothing has been run except the self-test in `src
 
 ## 9. Known hazards for later milestones
 
-- **Byte order.** Every file the game reads is big-endian and is overlaid with structs (`pc_port_readiness.md`, section 5.2). Section 11 has the strategy (swap on load) and the list of formats that are converted (archives, palettes, fonts, layouts, layout animations) and that are not yet (effects, sound, models, the news file, save data). Wide string literals and the message tables are compiled in host order, while text inside `news.bin` is big-endian.
-- **Bitfields.** CodeWarrior fills bitfields from the most significant bit, gcc on x86 from the least significant. No bitfield in the game or NW4R headers is overlaid on file data (section 11, "Bitfields"); hardware-register bitfields are only in SDK sources, which are not compiled.
-- **Type punning that byte order breaks.** Code that reads memory as a different type than it was written is wrong on a little-endian host even with converted files: a colour's four bytes read as a `u32` (five sites, section 11, "Colours"), two `u8` fields read as one `u16` (`ef::Resource::RelocateCommand()`). Each needs a `TARGET_PC` guard when its subsystem is brought up.
+- **Byte order.** Every file the game reads is big-endian and is overlaid with structs (`pc_port_readiness.md`, section 5.2). Section 12 has the strategy (swap on load) and the list of formats that are converted (archives, palettes, fonts, layouts, layout animations) and that are not yet (effects, sound, models, the news file, save data). Wide string literals and the message tables are compiled in host order, while text inside `news.bin` is big-endian.
+- **Bitfields.** CodeWarrior fills bitfields from the most significant bit, gcc on x86 from the least significant. No bitfield in the game or NW4R headers is overlaid on file data (section 12, "Bitfields"); hardware-register bitfields are only in SDK sources, which are not compiled.
+- **Type punning that byte order breaks.** Code that reads memory as a different type than it was written is wrong on a little-endian host even with converted files: a colour's four bytes read as a `u32` (five sites, section 12, "Colours"), two `u8` fields read as one `u16` (`ef::Resource::RelocateCommand()`). Each needs a `TARGET_PC` guard when its subsystem is brought up.
 - **The global `operator new` is the game's.** `src/news` replaces it with the game's heaps, for the backend too. Backend code must not use `new` or standard containers before the heaps exist (or at all, if the memory should not come from a game heap); use `malloc()`.
 - **`char` signedness.** x86 gcc treats `char` as signed. The Wii flags do not pass `-char`; check CodeWarrior's default before relying on comparisons of `char` values above 0x7F.
 - **Code not compiled here.** The HOME Menu (`src/revolution/HBM`, C++ on NW4R) and the TMCC JPEG decoder are portable code inside the SDK tree; whether to compile them natively or replace them is undecided. The Operations Guide viewer (`vcmv` plus a PowerPC RSO module) cannot run natively.
 - **Static initialisers.** NW4R and the game have global constructors that call the SDK (`OSInitMutex` at start-up is the first line `newschannel` prints). The backend must work before `main()` runs.
-- **`gErrorSystemArc`** (the error-screen archive embedded in the DOL) and the other `auto_*` data have no source; the PC build needs them from the user's DOL at build or run time (section 10).
+- **`gErrorSystemArc`** (the error-screen archive embedded in the DOL) and the other `auto_*` data have no source; the PC build reads them from the user's DOL at run time (section 10).
+- **Integer division by zero.** The PowerPC's `divw` does not trap; x86 raises SIGFPE. The game divides by a fade length that is still 0 in a few places (section 15, "Game-code findings"). Each site found is guarded with `PCDivW()` (`<pc/compat.h>`), which gives the PowerPC's result. Expect more: a SIGFPE in game code is this until proven otherwise.
+- **Sized `operator delete`.** The game only replaces `operator delete(void*)`. gcc calls the sized form (C++14), which would reach libstdc++ and `free()` a pointer of the game's heap; `src/pc/libc/sized_delete.cpp` forwards the sized forms to the game's. A new replaced form (aligned `new`, `nothrow`) needs the same treatment and an entry in `pc/cmake/private_symbols.ver`.
+- **Threads run in parallel** (section 11). Code that was only safe because of thread priorities can race on PC. The boot ran 24 times in a row without a failure, which proves little; `WiiConnect24.cpp` (download thread) and `nw4r::snd` (sound and task threads) are the places to look when something is flaky.
 
 ## 10. Data still taken from the DOL
 
-The game code refers to five variables that no decompiled source file defines. In the PC build they are zero-filled stubs (`PC_STUB_DATA` in `stubs_generated.cpp`), so the code links but would read null pointers or zeros.
-Their contents are not in the repository (R12). Before the code that uses them can run, each one needs either a decompiled definition on the Wii side (which the PC build then compiles) or a loader that reads it from the user's `orig/HAGE/sys/main.dol`.
+The game code refers to five variables that no decompiled source file defines. Their contents are not in the repository (R12).
+The PC build defines them in `src/pc/dol_data.cpp` and fills them at run time from the user's own `main.dol`, by address: `PCDolDataLoad()` runs in `main()` before the game starts (`--dol FILE`, `$NEWSCHANNEL_DOL`, default `orig/HAGE/sys/main.dol`). `--boot` refuses to start without the file, or with a DOL that does not have the error archive's magic at its address (another revision of the channel).
+
+- The archive is copied as it is (big-endian); `ARCInitHandle()` and the layout loader convert it like any other archive.
+- The string tables are arrays of pointers into the DOL. The loader follows each pointer, copies the big-endian UTF-16 string into host-order memory and stores the new pointer.
+- The two floats are byte-swapped.
+
+When one of these gets a decompiled definition on the Wii side, delete it from `dol_data.cpp`; the PC build then compiles the real one.
 
 | Symbol | Address | Size | What it is | Users |
 | --- | --- | --- | --- | --- |
-| `gErrorSystemArc` | `0x801B3620` (`.data`) | `0x680` | ARC archive with `error_system.brlyt`, the layout of the fatal error screen | `ErrorScreen.cpp` (constructor) |
+| `gErrorSystemArc` | `0x801B3620` (`.data`) | `0x1759C` | ARC archive with `arc/blyt/error_system.brlyt` (`0xF5C` bytes) and one more file (`0x1659C` bytes), the layout of the fatal error screen. `config/HAGE/symbols.txt` gives the symbol only `0x680` bytes, up to the next label (`lbl_801B3CA0`): that size is wrong and the labels inside the archive are not objects. The loader takes the size from the archive's node table | `ErrorScreen.cpp` (constructor) |
 | `lbl_801B26BC` | `0x801B26BC` (`.data`) | `0x1C` | `const wchar_t*[7]`: the language names ("English", "Deutsch"...), indexed by language. The strings are at `0x801B2648` to `0x801B26BC` and, for index 0, `0x80356A18` (`.sdata`) | `LanguageSelect.cpp` (list items), `SaveData.cpp` (`SaveErrorDialog::Draw`) |
 | `gMsgWeekday` | `0x801B27E8` (`.data`) | `0xC8` | `const wchar_t*[7][7]`: weekday names per language (49 pointers and 4 bytes of padding). The strings are at `0x801B2740` to `0x801B27E8` and in `.sdata` from `0x80356A48` | `HeadlineList.cpp` (date line), declared in `<news/Message.h>` |
 | `lbl_801B2958` | `0x801B2958` (`.data`) | `0xC8` | a second weekday table with the same layout. The strings are at `0x801B28B0` to `0x801B2958` and in `.sdata` up to `0x80356C48` | `d_s_news.cpp` (two date lines) |
@@ -305,7 +320,7 @@ The message tables that do have source (`gMsgToSectionSelect`, `gMsgSectionSelec
 
 Milestone 2, first part. `--boot` now runs `SystemInit` through `OSInit`, the arenas and the creation of the game's two heaps, and stops later in file loading, which other backends provide.
 
-Stubs: 413 before (404 functions, 9 data), 337 after (328 functions, 9 data). The 76 removed are OS 54, MEM 19 and BASE 3.
+This part removed 76 function stubs: OS 54, MEM 19 and BASE 3 (section 7 has the totals).
 
 ### Files
 
@@ -371,7 +386,7 @@ To block a game thread until an event, use `OSSleepThread(&queue)` in a loop and
 - `OSInitFont`, `OSGetFontTexture` and `OSGetFontWidth` report "unimplemented" and say there is no ROM font. Only `nw4r::ut::RomFont` calls them and the game does not create one.
 - `OSCancelThread`, `OSGetStackPointer`, the context functions and `OSSetErrorHandler` are not defined; nothing in the build references them.
 - The self-test cannot check `OSPanic` or `PCOSExit`, because both end the process.
-## 11. Byte order
+## 12. Byte order
 
 Every asset file is big-endian and the game, NW4R and the SDK read it in place through struct overlays, sometimes after turning file offsets into pointers in place.
 The PC build has one strategy for all of them: **swap on load**.
@@ -489,7 +504,7 @@ What this cannot fix is code that reinterprets a colour's memory itself. These s
 
 ### Formats
 
-Converted (each has a self-test on the real files, section 12):
+Converted (each has a self-test on the real files, section 13):
 
 | Format | Magic | Reader | Notes |
 | --- | --- | --- | --- |
@@ -499,8 +514,9 @@ Converted (each has a self-test on the real files, section 12):
 | Archive font `.brfna` | `RFNA` | `ut::ArchiveFont` | the same plus GLGR and the size in front of each compressed sheet |
 | Layout `.brlyt` | `RLYT` | `nw4r::lyt` | lyt1, txl1, fnl1, mat1, pan1, bnd1, pic1, txt1, wnd1, grp1 (pas1/pae1/grs1/gre1 have no body) |
 | Layout animation `.brlan` | `RLAN` (and `RLPA`, `RLVI`, `RLVC`, `RLMC`, `RLTS`, `RLTP`) | `nw4r::lyt` | pai1 with all contents, infos, targets and keys |
+| Sound archive `.brsar` | `RSAR` | `snd::detail::SoundArchiveFileReader` | header, SYMB (string table, four label trees), INFO (sounds, banks, players, files, groups); **not** the FILE block: the files inside are converted one by one when `MemorySoundArchive::detail_GetFileAddress()` hands them out, and none of their formats has a converter yet (`fmt_snd.cpp`) |
 
-Not converted yet. Until a format has a converter its file stays big-endian and **the code that parses it must not run**; three of these are loaded during start-up.
+Not converted yet. Until a format has a converter its file stays big-endian and **the code that parses it must not run**; three of these are loaded during start-up (section 15, "Bypasses", says how each is kept from running).
 The guard for such a loader is `PCEndianIsHostOrder(data, size)`, which is true only for a file that has been converted; it opens by itself when the converter is added:
 
 ```cpp
@@ -512,15 +528,15 @@ The guard for such a loader is `PCEndianIsHostOrder(data, size)`, which is true 
 | Format | Loaded | Reader | What to know |
 | --- | --- | --- | --- |
 | Effects `.breff`, `.breft` (`REFF`, `REFT`) | **start-up**: `PointerEffect::PointerEffect()` in `SystemInit()` | `ef::Resource::Add()`, `AddTexture()`, `RelocateCommand()` | The name tables are read bytewise (`(p[0] << 8) + p[1]`) and must NOT be swapped; `NameTable::numEntry`, the project header and `TextureData` are read as values. `RelocateCommand()` reads two `u8` fields as one `u16` (`*reinterpret_cast<u16*>(&header->curveFlag)`), which needs a `TARGET_PC` guard in `ef_resource.cpp`. The animation-curve key tables depend on the curve type (`ef_res_animcurve.h`). |
-| Sound archive `.brsar` and what is inside (`RSAR`, `RWSD`, `RBNK`, `RSEQ`, `RWAR`, `RWAV`, `RSTM`) | **start-up**: `SoundResource` in `d_s_news.cpp`, the HOME Menu's archive in `main.cpp` | `nw4r::snd` (`SoundArchiveFileReader`, `MemorySoundArchive`) | `Util::DataRef`/`Table` offsets throughout; sample data is big-endian PCM16/ADPCM that the mixer has to read as such; sequence data is a byte stream |
+| The files inside a sound archive (`RWSD`, `RBNK`, `RSEQ`, `RWAR`, `RWAV`, `RSTM`) | when a sound starts | `nw4r::snd` (`SeqFileReader`, `BankFileReader`, `WsdFileReader`, `WaveFileReader`) | Register a converter per magic and `detail_GetFileAddress()` starts handing the files out. `Util::DataRef`/`Table` offsets throughout; `SeqFileReader` already goes through `Util::ReadBigEndian()` for some fields (do not define `NW4R_LITLE_ENDIAN`: the converted tables would be swapped back); sample data is big-endian PCM16/ADPCM that the mixer has to read as such; sequence data is a byte stream |
 | Model `.brres` (`bres`, with `MDL0`, `TEX0`...) | **start-up**, in the background: `LoadEarth()` in `d_scene.cpp` (streaming LZ, so call `PCEndianFixFile()` when the last piece is in) | `g3d::ResFile::Init()`/`Bind()` | offsets relative to each structure, string tables, display lists (GX command streams: leave big-endian), vertex arrays (big-endian for the FIFO interpreter, or convert per attribute format) |
 | News file `news.bin` | when a download finishes | `NewsData.h` structs, `NewsHeader::At()` | all `u32`/`u16`, 17 offset fields, 16-bit big-endian text; pictures are JPEG (bytes). No magic at offset 0 that is safe to key on: convert explicitly after the CRC check |
 | Save file `savedata.dat` | start-up, if it exists | `SaveData.cpp` | written from a struct. On PC it is simply little-endian and not interchangeable with a Wii save; convert on read and write if that is wanted |
 | Message tables, wide string literals | compiled in | - | host order already; nothing to do |
-| `gErrorSystemArc` and the other data of section 10 | from the DOL | `ErrorScreen.cpp` | an embedded U8 archive with a `.brlyt`: once it is loaded from the DOL, `ARCInitHandle()` converts it like any other |
+| `gErrorSystemArc` and the other data of section 10 | from the DOL | `ErrorScreen.cpp` | done: the archive is converted by `ARCInitHandle()` like any other, the strings and floats by the loader (section 10) |
 | `Opera.arc`, `html-*.arc`, `wwwlib-rvl.lz7` | Operations Guide | `vcmv` | not run natively. Note that `Opera.arc` is read whole by `main.cpp` and copied to NAND: `contentReadNAND()` converts its U8 header on the way, so the copy in the host NAND directory is not a valid big-endian archive |
 
-## 12. File loading (CNT, ARC, NAND, DVD, CX, TPL)
+## 13. File loading (CNT, ARC, NAND, DVD, CX, TPL)
 
 `src/pc/sdk/` replaces these SDK libraries (45 functions that were stubs, plus the rest of each API):
 
@@ -566,10 +582,9 @@ With the contents (skipped with a message if they are absent), loaded exactly as
 | `TPLCommon.tpl.LZ`, `TPLNews.tpl.LZ` | 103 and 91 textures; first one 69 x 35 RGB5A3 and 608 x 456 CMPR; every header plausible after `TPLBind()` |
 | `wbf1.brfna` (content 7) | GLGR: 70 sheets of 65536 bytes, 108 glyphs per sheet, 15 sets; `ut::ArchiveFont::Construct()` with every glyph group succeeds (70 sheets through the streaming Huffman reader); height 38, cell 30 x 36; the sheet of `A` is not blank |
 | `HomeButton3/LZ77_homeBtn_ENG.arc` (content 6) | 5 layouts, 40 animations (2384 key frames, in order and finite), 60 palettes |
-## 11. Milestone 2: window, settings, input, placeholders
+## 14. Window, settings, input, placeholders
 
 This part of milestone 2 gives the game a screen to wait on, the console's settings, one pointer, and silence from every library that is not written yet.
-OS, MEM and file loading are separate work; until they are merged, `--boot` still stops in the first heap call.
 
 ### What is implemented
 
@@ -583,11 +598,11 @@ OS, MEM and file loading are separate work; until they are merged, `--boot` stil
 | `src/pc/sdk/ax_noop.cpp` | AX, AI, AXFX hooks | placeholder for milestone 6 |
 | `src/pc/sdk/nwc24_noop.cpp` | NWC24, SO, VF, NCD, `NETGetUniversalCalendar` | placeholder for milestone 5 |
 | `src/pc/sdk/hbm.cpp` | HBM, vcmv | placeholder for milestone 7 |
-| `src/pc/sdk/misc.cpp` | `PPCMfhid4`/`PPCMthid4`/`PPCSync`, `stricmp` | real, weak |
+| `src/pc/sdk/misc.cpp` | `stricmp` | real, weak |
 | `pc/ported/sdk_*.txt` | TMCC JPEG, AXFX reverb, WENC, NET (`netcrc.c`, `neterror.c`) | the SDK's own C source, compiled natively |
 | `src/pc/selftest_backend.cpp` | | self-test of all of the above |
 
-Function stubs went from 404 to 130 (data stubs from 9 to 5). What is left belongs to the other milestone 2 tasks: OS 54, MEM 19, ARC 10, NAND 10, `ut::NandFileStream` 9, CNT 7, CX 7, DVD 7 and `DVDCancelAsync`, TPL 3, and three `nw4r::g3d` functions.
+This part removed 274 function stubs and the 4 data stubs of the render modes (section 7 has the totals).
 
 ### Placeholders are weak and silent
 
@@ -619,14 +634,14 @@ What each placeholder promises:
 - Only the thread that called `VIInit()` runs retraces. Another thread that calls `VIWaitForRetrace()` waits for the count to change.
 - The picture is not drawn yet (milestone 3): the window is cleared to black. `PCVIGetWindow()`, `PCVIGetGLContext()`, `PCVIGetPictureRect()` (the window letterboxed to 4:3 or 16:9) and `PCVIGetRenderMode()` in `src/pc/pc_video.h` are what the GX layer needs.
 - `VIGetDTVStatus()` is 1 (a monitor is "component cable") and `progressive` defaults to on, so the game selects its progressive mode and skips the 98-frame black wait of a mode switch.
-- **Shutdown.** Closing the window, SIGINT and SIGTERM arrive as an SDL quit event. The retrace then calls the close handler, which the boot driver sets to the game's `PowerCallback()` (`src/news/System.cpp`): the game's own power-button path, ending in `OSShutdownSystem()`. If the game has not ended the process 300 retraces later, or the user closes the window a second time, `PCExit(0)` ends it.
-- `PCExit()` closes the window, shuts SDL down and calls `_exit()`. Global destructors are not run: other OS threads may still be in game code. `OSShutdownSystem()`, `OSReturnToMenu()` and `OSRestart()` should end in `PCExit(0)`.
+- **Shutdown.** Closing the window, SIGINT and SIGTERM arrive as an SDL quit event. The retrace then calls the close handler, which the boot driver sets to a function that presses the console's power button (`PCOSPressPowerButton()`, section 11): the game's `PowerCallback()` runs in interrupt context, and the game's own shutdown path ends in `OSShutdownSystem()`. If the game has not ended the process 300 retraces later, or the user closes the window a second time, `PCExit(0)` ends it.
+- There is one way out of the process: `PCOSExit()` (section 11). VI registers the window's teardown with `PCOSAtExit()`, so `OSShutdownSystem()`, `OSReturnToMenu()`, `OSRestart()` and `PCExit()` (which is `PCOSExit()` for code that has no game running) all close the window and shut SDL down. Global destructors are not run: other OS threads may still be in game code.
 
 ### Settings (SC)
 
 `src/pc/pc_config.h` documents the keys. Defaults: English, 4:3, progressive, stereo, product area USA, country not set, WiiConnect24 standby on, NTSC.
 `SCSetLanguage()` changes the value in memory; `SCFlush()` writes the settings back only if a config file is in use.
-`PCGetContentsDir()` and `PCGetNandDir()` give the two directories (`orig/HAGE/contents`, `orig/HAGE/nand` by default); the boot driver also exports them as `NEWSCHANNEL_CONTENTS` and `NEWSCHANNEL_NAND`.
+The two directories belong to the file backends (`PCGetContentsDir()`, `PCGetNandDir()` in `<pc/files.h>`, section 13, which also read `NEWSCHANNEL_CONTENTS` and `NEWSCHANNEL_NAND`). `contents` and `nand` in the settings file or on the command line override them: the boot driver passes them on with `PCSetContentsDir()` and `PCSetNandDir()`.
 `PCGetConfig()` works during static initialisation.
 
 ### Input (KPAD, WPAD)
@@ -651,7 +666,9 @@ For backend code the consequence remains: `new`, `std::string`, `std::vector` an
 | --- | --- |
 | `--frames N` | end the process after N retraces (automated runs) |
 | `--no-window` | no window; pacing and callbacks only |
-| `--contents DIR`, `--nand-dir DIR` | the two directories |
+| `--contents DIR` (or `--contents-dir`), `--nand-dir DIR` | the two directories (section 13); they override `$NEWSCHANNEL_CONTENTS`/`$NEWSCHANNEL_NAND` and the settings file |
+| `--dol FILE` | the channel's `main.dol` (section 10) |
+| `--input SCRIPT` | scripted remote for automated runs: `P0:0@1,A@300` points at the centre of the picture from retrace 1 and presses A at retrace 300 (`src/pc/pc_input.h`) |
 | `--lang LANG`, `--wide` | language (`en ja de fr es it nl`), 16:9 |
 | `--config FILE` | settings file (default `./newschannel.ini` if it exists) |
 | `--window-test` | the video path without the game: open the window, run `--frames` empty frames (default 120), print the rate |
@@ -659,3 +676,98 @@ For backend code the consequence remains: `new`, `std::string`, `std::vector` an
 ### Self-test
 
 `newschannel --selftest` now also runs `PCSelfTestBackend()`: SC and config parsing, VI (callbacks, `VIFlush` latching, 59.94 Hz timing, the quit event), WPAD/KPAD and the pointer calibration, the GX object functions, AX registration and one buffer through the native AXFX reverb, the NWC24 task sequence the game uses, the SO/NET error path, `NETCalcCRC32`, VF, HBM, vcmv, and a JPEG decoded by the native TMCC decoder.
+
+## 15. Milestone 2: the boot
+
+Milestone 2 is met. `newschannel --boot` runs the game's `SystemInit()`, creates the news scene and runs the game's own frame loop at 59.94 Hz in an SDL window until the window is closed; closing it runs the game's shutdown and the process exits with status 0.
+The window is black: every GX call is a placeholder (milestone 3).
+
+### How far the game gets
+
+| Step | What runs | Result |
+| --- | --- | --- |
+| `SystemInit()` | `OSInit`, both arenas and heaps, KPAD, `VIInit` (the window), `GXInit`, settings (language, region, video mode), `VFInit`, `WC24Init` (the download thread starts), `CNTInit` and six content handles, `G3dInit`, `LytInit`, `PointerEffect` | complete |
+| `ChangeScene(SCENE_NEWS)` | `NewsScene::NewsScene()`: the HOME Menu's data (archives, `config.txt`, its sound archive), `Opera.arc` copied to NAND `/tmp`, fonts (`.brfnt`, `.brfna`), `news_layout.arc.LZ` and every layout built from it with `lyt::Layout::Build()`, palettes, the sound system (`InitSoundFromMemory`: `SoundArchivePlayer` set up from `rev_news.brsar`, reverb, the sound and task threads) | complete |
+| Frame loop | `SystemCalc()` / `SystemDraw()` / `VIWaitForRetrace()` | runs until the window is closed |
+| `NewsScene::StateStartup`, first run | no save file: the game shows its "save data" dialog (`SaveErrorDialog`, message 1) and waits for the A button | reached after the first fade; without input the game stays here, as a console would |
+| after A (`--input "P0:0@1,A@300"`) | the game creates `noerase/savedata.dat` in the NAND directory and opens the connection screen (`Connect`, `DrawIntro`) | complete; the save file loads on the next start (CRC and label accepted) and the dialog is skipped |
+| `Connect` | the download thread runs the game's request; `SOStartup()` fails (no network backend, section 14), the task ends with result -9 | the game shows its own connection error screen (`Connect::STATE_ERROR`, text 2) and waits for "next" |
+| Window closed (or SIGINT/SIGTERM) | `PowerCallback()` → `gShutdown` → `Scene::ReturnToMenu()` → `NewsScene::Exit()` (sound shut down, scene destroyed) → `OSShutdownSystem()` → `PCOSExit(0)` | exit status 0, from the dialog and from the connection screen |
+
+The news itself (download, `InitNews()`, the globe, the slide show) is behind the connection screen and needs milestone 5.
+
+### Boot log
+
+`build/pc/newschannel --boot --frames 600` (the paths are the defaults):
+
+```
+newschannel (Wii News Channel HAGE v7, native PC build)
+  target:   32-bit x86, wchar_t 16 bits, built ...
+  compiler: gcc 16.2.1 20260810
+  SDL:      3.4.16
+  libcurl:  8.22.0
+SDL initialised (platform: Linux)
+contents: orig/HAGE/contents
+nand:     /home/<user>/.local/share/newschannel/nand
+Calling the game's main()...
+
+Revolution OS
+Kernel built : native PC backend
+Console Type : Retail 33
+Memory 88 MB
+MEM1 Arena : 0x8036c6e0 - 0x81800000
+MEM2 Arena : 0x90000800 - 0x933e0000
+CNT: content 11 is not an archive; handle not initialised
+newschannel: 600 frames done (--frames), exiting
+```
+
+When the window is closed instead, the last line is `OSShutdownSystem: the program ends here on PC`.
+The game prints nothing of its own on a good start: its `OSReport()` calls are all on error paths.
+There is no `unimplemented:` line: none of the 12 remaining stubs is called.
+
+The one diagnostic, "content 11 is not an archive", is the game initialising a handle for content 11 (`gContentHandles[9]`), which is not a U8 archive in this WAD (section 13). Nothing opens a file through that handle during the boot.
+
+### What the integration added
+
+| File | What |
+| --- | --- |
+| `src/pc/dol_data.cpp`, `dol_data.h` | the five variables of section 10, read from the user's DOL at run time; `--dol` |
+| `src/pc/endian/fmt_snd.cpp` | byte order of the sound archive's header, SYMB and INFO blocks (section 12) |
+| `src/pc/libc/sized_delete.cpp` | `operator delete(void*, size_t)` forwarding to the game's `operator delete` (section 9) |
+| `include/pc/compat.h` | `PCDivW()`: signed division with the PowerPC's result for a zero divisor |
+| `src/pc/sdk/wpad.cpp`, `pc_input.h` | scripted input for automated runs (`--input`) |
+| `src/pc/sdk/vi.cpp`, `main.cpp`, `pc_config.cpp` | one exit path (`PCOSExit()` with the window as an exit hook), retrace callbacks in interrupt context, window close through `PCOSPressPowerButton()`, one owner of the contents and NAND directories (`<pc/files.h>`; the settings only override them) |
+| `src/pc/selftest_boot.cpp` | self-tests for the above |
+
+### Bypasses
+
+Each of these skips something the Wii does. All are marked `TODO(milestone 6)` in the source.
+
+| Where | What is skipped | Why | Remove when |
+| --- | --- | --- | --- |
+| `PointerEffect::PointerEffect()` (`src/news/PointerEffect.cpp`) | `ef::Resource::Add()`, `AddTexture()` and `RelocateCommand()` for `nw4r_defcursor_all01.breff/.breft`. `mLoaded` is still set, so the game starts its news scene and not the fatal error screen; `EffectSystem::CreateEffect()` finds no emitter and the pointer has no particle trail | no byte-order converter for `REFF`/`REFT` | converters are registered: the guard is `PCEndianIsHostOrder()` and opens by itself. `RelocateCommand()` also needs its `u8` pair read as a `u16` guarded (section 12) |
+| `MemorySoundArchive::detail_GetFileAddress()` (`src/nw4r/snd/snd_MemorySoundArchive.cpp`) | returns NULL for a sound file that could not be converted, so `StartSound()` fails for that sound instead of parsing big-endian data. The archive's tables are converted and `SoundArchivePlayer` is set up for real | no converters for `RSEQ`, `RBNK`, `RWSD`, `RWAR` | converters are registered (the function already calls `PCEndianFixFile()` on each file) |
+| `Scene::Execute()` (`src/news/d_scene.cpp`) | `new Model(sEarthData)` when the decompressed `earth.brres` is still big-endian. Not reached during the boot (the model is loaded by `InitNews()`, after a news download) | no converter for `bres` | a converter is registered. Check then what waits for `gEarthModel` |
+
+Not bypasses, but placeholders with the same effect on what the user sees: GX draws nothing, AX plays nothing (`AXAcquireVoice()` returns NULL), the remote has no buttons except through `--input`, NWC24/SO have no network, the HOME Menu closes at once (section 14).
+
+### Game-code findings
+
+Things in the shared source that are wrong, or only right on a PowerPC. The PC build guards them under `TARGET_PC`; the Wii code is unchanged (`main.dol: OK`, no unit of `report.json` differs).
+
+| Where | What | On the Wii | For the main branch |
+| --- | --- | --- | --- |
+| `LayoutScreen::Calc()` (`LayoutScreen.cpp`): `mAlphaFadeFrame * 255 / mAlphaFadeLength` | integer division by zero: `mAlphaFadeLength` is 0 until a fade is started | `divw` gives 0, alpha is 255 | original behaviour, nothing to fix. PC: `PCDivW()` |
+| `Layout::Calc()`, `SlideIn()`, `SlideOut()`, `FadeIn()` (`PaneLayout.cpp`): `... / mFadeLength`, `... / mSlideLength` | the same, four sites | the same | the same |
+| `config/HAGE/symbols.txt`: `gErrorSystemArc ... size:0x680`, followed by `lbl_801B3CA0 ... size:0x13E0` and more | the archive is `0x1759C` bytes (its node table says so); the labels after `0x801B3CA0` are inside the archive's second file | - | **to fix on main**: one object of `0x1759C` bytes (rounded as the linker did), which is also what a future `ErrorScreen` data split needs |
+
+No logic bug was found in a NonMatching file during the boot.
+
+### What milestone 3 (drawing) needs first
+
+1. **A GX backend in place of `src/pc/sdk/gx_noop.cpp`.** The first things the game draws are 2D: `SystemDraw()` → the scene's `mDraw` (`DrawStartup`, `DrawDialog`, `DrawIntro`) → `lyt::Layout::Draw()`, `ut::TextWriter`, and the game's own quads (`Draw2D.cpp`, `DrawUtil.cpp`, the fader). That needs: the FIFO (`gPCGXFifo`, `<pc/gx_fifo.h>`) collecting vertices between `GXBegin`/`GXEnd`; vertex descriptors and formats; projection and position/texture matrices; TEV stages, colour and alpha combiners, konst and register colours; blend, alpha compare, Z mode, scissor, cull; `GXLoadTexObj` and `GXInitTexObj*`. The object functions that NW4R reads back already work (section 14).
+2. **Texture decoding from big-endian GX formats.** `.tpl` texels, font sheets and palettes were deliberately left big-endian (section 12): decode with `PCReadBE16/32`. The fonts are I4 sheets; layouts can name any GX texture format, so plan for all of them (I4, I8, IA4, IA8, RGB565, RGB5A3, RGBA8, CMPR, and C4/C8/C14X2 with palettes). The TMCC JPEG decoder's RGB565 output is host order (section 14).
+3. **Presenting a frame.** The game renders to the EFB and ends a frame with `GXCopyDisp(gCurXfb)`, `VISetNextFrameBuffer()`, `VIFlush()`, `VIWaitForRetrace()` (`System.cpp`, `SystemDraw()`). The simplest correct mapping: the EFB is an OpenGL framebuffer object of the render mode's `fbWidth` x `efbHeight`, `GXCopyDisp()` marks it as the frame for that XFB pointer, and `Present()` in `vi.cpp` (it has the `TODO(milestone 3)`) scales it into `PCVIGetPictureRect()`. The game also copies the EFB into a texture for its fades (`gFadeTex`, `GXCopyTex()` in `System.cpp`), as RGB565.
+4. **The colour punning sites** listed in section 12 ("Colours"): `DrawUtil.cpp:172`, `System.cpp:925-931`, `g3d_gpu.h:104/108`, `g3d_anmscn.cpp:30`. They are wrong on a little-endian host as soon as their output is drawn.
+5. **A way to look at the result.** `--input` drives the game past the save dialog (`P0:0@1,A@300`); add a `--screenshot FRAME` to the boot driver early, so that automated runs can compare pictures.
+6. **First pictures to expect**, in order: the "save data" dialog on a black background (first run), then the connection screen with the mascot and, after the download fails, the connection error text.

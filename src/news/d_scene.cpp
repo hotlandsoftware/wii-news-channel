@@ -30,6 +30,9 @@
 #include <revolution/tpl.h>
 #include <revolution/vi.h>
 #include <string.h>
+#ifdef TARGET_PC
+#include <pc/endian.h>
+#endif
 
 #undef gSysFont
 #undef gArticleFont
@@ -532,9 +535,19 @@ void Scene::Execute() {
             MEMFreeToExpHeap(sAppHeap, sEarthReadBuf);
             sEarthReadBuf = NULL;
         }
+#ifdef TARGET_PC
+        // The model arrives through streaming LZ, which does not convert byte
+        // order; do it now that the file is complete.
+        // TODO(milestone 6): .brres has no converter yet (src/pc/endian), so
+        // the file stays big-endian and the globe model is not created.
+        if (gEarthModel == NULL && (PCEndianFixFile(sEarthData, sEarthSize), PCEndianIsHostOrder(sEarthData, 4))) {
+            gEarthModel = new (-32) Model(sEarthData);
+        }
+#else
         if (gEarthModel == NULL) {
             gEarthModel = new (-32) Model(sEarthData);
         }
+#endif
     }
 
     CheckPointerOverClock(mClockBottom);

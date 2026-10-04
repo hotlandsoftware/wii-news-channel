@@ -112,6 +112,7 @@ void PCSelfTestMem();     // selftest_os.cpp
 void PCSelfTestOS();      // selftest_os.cpp
 void PCSelfTestFiles();   // selftest_files.cpp
 void PCSelfTestBackend(); // selftest_backend.cpp
+void PCSelfTestBoot();    // selftest_boot.cpp
 static void PCSelfTestDolData();
 
 static int sFailures;
@@ -226,6 +227,7 @@ static int RunSelfTest() {
     PCSelfTestFiles();
     PCSelfTestBackend();
     PCSelfTestDolData();
+    PCSelfTestBoot();
 
     if (sFailures == 0) {
         std::printf("self-test: all checks passed\n");
@@ -305,7 +307,7 @@ int main(int argc, char** argv) {
             config->maxFrames = static_cast<s32>(frames);
         } else if (std::strcmp(arg, "--no-window") == 0) {
             config->noWindow = true;
-        } else if (std::strcmp(arg, "--contents") == 0) {
+        } else if (std::strcmp(arg, "--contents") == 0 || std::strcmp(arg, "--contents-dir") == 0) {
             SetOption(argv[0], arg, "contents", OptionValue(argc, argv, &i));
         } else if (std::strcmp(arg, "--input") == 0) {
             const char* script = OptionValue(argc, argv, &i);
