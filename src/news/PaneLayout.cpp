@@ -105,7 +105,13 @@ void Layout::Calc() {
         mFadeFrame--;
     }
 
+#ifdef TARGET_PC
+    // mFadeLength is 0 until a fade is started: a division by zero, which
+    // gives 0 on the PowerPC and traps on x86 (PCDivW, <pc/compat.h>).
+    mAlpha = 255 - PCDivW(mFadeFrame * 255, mFadeLength);
+#else
     mAlpha = 255 - mFadeFrame * 255 / mFadeLength;
+#endif
     SetButtonAlpha(mAlpha);
 }
 
@@ -181,7 +187,11 @@ PaneButton* Layout::FindButton(const char* name) {
 void Layout::SlideIn(s32 frames) {
     mSlideOut = false;
     if (frames != mSlideLength) {
+#ifdef TARGET_PC
+        mSlideFrame = PCDivW(mSlideFrame * frames, mSlideLength); // 0 before the first slide
+#else
         mSlideFrame = mSlideFrame * frames / mSlideLength;
+#endif
         mSlideLength = frames;
     }
 }
@@ -189,7 +199,11 @@ void Layout::SlideIn(s32 frames) {
 void Layout::SlideOut(s32 frames) {
     mSlideOut = true;
     if (frames != mSlideLength) {
+#ifdef TARGET_PC
+        mSlideFrame = PCDivW(mSlideFrame * frames, mSlideLength); // 0 before the first slide
+#else
         mSlideFrame = mSlideFrame * frames / mSlideLength;
+#endif
         mSlideLength = frames;
     }
 }
@@ -197,7 +211,11 @@ void Layout::SlideOut(s32 frames) {
 void Layout::FadeIn(s32 frames) {
     mFadeOut = false;
     if (frames != mFadeLength) {
+#ifdef TARGET_PC
+        mFadeFrame = PCDivW(mFadeFrame * frames, mFadeLength); // 0 before the first fade
+#else
         mFadeFrame = mFadeFrame * frames / mFadeLength;
+#endif
         mFadeLength = frames;
     }
 }

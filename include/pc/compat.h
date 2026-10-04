@@ -66,6 +66,18 @@ static inline unsigned int pc_rlwimi_impl(unsigned int dst, unsigned int src,
 #define __rlwimi(dst, src, sh, mb, me)                                         \
     pc_rlwimi_impl((unsigned int)(dst), (unsigned int)(src), (sh), (mb), (me))
 
+/* Signed division as the PowerPC's divw does it where C leaves it undefined:
+ * the x86 traps on a zero divisor (and on INT_MIN / -1), the Wii's CPU does
+ * not and gives 0 for a non-negative dividend and -1 for a negative one. For
+ * the few places where the game divides by zero and discards or survives the
+ * result (guard them with TARGET_PC). */
+static inline int PCDivW(int a, int b) {
+    if (b == 0 || (b == -1 && a == (-2147483647 - 1))) {
+        return a < 0 ? -1 : 0;
+    }
+    return a / b;
+}
+
 static inline int __cntlzw(unsigned int x) {
     return x ? __builtin_clz(x) : 32;
 }

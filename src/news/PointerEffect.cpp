@@ -7,6 +7,9 @@
 #include <revolution/gx.h>
 #include <revolution/mtx.h>
 #include <revolution/os.h>
+#ifdef TARGET_PC
+#include <pc/endian.h>
+#endif
 
 using namespace nw4r;
 
@@ -40,6 +43,18 @@ PointerEffect::PointerEffect() {
     u32 size;
     mBreff = (u8*)LoadArcFile(gArchive, "nw4r_defcursor_all01.breff.LZ", 32, NULL, gSubHeap);
     mBreft = (u8*)LoadArcFile(gArchive, "nw4r_defcursor_all01.breft.LZ", 32, &size, gSubHeap);
+#ifdef TARGET_PC
+    // TODO(milestone 6): .breff/.breft have no byte-order converter yet
+    // (src/pc/endian). Until one is registered the files stay big-endian and
+    // are not given to ef::Resource: the pointer has no particle effects
+    // (EffectSystem::CreateEffect() finds no emitter and returns NULL). The
+    // files did load, so mLoaded is true and the game starts normally instead
+    // of showing its fatal error screen.
+    if (mBreff != NULL && mBreft != NULL &&
+        !(PCEndianIsHostOrder(mBreff, 4) && PCEndianIsHostOrder(mBreft, 4))) {
+        mLoaded = true;
+    } else
+#endif
     if (mBreff != NULL && mBreft != NULL) {
         mLoaded = true;
         resource->Add(mBreff);

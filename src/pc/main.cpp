@@ -29,6 +29,7 @@
 #include <pc/files.h>
 #include <pc/os.h>
 
+#include "dol_data.h"
 #include "pc_config.h"
 #include "pc_selftest.h"
 #include "pc_video.h"
@@ -71,7 +72,10 @@ void PrintHelp(const char* program) {
     std::printf("  --frames N       exit after N frames (for automated runs)\n");
     std::printf("  --no-window      do not open a window\n");
     std::printf("  --contents DIR   the channel's WAD contents, NN.app (default orig/HAGE/contents)\n");
-    std::printf("  --nand-dir DIR   directory used as the channel's NAND storage (default orig/HAGE/nand)\n");
+    std::printf("  --nand-dir DIR   directory used as the Wii's NAND (default $NEWSCHANNEL_NAND,\n");
+    std::printf("                   ~/.local/share/newschannel/nand)\n");
+    std::printf("  --dol FILE       the channel's main.dol, for data tables without source\n");
+    std::printf("                   (default $NEWSCHANNEL_DOL, orig/HAGE/sys/main.dol)\n");
     std::printf("  --lang LANG      en, ja, de, fr, es, it or nl (default en)\n");
     std::printf("  --wide           16:9 instead of 4:3\n");
     std::printf("  --config FILE    settings file (default ./newschannel.ini if it exists)\n\n");
@@ -105,6 +109,7 @@ void PCSelfTestMem();     // selftest_os.cpp
 void PCSelfTestOS();      // selftest_os.cpp
 void PCSelfTestFiles();   // selftest_files.cpp
 void PCSelfTestBackend(); // selftest_backend.cpp
+static void PCSelfTestDolData();
 
 static int sFailures;
 
@@ -117,6 +122,36 @@ void PCSelfTestCheck(bool ok, const char* expression, const char* file, int line
 
 static bool Near(f32 a, f32 b, f32 eps = 1e-4f) {
     return std::fabs(a - b) <= eps;
+}
+
+// Data read from the user's DOL (dol_data.cpp). Skipped without the DOL.
+extern u8 gErrorSystemArc[];
+extern const wchar_t* lbl_801B26BC[7];
+extern const wchar_t* gMsgWeekday[7][7];
+extern const wchar_t* lbl_801B2958[7][7];
+extern "C" f32 lbl_80356940[2];
+
+static void PCSelfTestDolData() {
+    std::FILE* file = std::fopen(PCDolDataGetPath(), "rb");
+    if (file == nullptr) {
+        std::printf("self-test: no DOL at '%s'; DOL data not tested\n", PCDolDataGetPath());
+        return;
+    }
+    std::fclose(file);
+    PC_CHECK(PCDolDataLoad());
+    PC_CHECK(PCDolDataIsLoaded());
+    PC_CHECK(gErrorSystemArc[0] == 0x55 && gErrorSystemArc[1] == 0xAA);
+    PC_CHECK(lbl_801B26BC[1] != nullptr && wcscmp(lbl_801B26BC[1], L"English") == 0);
+    for (int language = 0; language < 7; language++) {
+        PC_CHECK(lbl_801B26BC[language] != nullptr && wcslen(lbl_801B26BC[language]) > 0);
+        for (int day = 0; day < 7; day++) {
+            PC_CHECK(gMsgWeekday[language][day] != nullptr && wcslen(gMsgWeekday[language][day]) > 0);
+            PC_CHECK(lbl_801B2958[language][day] != nullptr && wcslen(lbl_801B2958[language][day]) > 0);
+        }
+    }
+    PC_CHECK(std::isfinite(lbl_80356940[0]) && std::isfinite(lbl_80356940[1]));
+    std::printf("self-test: DOL data from '%s' (weekday [1][0] has %d characters)\n", PCDolDataGetPath(),
+                static_cast<int>(wcslen(gMsgWeekday[1][0])));
 }
 
 static int RunSelfTest() {
@@ -187,6 +222,7 @@ static int RunSelfTest() {
     PCSelfTestOS();
     PCSelfTestFiles();
     PCSelfTestBackend();
+    PCSelfTestDolData();
 
     if (sFailures == 0) {
         std::printf("self-test: all checks passed\n");
@@ -268,6 +304,8 @@ int main(int argc, char** argv) {
             config->noWindow = true;
         } else if (std::strcmp(arg, "--contents") == 0) {
             SetOption(argv[0], arg, "contents", OptionValue(argc, argv, &i));
+        } else if (std::strcmp(arg, "--dol") == 0) {
+            PCDolDataSetPath(OptionValue(argc, argv, &i));
         } else if (std::strcmp(arg, "--nand-dir") == 0) {
             SetOption(argv[0], arg, "nand", OptionValue(argc, argv, &i));
         } else if (std::strcmp(arg, "--lang") == 0) {
@@ -315,6 +353,9 @@ int main(int argc, char** argv) {
     }
 
     std::printf("contents: %s\nnand:     %s\n", PCGetContentsDir(), PCGetNandDir());
+    if (!PCDolDataLoad()) {
+        return 1;
+    }
     std::printf("Calling the game's main()...\n");
     std::fflush(stdout);
 

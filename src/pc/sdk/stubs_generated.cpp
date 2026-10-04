@@ -21,11 +21,3 @@ PC_STUB(_ZN4nw4r2ut14NandFileStream4SeekEij, "nw4r::ut::NandFileStream::Seek(int
 PC_STUB(_ZN4nw4r2ut14NandFileStream5WriteEPKvj, "nw4r::ut::NandFileStream::Write(void const*, unsigned int)")
 PC_STUB(_ZN4nw4r2ut14NandFileStream10WriteAsyncEPKvjPFviPNS0_8IOStreamEPvES6_, "nw4r::ut::NandFileStream::WriteAsync(void const*, unsigned int, void (*)(int, nw4r::ut::IOStream*, void*), void*)")
 PC_STUB(_ZN4nw4r2ut14NandFileStreamD2Ev, "nw4r::ut::NandFileStream::~NandFileStream()")
-
-// ---- variables defined in files that are not in the build yet (5) ----
-// Zero-filled, sized from config/HAGE/symbols.txt.
-PC_STUB_DATA(gErrorSystemArc, 0x680)
-PC_STUB_DATA(gMsgWeekday, 0xC8)
-PC_STUB_DATA(lbl_801B26BC, 0x1C)
-PC_STUB_DATA(lbl_801B2958, 0xC8)
-PC_STUB_DATA(lbl_80356940, 0x8)

@@ -103,6 +103,7 @@ u32 PCEndianRepackBitfield(u32 value, u32 unitBits, const u8* widths, u32 count)
 /* Built-in converters (src/pc/endian/, src/pc/sdk/arc.cpp). */
 BOOL PCEndianSwapU8Archive(void* data, u32 size); /* header and node table only */
 BOOL PCEndianSwapTPL(void* data, u32 size);
+BOOL PCEndianSwapSoundArchive(void* data, u32 size); /* RSAR (.brsar): header, SYMB, INFO */
 BOOL PCEndianSwapFont(void* data, u32 size);        /* RFNT (.brfnt) and RFNA (.brfna) */
 BOOL PCEndianSwapLayout(void* data, u32 size);      /* RLYT (.brlyt) */
 BOOL PCEndianSwapLayoutAnim(void* data, u32 size);  /* RLAN (.brlan) */

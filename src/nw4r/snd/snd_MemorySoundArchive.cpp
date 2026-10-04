@@ -4,6 +4,10 @@
 #include <cstring>
 #include <new>
 
+#ifdef TARGET_PC
+#include <pc/endian.h>
+#endif
+
 namespace nw4r {
 namespace snd {
 
@@ -100,7 +104,24 @@ const void* MemorySoundArchive::detail_GetFileAddress(u32 id) const {
         return NULL;
     }
 
+#ifdef TARGET_PC
+    // The files inside the archive are converted to host byte order when they
+    // are first asked for (the archive's own tables were converted on load).
+    // TODO(milestone 6): RSEQ, RBNK, RWSD and RWAR have no converter yet
+    // (src/pc/endian); such a file is refused here, so the sound that needs it
+    // does not start, instead of being parsed in the wrong byte order.
+    void* pFile = const_cast<void*>(
+        ut::AddOffsetToPtr(mData, groupInfo.offset + itemInfo.offset));
+    switch (PCEndianFixFile(pFile, itemInfo.size)) {
+    case PC_ENDIAN_SWAPPED:
+    case PC_ENDIAN_ALREADY:
+        return pFile;
+    default:
+        return NULL;
+    }
+#else
     return ut::AddOffsetToPtr(mData, groupInfo.offset + itemInfo.offset);
+#endif
 }
 
 const void* MemorySoundArchive::detail_GetWaveDataFileAddress(u32 id) const {

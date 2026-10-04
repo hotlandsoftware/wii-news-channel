@@ -699,7 +699,13 @@ void LayoutScreen::Calc() {
         mAlphaFadeFrame--;
     }
 
+#ifdef TARGET_PC
+    // mAlphaFadeLength is 0 until a fade is started: a division by zero, which
+    // gives 0 on the PowerPC and traps on x86.
+    SetAlpha(255 - PCDivW(mAlphaFadeFrame * 255, mAlphaFadeLength));
+#else
     SetAlpha(255 - mAlphaFadeFrame * 255 / mAlphaFadeLength);
+#endif
 }
 
 void LayoutScreen::Draw() {
