@@ -2,6 +2,10 @@
 
 #include <revolution/gx.h>
 
+#ifdef TARGET_PC
+#include <string.h>
+#endif
+
 namespace nw4r {
 namespace g3d {
 
@@ -32,6 +36,24 @@ void Fog::Init() {
     }
 }
 
+#ifdef TARGET_PC
+Fog Fog::CopyTo(void* pDst) const {
+    if (pDst != NULL && IsValid()) {
+        // Six lfd/stfd pairs: 48 bytes, one doubleword at a time
+        const u8* pSrc = reinterpret_cast<const u8*>(ptr());
+
+        for (int i = 0; i < 6; i++) {
+            u64 work;
+            memcpy(&work, pSrc + i * 8, sizeof(work));
+            memcpy(static_cast<u8*>(pDst) + i * 8, &work, sizeof(work));
+        }
+
+        return Fog(static_cast<FogData*>(pDst));
+    }
+
+    return Fog(NULL);
+}
+#else
 Fog Fog::CopyTo(register void* pDst) const {
     if (pDst != NULL && IsValid()) {
         register const FogData* pSrc = ptr();
@@ -62,6 +84,7 @@ Fog Fog::CopyTo(register void* pDst) const {
 
     return Fog(NULL);
 }
+#endif // TARGET_PC
 
 void Fog::SetFogRangeAdjParam(u16 width, u16 center,
                               const math::MTX44& rProjMtx) {

@@ -52,6 +52,9 @@ void PrintHelp(const char* program) {
 
 // --- self-test ---------------------------------------------------------------
 
+void PCSelfTestMtx(); // selftest_mtx.cpp
+void PCSelfTestG3d(); // selftest_g3d.cpp
+
 static int sFailures;
 
 void PCSelfTestCheck(bool ok, const char* expression, const char* file, int line) {
@@ -126,6 +129,9 @@ static int RunSelfTest() {
     PC_CHECK(wcslen(L"News") == 4);
     PC_CHECK(swprintf(buffer, 32, L"%ls %02d:%02d %s", L"Time", 9, 5, "ok") == 13);
     PC_CHECK(wcscmp(buffer, L"Time 09:05 ok") == 0);
+
+    PCSelfTestMtx();
+    PCSelfTestG3d();
 
     if (sFailures == 0) {
         std::printf("self-test: all checks passed\n");

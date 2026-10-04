@@ -184,6 +184,14 @@ inline math::VEC3& AddVec(math::VEC3& rLhs, const math::VEC3& rRhs) {
 inline math::VEC3* VEC3AddRaw(register math::VEC3* pOut,
                               register const math::VEC3* pA,
                               register const math::VEC3* pB) {
+#ifdef TARGET_PC
+    // x and y are both read before either is stored, as with the pair
+    const f32 x = pA->x + pB->x;
+    const f32 y = pA->y + pB->y;
+    pOut->x = x;
+    pOut->y = y;
+    pOut->z = pA->z + pB->z;
+#else
     register f32 work0, work1, work2;
 
     asm {
@@ -196,6 +204,7 @@ inline math::VEC3* VEC3AddRaw(register math::VEC3* pOut,
         ps_add work2, work0, work1
         psq_st work2, 8(pOut), 1, 0
     }
+#endif
 
     return pOut;
 }
