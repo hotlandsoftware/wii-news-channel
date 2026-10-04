@@ -11,18 +11,6 @@ PC_STUB(AICheckInit, "AICheckInit")
 PC_STUB(AIInit, "AIInit")
 PC_STUB(AIRegisterDMACallback, "AIRegisterDMACallback")
 
-// ---- ARC (10) ----
-PC_STUB(ARCChangeDir, "ARCChangeDir")
-PC_STUB(ARCClose, "ARCClose")
-PC_STUB(ARCCloseDir, "ARCCloseDir")
-PC_STUB(ARCConvertPathToEntrynum, "ARCConvertPathToEntrynum")
-PC_STUB(ARCFastOpen, "ARCFastOpen")
-PC_STUB(ARCGetLength, "ARCGetLength")
-PC_STUB(ARCGetStartAddrInMem, "ARCGetStartAddrInMem")
-PC_STUB(ARCInitHandle, "ARCInitHandle")
-PC_STUB(ARCOpenDir, "ARCOpenDir")
-PC_STUB(ARCReadDir, "ARCReadDir")
-
 // ---- AX (35) ----
 PC_STUB(AXAcquireVoice, "AXAcquireVoice")
 PC_STUB(AXFreeVoice, "AXFreeVoice")
@@ -73,33 +61,6 @@ PC_STUB(AXFXSetHooks, "AXFXSetHooks")
 PC_STUB(PPCMfhid4, "PPCMfhid4")
 PC_STUB(PPCMthid4, "PPCMthid4")
 PC_STUB(PPCSync, "PPCSync")
-
-// ---- CNT (7) ----
-PC_STUB(CNTInit, "CNTInit")
-PC_STUB(CNTShutdown, "CNTShutdown")
-PC_STUB(contentCloseNAND, "contentCloseNAND")
-PC_STUB(contentGetLengthNAND, "contentGetLengthNAND")
-PC_STUB(contentInitHandleNAND, "contentInitHandleNAND")
-PC_STUB(contentOpenNAND, "contentOpenNAND")
-PC_STUB(contentReadNAND, "contentReadNAND")
-
-// ---- CX (7) ----
-PC_STUB(CXGetUncompressedSize, "CXGetUncompressedSize")
-PC_STUB(CXInitUncompContextHuffman, "CXInitUncompContextHuffman")
-PC_STUB(CXInitUncompContextLZ, "CXInitUncompContextLZ")
-PC_STUB(CXReadUncompHuffman, "CXReadUncompHuffman")
-PC_STUB(CXReadUncompLZ, "CXReadUncompLZ")
-PC_STUB(CXUncompressHuffman, "CXUncompressHuffman")
-PC_STUB(CXUncompressLZ, "CXUncompressLZ")
-
-// ---- DVD (7) ----
-PC_STUB(DVDCancel, "DVDCancel")
-PC_STUB(DVDClose, "DVDClose")
-PC_STUB(DVDConvertPathToEntrynum, "DVDConvertPathToEntrynum")
-PC_STUB(DVDFastOpen, "DVDFastOpen")
-PC_STUB(DVDGetDriveStatus, "DVDGetDriveStatus")
-PC_STUB(DVDReadAsyncPrio, "DVDReadAsyncPrio")
-PC_STUB(DVDReadPrio, "DVDReadPrio")
 
 // ---- GX (111) ----
 PC_STUB(GXBegin, "GXBegin")
@@ -258,18 +219,6 @@ PC_STUB(MEMGetTotalFreeSizeForExpHeap, "MEMGetTotalFreeSizeForExpHeap")
 PC_STUB(MEMInitAllocatorForExpHeap, "MEMInitAllocatorForExpHeap")
 PC_STUB(MEMRecordStateForFrmHeap, "MEMRecordStateForFrmHeap")
 
-// ---- NAND (10) ----
-PC_STUB(NANDClose, "NANDClose")
-PC_STUB(NANDCreate, "NANDCreate")
-PC_STUB(NANDCreateDir, "NANDCreateDir")
-PC_STUB(NANDDelete, "NANDDelete")
-PC_STUB(NANDGetCurrentDir, "NANDGetCurrentDir")
-PC_STUB(NANDGetLength, "NANDGetLength")
-PC_STUB(NANDOpen, "NANDOpen")
-PC_STUB(NANDRead, "NANDRead")
-PC_STUB(NANDSeek, "NANDSeek")
-PC_STUB(NANDWrite, "NANDWrite")
-
 // ---- NET (3) ----
 PC_STUB(NETCalcCRC32, "NETCalcCRC32")
 PC_STUB(NETGetStartupErrorCode, "NETGetStartupErrorCode")
@@ -380,11 +329,6 @@ PC_STUB(SCSetLanguage, "SCSetLanguage")
 PC_STUB(SOInit, "SOInit")
 PC_STUB(SOStartup, "SOStartup")
 
-// ---- TPL (3) ----
-PC_STUB(TPLBind, "TPLBind")
-PC_STUB(TPLGet, "TPLGet")
-PC_STUB(TPLGetGXTexObjFromPalette, "TPLGetGXTexObjFromPalette")
-
 // ---- VF (12) ----
 PC_STUB(VFCloseFile, "VFCloseFile")
 PC_STUB(VFCreateSystemFileRAM, "VFCreateSystemFileRAM")
@@ -457,8 +401,7 @@ PC_STUB(VCMVSetRenderMode, "VCMVSetRenderMode")
 PC_STUB(VCMVSetStartUrl, "VCMVSetStartUrl")
 PC_STUB(VCMVUnloadLibrary, "VCMVUnloadLibrary")
 
-// ---- undeclared (5) ----
-PC_STUB(DVDCancelAsync, "DVDCancelAsync")
+// ---- undeclared (4) ----
 PC_STUB(TMCCJPEGDecInit, "TMCCJPEGDecInit")
 PC_STUB(TMCCJPEGDecSetResolution, "TMCCJPEGDecSetResolution")
 PC_STUB(TMCCJPEGDecodeRGB565, "TMCCJPEGDecodeRGB565")

@@ -91,6 +91,8 @@ file(GLOB PC_SDK_SOURCES    CONFIGURE_DEPENDS "${REPO}/src/pc/sdk/*.cpp")
 file(GLOB PC_LIBC_SOURCES   CONFIGURE_DEPENDS "${REPO}/src/pc/libc/*.cpp")
 file(GLOB PC_THUNK_SOURCES  CONFIGURE_DEPENDS "${REPO}/src/pc/thunks/*.cpp")
 file(GLOB PC_CORE_SOURCES   CONFIGURE_DEPENDS "${REPO}/src/pc/*.cpp")
+# Byte order: one converter per asset format (docs/pc_port.md, "Byte order")
+file(GLOB PC_ENDIAN_SOURCES CONFIGURE_DEPENDS "${REPO}/src/pc/endian/*.cpp")
 
 # The generated stubs are linked only into `newschannel`; `newschannel_nostubs`
 # is the same program without them, which pc/tools/gen_stubs.py links to get
@@ -99,7 +101,8 @@ set(PC_STUBS_FILE "${REPO}/src/pc/sdk/stubs_generated.cpp")
 list(REMOVE_ITEM PC_SDK_SOURCES "${PC_STUBS_FILE}")
 
 add_library(pc_backend OBJECT
-    ${PC_SDK_SOURCES} ${PC_LIBC_SOURCES} ${PC_CORE_SOURCES} ${PC_THUNK_SOURCES})
+    ${PC_SDK_SOURCES} ${PC_LIBC_SOURCES} ${PC_CORE_SOURCES} ${PC_THUNK_SOURCES}
+    ${PC_ENDIAN_SOURCES})
 news_backend_options(pc_backend)
 target_link_libraries(pc_backend PUBLIC PkgConfig::SDL3 PkgConfig::CURL PkgConfig::GL)
 
