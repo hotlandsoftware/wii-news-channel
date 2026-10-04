@@ -59,6 +59,22 @@ PCEndianResult PCEndianFixFile(void* data, u32 size);
  * converted and unconverted buffers. */
 const char* PCEndianIdentify(const void* data, u32 size);
 
+/**
+ * TRUE if the buffer starts with a registered magic in HOST order, that is, if
+ * it is a file that has been converted and may be handed to the code that
+ * parses it. FALSE for a file whose format has no converter yet (it is still
+ * big-endian) and for unknown data.
+ *
+ * This is the guard for loaders of formats that are not converted yet:
+ *
+ *     #ifdef TARGET_PC
+ *         if (!PCEndianIsHostOrder(mBreff, 4)) { ...skip the effect... }
+ *     #endif
+ *
+ * The guard opens by itself once a converter for the format is registered.
+ */
+BOOL PCEndianIsHostOrder(const void* data, u32 size);
+
 /** A format converter: called with a buffer that is known to be big-endian
  * and to start with the format's magic. Returns FALSE if the data is damaged. */
 typedef BOOL (*PCEndianFormatFunc)(void* data, u32 size);

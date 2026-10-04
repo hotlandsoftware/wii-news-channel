@@ -103,6 +103,15 @@ const char* PCEndianIdentify(const void* data, u32 size) {
     return format != nullptr ? format->name : nullptr;
 }
 
+BOOL PCEndianIsHostOrder(const void* data, u32 size) {
+    if (data == nullptr || size < 4) {
+        return FALSE;
+    }
+    u32 host;
+    __builtin_memcpy(&host, data, 4);
+    return Find(host) != nullptr ? TRUE : FALSE;
+}
+
 PCEndianResult PCEndianFixFile(void* data, u32 size) {
     if (data == nullptr || size < 4) {
         return PC_ENDIAN_UNKNOWN;

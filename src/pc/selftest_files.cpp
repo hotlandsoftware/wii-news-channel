@@ -116,7 +116,11 @@ void TestHelpers() {
     u8 copy[16];
     std::memcpy(copy, text, 16);
     PC_CHECK(PCEndianFixFile(text, 16) == PC_ENDIAN_UNKNOWN && std::memcmp(text, copy, 16) == 0);
-    PC_CHECK(PCEndianIdentify(text, 16) == nullptr);
+    PC_CHECK(PCEndianIdentify(text, 16) == nullptr && PCEndianIsHostOrder(text, 16) == FALSE);
+
+    // A format without a converter stays big-endian and says so.
+    u8 effect[16] = {'R', 'E', 'F', 'F', 0xFE, 0xFF, 0x00, 0x07, 0, 0, 0, 0x10, 0, 0x10, 0, 1};
+    PC_CHECK(PCEndianFixFile(effect, 16) == PC_ENDIAN_UNKNOWN && PCEndianIsHostOrder(effect, 16) == FALSE);
 }
 
 void TestCX() {
@@ -200,7 +204,9 @@ void TestARC() {
     PC_CHECK(std::strcmp(PCEndianIdentify(arc, sizeof(arc)), "U8") == 0);
 
     ARCHandle handle;
+    PC_CHECK(PCEndianIsHostOrder(arc, sizeof(arc)) == FALSE);
     PC_CHECK(ARCInitHandle(arc, &handle) == TRUE);
+    PC_CHECK(PCEndianIsHostOrder(arc, sizeof(arc)) == TRUE);
     PC_CHECK(handle.entryNum == 4 && static_cast<ARCHeader*>(handle.archiveStartAddr)->magic == 0x55AA382D);
 
     // A second handle on the same buffer: nothing is converted twice.

@@ -185,8 +185,10 @@ s32 contentInitHandleNAND(s32 contentNum, CNTHandle* handle, MEMAllocator* alloc
     size = OSRoundUp32B(PCReadBE32(&header.fileStart));
 
     // (MEMAllocFromAllocator(allocator, size), spelled out so that CNT also
-    // works with a caller-made allocator before the MEM backend exists.)
-    buffer = allocator->pFunc->pfAlloc(allocator, size);
+    // works with a caller-made allocator before the MEM backend exists. An
+    // allocator that was never initialised allocates nothing.)
+    buffer = (allocator != nullptr && allocator->pFunc != nullptr) ? allocator->pFunc->pfAlloc(allocator, size)
+                                                                   : nullptr;
     if (buffer == nullptr) {
         close(fd);
         return CNT_ERROR_ALLOC;
