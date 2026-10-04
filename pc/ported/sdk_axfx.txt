@@ -1,0 +1,6 @@
+# SDK files compiled natively (see docs/pc_port.md, "SDK code compiled natively").
+# AXFX high-quality reverb: arithmetic on sample buffers; memory through the
+# hooks the application sets. AXFXHooks.c (the default hooks, on the OSAlloc
+# heap) is replaced by src/pc/sdk/ax_noop.cpp.
+AXFXReverbHi.c
+AXFXReverbHiExp.c

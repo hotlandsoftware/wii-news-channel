@@ -1,0 +1,3 @@
+# SDK files compiled natively (see docs/pc_port.md, "SDK code compiled natively").
+# The TMCC JPEG decoder: plain C, no hardware access.
+*

@@ -1,13 +1,18 @@
 // Entry point of the native PC build.
 //
-// Milestone 0/1: the game does not run yet. This program proves the toolchain
-// end to end: it links the natively compiled game and NW4R code (the files in
-// pc/ported/*.txt) with the PC backend, SDL3 and libcurl, runs a few checks on
-// that code and exits. `--boot` calls the game's own main() (src/news/main.cpp,
-// renamed to NewsMain by the build), which is what milestone 2 will make work.
+//   newschannel             build information, SDL start-up, self-test
+//   newschannel --selftest  only the self-test
+//   newschannel --boot      run the game: its own main() (src/news/main.cpp,
+//                           renamed to NewsMain by the build) on this thread
+//
+// The boot driver only prepares what the console has before an application
+// starts (the settings, where its files are) and tells the VI backend how to
+// ask the game to shut down. Everything else -- memory, video, input, files --
+// is set up by the game itself through the SDK calls the backend implements.
 
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <cwchar>
 
@@ -18,13 +23,28 @@
 #include <news/SmoothValue.h>
 #include <nw4r/math.h>
 #include <nw4r/ut.h>
+#include <revolution/gx.h>
+#include <revolution/vi.h>
 
 #include <pc/files.h>
+#include <pc/os.h>
 
+#include "pc_config.h"
 #include "pc_selftest.h"
+#include "pc_video.h"
 
 // The game's main() (src/news/main.cpp), renamed by pc/CMakeLists.txt.
 int NewsMain();
+
+// Closing the window is the console's power button: the game's handler (set
+// with OSSetPowerCallback() in SystemInit) asks its main loop to shut down,
+// and the game ends in OSShutdownSystem(). Before the game has set a handler
+// there is nothing to shut down.
+static void WindowClosed() {
+    if (!PCOSPressPowerButton()) {
+        PCExit(0);
+    }
+}
 
 namespace {
 
@@ -40,31 +60,51 @@ void PrintVersion() {
 }
 
 void PrintHelp(const char* program) {
-    std::printf("Usage: %s [option]\n\n", program);
-    std::printf("  (no option)   print build information, initialise SDL, run the self-test\n");
-    std::printf("  --selftest    run only the self-test of the ported code\n");
-    std::printf("  --boot        call the game's main() (experimental: most of the SDK is\n");
-    std::printf("                still stubs, so expect \"unimplemented\" lines and a crash)\n");
-    std::printf("  --contents-dir DIR\n");
-    std::printf("                the channel's WAD contents, NN.app (default: $NEWSCHANNEL_CONTENTS,\n");
-    std::printf("                orig/HAGE/contents)\n");
-    std::printf("  --nand-dir DIR\n");
-    std::printf("                the directory used as the Wii's NAND: save data (default:\n");
-    std::printf("                $NEWSCHANNEL_NAND, ~/.local/share/newschannel/nand)\n");
-    std::printf("  --version     print build information\n");
-    std::printf("  --help        this text\n\n");
-    std::printf("The game itself does not run yet; see docs/pc_port.md for the milestones.\n");
+    std::printf("Usage: %s [options]\n\n", program);
+    std::printf("  (no option)      print build information, initialise SDL, run the self-test\n");
+    std::printf("  --selftest       run only the self-test\n");
+    std::printf("  --boot           run the game\n");
+    std::printf("  --window-test    open the window and run empty frames (with --frames N; default 120)\n");
+    std::printf("  --version        print build information\n");
+    std::printf("  --help           this text\n\n");
+    std::printf("Options for --boot:\n");
+    std::printf("  --frames N       exit after N frames (for automated runs)\n");
+    std::printf("  --no-window      do not open a window\n");
+    std::printf("  --contents DIR   the channel's WAD contents, NN.app (default orig/HAGE/contents)\n");
+    std::printf("  --nand-dir DIR   directory used as the channel's NAND storage (default orig/HAGE/nand)\n");
+    std::printf("  --lang LANG      en, ja, de, fr, es, it or nl (default en)\n");
+    std::printf("  --wide           16:9 instead of 4:3\n");
+    std::printf("  --config FILE    settings file (default ./newschannel.ini if it exists)\n\n");
+    std::printf("Settings can also come from the settings file and from NEWSCHANNEL_* environment\n");
+    std::printf("variables; see src/pc/pc_config.h. Closing the window shuts the game down.\n");
+}
+
+// The value of option argv[*index], which is the next argument.
+const char* OptionValue(int argc, char** argv, int* index) {
+    if (*index + 1 >= argc) {
+        std::fprintf(stderr, "%s: option '%s' needs a value\n", argv[0], argv[*index]);
+        std::exit(2);
+    }
+    return argv[++*index];
+}
+
+void SetOption(const char* program, const char* option, const char* key, const char* value) {
+    if (!PCConfigSet(key, value)) {
+        std::fprintf(stderr, "%s: bad value '%s' for %s\n", program, value, option);
+        std::exit(2);
+    }
 }
 
 } // namespace
 
 // --- self-test ---------------------------------------------------------------
 
-void PCSelfTestMtx(); // selftest_mtx.cpp
-void PCSelfTestG3d(); // selftest_g3d.cpp
-void PCSelfTestMem(); // selftest_os.cpp
-void PCSelfTestOS();  // selftest_os.cpp
-void PCSelfTestFiles(); // selftest_files.cpp
+void PCSelfTestMtx();     // selftest_mtx.cpp
+void PCSelfTestG3d();     // selftest_g3d.cpp
+void PCSelfTestMem();     // selftest_os.cpp
+void PCSelfTestOS();      // selftest_os.cpp
+void PCSelfTestFiles();   // selftest_files.cpp
+void PCSelfTestBackend(); // selftest_backend.cpp
 
 static int sFailures;
 
@@ -146,6 +186,7 @@ static int RunSelfTest() {
     PCSelfTestMem();
     PCSelfTestOS();
     PCSelfTestFiles();
+    PCSelfTestBackend();
 
     if (sFailures == 0) {
         std::printf("self-test: all checks passed\n");
@@ -155,29 +196,98 @@ static int RunSelfTest() {
     return sFailures == 0 ? 0 : 1;
 }
 
+// --window-test: the video path without the game. Opens the window as the game
+// would (VIInit, VIConfigure), runs retraces and reports the frame rate. The
+// window can be closed; with no game to ask, that ends the process at once.
+static int RunWindowTest() {
+    PCConfig* config = PCGetConfig();
+    u32 frames = config->maxFrames > 0 ? static_cast<u32>(config->maxFrames) : 120;
+    config->maxFrames = 0;
+
+    VIInit();
+    GXRenderModeObj mode = GXNtsc480IntDf;
+    mode.viTVmode = VI_TVMODE_NTSC_PROG;
+    VIConfigure(&mode);
+    VISetBlack(FALSE);
+    VIFlush();
+
+    std::printf("window: %s, OpenGL context: %s\n", PCVIGetWindow() != nullptr ? "open" : "none",
+                PCVIGetGLContext() != nullptr ? "yes" : "no");
+    Uint64 start = SDL_GetTicksNS();
+    for (u32 i = 0; i < frames; i++) {
+        VIWaitForRetrace();
+    }
+    f64 seconds = static_cast<f64>(SDL_GetTicksNS() - start) / 1e9;
+    std::printf("%u frames in %.3f s (%.2f Hz)\n", frames, seconds, frames / seconds);
+    PCExit(0);
+}
+
 int main(int argc, char** argv) {
     bool selftest_only = false;
     bool boot = false;
+    bool window_test = false;
+    PCConfig* config = PCGetConfig();
+
+    // --config first: the other options override the file.
     for (int i = 1; i < argc; i++) {
-        if (std::strcmp(argv[i], "--help") == 0 || std::strcmp(argv[i], "-h") == 0) {
+        if (std::strcmp(argv[i], "--config") == 0) {
+            const char* file = OptionValue(argc, argv, &i);
+            if (!PCConfigLoad(file)) {
+                std::fprintf(stderr, "%s: cannot read config file '%s'\n", argv[0], file);
+                return 2;
+            }
+        }
+    }
+
+    for (int i = 1; i < argc; i++) {
+        const char* arg = argv[i];
+        if (std::strcmp(arg, "--help") == 0 || std::strcmp(arg, "-h") == 0) {
             PrintHelp(argv[0]);
             return 0;
-        } else if (std::strcmp(argv[i], "--version") == 0) {
+        } else if (std::strcmp(arg, "--version") == 0) {
             PrintVersion();
             return 0;
-        } else if (std::strcmp(argv[i], "--selftest") == 0) {
+        } else if (std::strcmp(arg, "--selftest") == 0) {
             selftest_only = true;
-        } else if (std::strcmp(argv[i], "--boot") == 0) {
+        } else if (std::strcmp(arg, "--boot") == 0) {
             boot = true;
-        } else if (std::strcmp(argv[i], "--contents-dir") == 0 && i + 1 < argc) {
-            PCSetContentsDir(argv[++i]);
-        } else if (std::strcmp(argv[i], "--nand-dir") == 0 && i + 1 < argc) {
-            PCSetNandDir(argv[++i]);
+        } else if (std::strcmp(arg, "--window-test") == 0) {
+            window_test = true;
+        } else if (std::strcmp(arg, "--config") == 0) {
+            i++; // handled above
+        } else if (std::strcmp(arg, "--frames") == 0) {
+            const char* value = OptionValue(argc, argv, &i);
+            char* end;
+            long frames = std::strtol(value, &end, 10);
+            if (end == value || *end != '\0' || frames <= 0) {
+                std::fprintf(stderr, "%s: bad value '%s' for --frames\n", argv[0], value);
+                return 2;
+            }
+            config->maxFrames = static_cast<s32>(frames);
+        } else if (std::strcmp(arg, "--no-window") == 0) {
+            config->noWindow = true;
+        } else if (std::strcmp(arg, "--contents") == 0) {
+            SetOption(argv[0], arg, "contents", OptionValue(argc, argv, &i));
+        } else if (std::strcmp(arg, "--nand-dir") == 0) {
+            SetOption(argv[0], arg, "nand", OptionValue(argc, argv, &i));
+        } else if (std::strcmp(arg, "--lang") == 0) {
+            SetOption(argv[0], arg, "language", OptionValue(argc, argv, &i));
+        } else if (std::strcmp(arg, "--wide") == 0) {
+            SetOption(argv[0], arg, "aspect", "16:9");
         } else {
-            std::fprintf(stderr, "%s: unknown option '%s'\n", argv[0], argv[i]);
+            std::fprintf(stderr, "%s: unknown option '%s'\n", argv[0], arg);
             PrintHelp(argv[0]);
             return 2;
         }
+    }
+
+    // The file backends own the directories (<pc/files.h>); a value from the
+    // config file or the command line overrides their defaults.
+    if (config->contentsDir[0] != '\0') {
+        PCSetContentsDir(config->contentsDir);
+    }
+    if (config->nandDir[0] != '\0') {
+        PCSetNandDir(config->nandDir);
     }
 
     if (selftest_only) {
@@ -186,22 +296,33 @@ int main(int argc, char** argv) {
 
     PrintVersion();
 
-    // No window yet (milestone 2): only the core, to prove SDL links and runs.
+    // Events only; VIInit() adds video when the game opens its screen.
     if (!SDL_Init(SDL_INIT_EVENTS)) {
         std::fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError());
         return 1;
     }
     std::printf("SDL initialised (platform: %s)\n", SDL_GetPlatform());
 
-    int result = RunSelfTest();
-
-    if (boot && result == 0) {
-        std::printf("Calling the game's main()...\n");
-        result = NewsMain();
-    } else {
-        std::printf("The game does not run yet (see docs/pc_port.md); exiting.\n");
+    if (window_test) {
+        return RunWindowTest();
     }
 
-    SDL_Quit();
-    return result;
+    if (!boot) {
+        int result = RunSelfTest();
+        std::printf("Run with --boot to start the game (see docs/pc_port.md).\n");
+        SDL_Quit();
+        return result;
+    }
+
+    std::printf("contents: %s\nnand:     %s\n", PCGetContentsDir(), PCGetNandDir());
+    std::printf("Calling the game's main()...\n");
+    std::fflush(stdout);
+
+    PCVISetCloseHandler(WindowClosed);
+
+    // Does not return: the game's main loop ends in OSShutdownSystem(),
+    // OSReturnToMenu() or OSRestart(), or the VI backend ends the process
+    // (--frames, or a window that was closed and a game that did not react).
+    int result = NewsMain();
+    PCExit(result);
 }

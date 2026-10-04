@@ -1,0 +1,3 @@
+# SDK files compiled natively (see docs/pc_port.md, "SDK code compiled natively").
+# WENC: the ADPCM encoder for the remote speaker.
+*
