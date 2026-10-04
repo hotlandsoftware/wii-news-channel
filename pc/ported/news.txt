@@ -14,8 +14,10 @@ GlobePin.cpp
 GlobePoint.cpp
 HeadlineList.cpp
 IconTextButton.cpp
+LanguageSelect.cpp
 LayoutScreen.cpp
 Locale.cpp
+MainScreen.cpp
 Mascot.cpp
 MathUtil.cpp
 Model.cpp
@@ -30,6 +32,7 @@ Resource.cpp
 SaveData.cpp
 ScreenBase.cpp
 Scroller.cpp
+SlideShow.cpp
 SmallTextButton.cpp
 SmoothValue.cpp
 System.cpp
@@ -39,6 +42,7 @@ Thread.cpp
 Ticker.cpp
 WiiConnect24.cpp
 d_s_news.cpp
+d_scene.cpp
 main.cpp
 msg/MsgChooseLanguage.cpp
 msg/MsgLastUpdated.cpp

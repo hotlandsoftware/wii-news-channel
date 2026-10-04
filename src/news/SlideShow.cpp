@@ -1099,6 +1099,7 @@ BOOL SlideShow::StateZoom(const s32* arg) {
         mStateFrame++;
         mUpButton->mDisabled = true;
         mUpButton->Press();
+        {
         f32 volume = 0.0f;
         Bgm_SetSlideshowVolume(volume);
         mZoomed = true;
@@ -1116,6 +1117,7 @@ BOOL SlideShow::StateZoom(const s32* arg) {
         StartZoom(this);
         mBeltVisible = false;
         break;
+        }
     default: {
         mZoomAngle += mZoomSpeed;
         if (mZoomAngle > 0x8000) {
