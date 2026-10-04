@@ -23,7 +23,7 @@ Each row is a share of that whole address range. `ninja`'s per-category summary 
 
 **Platform layer**
 - RVL SDK, linked: OS and BASE, EXI, SI, DB, VI, MTX, GX, DVD, AI, AX, AXFX, MEM, DSP, CX, NAND, SC, WENC, ESP, IPC, FS, PAD, WPAD, KPAD, EUART, USB, WUD, TPL, NdevExi2AD, RSO, CNT, ARC, SO, NET, NWC24 (except `NWC24Download.c`, 99.89%), the Bluetooth stack (BTE), and the VF filesystem.
-- NW4R, linked: `g3d`, `lyt` (except `lyt_window.cpp`, 99.7%), `snd` (except 3 files at 98.7–99.99%), `ut` and `math` (except `ut_ArchiveFontBase.cpp`, 99.87%), `ef` (except 7 files; `ef_animcurve` and `ef_drawstripestrategy` were written without reference source).
+- NW4R, linked: `g3d`, `lyt` (except `lyt_window.cpp`, 99.7%), `snd` (except 3 files at 98.7–99.99%), `ut` and `math` (except `ut_ArchiveFontBase.cpp`, 99.87%), `ef` (except 5 files; `ef_animcurve` and `ef_drawstripestrategy` were written without reference source).
 - HOME Menu: all 6 files linked. It has no separate sound engine; it plays sounds through NW4R `snd`.
 - VC manual viewer (`vcmv`, the HOME Menu's HTML Operations Guide on top of Opera's web library, loaded as an RSO module from the channel's content): 2 of 6 files linked, 97% decompiled.
 - TMCC JPEG decoder (the channel's photo decoder, no public source): 4 of 9 files linked, 92% decompiled.
