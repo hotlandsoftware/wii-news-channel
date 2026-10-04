@@ -1,0 +1,5 @@
+# SDK files compiled natively (see docs/pc_port.md, "SDK code compiled natively").
+# CRC and the start-up error table. nettime.c needs NWC24 internals; the
+# backend has its own NETGetUniversalCalendar().
+netcrc.c
+neterror.c

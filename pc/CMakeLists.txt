@@ -79,6 +79,20 @@ news_library(nw4r_ef   DIR src/nw4r/ef)
 news_library(nw4r_snd  DIR src/nw4r/snd)
 news_library(news      DIR src/news)
 
+# SDK libraries whose decompiled source is portable C with no hardware access.
+# They are compiled as they are instead of being rewritten in src/pc/sdk.
+news_library(sdk_tmcc_jpeg DIR src/revolution/TMCC_JPEG)
+news_library(sdk_axfx      DIR src/revolution/AXFX CXX)
+news_library(sdk_net       DIR src/revolution/NET CXX)
+news_library(sdk_wenc      DIR src/revolution/WENC)
+
+# The NET sources define their functions without including the header that
+# declares them. As C++ they need the declarations (extern "C") first.
+foreach(target sdk_net status_sdk_net)
+    target_compile_options(${target} PRIVATE
+        "SHELL:-include \"${REPO}/include/revolution/net.h\"")
+endforeach()
+
 # The game's own main() (src/news/main.cpp) becomes NewsMain(); the process
 # entry point is src/pc/main.cpp, which calls it (`newschannel --boot`).
 set_source_files_properties("${REPO}/src/news/main.cpp" PROPERTIES

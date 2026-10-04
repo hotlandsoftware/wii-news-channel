@@ -59,7 +59,11 @@ function(news_backend_options target)
     target_include_directories(${target} PRIVATE "${REPO}/src/pc")
 endfunction()
 
-# news_library(<name> DIR <dir relative to the repository>)
+# news_library(<name> DIR <dir relative to the repository> [CXX])
+#
+# CXX compiles the library's .c files as C++, like the rest of the program.
+# SDK C files that include <revolution/os.h> or <revolution/gx.h> need it: the
+# PC versions of those headers contain C++ (the GX FIFO object).
 #
 # Creates two object libraries:
 #   <name>          the files listed in pc/ported/<name>.txt; linked into the
@@ -69,11 +73,14 @@ endfunction()
 #                   command for every file (pc/tools/status.py runs them with
 #                   -fsyntax-only)
 function(news_library name)
-    cmake_parse_arguments(ARG "" "DIR" "" ${ARGN})
+    cmake_parse_arguments(ARG "CXX" "DIR" "" ${ARGN})
     set(dir "${REPO}/${ARG_DIR}")
 
     file(GLOB_RECURSE all_sources CONFIGURE_DEPENDS "${dir}/*.cpp" "${dir}/*.c")
     list(SORT all_sources)
+    if(ARG_CXX)
+        set_source_files_properties(${all_sources} PROPERTIES LANGUAGE CXX)
+    endif()
 
     set(list_file "${CMAKE_CURRENT_SOURCE_DIR}/ported/${name}.txt")
     set(ported "")
