@@ -91,10 +91,12 @@ bool Wide() {
 
 void OpenWindow() {
     const PCConfig* config = PCGetConfig();
+    // Events come first: SIGINT/SIGTERM arrive as a quit event even without a window.
+    SDL_InitSubSystem(SDL_INIT_EVENTS);
     if (config->noWindow) {
         return;
     }
-    if (!SDL_InitSubSystem(SDL_INIT_VIDEO | SDL_INIT_EVENTS)) {
+    if (!SDL_InitSubSystem(SDL_INIT_VIDEO)) {
         std::fprintf(stderr, "VIInit: no video (%s); running without a window\n", SDL_GetError());
         return;
     }

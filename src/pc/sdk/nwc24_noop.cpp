@@ -22,6 +22,8 @@
 //   mounted and no file exists.
 
 #include <revolution/nwc24.h>
+#include <revolution/nwc24/internal/NWC24iSchedule.h>
+#include <revolution/nwc24/internal/NWC24iSystem.h>
 
 #include <cstdio>
 #include <cstring>

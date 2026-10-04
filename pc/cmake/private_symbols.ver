@@ -1,0 +1,20 @@
+/* Symbols of the executable that must not be visible to shared libraries.
+ *
+ * The game replaces the global operator new/delete with versions that
+ * allocate from its own heaps (src/news/System.cpp). libstdc++ declares these
+ * operators with default visibility, so the linker would export the game's
+ * versions, and every C++ shared library in the process (Mesa's LLVM, for
+ * one) would allocate from the game's 24 MB heap, from its own threads.
+ * Making them local keeps the replacement inside the program.
+ */
+{
+  local:
+    _Znwj;           /* operator new(unsigned int) */
+    _Znaj;           /* operator new[](unsigned int) */
+    _ZdlPv;          /* operator delete(void*) */
+    _ZdaPv;          /* operator delete[](void*) */
+    _ZdlPvj;         /* operator delete(void*, unsigned int) */
+    _ZdaPvj;         /* operator delete[](void*, unsigned int) */
+    _ZnwjRKSt9nothrow_t;
+    _ZnajRKSt9nothrow_t;
+};

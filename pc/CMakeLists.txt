@@ -139,7 +139,11 @@ function(news_executable name)
     endforeach()
     target_link_libraries(${name} PRIVATE
         PkgConfig::SDL3 PkgConfig::CURL PkgConfig::GL m)
+    # Keep the game's operator new/delete to ourselves (see the file).
+    target_link_options(${name} PRIVATE
+        "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/cmake/private_symbols.ver")
     set_target_properties(${name} PROPERTIES
+        LINK_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/cmake/private_symbols.ver"
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 endfunction()
 
