@@ -80,11 +80,6 @@ extern "C" Globe* gGlobe;
 
 void DrawScreenFade(s32 alpha);
 
-// The original calls Layout::SetBlend(s32, s32, s32) and only sets up the
-// first argument; r5 and r6 still hold mFooterFade and 15 from computing it,
-// so the callee receives (alpha, mFooterFade, 15). Declaring the mangled name
-// with C linkage and one argument reproduces that code.
-extern "C" void SetBlend__6LayoutFlll(Layout* layout, s32 alpha);
 
 extern "C" {
 
@@ -1945,8 +1940,22 @@ void SlideShow::LayoutArticle() {
     }
 }
 
+static inline void UpdateLayoutAlpha(SlideShow* s) {
+    s32 alpha = 32;
+    f32 t = math::SinFIdx(FIdxRad((1.5708f * (15 - s->mFooterFade)) / 15.0f));
+    alpha += (s32)(255.0f - alpha) * t;
+    s->mCurLayout->SetBlend(alpha, s->mFooterFade, 15);
+}
+
 void SlideShow::CheckPointer() {
+    f32 minDist;
+    f32 x;
+    f32 y;
+    f32 left = -16.0f;
     f32 right = 16.0f + GetScreenWidth();
+    f32 minY = 63.0f;
+    f32 maxY = 393.0f;
+    minDist = 900.0f;
     bool moved = false;
     bool inside = false;
     bool used = false;
@@ -1954,27 +1963,24 @@ void SlideShow::CheckPointer() {
     bool outside = false;
     for (s32 i = 0; i < 4; i++) {
         if (IsPointerValid(i)) {
-            f32 x = gCursorX[i][0];
-            f32 y = gCursorY[i][0];
+            x = gCursorX[i][0];
+            y = gCursorY[i][0];
             f32 px, py;
             if (gPointerHistory.GetOldest(i, &px, &py)) {
-                if (x >= -16.0f && x < right && px >= -16.0f && px < right) {
-                    f32 dx = x - px;
-                    f32 dy = y - py;
-                    if (dx * dx + dy * dy > 900.0f) {
-                        moved = true;
-                    }
-                } else if (y <= 63.0f || y > 393.0f) {
+                if (x >= left && x < right && px >= left && px < right &&
+                    (x - px) * (x - px) + (y - py) * (y - py) > minDist) {
+                    moved = true;
+                } else if (y <= minY || y > maxY) {
                     moved = true;
                 }
             }
-            if (x >= -16.0f && x < right) {
+            if (x >= left && x < right) {
                 inside = true;
             }
             if (gHoverButtons[i] != 0) {
                 used = true;
             }
-            if (y < 63.0f || y > 393.0f) {
+            if (y < minY || y > maxY) {
                 outside = true;
             }
         }
@@ -2033,10 +2039,7 @@ void SlideShow::CheckPointer() {
     }
     gHideClock = flag;
 
-    s32 lo = 32;
-    SetBlend__6LayoutFlll(mCurLayout,
-                lo + (s32)(255.0f - lo) *
-                         math::SinFIdx(FIdxRad((1.5708f * (15 - mFooterFade)) / 15.0f)));
+    UpdateLayoutAlpha(this);
 }
 
 BOOL SlideShow::StartGrab(s32 chan, const ut::Rect* rect) {
