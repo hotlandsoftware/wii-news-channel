@@ -1171,6 +1171,7 @@ BOOL SlideShow::StateZoom(const s32* arg) {
             }
             break;
         case 2: {
+            s32 i;
             bool close = false;
             f32 left = 0.0f;
             f32 top = 63.0f;
@@ -1215,7 +1216,7 @@ BOOL SlideShow::StateZoom(const s32* arg) {
                 }
             }
 
-            for (s32 i = 0; i < 4; i++) {
+            for (i = 0; i < 4; i++) {
                 if (IsPointerValid(i)) {
                     f32 x = gPointerX[i];
                     f32 y = gPointerY[i];
@@ -1258,7 +1259,7 @@ BOOL SlideShow::StateZoom(const s32* arg) {
             }
 
             ut::Rect area(0.0f, 0.0f, GetScreenWidth(), 456.0f);
-            for (s32 i = 0; i < 4; i++) {
+            for (i = 0; i < 4; i++) {
                 lbl_801EDFD0[i] = 1;
                 switch (UpdateGrab(i, &area)) {
                 case 0:
