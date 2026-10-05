@@ -155,6 +155,14 @@ static inline ut::Color operator-(const ut::Color& a, const ut::Color& b) {
     return ut::Color(r, g, bl, al);
 }
 
+static inline void ApplyView(SlideShow* s) {
+    s->mViewWidth = s->mView.GetWidth();
+    s->mViewHeight = s->mView.GetHeight();
+    s->mText.right = GetContentRight();
+    s->mText.bottom = s->mView.bottom - 63.0f;
+    Article_SetHeight(s->mText.bottom - s->mText.top);
+}
+
 SlideShow::SlideShow(u32 arc)
     : mCurLayout(NULL), mMainLayout(NULL), mSlideLayout(NULL), mBeltLayout(NULL), mUpButton(NULL),
       mDownButton(NULL), mBackButton(NULL), mZoomInButton(NULL), mZoomOutButton(NULL),
@@ -326,15 +334,11 @@ SlideShow::SlideShow(u32 arc)
     mWriter.SetScale(0.8f);
     mWriter.SetCharSpace(3.0f);
 
-    mView.top = 0.0f;
     mView.left = 0.3f * GetScreenWidth();
-    mView.bottom = GetScreenHeight();
-    mViewHeight = GetScreenHeight() - mView.top;
+    mView.top = 0.0f;
     mView.right = GetScreenWidth();
-    mViewWidth = mView.right - mView.left;
-    mText.bottom = mView.bottom - 63.0f;
-    mText.right = GetContentRight();
-    Article_SetHeight(mText.bottom - mText.top);
+    mView.bottom = GetScreenHeight();
+    ApplyView(this);
 
     s32 numCategories = lbl_803575E0;
     while (GetCategory(mCategory)->mArticles == NULL) {
@@ -361,14 +365,6 @@ SlideShow::~SlideShow() {
     delete mBeltLayout;
     delete mSlideLayout;
     delete mMainLayout;
-}
-
-static inline void ApplyView(SlideShow* s) {
-    s->mViewWidth = s->mView.right - s->mView.left;
-    s->mViewHeight = s->mView.bottom - s->mView.top;
-    s->mText.right = GetContentRight();
-    s->mText.bottom = s->mView.bottom - 63.0f;
-    Article_SetHeight(s->mText.bottom - s->mText.top);
 }
 
 static inline void SetViewToTarget(SlideShow* s) {
