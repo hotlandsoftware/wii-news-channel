@@ -21,6 +21,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <pthread.h>
 
 #define GL_GLEXT_PROTOTYPES 1
 #include <SDL3/SDL.h>
@@ -51,6 +52,7 @@ enum { kMaxXfbs = 8 };
 struct Renderer {
     bool tried;
     bool ok;
+    pthread_t thread; // the thread the OpenGL context is current on
     GLuint vao, vbo;
     GLuint vertexShader;
     GLuint efbFbo, efbColor, efbDepth;
@@ -162,11 +164,21 @@ bool Init() {
 
 bool EnsureGL() {
     if (r.tried) {
+        if (r.ok && !pthread_equal(pthread_self(), r.thread)) {
+            // The context belongs to the thread that called VIInit(). The
+            // state is still tracked; only the drawing is lost.
+            PCGXWarnOnce("GX: drawing from a thread other than the one that called VIInit(); not drawn");
+            return false;
+        }
         return r.ok;
     }
     if (PCVIGetGLContext() == nullptr) {
         return false; // VIInit() may still open the window
     }
+    if (SDL_GL_GetCurrentContext() != PCVIGetGLContext()) {
+        return false; // not the window's thread; try again from there
+    }
+    r.thread = pthread_self();
     r.ok = Init();
     return r.ok;
 }

@@ -934,6 +934,67 @@ void TestWithContext() {
         GXSetTevDirect(static_cast<GXTevStageID>(i));
     }
 
+    // An indirect lookup that shifts the coordinates by a known amount: the
+    // offset texture says s = 160 - 128 = 32, the matrix halves it, so the
+    // regular texture is read 16 texels to the right.
+    {
+        static u8 offsetRgba[4 * 4 * 4], offsetTexels[64];
+        static u8 rampRgba[32 * 4 * 4], rampTexels[32 * 4 * 4];
+        for (u32 i = 0; i < 16; i++) {
+            offsetRgba[i * 4 + 0] = 0;
+            offsetRgba[i * 4 + 1] = 128; // u
+            offsetRgba[i * 4 + 2] = 128; // t
+            offsetRgba[i * 4 + 3] = 160; // s
+        }
+        for (u32 i = 0; i < 32 * 4; i++) {
+            rampRgba[i * 4 + 0] = static_cast<u8>((i % 32) * 8);
+            rampRgba[i * 4 + 1] = 0;
+            rampRgba[i * 4 + 2] = 0;
+            rampRgba[i * 4 + 3] = 255;
+        }
+        PC_CHECK(PCGXEncodeTexture(offsetRgba, GX_TF_RGBA8, 4, 4, offsetTexels));
+        PC_CHECK(PCGXEncodeTexture(rampRgba, GX_TF_RGBA8, 32, 4, rampTexels));
+        GXTexObj ramp, offsets;
+        GXInitTexObj(&ramp, rampTexels, 32, 4, GX_TF_RGBA8, GX_CLAMP, GX_CLAMP, GX_FALSE);
+        GXInitTexObjLOD(&ramp, GX_NEAR, GX_NEAR, 0.0f, 0.0f, 0.0f, GX_FALSE, GX_FALSE, GX_ANISO_1);
+        GXInitTexObj(&offsets, offsetTexels, 4, 4, GX_TF_RGBA8, GX_REPEAT, GX_REPEAT, GX_FALSE);
+        GXInitTexObjLOD(&offsets, GX_NEAR, GX_NEAR, 0.0f, 0.0f, 0.0f, GX_FALSE, GX_FALSE, GX_ANISO_1);
+        GXLoadTexObj(&ramp, GX_TEXMAP0);
+        GXLoadTexObj(&offsets, GX_TEXMAP1);
+
+        Setup2D();
+        GXSetBlendMode(GX_BM_NONE, GX_BL_ONE, GX_BL_ZERO, GX_LO_COPY);
+        GXSetAlphaCompare(GX_ALWAYS, 0, GX_AOP_AND, GX_ALWAYS, 0);
+        GXSetTevColorIn(GX_TEVSTAGE0, GX_CC_ZERO, GX_CC_ZERO, GX_CC_ZERO, GX_CC_TEXC);
+        GXSetTevAlphaIn(GX_TEVSTAGE0, GX_CA_ZERO, GX_CA_ZERO, GX_CA_ZERO, GX_CA_TEXA);
+        Quad(300.0f, 400.0f, 332.0f, 404.0f); // one pixel per texel, no indirection yet
+        PC_CHECK(PixelNear(304, 402, 4 * 8, 0, 0, 0));
+
+        GXSetNumIndStages(1);
+        GXSetIndTexOrder(GX_INDTEXSTAGE0, GX_TEXCOORD0, GX_TEXMAP1);
+        GXSetIndTexCoordScale(GX_INDTEXSTAGE0, GX_ITS_1, GX_ITS_1);
+        GXSetIndTexMtx(GX_ITM_0, indMtx, 0);
+        GXSetTevIndirect(GX_TEVSTAGE0, GX_INDTEXSTAGE0, GX_ITF_8, GX_ITB_STU, GX_ITM_0, GX_ITW_OFF, GX_ITW_OFF, GX_FALSE,
+                         GX_FALSE, GX_ITBA_OFF);
+        Quad(300.0f, 400.0f, 332.0f, 404.0f);
+        PC_CHECK(PCGXRenderProgramOK());
+        PC_CHECK(PixelNear(304, 402, (4 + 16) * 8, 0, 0, 0));
+        PC_CHECK(PixelNear(312, 401, (12 + 16) * 8, 0, 0, 0));
+        // twice the scale exponent, twice the shift: clamped at the last texel
+        GXSetIndTexMtx(GX_ITM_0, indMtx, 1);
+        Quad(300.0f, 400.0f, 332.0f, 404.0f);
+        PC_CHECK(PixelNear(302, 402, 31 * 8, 0, 0, 0));
+        GXSetNumIndStages(0);
+        GXSetTevDirect(GX_TEVSTAGE0);
+
+        // back to the coloured quads of this test
+        GXClearVtxDesc();
+        GXSetVtxDesc(GX_VA_POS, GX_DIRECT);
+        GXSetVtxDesc(GX_VA_CLR0, GX_DIRECT);
+        GXSetChanCtrl(GX_COLOR0A0, GX_FALSE, GX_SRC_REG, GX_SRC_VTX, GX_LIGHT_NULL, GX_DF_NONE, GX_AF_NONE);
+        GXSetCullMode(GX_CULL_NONE);
+    }
+
     // destination alpha on an EFB with alpha: the dual-source variant
     GXSetNumTevStages(1);
     GXSetPixelFmt(GX_PF_RGBA6_Z24, GX_ZC_LINEAR);
