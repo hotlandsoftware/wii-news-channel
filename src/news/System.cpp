@@ -371,10 +371,17 @@ void SystemCalc() {
             gPointerValid[i][j] = false;
         }
 
-        f32 tx = GetSmoothRate(gPointerX[i], gCursorX[i][0]);
-        f32 ty = gCursorY[i][0] - gPointerY[i];
+        f32 d = gCursorX[i][0] - gPointerX[i];
+        f32 tx = 0.002f * __fabsf(d);
+        if (tx < 0.1f) {
+            tx = 0.1f;
+        }
+        if (tx > 1.0f) {
+            tx = 1.0f;
+        }
+        d = gCursorY[i][0] - gPointerY[i];
         LerpTo(gPointerX[i], gCursorX[i][0], tx);
-        ty = 0.002f * math::FAbs(ty);
+        f32 ty = 0.002f * math::FAbs(d);
         if (ty < 0.1f) {
             ty = 0.1f;
         }
