@@ -109,6 +109,8 @@ public:
 
     f32 GetHeight() { return mHeight; }
     f32 GetLineHeight() { return mLineHeight; }
+    NewsTexture* GetPicture() { return mPicture; }
+    const wchar_t* GetPicLabel() { return mPicLabel; }
 
     MEMAllocator* mAllocator;          // at 0x00
     nw4r::ut::CharWriter* mWriter;     // at 0x04

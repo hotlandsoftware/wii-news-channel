@@ -457,11 +457,6 @@ static inline bool IsArticleShort() {
     return (s32)(sCreditView->mHeight + 60.0f) <= (s32)sArticleSize.y;
 }
 
-// The picture of the article body.
-static inline NewsTexture* GetBodyPicture() {
-    return sBodyView->mPicture;
-}
-
 static inline s32 GetMaxScrollLine() {
     s32 max = (lbl_80357568->mNumLines + sBodyView->mNumLines + 1 + sCreditView->mNumLines) -
               sLinesPerPage[lbl_80356970];
@@ -2031,31 +2026,41 @@ void Pins_ResetStacks() {
     }
 }
 
+// Distance from a to the screen position of pin.
+static inline f32 PinDistance(const math::VEC2& a, GlobePin* pin) {
+    math::VEC2 d;
+    math::VEC2 b = pin->GetPos();
+    d.x = a.x - b.x;
+    d.y = a.y - b.y;
+    return math::FSqrt(d.x * d.x + d.y * d.y);
+}
+
 void Pins_Sort() {
     Pins_ResetStacks();
     GlobePin** pin = sPins;
+    GlobePin** sorted;
+    BOOL linked;
+    u32 i;
+    u32 j;
     if (pin == NULL || sSortedPins == NULL) {
         return;
     }
 
-    for (u32 i = 0; i < sNumPins; i++, pin++) {
+    for (i = 0; i < sNumPins; i++, pin++) {
         if (*pin && (*pin)->mState == 1) {
-            GlobePin** sorted = sSortedPins;
-            BOOL linked = FALSE;
-            for (u32 j = 0; j < sNumPins; j++, sorted++) {
+            sorted = sSortedPins;
+            linked = FALSE;
+            for (j = 0; j < sNumPins; j++, sorted++) {
                 if (*sorted == NULL) {
                     *sorted = *pin;
                     break;
                 }
                 math::VEC2 a;
                 a = (*pin)->GetPos();
-                math::VEC2 b = (*sorted)->GetPos();
-                math::VEC2 d;
-                d.x = a.x - b.x;
-                d.y = a.y - b.y;
-                f32 dist = math::FSqrt(d.x * d.x + d.y * d.y);
+                f32 dist = PinDistance(a, *sorted);
                 GlobePin* p = *sorted;
-                if (dist < 35.0f * (*pin)->mRadius + 35.0f * p->mRadius) {
+                f32 r = 35.0f * p->mRadius;
+                if (dist < 35.0f * (*pin)->mRadius + r) {
                     for (; p; p = p->mNext) {
                         if (p->mNext == NULL) {
                             p->mNext = *pin;
@@ -2072,8 +2077,8 @@ void Pins_Sort() {
         }
     }
 
-    GlobePin** sorted = sSortedPins;
-    for (u32 i = 0; i < sNumPins; i++, sorted++) {
+    sorted = sSortedPins;
+    for (i = 0; i < sNumPins; i++, sorted++) {
         GlobePin* p = *sorted;
         if (p) {
             s32 n = 0;
@@ -2940,7 +2945,7 @@ BOOL Article_GetPictureRect(ut::Rect* rect, f32 x, f32 y, f32 scale) {
 }
 
 BOOL Article_GetZoomedPictureRect(ut::Rect* rect) {
-    NewsTexture* tex = GetBodyPicture();
+    NewsTexture* tex = sBodyView->GetPicture();
     if (tex == NULL) {
         return FALSE;
     }
