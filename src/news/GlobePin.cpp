@@ -20,6 +20,10 @@
 
 using namespace nw4r;
 
+// Latest pointer position of a channel (the same helpers as in Connect.cpp).
+static inline f32 GetCursorX(s32 chan) { return gCursorX[chan][0]; }
+static inline f32 GetCursorY(s32 chan) { return gCursorY[chan][0]; }
+
 // Not yet decompiled: globals of the globe screen.
 struct GlobeView {
     u8 unk0[4];
@@ -479,7 +483,7 @@ void GlobePin::Update(Camera* camera) {
             mE4 = 0xFF;
             for (s32 i = 0; i < 4; i++) {
                 if (IsPointerValid(i)) {
-                    math::VEC2 cursor(gCursorX[i][0], gCursorY[i][0]);
+                    math::VEC2 cursor(GetCursorX(i), GetCursorY(i));
                     if (cursor.y > minY && cursor.y < maxY) {
                         math::VEC2 screen = GetPos();
     f32 maxDist = 35.0f;
