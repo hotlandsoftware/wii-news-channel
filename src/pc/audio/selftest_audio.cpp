@@ -527,6 +527,23 @@ void TestSrc() {
     AXFreeVoice(vpb);
     Flush();
 
+    // Ratio 20: nothing limits the ratio. nw4r::snd asks for up to 44 with the
+    // channel's own sounds (a looped wave played five octaves up).
+    static u8 fast[2 * 4000];
+    for (int i = 0; i < 4000; i++) {
+        PutS16(fast + i * 2, 1000);
+    }
+    setup = DefaultSetup(fast, AxVoice::FORMAT_PCM16, 4000);
+    setup.srcType = AX_SRC_TYPE_LINEAR;
+    setup.ratio = 0x140000;
+    vpb = StartVoice(setup);
+    Prime();
+    PC_CHECK(DspCurrent(vpb) == AxVoice::GetDspAddressBySample(fast, 1920, AxVoice::FORMAT_PCM16));
+    PCAudioStep(1);
+    PC_CHECK(DspCurrent(vpb) == AxVoice::GetDspAddressBySample(fast, 3840, AxVoice::FORMAT_PCM16));
+    AXFreeVoice(vpb);
+    Flush();
+
     static u8 ramp[2 * 200];
     for (int i = 0; i < 200; i++) {
         PutS16(ramp + i * 2, static_cast<s16>(i * 100));

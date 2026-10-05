@@ -72,6 +72,19 @@ void SoundThread::SoundThreadProc() {
         if (reinterpret_cast<u32>(msg) == MSG_AX_CALLBACK) {
             ut::detail::AutoLock<OSMutex> lock(mMutex);
 
+#ifdef TARGET_PC
+            // On the console nothing of lower priority runs while this thread
+            // is in its update: the game's thread never sees a half-updated
+            // player list, and its own changes (SeqPlayer::Start(),
+            // FinishPlayer() and the other functions that take an
+            // AutoInterruptLock) are atomic for this thread. On PC the threads
+            // run in parallel, so the update takes that same lock for its
+            // whole length (docs/pc_port.md, "Sound: what plays"). Without
+            // it, starting a sound while another one is being stopped walks a
+            // list that the game's thread is unlinking.
+            ut::AutoInterruptLock pcUpdateLock;
+#endif
+
             u32 start = OSGetTick();
 
             AxManager::GetInstance().Update();

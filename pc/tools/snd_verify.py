@@ -67,9 +67,9 @@ def read_waves_list(waves_dir):
             p = line.split()
             w = dict(file=int(p[0]), index=int(p[1]), format=int(p[2]), rate=int(p[3]), samples=int(p[4]),
                      loop=int(p[5]), loop_start=int(p[6]), channels=int(p[7]), offset=int(p[8]),
-                     bytes=int(p[9]), wav=p[10], archive_offset=int(p[11]))
-            if len(p) >= 34:
-                h = [int(x, 16) for x in p[12:34]]
+                     bytes=int(p[9]), wav=p[10], archive_offset=int(p[11]), offset2=int(p[12]))
+            if len(p) >= 35:
+                h = [int(x, 16) for x in p[13:35]]
                 w["coefs"] = [x - 0x10000 if x & 0x8000 else x for x in h[:16]]
                 w["pred_scale"], w["yn1"], w["yn2"] = h[16], h[17], h[18]
             waves.append(w)
@@ -144,14 +144,29 @@ def read_log(path):
 # --- expected output -------------------------------------------------------------------
 
 class Bank:
-    """The reference waves, and where each one's data is in the DSP's address space."""
+    """The reference waves, and where each one's data is in the DSP's address space.
+
+    Addresses are physical byte addresses modulo 2^31: an ADPCM address is in
+    nibbles and has lost bit 31, a PCM16 address is in 16-bit units."""
 
     def __init__(self, waves_dir):
-        self.waves = [w for w in read_waves_list(waves_dir) if w["channels"] == 1]
-        for w in self.waves:
+        self.waves = []
+        for w in read_waves_list(waves_dir):
             rate, data = read_wav(w["wav"])
-            w["pcm"] = data[:, 0].astype(np.float64)
+            for channel in range(w["channels"]):
+                entry = dict(w)
+                entry["offset"] = w["offset"] if channel == 0 else w["offset2"]
+                entry["pcm"] = data[:, channel].astype(np.float64)
+                self.waves.append(entry)
         self.base = None
+
+    @staticmethod
+    def byte_address(v, address):
+        if v["format"] == "adpcm":
+            return address >> 1
+        if v["format"] == "pcm16":
+            return (address * 2) & 0x7FFFFFFF
+        return address & 0x7FFFFFFF
 
     def find_base(self, frames):
         """The byte address of the wave data: the value that puts the most voices at the start of a wave."""
@@ -171,20 +186,23 @@ class Bank:
         self.base = max(votes, key=votes.get)
         return True
 
+    def sample_of(self, w, v, address):
+        if v["format"] == "adpcm":
+            nibble = address - 2 * (self.base + w["offset"])
+            return (nibble // 16) * 14 + (nibble % 16) - 2
+        rel = (self.byte_address(v, address) - self.base - w["offset"]) & 0x7FFFFFFF
+        return rel // 2 if v["format"] == "pcm16" else rel
+
     def locate(self, v):
         """(wave, sample index of the voice's current address), or (None, 0)."""
-        if v["format"] != "adpcm" or self.base is None:
+        if self.base is None:
             return None, 0
-        rel = (v["cur"] >> 1) - self.base
+        code = {"pcm8": 0, "pcm16": 1, "adpcm": 2}[v["format"]]
+        rel = (self.byte_address(v, v["cur"]) - self.base) & 0x7FFFFFFF
         for w in self.waves:
-            if w["format"] == 2 and w["offset"] <= rel < w["offset"] + w["bytes"]:
-                nibble = v["cur"] - 2 * (self.base + w["offset"])
-                return w, (nibble // 16) * 14 + (nibble % 16) - 2
+            if w["format"] == code and w["offset"] <= rel < w["offset"] + w["bytes"]:
+                return w, self.sample_of(w, v, v["cur"])
         return None, 0
-
-    def sample_of(self, w, address):
-        nibble = address - 2 * (self.base + w["offset"])
-        return (nibble // 16) * 14 + (nibble % 16) - 2
 
 
 _four_tap = {}
@@ -212,8 +230,8 @@ class Run:
         self.wave = wave
         self.read = float(start_sample)   # samples read so far (unrolled over loops)
         self.frac = 0.0
-        self.end = bank.sample_of(wave, v["end"])
-        self.loop_start = bank.sample_of(wave, v["loop"]) if v["looped"] else None
+        self.end = bank.sample_of(wave, v, v["end"])
+        self.loop_start = bank.sample_of(wave, v, v["loop"]) if v["looped"] else None
         self.max_error = 0
         self.frames = 0
         self.ratios = set()

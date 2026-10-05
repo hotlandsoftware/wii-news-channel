@@ -105,6 +105,12 @@ int PCSndRenderMain(const char* spec, const char* dir, int onlyId, f32 seconds);
 // These are references that never went through nw4r::snd's playback.
 int PCSndDumpWavesMain(const char* spec, const char* dir);
 
+// `newschannel --snd-stress [CONTENT:PATH] [--seconds S]`: starts, stops, pauses
+// and mutes random sounds as fast as it can for S seconds (default 10) while
+// the sound thread and the audio frames run in real time, without a device.
+// Status 0 if nothing broke and every voice was released at the end.
+int PCSndStressMain(const char* spec, f32 seconds);
+
 // Writes a 16-bit WAV file. FALSE if the file cannot be written.
 bool PCSndWriteWav(const char* path, const s16* samples, u32 frames, u32 channels, u32 rate);
 

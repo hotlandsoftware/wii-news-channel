@@ -92,6 +92,9 @@ void PrintHelp(const char* program) {
     std::printf("  --dump-waves DIR [CONTENT:PATH]\n");
     std::printf("                   decode every wave of a sound archive's banks with the mixer's decoder\n");
     std::printf("                   into DIR/wave_FF_NNN.wav and DIR/waves.txt (reference for the above)\n");
+    std::printf("  --snd-stress [CONTENT:PATH] [--seconds S]\n");
+    std::printf("                   start, stop, pause and mute random sounds as fast as possible for S\n");
+    std::printf("                   seconds (default 10) against the running sound thread; no device\n");
     std::printf("  --version        print build information\n");
     std::printf("  --help           this text\n\n");
     std::printf("Options for --boot:\n");
@@ -147,6 +150,7 @@ void PCSelfTestFiles();   // selftest_files.cpp
 void PCSelfTestBackend(); // selftest_backend.cpp
 void PCSelfTestBoot();    // selftest_boot.cpp
 void PCSelfTestSnd();     // selftest_snd.cpp
+void PCSelfTestSndRender(); // selftest_snd.cpp; after PCSelfTestAudio()
 // PCSelfTestGX() and PCSelfTestGXWithContext() (selftest_gx.cpp): gx/pc_gx.h
 void PCSelfTestTexDecode(); // gx/texdecode_selftest.cpp
 static void PCSelfTestDolData();
@@ -275,6 +279,9 @@ static int RunSelfTest() {
     PCSelfTestSnd();
     PCSelfTestTexDecode();
     PCSelfTestAudio();
+    // Sounds through nw4r::snd's sound system. This starts the sound and task
+    // threads, which never end: the process must leave through PCExit().
+    PCSelfTestSndRender();
 
     if (sFailures == 0) {
         std::printf("self-test: all checks passed\n");
@@ -322,6 +329,7 @@ int main(int argc, char** argv) {
     const char* list_sounds = nullptr;
     const char* render_sounds = nullptr;
     const char* dump_waves = nullptr;
+    bool snd_stress = false;
     const char* snd_archive = "";
     int render_sound_id = -1;
     f32 render_seconds = 0.0f;
@@ -410,6 +418,11 @@ int main(int argc, char** argv) {
             if (i + 1 < argc && argv[i + 1][0] != '-') {
                 snd_archive = argv[++i];
             }
+        } else if (std::strcmp(arg, "--snd-stress") == 0) {
+            snd_stress = true;
+            if (i + 1 < argc && argv[i + 1][0] != '-') {
+                snd_archive = argv[++i];
+            }
         } else if (std::strcmp(arg, "--sound") == 0) {
             render_sound_id = std::atoi(OptionValue(argc, argv, &i));
         } else if (std::strcmp(arg, "--seconds") == 0) {
@@ -449,13 +462,16 @@ int main(int argc, char** argv) {
     if (dump_waves != nullptr) {
         return PCSndDumpWavesMain(snd_archive, dump_waves);
     }
+    if (snd_stress) {
+        PCOSExit(PCSndStressMain(snd_archive, render_seconds));
+    }
     if (render_sounds != nullptr) {
         // PCOSExit(): the sound and task threads are still running.
         PCOSExit(PCSndRenderMain(snd_archive, render_sounds, render_sound_id, render_seconds));
     }
 
     if (selftest_only) {
-        return RunSelfTest();
+        PCExit(RunSelfTest());
     }
     if (selftest_gl) {
         // The part of the GX self-test that needs an OpenGL context: a hidden
@@ -487,8 +503,8 @@ int main(int argc, char** argv) {
     if (!boot) {
         int result = RunSelfTest();
         std::printf("Run with --boot to start the game (see docs/pc_port.md).\n");
-        SDL_Quit();
-        return result;
+        // Not `return`: the self-test leaves the sound threads running.
+        PCExit(result);
     }
 
     std::printf("contents: %s\nnand:     %s\n", PCGetContentsDir(), PCGetNandDir());

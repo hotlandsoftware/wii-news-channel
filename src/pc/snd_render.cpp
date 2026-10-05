@@ -170,8 +170,22 @@ bool PCSndWriteWav(const char* path, const s16* samples, u32 frames, u32 channel
 
 // --- the renderer ------------------------------------------------------------------------
 
+namespace {
+
+// `manual`: the renderer steps the audio frames itself. Otherwise the audio
+// clock thread runs them in real time (--snd-stress).
+bool Open(const void* archive, u32 size, bool manual);
+
+} // namespace
+
 bool PCSndRenderOpen(const void* archive, u32 size) {
-    if (sRenderer != nullptr || archive == nullptr || !PCAudioIsManual()) {
+    return PCAudioIsManual() && Open(archive, size, true);
+}
+
+namespace {
+
+bool Open(const void* archive, u32 size, bool manual) {
+    if (sRenderer != nullptr || archive == nullptr) {
         return false;
     }
     // Wave data in MEM2, like the game's: the DSP addresses nw4r::snd computes
@@ -210,6 +224,9 @@ bool PCSndRenderOpen(const void* archive, u32 size) {
     // The sound thread registers its AX callback when it starts running; from
     // then on every audio frame is answered.
     detail::SoundThread::GetInstance().RegisterPlayerCallback(&r->sync);
+    if (!manual) {
+        return true;
+    }
     bool answered = false;
     for (int i = 0; i < 400 && !answered; i++) {
         answered = StepFrame(10 * 1000);
@@ -221,6 +238,8 @@ bool PCSndRenderOpen(const void* archive, u32 size) {
     }
     return true;
 }
+
+} // namespace
 
 void PCSndRenderClose() {
     Renderer* r = sRenderer;
@@ -455,11 +474,12 @@ int PCSndDumpWavesMain(const char* spec, const char* dir) {
         archive.Setup(data);
         std::fprintf(list, "# %s: waves decoded with the mixer's decoder\n", spec);
         std::fprintf(list, "# file wave format rate samples loop loopStart channels dataOffset dataBytes wav "
-                           "archiveOffset [coef x16 predScale yn1 yn2 loopPredScale loopYn1 loopYn2]\n");
+                           "archiveOffset dataOffset2 [coef x16 predScale yn1 yn2 loopPredScale loopYn1 loopYn2]\n");
         std::fprintf(list, "# format: 0 PCM8, 1 PCM16, 2 DSP-ADPCM. dataOffset: of channel 0, in the file's wave\n"
-                           "# data. archiveOffset: of the same byte, from the start of the archive (RSAR). The\n"
-                           "# hexadecimal values are channel 0's ADPCM parameters (pc/tools/snd_verify.py decodes\n"
-                           "# the wave from the content file with them, independently of the mixer).\n");
+                           "# data; dataOffset2: of channel 1 (0 for a mono wave). archiveOffset: of channel 0's\n"
+                           "# first byte, from the start of the archive (RSAR). The hexadecimal values are\n"
+                           "# channel 0's ADPCM parameters (pc/tools/snd_verify.py decodes the wave from the\n"
+                           "# content file with them, independently of the mixer).\n");
         for (u32 g = 0; g < archive.GetGroupCount(); g++) {
             SoundArchive::GroupInfo group;
             if (!archive.detail_ReadGroupInfo(g, &group)) {
@@ -505,11 +525,14 @@ int PCSndDumpWavesMain(const char* spec, const char* dir) {
                     std::snprintf(path, sizeof(path), "%s/wave_%02u_%03d.wav", dir, item.fileId, index);
                     ok = ok && PCSndWriteWav(path, mixed, samples, channels, wave.sampleRate);
                     std::free(mixed);
-                    std::fprintf(list, "%u %d %u %u %u %u %u %u %u %u %s %u", item.fileId, index, wave.sampleFormat,
+                    std::fprintf(list, "%u %d %u %u %u %u %u %u %u %u %s %u %u", item.fileId, index, wave.sampleFormat,
                                  wave.sampleRate, samples, wave.loopFlag, wave.loopStart, channels, offset, bytes,
                                  ok ? path : "-",
                                  static_cast<u32>(static_cast<const u8*>(wave.channelParam[0].dataAddr) -
-                                                  static_cast<const u8*>(data)));
+                                                  static_cast<const u8*>(data)),
+                                 channels > 1 ? static_cast<u32>(static_cast<const u8*>(wave.channelParam[1].dataAddr) -
+                                                                 static_cast<const u8*>(waveBase))
+                                              : 0u);
                     if (wave.sampleFormat == detail::WaveFile::FORMAT_ADPCM) {
                         const detail::AdpcmInfo& adpcm = wave.channelParam[0].adpcmInfo;
                         for (int k = 0; k < 16; k++) {
@@ -532,4 +555,152 @@ int PCSndDumpWavesMain(const char* spec, const char* dir) {
     std::printf("%s: %u waves written to %s (list: %s)%s\n", spec, total, dir, listPath,
                 failed != 0 ? "; some could not be decoded" : "");
     return failed == 0 ? 0 : 1;
+}
+
+// --- --snd-stress ---------------------------------------------------------------------------
+//
+// The game's thread against the sound thread and the audio "interrupt", all
+// three running freely in real time: sounds are started, stopped, paused and
+// muted as fast as the calling thread can, the way the game's sound manager
+// calls nw4r::snd, only far more often. On the console the sound thread
+// cannot be interrupted by the game's thread; here the three really run in
+// parallel, and this is the test that nw4r::snd survives it (section 20).
+
+namespace {
+
+u32 sStressSeed = 12345;
+u32 StressRandom(u32 range) {
+    sStressSeed = sStressSeed * 1664525u + 1013904223u;
+    return (sStressSeed >> 8) % range;
+}
+
+f64 Seconds() {
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    return static_cast<f64>(now.tv_sec) + static_cast<f64>(now.tv_nsec) / 1e9;
+}
+
+} // namespace
+
+int PCSndStressMain(const char* spec, f32 seconds) {
+    if (spec == nullptr || spec[0] == '\0') {
+        spec = "9:rev_news.brsar";
+    }
+    if (seconds <= 0.0f) {
+        seconds = 10.0f;
+    }
+    u32 size = 0;
+    void* data = PCSndLoadArchive(spec, &size);
+    if (data == nullptr) {
+        std::fprintf(stderr, "newschannel: cannot load the sound archive '%s' from '%s'\n", spec, PCGetContentsDir());
+        return 1;
+    }
+    PCAudioSetMute(true); // real-time audio frames, no device
+    if (!Open(data, size, false)) {
+        return 1;
+    }
+    std::free(data);
+    Renderer* r = sRenderer;
+    const u32 soundCount = PCSndRenderSoundCount();
+
+    enum { kHandles = 6 };
+    SoundHandle handles[kHandles];
+    u64 operations = 0, started = 0, refused = 0;
+    u32 maxVoices = 0;
+    const u64 firstBlock = PCAudioGetBlockCount();
+    const u32 firstSync = r->sync.Count();
+    const f64 start = Seconds();
+    f64 nextUpdate = start;
+    f64 now = start;
+    while (now - start < seconds) {
+        SoundHandle& handle = handles[StressRandom(kHandles)];
+        switch (StressRandom(8)) {
+        case 0:
+        case 1:
+        case 2: // PlaySE(), PlaySound()
+            if (r->player.StartSound(&handle, StressRandom(soundCount))) {
+                started++;
+                handle.SetVolume(1.0f, 0);
+                SeqSoundHandle seq(&handle);
+                seq.SetTrackMute(0xFFFFFFFF, false);
+                handle.SetPitch(1.0f);
+                handle.SetPan(0.0f);
+            } else {
+                refused++;
+            }
+            break;
+        case 3: // StopSound()
+            handle.Stop(static_cast<int>(StressRandom(3)) * 20);
+            break;
+        case 4: // PauseSound()
+            handle.Pause(StressRandom(2) != 0, static_cast<int>(StressRandom(2)) * 10);
+            break;
+        case 5: { // SetSoundVolume()
+            const f32 volume = static_cast<f32>(StressRandom(11)) / 10.0f;
+            handle.SetVolume(volume, 0);
+            if (handle.IsAttachedSound()) {
+                SeqSoundHandle seq(&handle);
+                seq.SetTrackMute(0xFFFFFFFF, volume < 0.05f);
+            }
+            break;
+        }
+        case 6:
+            handle.SetPitch(0.5f + static_cast<f32>(StressRandom(16)) / 10.0f);
+            handle.SetPan(static_cast<f32>(StressRandom(21)) / 10.0f - 1.0f);
+            break;
+        default:
+            (void)handle.IsAttachedSound();
+            break;
+        }
+        operations++;
+        const u32 voices = PCAXDspGetStats()->voices;
+        maxVoices = voices > maxVoices ? voices : maxVoices;
+        now = Seconds();
+        if (now >= nextUpdate) { // UpdateSound(), once per picture
+            r->player.Update();
+            nextUpdate += kVideoFrameUs / 1e6;
+        }
+        if ((operations & 63) == 0) {
+            struct timespec pause = {0, 200 * 1000};
+            nanosleep(&pause, nullptr);
+        }
+    }
+
+    // Everything must come to rest.
+    // (A handle that was reused left its earlier sound playing, loops
+    // included, so the players are asked, not the handles.)
+    for (u32 i = 0; i < r->archive.GetPlayerCount(); i++) {
+        r->player.GetSoundPlayer(i).StopAllSound(0);
+    }
+    // (Released notes fade for as long as their instrument says: seconds.)
+    bool silent = false;
+    for (int i = 0; i < 1500 && !silent; i++) {
+        r->player.Update();
+        struct timespec pause = {0, 10 * 1000 * 1000};
+        nanosleep(&pause, nullptr);
+        silent = PCAXDspGetStats()->voices == 0;
+    }
+    if (!silent) {
+        std::printf("sound stress: %u voices still running; sounds per player:", PCAXDspGetStats()->voices);
+        for (u32 i = 0; i < r->archive.GetPlayerCount(); i++) {
+            std::printf(" %d", r->player.GetSoundPlayer(i).GetPlayingSoundCount());
+        }
+        std::printf("\n");
+    }
+    const u64 blocks = PCAudioGetBlockCount() - firstBlock;
+    const u32 answered = r->sync.Count() - firstSync;
+    const u32 bad = PCAXDspGetStats()->badAddresses;
+    const f64 elapsed = Seconds() - start;
+    // The sound thread must have kept up: one update per audio frame (its
+    // message queue holds four; a frame is lost only if it falls behind).
+    const bool keptUp = answered + 8 >= blocks && blocks > static_cast<u64>(elapsed * 300);
+    const bool ok = silent && bad == 0 && keptUp;
+    std::printf("sound stress: %.1f s, %llu operations, %llu sounds started, %llu refused, up to %u voices;\n"
+                "              %llu audio frames, %u answered by the sound thread, %u bad sample addresses, %s\n",
+                elapsed, static_cast<unsigned long long>(operations), static_cast<unsigned long long>(started),
+                static_cast<unsigned long long>(refused), maxVoices, static_cast<unsigned long long>(blocks), answered,
+                bad, silent ? "all voices released" : "VOICES STILL RUNNING");
+    std::printf("sound stress: %s\n", ok ? "OK" : "FAILED");
+    std::fflush(stdout);
+    return ok ? 0 : 1;
 }

@@ -908,6 +908,168 @@ void TestArchive(const char* spec, const char* name, bool own) {
 
 } // namespace
 
+// --- sounds through the real playback path --------------------------------------------
+//
+// SoundArchivePlayer::StartSound(), the sound thread, the sequence player,
+// channels, voices, AX and the DSP program, with the audio frames stepped by
+// the renderer (snd_render.cpp). No device. The numbers below are ranges
+// around what the channel's own archive gives (docs/pc_port.md, "Sound: what
+// plays"); pc/tools/snd_verify.py compares the samples themselves.
+
+namespace {
+
+// The first sample frame that is not silent, or `frames`.
+u32 FirstSound(const PCSndRendered& sound) {
+    for (u32 i = 0; i < sound.frames; i++) {
+        if (sound.samples[i * 2] != 0 || sound.samples[i * 2 + 1] != 0) {
+            return i;
+        }
+    }
+    return sound.frames;
+}
+
+u64 Energy(const PCSndRendered& sound, u32 channel) {
+    u64 sum = 0;
+    for (u32 i = 0; i < sound.frames; i++) {
+        const s32 value = sound.samples[i * 2 + channel];
+        sum += static_cast<u64>(value * value);
+    }
+    return sum;
+}
+
+void TestRenderNews() {
+    u32 size = 0;
+    void* data = PCSndLoadArchive("9:rev_news.brsar", &size);
+    PC_CHECK(data != nullptr);
+    const bool open = data != nullptr && PCSndRenderOpen(data, size);
+    PC_CHECK(open);
+    std::free(data);
+    if (!open) {
+        return;
+    }
+    PC_CHECK(PCSndRenderSoundCount() == 88);
+
+    // 35 NEW_SE_MENU_SEL (the pointer enters a button): two short notes on
+    // one voice, and the sound ends by itself.
+    PCSndRendered first, second;
+    PC_CHECK(PCSndRenderSound(35, 2.0f, &first));
+    PC_CHECK(first.startResult == 0 && !first.cut && first.badAddresses == 0 && first.clipped == 0);
+    PC_CHECK(first.maxVoices == 1 && first.voiceFrames >= 10 && first.voiceFrames <= 40);
+    PC_CHECK(first.peak > 1000 && first.peak < 20000);
+    PC_CHECK(first.lastFrame - first.firstFrame < 60); // under 180 ms
+    // Mono, in the middle.
+    PC_CHECK(Energy(first, 0) == Energy(first, 1) && Energy(first, 0) != 0);
+
+    // The same sound again gives the same samples: nothing depends on the
+    // host's timing. (Only where it starts moves, with the phase of the game's
+    // 60 Hz update against the 3 ms audio frames.)
+    PC_CHECK(PCSndRenderSound(35, 2.0f, &second));
+    const u32 a = FirstSound(first), b = FirstSound(second);
+    const u32 length = 20 * 96;
+    PC_CHECK(a + length <= first.frames && b + length <= second.frames);
+    if (a + length <= first.frames && b + length <= second.frames) {
+        PC_CHECK(std::memcmp(first.samples + a * 2, second.samples + b * 2, length * 4) == 0);
+    }
+    std::free(first.samples);
+    std::free(second.samples);
+
+    // 26 WTR_SE_COM_BUTTON (A on a button): six notes on up to three voices
+    // over about 1.4 s, panned, so the channels differ.
+    PCSndRendered button;
+    PC_CHECK(PCSndRenderSound(26, 4.0f, &button));
+    PC_CHECK(button.startResult == 0 && !button.cut && button.badAddresses == 0 && button.clipped == 0);
+    PC_CHECK(button.maxVoices == 3 && button.voiceFrames > 700 && button.voiceFrames < 1300);
+    const u32 buttonMs = (button.lastFrame - button.firstFrame + 1) * 3;
+    PC_CHECK(buttonMs > 1100 && buttonMs < 1700);
+    PC_CHECK(Energy(button, 0) != 0 && Energy(button, 1) != 0 && Energy(button, 0) != Energy(button, 1));
+    std::free(button.samples);
+
+    // 42 NEW_SE_GENRE_SEL plays its wave 44 semitones up: a pitch ratio of
+    // 17.5, which the DSP program must not clamp. Two notes, about 60 ms.
+    PCSndRendered high;
+    PC_CHECK(PCSndRenderSound(42, 2.0f, &high));
+    PC_CHECK(high.startResult == 0 && !high.cut && high.badAddresses == 0);
+    PC_CHECK(high.maxVoices == 1 && high.voiceFrames >= 12 && high.voiceFrames <= 40 && high.peak > 500);
+    std::free(high.samples);
+
+    // 29 NEW_BGM_READ has volume 0 in the archive: voices run, nothing is
+    // heard (the game raises the volume itself), and it loops, so it is cut.
+    PCSndRendered muted;
+    PC_CHECK(PCSndRenderSound(29, 1.5f, &muted));
+    PC_CHECK(muted.startResult == 0 && muted.cut && muted.voiceFrames > 100 && muted.peak == 0);
+    std::free(muted.samples);
+
+    // 28 NEW_BGM_NEWS: the music. Many voices, never full scale.
+    PCSndRendered music;
+    PC_CHECK(PCSndRenderSound(28, 3.0f, &music));
+    PC_CHECK(music.startResult == 0 && music.cut && music.badAddresses == 0 && music.clipped == 0);
+    PC_CHECK(music.maxVoices >= 4 && music.peak > 2000 && music.peak < 30000);
+    std::printf("self-test: sounds through nw4r::snd and AX: MENU_SEL %u voice frames, COM_BUTTON %u ms on %u voices, "
+                "BGM_NEWS up to %u voices\n",
+                first.voiceFrames, buttonMs, button.maxVoices, music.maxVoices);
+    std::free(music.samples);
+
+    // A sound that does not exist is refused and plays nothing.
+    PCSndRendered none;
+    PC_CHECK(PCSndRenderSound(1000, 0.2f, &none));
+    PC_CHECK(none.startResult != 0 && none.voiceFrames == 0 && none.peak == 0);
+    std::free(none.samples);
+
+    PCSndRenderClose();
+}
+
+void TestRenderHomeMenu() {
+    u32 size = 0;
+    void* data = PCSndLoadArchive("6:HomeButton3/Huf8_HomeButtonSe.brsar", &size);
+    PC_CHECK(data != nullptr);
+    const bool open = data != nullptr && PCSndRenderOpen(data, size);
+    PC_CHECK(open);
+    std::free(data);
+    if (!open) {
+        return;
+    }
+    // 0 HOMESE_HOME_BUTTON: a stereo DSP-ADPCM wave, one voice per channel.
+    PCSndRendered stereo;
+    PC_CHECK(PCSndRenderSound(0, 4.0f, &stereo));
+    PC_CHECK(stereo.startResult == 0 && !stereo.cut && stereo.badAddresses == 0 && stereo.maxVoices == 2);
+    PC_CHECK(Energy(stereo, 0) != 0 && Energy(stereo, 1) != 0 && Energy(stereo, 0) != Energy(stereo, 1));
+    std::free(stereo.samples);
+
+    // 16 HOMESE_START_CONNECT_WINDOW plays the archive's one PCM16 wave, whose
+    // samples were swapped to host order on load. It is a chime that dies
+    // away over 1.3 s; read in the wrong byte order it would be noise at a
+    // constant level.
+    PCSndRendered pcm;
+    PC_CHECK(PCSndRenderSound(16, 4.0f, &pcm));
+    PC_CHECK(pcm.startResult == 0 && !pcm.cut && pcm.badAddresses == 0 && pcm.peak > 3000);
+    const u32 start = FirstSound(pcm);
+    const u32 window = 3200; // 100 ms
+    PC_CHECK(start + 12 * window <= pcm.frames);
+    if (start + 12 * window <= pcm.frames) {
+        u64 early = 0, late = 0;
+        for (u32 i = 0; i < window; i++) {
+            const s32 x = pcm.samples[(start + i) * 2];
+            const s32 y = pcm.samples[(start + 10 * window + i) * 2];
+            early += static_cast<u64>(x * x);
+            late += static_cast<u64>(y * y);
+        }
+        PC_CHECK(early > late * 20);
+    }
+    std::free(pcm.samples);
+    PCSndRenderClose();
+}
+
+} // namespace
+
+void PCSelfTestSndRender() {
+    if (PCContentExists(9)) {
+        TestRenderNews();
+    }
+    if (PCContentExists(6)) {
+        TestRenderHomeMenu();
+    }
+}
+
 void PCSelfTestSnd() {
     TestSeqFile();
     TestBankFile();
