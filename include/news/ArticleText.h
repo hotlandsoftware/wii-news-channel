@@ -109,6 +109,7 @@ public:
 
     f32 GetHeight() { return mHeight; }
     f32 GetLineHeight() { return mLineHeight; }
+    s32 GetNumLines() { return mNumLines; }
     NewsTexture* GetPicture() { return mPicture; }
     const wchar_t* GetPicLabel() { return mPicLabel; }
 

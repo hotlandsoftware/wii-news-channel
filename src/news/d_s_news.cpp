@@ -2717,28 +2717,28 @@ f32 Article_GetMaxScrollOffset() {
     s32 bodyLines = sBodyView->mNumLines;
     s32 bodyStart = headlineLines + 1;
     s32 creditStart = bodyStart + bodyLines;
-    s32 max = (headlineLines + bodyLines + sCreditView->mNumLines + 1) -
-              sLinesPerPage[lbl_80356970];
-    f32 line = max & ~(max >> 31);
+    f32 line = GetMaxScrollLine();
     // Never read. The original converts headlineLines here as well: the dead conversion
     // takes an int-to-float stack slot and leaves its xoris in the entry block.
     f32 headline = headlineLines;
     if (line > creditStart) {
         f32 h = GetLogoHeight();
-        return -(sBodyView->mLineHeight * sBodyView->mNumLines +
-                 (lbl_80357568->mLineHeight * lbl_80357568->mNumLines + h * gTextScale) +
-                 (line - creditStart) * sCreditView->mLineHeight);
+        f32 y = lbl_80357568->GetLineHeight() * lbl_80357568->GetNumLines() + h * gTextScale;
+        y = sBodyView->GetLineHeight() * sBodyView->mNumLines + y;
+        y += (line - creditStart) * sCreditView->GetLineHeight();
+        return -y;
     }
     if (line > bodyStart) {
         f32 h = GetLogoHeight();
-        return -(lbl_80357568->mLineHeight * lbl_80357568->mNumLines + h * gTextScale +
+        f32 logo = h * gTextScale;
+        return -(lbl_80357568->mLineHeight * lbl_80357568->GetNumLines() + logo +
                  (line - bodyStart) * sBodyView->mLineHeight);
     }
     if (line > headlineLines) {
         f32 h = GetLogoHeight();
-        return -(lbl_80357568->mLineHeight * lbl_80357568->mNumLines + h * gTextScale);
+        return -(lbl_80357568->GetLineHeight() * lbl_80357568->GetNumLines() + h * gTextScale);
     }
-    return -(line * (headlineLines * lbl_80357568->mLineHeight));
+    return -(line * (headlineLines * lbl_80357568->GetLineHeight()));
 }
 
 void Article_SetHeight(f32 width) {
