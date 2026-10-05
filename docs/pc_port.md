@@ -24,6 +24,7 @@ Contents:
 15. [Milestone 2: the boot](#15-milestone-2-the-boot)
 16. [GX backend (milestone 3)](#16-gx-backend-milestone-3)
 17. [Texture formats and the texture codec](#17-texture-formats-and-the-texture-codec)
+18. [Audio (AX, DSP, AI)](#18-audio-ax-dsp-ai)
 
 ## 1. Decisions
 
@@ -45,7 +46,7 @@ pc/                         build system and tools of the PC port
   CMakeLists.txt            the build (out-of-tree, in build/pc)
   cmake/NewsLibrary.cmake   compiler flags, news_library()
   ported/<library>.txt      which files of each library are built into the program
-                            (sdk_*.txt, rvl_mem.txt: SDK source compiled natively, sections 11, 14)
+                            (sdk_*.txt, rvl_mem.txt: SDK source compiled natively, sections 11, 14, 18)
   cmake/private_symbols.ver keeps the game's operator new/delete out of shared libraries
   tools/status.py           which files compile
   tools/gen_stubs.py        writes src/pc/sdk/stubs_generated.cpp
@@ -71,6 +72,8 @@ src/pc/                     PC-only sources
   sdk/stubs_generated.cpp   generated; never edit
   gx/texdecode.h/.cpp       GX texture images to and from RGBA8 (section 17)
   gx/texdecode_tool.cpp     PNG writer, `--list-textures`, `--dump-texture`
+  audio/                    the AX program of the DSP, the audio output and its clock (section 18);
+                            pc_audio.h is what other PC code may call
   endian/fmt_<format>.cpp   byte order: one converter per asset format, and the registry (section 12)
   libc/wchar16.cpp          16-bit wcslen(), swprintf() and so on
   deadstripped/<library>.cpp  definitions the DOL's linker removed but gcc needs
@@ -146,6 +149,7 @@ build/pc/newschannel --boot --contents path/to/contents --nand-dir path/to/nand 
 `newschannel` without options prints its build information, initialises SDL, runs the self-test and exits with status 0.
 `newschannel --boot` calls the game's own `main()` (renamed to `NewsMain` by the build). The game starts, loads its assets, creates its news scene, runs its frame loop and draws its 2D screens in the window (section 16); closing the window shuts it down through the game's own power-button path. Section 15 describes how far it gets and section 14 lists the options (`--frames N`, `--contents DIR`, `--nand-dir DIR`, `--dol FILE`, `--lang`, `--wide`, `--no-window`, `--input SCRIPT`, `--screenshot N[,N...]`, `--screenshot-dir DIR`).
 `newschannel --window-test` opens the window and runs empty frames without the game.
+`newschannel --audio-test` plays a two-second tone through AX and `nw4r::snd`'s voice (section 18).
 `newschannel --list-textures 9` and `newschannel --dump-texture 9:TPLCommon.tpl.LZ:0 build/scratch/t.png` list and decode the textures in the contents (section 17).
 
 `extract_wad.py --contents` writes `orig/HAGE/contents/NN.app` (NN = content index: 00, 02 to 11). The game's archive number `n` is content `n + 2`.
@@ -206,7 +210,7 @@ inline f32 FAbs(register f32 x) {
 
 - The GX FIFO (`GXWGFifo.f32 = x`, `WGPIPE.f = x`) compiles unchanged: both names are macros for `gPCGXFifo` (`<pc/gx_fifo.h>`), whose members are write-only ports that call `PCGXFifoWrite*()` in `src/pc/sdk/gx_fifo.cpp`.
 - A variable at a fixed address (`u32 __OSBusClock : 0x800000F8;`) becomes `extern` under `TARGET_PC` in the header and is defined in `src/pc/sdk/lowmem.cpp`.
-- Other hardware registers (`__VIRegs`, `__PIRegs`, `DSP_HW_REGS`, EXI) are only used by SDK sources, which are not compiled. If shared code touches one, replace the access with a backend function; do not emulate the register.
+- Other hardware registers (`__VIRegs`, `__PIRegs`, `DSP_HW_REGS`, EXI) are only used by SDK sources, which are not compiled. If shared code touches one, replace the access with a backend function; do not emulate the register. (`DSP_HW_REGS` is not declared on PC: `<revolution/dsp.h>` is included by AX, which is compiled, section 18.)
 - Never cast an integer constant to a pointer on PC.
 
 **R7. Mangled names.** Calls through CodeWarrior-mangled `extern "C"` names (`__ct__5GlobeFv(globe)`, `Calc__13SoundResourceFv()`) and placeholders (`fn_80012345`) stay as they are in the shared source. Define each name once as a thunk in `src/pc/thunks/<Class>.cpp` with the macros of `<pc/thunk.h>` (`PC_THUNK_CTOR`, `PC_THUNK_DTOR`, `PC_THUNK_METHOD`, `PC_THUNK_STATIC`, or a hand-written `extern "C"` function when there are parameters). Thunk files are compiled with `-fno-access-control`. Until a thunk exists, `gen_stubs.py` lists the name in its "CodeWarrior names" group. A placeholder for data (`lbl_80012345`) needs the real variable; give it its real name in the shared source if that is neutral for the Wii build.
@@ -262,7 +266,8 @@ Adding a file to the build: fix it until `status.py -f <name>` passes, add it to
 | `nw4r_ut` | 18 | 18 | |
 | `rvl_mem` | 6 | 6 | SDK source compiled as it is (section 11) |
 | `sdk_tmcc_jpeg`, `sdk_axfx`, `sdk_net`, `sdk_wenc` | 17 | 17 | SDK source compiled as it is (section 14); 13 of the files are in the build |
-| **Total** | **240** | **240** | |
+| `sdk_ax` | 10 | 10 | AX, compiled as it is (section 18); 9 of the files are in the build (not the DSP's program, `DSPCode.c`) |
+| **Total** | **250** | **250** | |
 
 Stubs (`gen_stubs.py`): **12 functions, 0 data** (after milestone 1: 404 and 9). What is left:
 
@@ -274,7 +279,7 @@ Stubs (`gen_stubs.py`): **12 functions, 0 data** (after milestone 1: 404 and 9).
 None of them is called during the boot of section 15: the boot log has no `unimplemented:` line.
 No CodeWarrior name is stubbed: the 44 names the game calls have thunks in `src/pc/thunks`.
 
-Stubs are not the whole picture: AX/AI, NWC24/SO/VF, KPAD/WPAD buttons and HBM are hand-written placeholders that are silent by design (section 14, "Placeholders are weak and silent"). They are the work of milestones 4 to 7. GX is implemented (section 16).
+Stubs are not the whole picture: NWC24/SO/VF, KPAD/WPAD buttons and HBM are hand-written placeholders that are silent by design (section 14, "Placeholders are weak and silent"). They are the work of milestones 4 to 7. GX is implemented (section 16), and so are AX, the DSP and the AI (section 18).
 
 ## 8. Milestones
 
@@ -284,7 +289,7 @@ Stubs are not the whole picture: AX/AI, NWC24/SO/VF, KPAD/WPAD buttons and HBM a
 - [x] **3. It draws.** GX to OpenGL layer (state, TEV, textures, the FIFO), VI frame pacing; layouts and fonts on screen (sections 16 and 17; what was looked at and what is still missing: section 16, "Integration: what the screens look like").
 - [ ] **4. Input.** KPAD/WPAD from mouse, keyboard and game controllers; the pointer and buttons work.
 - [ ] **5. News.** NWC24 download tasks, VF and NET replaced by libcurl and host files; a news file loads, articles and slide show work, JPEG pictures decode.
-- [ ] **6. Globe, effects, sound.** `nw4r::g3d` globe, `nw4r::ef` pointer effects, AX/AI output through SDL audio, `nw4r::snd` playing the sound archive.
+- [ ] **6. Globe, effects, sound.** `nw4r::g3d` globe, `nw4r::ef` pointer effects, AX/AI output through SDL audio, `nw4r::snd` playing the sound archive. Done so far: the audio backend (section 18). Sounds do not start yet, because the files inside the sound archive have no byte-order converters (section 15, "Bypasses").
 - [ ] **7. Polish.** HOME Menu, save data, settings and language selection, window scaling and aspect ratio, a decision on the Operations Guide (its viewer is PowerPC code), packaging, 64-bit.
 
 ## 9. Known hazards for later milestones
@@ -539,7 +544,7 @@ The guard for such a loader is `PCEndianIsHostOrder(data, size)`, which is true 
 | Format | Loaded | Reader | What to know |
 | --- | --- | --- | --- |
 | Effects `.breff`, `.breft` (`REFF`, `REFT`) | **start-up**: `PointerEffect::PointerEffect()` in `SystemInit()` | `ef::Resource::Add()`, `AddTexture()`, `RelocateCommand()` | The name tables are read bytewise (`(p[0] << 8) + p[1]`) and must NOT be swapped; `NameTable::numEntry`, the project header and `TextureData` are read as values. `RelocateCommand()` reads two `u8` fields as one `u16` (`*reinterpret_cast<u16*>(&header->curveFlag)`), which needs a `TARGET_PC` guard in `ef_resource.cpp`. The animation-curve key tables depend on the curve type (`ef_res_animcurve.h`). |
-| The files inside a sound archive (`RWSD`, `RBNK`, `RSEQ`, `RWAR`, `RWAV`, `RSTM`) | when a sound starts | `nw4r::snd` (`SeqFileReader`, `BankFileReader`, `WsdFileReader`, `WaveFileReader`) | Register a converter per magic and `detail_GetFileAddress()` starts handing the files out. `Util::DataRef`/`Table` offsets throughout; `SeqFileReader` already goes through `Util::ReadBigEndian()` for some fields (do not define `NW4R_LITLE_ENDIAN`: the converted tables would be swapped back); sample data is big-endian PCM16/ADPCM that the mixer has to read as such; sequence data is a byte stream |
+| The files inside a sound archive (`RWSD`, `RBNK`, `RSEQ`, `RWAR`, `RWAV`, `RSTM`) | when a sound starts | `nw4r::snd` (`SeqFileReader`, `BankFileReader`, `WsdFileReader`, `WaveFileReader`) | Register a converter per magic and `detail_GetFileAddress()` starts handing the files out. `Util::DataRef`/`Table` offsets throughout; `SeqFileReader` already goes through `Util::ReadBigEndian()` for some fields (do not define `NW4R_LITLE_ENDIAN`: the converted tables would be swapped back); sample data is big-endian PCM16/ADPCM and must not be converted: the mixer reads it as such (section 18); sequence data is a byte stream |
 | Model `.brres` (`bres`, with `MDL0`, `TEX0`...) | **start-up**, in the background: `LoadEarth()` in `d_scene.cpp` (streaming LZ, so call `PCEndianFixFile()` when the last piece is in) | `g3d::ResFile::Init()`/`Bind()` | offsets relative to each structure, string tables, display lists (GX command streams: leave big-endian), vertex arrays (big-endian for the FIFO interpreter, or convert per attribute format) |
 | News file `news.bin` | when a download finishes | `NewsData.h` structs, `NewsHeader::At()` | all `u32`/`u16`, 17 offset fields, 16-bit big-endian text; pictures are JPEG (bytes). No magic at offset 0 that is safe to key on: convert explicitly after the CRC check |
 | Save file `savedata.dat` | start-up, if it exists | `SaveData.cpp` | written from a struct. On PC it is simply little-endian and not interchangeable with a Wii save; convert on read and write if that is wanted |
@@ -606,7 +611,7 @@ This part of milestone 2 gives the game a screen to wait on, the console's setti
 | `src/pc/pc_config.cpp` | (PC) | settings: defaults, `newschannel.ini`, `NEWSCHANNEL_*` variables, command line |
 | `src/pc/sdk/kpad.cpp`, `wpad.cpp` | KPAD, WPAD | placeholder for milestone 4: one remote on channel 0, no buttons, pointing at the mouse |
 | `src/pc/gx/` | GX | real: section 16 |
-| `src/pc/sdk/ax_noop.cpp` | AX, AI, AXFX hooks | placeholder for milestone 6 |
+| `src/pc/sdk/ai.cpp`, `dsp.cpp`, `axfx.cpp`, `src/pc/audio/` | AI, DSP, AXFX hooks; AX is the SDK's source | real: section 18 |
 | `src/pc/sdk/nwc24_noop.cpp` | NWC24, SO, VF, NCD, `NETGetUniversalCalendar` | placeholder for milestone 5 |
 | `src/pc/sdk/hbm.cpp` | HBM, vcmv | placeholder for milestone 7 |
 | `src/pc/sdk/misc.cpp` | `stricmp` | real, weak |
@@ -625,7 +630,7 @@ Each placeholder file starts with a `TODO(milestone N)` that names the milestone
 What each placeholder promises:
 
 - **GX** is no longer a placeholder (section 16). Only the SDK's debug shapes (`GXDrawCube`, `GXDrawCylinder`, `GXDrawSphere`, `GXDrawTorus`, used by `nw4r::ef` emitter-form drawing) are still weak no-ops, in `src/pc/gx/gx_api.cpp`.
-- **AX, AI.** Initialisation succeeds and registered callbacks can be read back, but no callback is ever called: there is no audio frame. `AXAcquireVoice` returns `NULL` ("no voice free"), so `nw4r::snd` fails to start each sound and carries on.
+- **AX, AI** are no longer placeholders (section 18).
 - **NWC24, SO, VF.** A console that has never been online. The library opens and passes `NWC24Check`; download tasks can be created, registered, read back and deleted, in memory only. `SOStartup` fails with `SO_ERR_LINK_UP_TIMEOUT`, which the SDK's `NETGetStartupErrorCode` (compiled natively) turns into error 51099. No VF drive mounts. The game therefore takes its own "could not connect" path.
 - **HBM, vcmv.** `HBMCalc` answers "HOME pressed again" at once, so a HOME Menu that is opened closes on the next frame. `VCMVLoadLibrary` fails, so the Operations Guide is skipped.
 
@@ -635,7 +640,8 @@ What each placeholder promises:
 
 - C files that include `<revolution/os.h>` or `<revolution/gx.h>` must be compiled as C++ (`news_library(... CXX)`), because the PC versions of those headers contain C++ (the GX FIFO object). A file that defines a function without including the header that declares it then needs the header force-included, or the definition gets a C++ name (`sdk_net` does this for `<revolution/net.h>`).
 - TMCC JPEG is compiled as C. It writes each RGB565 texel as a `u16` in host byte order (the self-test decodes a 16x16 picture and checks this). On the Wii that is big-endian, which is what GX reads; the texture decoder of milestone 3 must treat TMCC output as host-order, unlike texels that come from `.tpl` files.
-- `AXFXHooks.c` is not compiled: its default allocator uses the OSAlloc heap, which this program never creates. `ax_noop.cpp` defines the hooks with the host heap as the default.
+- `AXFXHooks.c` is not compiled: its default allocator uses the OSAlloc heap, which this program never creates. `src/pc/sdk/axfx.cpp` defines the hooks with the host heap as the default.
+- AX (`pc/ported/sdk_ax.txt`) is compiled without `DSPCode.c`, the program it loads into the console's DSP. Section 18 says what stands in for the DSP and the AI.
 
 ### Video (VI)
 
@@ -682,13 +688,15 @@ For backend code the consequence remains: `new`, `std::string`, `std::vector` an
 | `--input SCRIPT` | scripted remote for automated runs: `P0:0@1,A@300` points at the centre of the picture from retrace 1 and presses A at retrace 300 (`src/pc/pc_input.h`) |
 | `--screenshot N[,N...]` | save the picture shown at these retraces as `frame_NNNNNN.png` (section 16, "Looking at the result"); with `--no-window` the frames are drawn in a hidden window |
 | `--screenshot-dir DIR` | where the screenshots go (default: the current directory; keep them out of the repository, e.g. `build/shots`) |
+| `--mute` | no audio device; audio frames still run in real time (section 18) |
+| `--audio-dump FILE.wav` | write the mixed stereo output of the run to a WAV file (32 kHz, 16 bits). Never commit it (R12); write it below `build/` |
 | `--lang LANG`, `--wide` | language (`en ja de fr es it nl`), 16:9 |
 | `--config FILE` | settings file (default `./newschannel.ini` if it exists) |
 | `--window-test` | the video path without the game: open the window, run `--frames` empty frames (default 120), print the rate |
 
 ### Self-test
 
-`newschannel --selftest` now also runs `PCSelfTestBackend()`: SC and config parsing, VI (callbacks, `VIFlush` latching, 59.94 Hz timing, the quit event), WPAD/KPAD and the pointer calibration, the GX object functions, AX registration and one buffer through the native AXFX reverb, the NWC24 task sequence the game uses, the SO/NET error path, `NETCalcCRC32`, VF, HBM, vcmv, and a JPEG decoded by the native TMCC decoder.
+`newschannel --selftest` now also runs `PCSelfTestBackend()`: SC and config parsing, VI (callbacks, `VIFlush` latching, 59.94 Hz timing, the quit event), WPAD/KPAD and the pointer calibration, the GX object functions, one buffer through the native AXFX reverb (AX and the AI have their own self-test, section 18), the NWC24 task sequence the game uses, the SO/NET error path, `NETCalcCRC32`, VF, HBM, vcmv, and a JPEG decoded by the native TMCC decoder.
 
 ## 15. Milestone 2: the boot
 
@@ -731,8 +739,12 @@ Memory 88 MB
 MEM1 Arena : 0x8036c6e0 - 0x81800000
 MEM2 Arena : 0x90000800 - 0x933e0000
 CNT: content 11 is not an archive; handle not initialised
+<< RVL_SDK - AX 	release build: May  8 2007 12:54:39 (0x4199_60831) >>
+audio:    SDL <driver>, device 48000 Hz, 2 channel(s), buffer 1024 frames
 newschannel: 600 frames done (--frames), exiting
 ```
+
+The AX line is the SDK registering its version, as on the console. The `audio:` line names the output (the driver and the device's format vary), or says why there is none (section 18).
 
 When the window is closed instead, the last line is `OSShutdownSystem: the program ends here on PC`.
 The game prints nothing of its own on a good start: its `OSReport()` calls are all on error paths.
@@ -759,10 +771,10 @@ Each of these skips something the Wii does. All are marked `TODO(milestone 6)` i
 | Where | What is skipped | Why | Remove when |
 | --- | --- | --- | --- |
 | `PointerEffect::PointerEffect()` (`src/news/PointerEffect.cpp`) | `ef::Resource::Add()`, `AddTexture()` and `RelocateCommand()` for `nw4r_defcursor_all01.breff/.breft`. `mLoaded` is still set, so the game starts its news scene and not the fatal error screen; `EffectSystem::CreateEffect()` finds no emitter and the pointer has no particle trail | no byte-order converter for `REFF`/`REFT` | converters are registered: the guard is `PCEndianIsHostOrder()` and opens by itself. `RelocateCommand()` also needs its `u8` pair read as a `u16` guarded (section 12) |
-| `MemorySoundArchive::detail_GetFileAddress()` (`src/nw4r/snd/snd_MemorySoundArchive.cpp`) | returns NULL for a sound file that could not be converted, so `StartSound()` fails for that sound instead of parsing big-endian data. The archive's tables are converted and `SoundArchivePlayer` is set up for real | no converters for `RSEQ`, `RBNK`, `RWSD`, `RWAR` | converters are registered (the function already calls `PCEndianFixFile()` on each file) |
+| `MemorySoundArchive::detail_GetFileAddress()` (`src/nw4r/snd/snd_MemorySoundArchive.cpp`) | returns NULL for a sound file that could not be converted, so `StartSound()` fails for that sound instead of parsing big-endian data. The archive's tables are converted and `SoundArchivePlayer` is set up for real. This is the only reason the game is still silent: the audio backend is complete (section 18) | no converters for `RSEQ`, `RBNK`, `RWSD`, `RWAR` | converters are registered (the function already calls `PCEndianFixFile()` on each file). Section 18, "For the sound-file converters", says what the mixer expects of them |
 | `Scene::Execute()` (`src/news/d_scene.cpp`) | `new Model(sEarthData)` when the decompressed `earth.brres` is still big-endian. Not reached during the boot (the model is loaded by `InitNews()`, after a news download) | no converter for `bres` | a converter is registered. Check then what waits for `gEarthModel` |
 
-Not bypasses, but placeholders with the same effect on what the user sees: GX draws nothing, AX plays nothing (`AXAcquireVoice()` returns NULL), the remote has no buttons except through `--input`, NWC24/SO have no network, the HOME Menu closes at once (section 14).
+Not bypasses, but placeholders with the same effect on what the user sees: NWC24/SO have no network, the HOME Menu closes at once (section 14). (When this list was written GX also drew nothing and AX played nothing; sections 16 and 18 replaced those two.)
 
 ### Game-code findings
 
@@ -1065,3 +1077,149 @@ What this means for the GX backend:
 - **Filters:** `GX_LINEAR` for both everywhere, except the eight textures with mipmaps, which ask for `GX_LIN_MIP_LIN` and store 7 levels.
 - **A texture's pixels can change under the same pointer:** `gFadeTex` is written by every `GXCopyTex()`, and the buffers of news pictures are allocated and freed as articles change. A cache of decoded textures keyed by the image pointer needs an invalidation rule for these (`GXInvalidateTexAll()` is one signal; the copy itself is another).
 - **Not in this survey:** the textures inside `earth.brres.LZ` (content 8, `TEX0`) and in the effect files (`.breft`). Their containers have no byte-order converter yet (section 12), so the walk does not open them; both belong to milestone 6.
+
+## 18. Audio (AX, DSP, AI)
+
+The audio backend replaces the placeholder of milestone 2. Voices that `nw4r::snd` (or anything else) starts through AX are decoded, resampled, mixed with their effects and played through SDL.
+The game itself is still silent, for a reason outside this backend: the files inside the sound archive have no byte-order converters yet, so `StartSound()` fails (section 15, "Bypasses"). "For the sound-file converters" below says what is needed.
+
+```sh
+build/pc/newschannel --audio-test                  # a 440 Hz tone, left to right, through nw4r::snd's AxVoice
+build/pc/newschannel --boot --audio-dump build/scratch/run.wav
+NEWSCHANNEL_AX_LOG=1 build/pc/newschannel --boot   # every frame with a running voice, to stderr
+```
+
+### How audio works on the console
+
+| Part | What it does |
+| --- | --- |
+| `nw4r::snd` | Sequences, banks, wave sounds, streams. Per voice it fills an AX parameter block (`AXPB`: addresses, format, ADPCM coefficients, pitch ratio, volume envelope, mix volumes) through the `AXSetVoice*()` functions and by writing fields and sync flags directly (`AxVoice.cpp`) |
+| AX (CPU side, `src/revolution/AX`) | 96 voices in priority lists. Once per audio frame it copies the changed parts of each voice's block to the block array the DSP reads (`__AXSyncPBs`), writes a command list (`__AXNextFrame`), mails its address to the DSP, runs the aux (effect) callbacks and the frame callback, and gives the AI the buffer the DSP filled during the frame before |
+| DSP (a second processor running AX's program) | Runs the command list: decodes and resamples every running voice, applies its envelope and low-pass filter, mixes it into the main buses (left, right, surround) and the aux buses A, B, C, exchanges the aux buses with the CPU, compresses, writes 96 stereo samples |
+| AI | Plays that buffer at 32 kHz by DMA and interrupts the CPU when it is done, which starts the next frame |
+
+An audio frame is **96 samples at 32 kHz: 3 ms** (`AX_SAMPLES_PER_FRAME`). `nw4r::snd` counts time in these frames (its sound thread gets one message per frame, fades are given in frames).
+
+### What the PC build does
+
+**AX is the SDK's source, compiled natively** (`pc/ported/sdk_ax.txt`: `AX.c`, `AXAlloc.c`, `AXAux.c`, `AXCL.c`, `AXComp.c`, `AXOut.c`, `AXProf.c`, `AXSPB.c`, `AXVPB.c`). Voice allocation and stealing, the drop callback, every `AXSetVoice*()` setter, the sync flags, the DSP cycle budget, depop, the aux ring buffers, the command list and the remote speaker ring are therefore the console's code, not a reimplementation. Only the two pieces of hardware below it are replaced:
+
+| File | Replaces | How |
+| --- | --- | --- |
+| `src/pc/sdk/dsp.cpp` | the DSP task interface (`DSPInit`, `DSPAddTask`, `DSPSendMailToDSP`...) | AX's task starts at once. When AX mails a command list, the list is run at once on the calling thread and the task's resume callback (the DSP's "frame done" interrupt) is called |
+| `src/pc/audio/ax_dsp.cpp` | AX's program on the DSP | `PCAXDspRunCommandList()`: see "The DSP program" |
+| `src/pc/sdk/ai.cpp` | the AI's DMA (`AIInitDMA`, `AIStartDMA`, `AIRegisterDMACallback`...) | `PCAIServiceBlock()` is one "block finished" interrupt: the buffer the registers point to goes to the output, then the DMA callback (AX's `__AXOutAiCallback`) runs in interrupt context |
+| `src/pc/audio/audio_out.cpp` | the sound hardware and its clock | a thread that calls `PCAIServiceBlock()` every 3 ms; an SDL audio stream; the WAV dump |
+| `src/pc/sdk/axfx.cpp` | `AXFXHooks.c` | the allocation hooks (section 14) |
+| `src/pc/audio/pc_audio.h` | | the interface of the directory |
+| `src/pc/audio/selftest_audio.cpp` | | self-tests, `--audio-test` |
+
+Two guarded changes in shared SDK files (the Wii build is unchanged, R1):
+
+- `include/revolution/dsp/dsp_hardware.h`: `DSP_HW_REGS` (a variable at a fixed address) is not declared on PC.
+- `src/revolution/AX/AXVPB.c`, `AXSetVoiceAddr()`: for PCM voices the SDK sets the decoder gain by writing `gain` and `pred_scale`, two `u16`, as one 32-bit constant. On a little-endian host the halves land the other way round; the PC branch writes the constant that puts the gain first.
+
+### One audio frame
+
+The order is the console's, because it is the SDK's code (`AXOut.c`, `__AXOutNewFrame`), entered from `PCAIServiceBlock()` with interrupts disabled (the kernel lock, section 11):
+
+1. The AI starts playing the buffer that AX named in the previous frame (`PCAudioOutWrite()`: device, WAV dump).
+2. `__AXSyncPBs`: for every voice, the parts of its block marked in `sync` are copied to the DSP's block; state, envelope volume and current address are copied back from the DSP for voices without changes. Voices beyond the DSP's cycle budget are dropped.
+3. The command list that was built in the previous frame is mailed to the DSP: **the frame is mixed here**, from the blocks as they are at this moment.
+4. Drop callbacks run (`nw4r::snd`: `CALLBACK_STATUS_DROP_DSP`).
+5. Aux callbacks run on the buffers the DSP wrote in the frame before (`nw4r::snd`'s `FxReverbHi` on AUX C, the game's `FxVoice` on AUX B).
+6. The frame callback runs (`AXRegisterCallback`; `nw4r::snd`: `AxManager::AxCallbackFunc`, which wakes the sound thread).
+7. The next command list is built, and the AI is given the buffer that was just mixed.
+
+So a change made in the frame callback, or by the sound thread it wakes, is heard from the next frame on, and an aux bus comes back two frames (6 ms) after it was sent, as on the console. On the console step 3 only starts the DSP, which mixes while the CPU does steps 4 to 7; nothing in those steps changes what the DSP reads, so mixing at once gives the same result.
+
+### The DSP program (`ax_dsp.cpp`)
+
+Its input is what the DSP gets: the command list, the chain of `AXPB` blocks (linked by `nextHi`/`nextLo`), the studio block (`AXSTUDIO`: start value and step of every bus, the depop fade), and the aux buffers. Pointers in them are host pointers in 32 bits, as the SDK code stored them (one more reason the build is 32-bit).
+
+Per running voice, per frame:
+
+| Step | Details |
+| --- | --- |
+| Decode ("accelerator") | DSP-ADPCM: nibbles, high first; `sample = scale * nibble + (0x400 + c1 * yn1 + c2 * yn2 >> 11)`, with predictor and scale from the first byte of each 8-byte frame. PCM16: **big-endian** samples. PCM8: the byte is the high half. The gain field is not used (it is the identity for PCM as AX sets it) |
+| End address | After the sample at the end address the current address becomes the loop address. With the loop flag: the predictor/scale comes from the loop context, and so do `yn1`/`yn2` unless the voice is a stream voice (`AX_VOICE_STREAM`). Without: the voice's state becomes stop. `nw4r::snd` points the loop address of a one-shot voice at `AxManager`'s zero buffer and detects the end by that address (`AxVoice::IsPlayFinished()`) |
+| Rate conversion | The position advances by `ratio` (16.16) per output sample over a history of four input samples (`AXPBSRC::last_samples`). `srcSelect` 2: none. 1: linear, between the two oldest (a delay of three samples at ratio 1). 0: 4-tap, 128 phases, coefficient set `coefSelect` (a delay of two samples at ratio 1) |
+| Volume envelope | `sample * currentVolume >> 15`, the volume stepping by `currentDelta` per sample |
+| Low-pass | `y = (a0 * x + b0 * y1) >> 15` when `lpf.on` (`AXGetLpfCoefs`) |
+| Mixer | 12 buses (main L/R/S, aux A/B/C each L/R/S), each enabled by its bit of `mixerCtrl`; `sample * volume >> 15`, the volume stepping by its delta per sample when the bus's ramp bit is set. The last value on each bus is the voice's depop value |
+
+Then: the aux buses go to the CPU and the CPU's processed buffers are added to the main buses with the return volumes; the compressor; the surround bus is saved (in stereo mode it is added to left and right in the next frame, as the command list says); left and right are scaled by the master volume (ramped within the frame) and clamped to 16 bits.
+
+Everything the DSP changes is written back to the voice's block, as on the console: current address, decoder state, resampler state, the envelope volume, the mix volumes, the depop values, the state.
+
+Known differences from the console's DSP:
+
+| What | Here | Why |
+| --- | --- | --- |
+| 4-tap coefficients | computed: a windowed sinc per set (cut-off 1/4, 3/8, 1/2 of the input rate for the "8 kHz", "12 kHz", "16 kHz" sets) | the console's table is in the DSP's ROM, not in the SDK source. Same filter structure, not bit-identical samples |
+| Compressor | reconstructed from the layout of `__AXCompressorTable` (21 rows of 96 gains: 11 that fall to the lowest gain within a frame, 10 that rise one step per frame) | the algorithm is in the DSP program. It only acts when the sum of the voices exceeds 16 bits |
+| Wii Remote speaker | not mixed; the remote ring gets silence. `AXSetVoiceRmtOn/RmtMix` are accepted | `TODO(milestone 7)` |
+| ITD, biquad | not implemented | `nw4r::snd` never enables them. `TODO(milestone 7)` |
+| Dolby Pro Logic II | reduced to stereo | the game only selects `AX_OUTPUT_STEREO` (also for its mono and surround settings) |
+| A voice whose samples are not mapped memory | is stopped, with one warning | the console would play garbage |
+
+### Sample addresses
+
+A voice's addresses are in the DSP's units: a physical address times 2 plus a nibble for ADPCM, divided by 2 plus a sample for PCM16, plus a sample for PCM8. `nw4r::snd` computes them from pointers with `OSCachedToPhysical()`, which on PC is simply "minus `0x80000000`, modulo 2^32".
+
+- Wave data in the emulated MEM1/MEM2 blocks at the console's addresses (the usual case, section 11) gets the console's own values.
+- Other memory (a static buffer such as `AxManager`'s zero buffer; the memory blocks, if the host could not map them at the console's addresses) still gives consistent values. PCM addresses convert back exactly. An ADPCM address has lost its top bit in the multiplication, which leaves two candidates 2 GiB apart; the DSP program takes the one inside an emulated memory block, else the one inside the program's image, else the one that is mapped (`AccelByte()`).
+- ADPCM data must start at a multiple of 8 bytes: a frame's start is recognised by the nibble address (`address & 15 == 0`), as on the console. NW4R sound files align their wave data to 32 bytes, so this holds as long as a file is loaded at an aligned address.
+
+### The clock
+
+On the console the AI's interrupt comes every 3 ms, driven by the sound hardware. Here a thread calls `PCAIServiceBlock()`:
+
+- **every 3 ms on the host's monotonic clock, one frame at a time.** Frames never come in bursts: `nw4r::snd`'s sound thread receives one message per frame through a queue of four and would lose frames (and with them tempo). A thread that finds itself more than four frames late skips the missed frames.
+- **With a device** the period follows the sound card: the amount of audio waiting in the SDL stream is held at a target (48 ms, or two device buffers if that is more) by stretching or shortening the period by at most 1 %. The stream starts filled with silence to the target. If the device stops taking data, the stream is emptied instead of growing.
+- **Without a device** the period is exactly 3 ms. Audio frames always run in real time, because the game's sound thread and its timing depend on them.
+
+There is no device with `--mute` (or `NEWSCHANNEL_MUTE=1`), with `--no-window` (automated runs make no sound), when SDL has no audio driver, or when no playback device can be opened; the `audio:` line of the log says which. `--audio-dump` records in every case. SDL resamples 32 kHz stereo to the device's format.
+
+The thread is an ordinary host thread; it gets an implicit `OSThread` (section 11) and calls the DMA callback between `OSDisableInterrupts()` and `OSRestoreInterrupts()`. The mixing, the effects and the game's frame callbacks all run there, under the kernel lock, as they run with interrupts disabled on the console. When the program ends, an exit hook finishes the WAV file and closes the device; the thread is not joined.
+
+### Tools
+
+| Tool | Use |
+| --- | --- |
+| `--audio-test` | Starts AX and `nw4r::snd`'s `AxManager`/`AxVoiceManager`, plays a 2 s PCM16 tone through an `AxVoice` while a frame callback pans it from left to right, and checks that the voice ended on time and that audio frames ran at 3 ms. Works with `--mute`, `--audio-dump` and `SDL_AUDIODRIVER=dummy` |
+| `--audio-dump FILE.wav` | everything the AI plays, 32 kHz stereo 16-bit; the header is rewritten about once a second, so a killed run leaves a valid file |
+| `--mute` | no device |
+| `NEWSCHANNEL_AX_LOG=1` (or `=FILE`) | for every frame with a running voice: each voice's format, addresses, loop flag, resampler, ratio, envelope, the 12 mix volumes, low-pass and remote flags, `ENDED` when it reached its end; then the number of voices and the frame's peak |
+
+### Self-test
+
+`PCSelfTestAudio()` (`newschannel --selftest`) needs no device: the output is in manual mode (`PCAudioSetManual()`), a frame runs when the test calls `PCAudioStep()`, and the test reads the block the AI played. It drives the whole chain (SDK AX, command list, DSP program, AI):
+
+- registration: the frame callback runs once per frame with interrupts disabled; aux callbacks; `AXSetMode`; the remote ring; `AXGetLpfCoefs`
+- allocation: 96 voices, stealing by priority with the drop callback, `AXSetVoicePriority`, `AXFreeVoice`
+- DSP-ADPCM: two hand-made frames with two predictors against hand-computed PCM, from static memory and from MEM1; the end of a one-shot voice (state, address at the zero buffer, state reported back by AX)
+- PCM16 and PCM8 at ratio 1 against the samples times the volume; the linear and 4-tap delays; unity DC gain of every coefficient phase
+- ratio 2.0 and 0.5: addresses after one frame, the frame in which the voice ends, the length of the output, interpolated values, `AXSetVoiceSrcRatio`
+- loops: PCM16 loop points; ending a loop the way `AxVoice::StopAtPoint()` does (direct block writes with sync flags); the ADPCM loop context; a stream voice keeping its history
+- the envelope ramp and `AX_PBSYNC_VE_DELTA`; a mixer ramp; surround one frame late; the master volume; the low-pass step response; depop after `AXSetVoiceState(stop)`
+- an aux bus through a callback and back two frames later with the return volume; the compressor; the DSP budget (`AXSetMaxDspCycles(0)` drops the running voice and frees it)
+- a sample address that is not memory
+- `nw4r::snd`'s `AxVoice` (acquired from `AxVoiceManager`, set up the way `Voice::Setup()` does): PCM16 at 32 kHz and 16 kHz, ADPCM, `IsPlayFinished()`, `GetCurrentPlayingSample()`, the drop callback
+- the WAV file
+
+### For the sound-file converters
+
+What the mixer and AX expect of the data that `nw4r::snd` hands over, for whoever writes the converters of section 12 (`RWSD`, `RBNK`, `RWAR`, `RWAV`, `RSEQ`, `RSTM`):
+
+- **Do not convert sample data.** PCM16 samples stay big-endian and ADPCM frames are bytes; the DSP program reads them as the console's DSP does.
+- **Do convert the ADPCM parameters**: the 16 coefficients, gain, predictor/scale and history of `AdpcmParam`, the loop context of `AdpcmLoopParam`, and the per-block history tables of a stream. They are `u16` values that `AxVoice::SetAdpcm()` copies into the parameter block.
+- Wave data must stay where its file offset puts it (aligned to 8 bytes for ADPCM), and should be in MEM1/MEM2 (the game's heaps), where addresses need no guessing.
+- A converted file that makes `detail_GetFileAddress()` return a pointer is all it takes: nothing in AX or below needs a change. To check a sound, run with `NEWSCHANNEL_AX_LOG=1` and `--audio-dump`; a voice with a wrong address is reported once (`AX: voice N stopped: ...`).
+
+### Not done
+
+- Wii Remote speaker audio, ITD, biquad, real Dolby Pro Logic II (above).
+- `AXSetVoiceSrcType(AX_SRC_TYPE_4TAP_AUTO)` is not an SDK value (`nw4r::snd` resolves it before the call).
+- A second DSP task, the AI's 48 kHz mode and its stream (`AIS*`) functions: nothing uses them.
+- 64-bit: the command list, the block chain and `AIInitDMA()` carry pointers in 32 bits.

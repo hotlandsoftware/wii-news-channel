@@ -7,18 +7,24 @@
 // DMA callback, that is, AX's audio frame. A block is 96 sample frames at
 // 32 kHz: 3 ms.
 //
-// When is a block due?
+// When is a block due? Every 3 ms on the host's monotonic clock, one at a
+// time: nw4r::snd's sound thread gets one message per audio frame through a
+// queue of four, and counts its sequence ticks and fades in frames, so frames
+// must be spread evenly like the console's interrupts and never come in
+// bursts. If the thread is late by more than a few frames (the process was
+// stopped, the machine is overloaded) the missed frames are skipped, not
+// replayed.
 //
-// - With a device: when less than kQueueTarget is waiting in the SDL audio
-//   stream. The sound card's clock, not the host's, then decides how fast
-//   audio frames run, so the stream neither runs dry nor grows. Blocks come in
-//   small bursts (whenever the device has taken a buffer) instead of one every
-//   3 ms; the average is exact.
-// - Without a device (--mute, --no-window, no sound card, or a device that
-//   stopped taking data): every 3 ms on the host's monotonic clock.
+// With a device there are two clocks, the host's and the sound card's, and
+// they never agree exactly. The amount of audio waiting in the SDL stream
+// shows the difference: when it grows above its target the block period is
+// stretched, when it shrinks the period is shortened, by at most 1 %. So the
+// sound card decides the long-term rate and the stream neither runs dry nor
+// grows. Without a device (--mute, --no-window, no sound card) the period is
+// exactly 3 ms.
 //
 // Either way audio frames run in real time whether or not anything can be
-// heard: nw4r::snd's sound thread, sequence timing and fades depend on them.
+// heard: the game's sound thread, sequence timing and fades depend on them.
 //
 // SDL converts 32 kHz stereo s16 to whatever the device wants.
 
@@ -40,9 +46,13 @@ namespace {
 
 const u32 kSampleRate = 32000;
 const u32 kBytesPerFrame = 4;
-// What is kept waiting in the stream: 48 ms.
-const int kQueueTarget = static_cast<int>(kSampleRate * kBytesPerFrame * 48 / 1000);
-const u64 kStallNS = 200ull * 1000 * 1000;
+// What is kept waiting in the stream: at least 48 ms (more for a device with
+// a large buffer, see OpenDevice).
+const int kMinQueueTarget = static_cast<int>(kSampleRate * kBytesPerFrame * 48 / 1000);
+// How far the block period follows the stream's fill level.
+const f64 kMaxRateCorrection = 0.01;
+// More than this many periods late: skip instead of catching up.
+const u64 kMaxLatePeriods = 4;
 const u32 kMaxBlockFrames = 0x8000 / 4;
 
 bool sMute;
@@ -53,7 +63,8 @@ char sDumpPath[1024];
 // exit hook. sOutMutex is never held across an OS call or game code.
 pthread_mutex_t sOutMutex = PTHREAD_MUTEX_INITIALIZER;
 SDL_AudioStream* sStream;
-bool sDeviceStalled;
+int sQueueTarget = kMinQueueTarget; // bytes of 32 kHz stereo s16
+bool sOverflowReported;
 FILE* sDump;
 u32 sDumpFrames;
 
@@ -168,9 +179,24 @@ void OpenDevice() {
             } else {
                 std::printf("audio:    SDL %s\n", driver != NULL ? driver : "?");
             }
+            // The device takes its whole buffer at once: keep two of them waiting.
+            int target = kMinQueueTarget;
+            if (deviceFrames > 0 && device.freq > 0) {
+                s64 bufferBytes = static_cast<s64>(deviceFrames) * kSampleRate * kBytesPerFrame / device.freq;
+                if (bufferBytes * 2 > target) {
+                    target = static_cast<int>(bufferBytes * 2);
+                }
+            }
+            target -= target % static_cast<int>(kBytesPerFrame);
+            // Start at the target, with silence.
+            void* silence = std::calloc(1, static_cast<size_t>(target));
+            if (silence != NULL) {
+                SDL_PutAudioStreamData(stream, silence, target);
+                std::free(silence);
+            }
             pthread_mutex_lock(&sOutMutex);
             sStream = stream;
-            sDeviceStalled = false;
+            sQueueTarget = target;
             pthread_mutex_unlock(&sOutMutex);
         }
     }
@@ -197,59 +223,49 @@ void Shutdown() {
     }
 }
 
-int QueuedBytes() {
-    int queued = -1;
+// The block period's correction for the stream's fill level: +1 = too full
+// (slow down), -1 = empty (hurry). 0 without a device.
+f64 FillError() {
+    f64 error = 0.0;
     pthread_mutex_lock(&sOutMutex);
     if (sStream != NULL) {
-        queued = SDL_GetAudioStreamQueued(sStream);
+        int queued = SDL_GetAudioStreamQueued(sStream);
+        if (queued > sQueueTarget * 4) {
+            // The device takes (almost) nothing: suspended, unplugged, or far
+            // off 32 kHz. Do not let the delay and the memory grow.
+            if (!sOverflowReported) {
+                sOverflowReported = true;
+                std::fprintf(stderr, "audio: the device is not taking data fast enough; dropping audio\n");
+            }
+            SDL_ClearAudioStream(sStream);
+            queued = 0;
+        }
+        error = static_cast<f64>(queued - sQueueTarget) / sQueueTarget;
+        error = error < -1.0 ? -1.0 : (error > 1.0 ? 1.0 : error);
     }
     pthread_mutex_unlock(&sOutMutex);
-    return queued;
+    return error;
 }
 
 // --- the thread: the AI interrupt --------------------------------------------------
 
 void* ThreadMain(void*) {
     u64 next = NowNS();
-    u64 lastRun = next;
 
     while (!sStop && !PCOSIsExiting()) {
         u64 now = NowNS();
-        int queued = sDeviceStalled ? -1 : QueuedBytes();
-
-        if (queued >= 0) {
-            // Paced by the device.
-            if (queued >= kQueueTarget) {
-                if (now - lastRun > kStallNS) {
-                    // The device takes nothing (suspended, unplugged). Go on
-                    // without it so that the game's audio keeps moving.
-                    std::fprintf(stderr, "audio: the device stopped taking data; continuing on the clock\n");
-                    pthread_mutex_lock(&sOutMutex);
-                    sDeviceStalled = true;
-                    if (sStream != NULL) {
-                        SDL_ClearAudioStream(sStream);
-                    }
-                    pthread_mutex_unlock(&sOutMutex);
-                    next = now;
-                } else {
-                    SleepUntilNS(now + 1000000);
-                }
-                continue;
-            }
-        } else {
-            // Paced by the clock.
-            if (now < next) {
-                SleepUntilNS(next);
-                continue;
-            }
-            if (now - next > kStallNS) {
-                next = now; // the process was stopped: do not replay the gap as a burst
-            }
+        if (now < next) {
+            SleepUntilNS(next);
+            continue;
         }
 
         u32 frames = PCAIServiceBlock();
-        lastRun = NowNS();
-        next += static_cast<u64>(frames) * 1000000000ull / kSampleRate;
+
+        f64 period = static_cast<f64>(frames) * 1e9 / kSampleRate;
+        if (now - next > kMaxLatePeriods * static_cast<u64>(period)) {
+            next = now;
+        }
+        next += static_cast<u64>(period * (1.0 + kMaxRateCorrection * FillError()));
     }
     return NULL;
 }
@@ -289,7 +305,7 @@ const char* PCAudioGetOutputName() {
     if (sManual) {
         return "manual";
     }
-    return (sStream != NULL && !sDeviceStalled) ? "sdl" : "none";
+    return sStream != NULL ? "sdl" : "none";
 }
 
 void PCAudioOutStart() {
@@ -308,10 +324,6 @@ void PCAudioOutStart() {
     pthread_setname_np(sThread, "AI DMA");
     pthread_detach(sThread);
 }
-
-// AIStopDMA() does not stop the thread: a stopped DMA still has its block
-// clock, and blocks of silence keep the stream fed.
-void PCAudioOutStop() {}
 
 void PCAudioStep(u32 blocks) {
     for (u32 i = 0; i < blocks; i++) {
@@ -336,7 +348,7 @@ void PCAudioOutWrite(const s16* samples, u32 frames) {
             WriteDumpHeader(); // about once a second: a killed run leaves a valid file
         }
     }
-    if (sStream != NULL && !sDeviceStalled) {
+    if (sStream != NULL) {
         SDL_PutAudioStreamData(sStream, samples, static_cast<int>(frames * kBytesPerFrame));
     }
     pthread_mutex_unlock(&sOutMutex);

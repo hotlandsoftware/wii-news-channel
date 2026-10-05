@@ -93,6 +93,8 @@ void AIStartDMA(void) {
     PCAudioOutStart();
 }
 
+// The block clock keeps running: silence is played and the callback is not
+// called until the DMA is started again.
 void AIStopDMA(void) {
     BOOL enabled = OSDisableInterrupts();
     sPlaying = false;

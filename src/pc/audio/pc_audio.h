@@ -38,10 +38,10 @@ void PCAudioStep(u32 blocks);
 
 // --- the AI's side (src/pc/sdk/ai.cpp) -------------------------------------------
 
-// AIStartDMA()/AIStopDMA(): start and stop the thread that stands in for the
-// AI DMA interrupt (not in manual mode). The thread calls PCAIServiceBlock().
+// AIStartDMA(): open the device and start the thread that stands in for the
+// AI's DMA interrupt (not in manual mode). The thread calls
+// PCAIServiceBlock() once per block and runs until the program ends.
 void PCAudioOutStart();
-void PCAudioOutStop();
 
 // One DMA period, implemented by ai.cpp: hand the buffer that starts playing
 // to PCAudioOutWrite() and call the DMA callback in interrupt context.
