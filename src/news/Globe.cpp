@@ -1,6 +1,9 @@
 // The 3D globe view: scene root, camera, zoom/tilt levels and Wii Remote
 // drag/twist input.
 #define NW4R_MATH_VEC3_NO_DTOR
+// The nw4r::math inline-asm helpers (VEC3Dot, VEC3Sub) allocate their work
+// registers in this file in the opposite order from the NW4R libraries.
+#define NW4R_MATH_WORK_REGS_REVERSED
 #include <revolution/kpad.h>
 #include <news/Globe.h>
 #include <news/Camera.h>
