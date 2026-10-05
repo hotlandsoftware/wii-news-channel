@@ -140,6 +140,15 @@ static inline void EnableButton(PaneButton* button) {
     button->mDisabled = false;
 }
 
+// The clock stays hidden while the update message is shown.
+static inline void SetHideClock(bool hide) {
+    bool flag = true;
+    if (gUpdateMsgType != 1) {
+        flag = hide;
+    }
+    gHideClock = flag;
+}
+
 static inline Category* GetCategory(s32 idx) {
     return &gNewsData->mCategories[idx];
 }
@@ -1323,10 +1332,11 @@ BOOL SlideShow::StateMove(const s32* arg) {
         break;
     case 0: {
         ChangeSubState(&SlideShow::SubStateIdle);
+        bool hadLocation;
         u16 prevWidth;
         u16 prevHeight;
         NewsLocationRec* location = mArticle->mLocation;
-        bool hadLocation = location != NULL;
+        hadLocation = location != NULL;
         if (location != NULL) {
             prevWidth = ((u16*)location)[2];
             prevHeight = ((u16*)location)[3];
@@ -1348,9 +1358,9 @@ BOOL SlideShow::StateMove(const s32* arg) {
             NextArticle();
         }
 
-        NewsArticle* prev = mArticle;
-        mSlideAngle = 0;
         mStateFrame++;
+        mSlideAngle = 0;
+        NewsArticle* prev = mArticle;
         if (prev != NULL) {
             mPrevPicture = GetPictureTexture(prev);
             mPrevCaption = GetPictureCaption(mArticle);
@@ -1405,12 +1415,15 @@ BOOL SlideShow::StateMove(const s32* arg) {
             mText.top = mZoomFrom[6] + mZoomFrom[7] * t;
             ApplyView(this);
         }
-        if (mStateFrame == 3) {
+        switch (mStateFrame) {
+        case 3:
             if (mArticle->mLocation == NULL) {
                 lbl_8035697C = 1;
             }
             ChangeState(&SlideShow::StateShow);
             return TRUE;
+        case 2:
+            break;
         }
         break;
     }
@@ -1436,11 +1449,7 @@ BOOL SlideShow::StateMessage(const s32* arg) {
         }
         if (gTrigAll & 0x800) {
             PlaySE(0x41);
-            bool flag = true;
-            if (gUpdateMsgType != 1) {
-                flag = mMessageFlag;
-            }
-            gHideClock = flag;
+            SetHideClock(mMessageFlag);
             mStateFrame = 2;
         }
         break;
@@ -2033,11 +2042,7 @@ void SlideShow::CheckPointer() {
         mFooterFade++;
     }
 
-    bool flag = true;
-    if (gUpdateMsgType != 1) {
-        flag = outside;
-    }
-    gHideClock = flag;
+    SetHideClock(outside);
 
     UpdateLayoutAlpha(this);
 }
