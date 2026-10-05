@@ -530,7 +530,8 @@ void GlobePin::UpdateCards(f32 alpha) {
     Quaternion* quat;
     Camera* camera = gGlobe->mCamera;
     s32 picIndex = -1;
-    f32 zoom = 0.00019f * camera->mDistance;
+    f32 distance = camera->mDistance;
+    f32 zoom = 0.00019f * distance;
     if (mCount == 0) {
         return;
     }
@@ -584,7 +585,8 @@ void GlobePin::UpdateCards(f32 alpha) {
         } else {
             order = i;
         }
-        f32 target = (1.0f + 0.5f * (zoom * ((mCount - order) - 1.0f))) * mRadius;
+        f32 target = 1.0f + 0.5f * (zoom * ((mCount - order) - 1.0f));
+        target *= mRadius;
         f32 dist = 0.9f * pin->mCardDist + 0.1f * target;
         pin->mCardDist = dist;
         C_QUATSlerp(quat, &mQuat, quat, 0.1f);
