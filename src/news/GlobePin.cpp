@@ -153,16 +153,19 @@ void GlobePin::Draw(u8 alpha) {
         math::VEC3 pos(0.0f, 0.0f, 0.0f);
         f32 halfW = 0.5f * TPL_GetWidth(gCommonTpl, 0x52);
         f32 halfH = 0.5f * TPL_GetHeight(gCommonTpl, 0x52);
+        f32 scale;
+        f32 w;
+        f32 h;
         f32 k = 1.5f;
         Draw2D_SetupGX();
         Draw2D_SetOrtho();
         GXSetZMode(GX_TRUE, GX_LEQUAL, GX_FALSE);
         for (s32 i = 0; i < 2; i++, ripple++) {
             if (ripple->mScale > 0.0f && ripple->mAlpha != 0) {
-                f32 scale = ripple->mScale;
+                scale = ripple->mScale;
                 scale *= k;
-                f32 w = halfW * scale;
-                f32 h = halfH * scale;
+                w = halfW * scale;
+                h = halfH * scale;
                 color.a = ripple->mAlpha;
                 pos.x = GetPos().x - w;
                 pos.y = GetPos().y - h;
