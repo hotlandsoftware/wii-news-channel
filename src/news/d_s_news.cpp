@@ -984,7 +984,7 @@ BOOL NewsScene::InitNews() {
     lbl_80357598 = 0;
 
     math::VEC2 pos(GetSideMargin(), 63.0f);
-    math::VEC2 size(GetScreenWidth() - GetSideMargin() - GetSideMargin(), 330.0f);
+    math::VEC2 size(GetContentRight() - GetSideMargin(), 330.0f);
 
     hasCaption = FALSE;
     bodyLen = 0;
@@ -1299,7 +1299,7 @@ BOOL NewsScene::StateMain() {
         static f32 sMarkZ = 0.0f;
 #pragma pop
         f32 y = 456.0f - (63.0f + h);
-        f32 x = (GetScreenWidth() - GetSideMargin()) - w;
+        f32 x = GetContentRight() - w;
         lbl_801EDF70.z = sMarkZ;
         lbl_801EDF70.y = y;
         lbl_801EDF70.x = x;
@@ -1307,7 +1307,7 @@ BOOL NewsScene::StateMain() {
         f32 x2;
         f32 w2 = TPL_GetWidth(gCommonTpl, 0x3E);
         y2 = lbl_801EDF70.y - h;
-        x2 = (GetScreenWidth() - GetSideMargin()) - w2;
+        x2 = GetContentRight() - w2;
         lbl_801EDF88.z = lbl_801EDF70.z;
         lbl_801EDF88.y = y2;
         lbl_801EDF88.x = x2;
