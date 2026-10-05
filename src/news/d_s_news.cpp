@@ -944,15 +944,33 @@ void NewsScene::OnHomeMenuOpen() {
     }
 }
 
+// At most 14 news sections are shown.
+static inline u32 GetNumCategories(NewsData* data) {
+    u32 num = 14;
+    if (data->mNumCategories <= 14) {
+        num = data->mNumCategories;
+    }
+    return num;
+}
+
 BOOL NewsScene::InitNews() {
     gHideClock = gUpdateMsgType == 1;
     ClearButtonHover();
 
-    NewsData* data = gNewsData;
-    u32 numCategories = 14;
-    if (data->mNumCategories <= 14) {
-        numCategories = data->mNumCategories;
-    }
+    u32 numCategories;
+    NewsData* data;
+    u32 i;
+    u32 j;
+    s32 bodyLen;
+    s32 headlineLen;
+    s32 creditLen;
+    s32 captionLen;
+    NewsArticle** article;
+    u32 num;
+    BOOL hasCaption;
+
+    data = gNewsData;
+    numCategories = GetNumCategories(data);
     lbl_803575E0 = numCategories;
     if (data->mHeader->unk2C[0] == 0) {
         gCharSpaceScale = -2.0f;
@@ -968,19 +986,19 @@ BOOL NewsScene::InitNews() {
     math::VEC2 pos(GetSideMargin(), 63.0f);
     math::VEC2 size(GetScreenWidth() - GetSideMargin() - GetSideMargin(), 330.0f);
 
-    BOOL hasCaption = FALSE;
-    s32 bodyLen = 0;
-    s32 headlineLen = 0;
-    s32 creditLen = 0;
-    s32 captionLen = 0;
+    hasCaption = FALSE;
+    bodyLen = 0;
+    headlineLen = 0;
+    creditLen = 0;
+    captionLen = 0;
     sNumPins = 0;
-    for (u32 i = 0; i < numCategories; i++) {
+    for (i = 0; i < numCategories; i++) {
         Category* category = &data->mCategories[i];
-        NewsArticle** article = category->mArticles;
-        u32 num = category->mNumArticles;
-        for (u32 j = 0; j < num; j++, article++) {
-            NewsArticle* a = *article;
-            if (a) {
+        article = category->mArticles;
+        num = category->mNumArticles;
+        for (j = 0; j < num; j++, article++) {
+            if (*article) {
+                NewsArticle* a = *article;
                 s32 len = wcslen(a->mHeadlineText) + 1;
                 if (len > headlineLen) {
                     headlineLen = len;
@@ -1013,14 +1031,17 @@ BOOL NewsScene::InitNews() {
         return FALSE;
     }
 
-    GlobePin** pin = sPins;
-    for (u32 i = 0; i < lbl_803575E0; i++) {
+    GlobePin** pin;
+    u32 count;
+    u32 k;
+    pin = sPins;
+    for (i = 0; i < lbl_803575E0; i++) {
         Category* category = &gNewsData->mCategories[i];
-        NewsArticle** article = category->mArticles;
-        u32 num = category->mNumArticles;
-        for (u32 j = 0; j < num; j++, article++) {
+        article = category->mArticles;
+        count = category->mNumArticles;
+        for (k = 0; k < count; k++, article++) {
             if (*article && (*article)->mLocationName) {
-                *pin = new (&gNewsAllocator) GlobePin(i, j, *article, gModelDepth);
+                *pin = new (&gNewsAllocator) GlobePin(i, k, *article, gModelDepth);
                 if (*pin == NULL) {
                     return FALSE;
                 }
