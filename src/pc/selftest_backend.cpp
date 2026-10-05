@@ -286,29 +286,11 @@ void TestGX() {
     GXDrawDone();
 }
 
-// --- AX / AI / AXFX -------------------------------------------------------------------
+// --- AXFX ------------------------------------------------------------------------------
 
-void AuxCallback(void*, void*) {}
-void OutCallback(void) {}
+// AX and AI have their own self-test: src/pc/audio/selftest_audio.cpp.
 
 void TestAudio() {
-    AIInit(NULL);
-    PC_CHECK(AICheckInit() == TRUE);
-    AXInit();
-
-    PC_CHECK(AXAcquireVoice(15, NULL, 0) == NULL);
-    AXOutCallback old = AXRegisterCallback(OutCallback);
-    PC_CHECK(AXRegisterCallback(old) == OutCallback);
-
-    int context = 0;
-    AXAuxCallback auxCallback;
-    void* auxContext;
-    AXRegisterAuxACallback(AuxCallback, &context);
-    AXGetAuxACallback(&auxCallback, &auxContext);
-    PC_CHECK(auxCallback == AuxCallback && auxContext == &context);
-    AXRegisterAuxACallback(NULL, NULL);
-    PC_CHECK(AXRmtGetSamplesLeft() == 0);
-
     // AXFX is the SDK's reverb, compiled natively: run one buffer through it.
     static AXFX_REVERBHI reverb;
     std::memset(&reverb, 0, sizeof(reverb));

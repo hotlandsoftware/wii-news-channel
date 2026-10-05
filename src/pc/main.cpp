@@ -34,6 +34,7 @@
 #include "gx/texdecode.h"
 #include "pc_config.h"
 #include "pc_input.h"
+#include "audio/pc_audio.h"
 #include "pc_selftest.h"
 #include "pc_video.h"
 
@@ -71,6 +72,8 @@ void PrintHelp(const char* program) {
     std::printf("                   without a display)\n");
     std::printf("  --boot           run the game\n");
     std::printf("  --window-test    open the window and run empty frames (with --frames N; default 120)\n");
+    std::printf("  --audio-test     play a two-second tone through AX and nw4r::snd's voice (also takes\n");
+    std::printf("                   --mute and --audio-dump)\n");
     std::printf("  --list-textures CONTENT[:PATH[:INDEX]]\n");
     std::printf("                   list the textures of a content (9), of a file or directory in it\n");
     std::printf("                   (9:TPLCommon.tpl.LZ, 9:news_layout.arc.LZ/arc/timg), or of 'all'\n");
@@ -87,6 +90,9 @@ void PrintHelp(const char* program) {
     std::printf("  --screenshot-window    also save the window's back buffer (frame_NNNNNN_window.png);\n");
     std::printf("                         needs a visible window\n");
     std::printf("  --screenshot-dir DIR   where to save them (default: the current directory)\n");
+    std::printf("  --mute           no audio device (audio frames still run in real time)\n");
+    std::printf("  --audio-dump FILE.wav  write the mixed stereo output of the run to a WAV file\n");
+    std::printf("                   (32 kHz, 16 bits; keep it out of the repository, e.g. below build/)\n");
     std::printf("  --input SCRIPT   scripted remote for automated runs, e.g. \"P0:0@1,A@300\":\n");
     std::printf("                   point at the centre from frame 1, press A at frame 300\n");
     std::printf("  --contents DIR   the channel's WAD contents, NN.app (default orig/HAGE/contents)\n");
@@ -182,6 +188,9 @@ static void PCSelfTestDolData() {
 static int RunSelfTest() {
     sFailures = 0;
 
+    // No audio thread and no device: the audio self-test steps the frames.
+    PCAudioSetManual(true);
+
     // nw4r::math (src/nw4r/math, natively compiled). 256 index units = 360 degrees.
     PC_CHECK(Near(nw4r::math::SinFIdx(64.0f), 1.0f));
     PC_CHECK(Near(nw4r::math::CosFIdx(128.0f), -1.0f));
@@ -251,6 +260,7 @@ static int RunSelfTest() {
     PCSelfTestDolData();
     PCSelfTestBoot();
     PCSelfTestTexDecode();
+    PCSelfTestAudio();
 
     if (sFailures == 0) {
         std::printf("self-test: all checks passed\n");
@@ -291,6 +301,7 @@ int main(int argc, char** argv) {
     bool boot = false;
     bool window_test = false;
     bool selftest_gl = false;
+    bool audio_test = false;
     const char* list_textures = nullptr;
     const char* dump_texture = nullptr;
     const char* dump_texture_out = nullptr;
@@ -353,6 +364,12 @@ int main(int argc, char** argv) {
             PCGXSetScreenshotWindow(true);
         } else if (std::strcmp(arg, "--screenshot-dir") == 0) {
             PCGXSetScreenshotDir(OptionValue(argc, argv, &i));
+        } else if (std::strcmp(arg, "--mute") == 0) {
+            PCAudioSetMute(true);
+        } else if (std::strcmp(arg, "--audio-dump") == 0) {
+            PCAudioSetDumpFile(OptionValue(argc, argv, &i));
+        } else if (std::strcmp(arg, "--audio-test") == 0) {
+            audio_test = true;
         } else if (std::strcmp(arg, "--selftest-gl") == 0) {
             selftest_gl = true;
         } else if (std::strcmp(arg, "--dol") == 0) {
@@ -415,6 +432,11 @@ int main(int argc, char** argv) {
 
     if (window_test) {
         return RunWindowTest();
+    }
+    if (audio_test) {
+        // PCOSExit(), not PCExit(): the audio backend's exit hook closes the
+        // device before SDL goes away.
+        PCOSExit(PCAudioTestMain());
     }
 
     if (!boot) {

@@ -90,6 +90,9 @@ set_source_files_properties(${PC_SDK_C_SOURCES} PROPERTIES LANGUAGE CXX)
 # They are compiled as they are instead of being rewritten in src/pc/sdk.
 news_library(sdk_tmcc_jpeg DIR src/revolution/TMCC_JPEG)
 news_library(sdk_axfx      DIR src/revolution/AXFX CXX)
+# AX: everything except the DSP's own program. Its hardware (DSP, AI) is
+# src/pc/sdk/dsp.cpp, src/pc/sdk/ai.cpp and src/pc/audio.
+news_library(sdk_ax        DIR src/revolution/AX CXX)
 news_library(sdk_net       DIR src/revolution/NET CXX)
 news_library(sdk_wenc      DIR src/revolution/WENC)
 
@@ -116,6 +119,8 @@ file(GLOB PC_CORE_SOURCES   CONFIGURE_DEPENDS "${REPO}/src/pc/*.cpp")
 file(GLOB PC_ENDIAN_SOURCES CONFIGURE_DEPENDS "${REPO}/src/pc/endian/*.cpp")
 # GX backend parts (texture codec; docs/pc_port.md, "Texture formats")
 file(GLOB PC_GX_SOURCES     CONFIGURE_DEPENDS "${REPO}/src/pc/gx/*.cpp")
+# Audio backend: the AX DSP program, the output device (docs/pc_port.md, "Audio")
+file(GLOB PC_AUDIO_SOURCES  CONFIGURE_DEPENDS "${REPO}/src/pc/audio/*.cpp")
 # The texture tool derives from ut::ResFont and ut::ArchiveFont to reach their
 # glyph sheets; NW4R is built without RTTI, so there is no typeinfo to refer to.
 set_source_files_properties("${REPO}/src/pc/gx/texdecode_tool.cpp" PROPERTIES
@@ -129,7 +134,7 @@ list(REMOVE_ITEM PC_SDK_SOURCES "${PC_STUBS_FILE}")
 
 add_library(pc_backend OBJECT
     ${PC_SDK_SOURCES} ${PC_LIBC_SOURCES} ${PC_CORE_SOURCES} ${PC_THUNK_SOURCES}
-    ${PC_ENDIAN_SOURCES} ${PC_GX_SOURCES})
+    ${PC_ENDIAN_SOURCES} ${PC_GX_SOURCES} ${PC_AUDIO_SOURCES})
 news_backend_options(pc_backend)
 target_link_libraries(pc_backend PUBLIC PkgConfig::SDL3 PkgConfig::CURL PkgConfig::GL)
 

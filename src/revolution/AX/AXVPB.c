@@ -570,7 +570,12 @@ void AXSetVoiceAddr(AXVPB* vpb, AXPBADDR* addr) {
         *dst++ = 0;
         *dst++ = 0;
         *dst++ = 0;
+#ifdef TARGET_PC
+        // gain and pred_scale, two u16: the gain is the first one
+        *dst++ = 0x0800;
+#else
         *dst++ = 0x08000000;
+#endif
         *dst = 0;
         break;
     case AX_SAMPLE_FORMAT_PCM_S8:
@@ -583,7 +588,12 @@ void AXSetVoiceAddr(AXVPB* vpb, AXPBADDR* addr) {
         *dst++ = 0;
         *dst++ = 0;
         *dst++ = 0;
+#ifdef TARGET_PC
+        // gain and pred_scale, two u16: the gain is the first one
+        *dst++ = 0x0100;
+#else
         *dst++ = 0x01000000;
+#endif
         *dst = 0;
         break;
     case AX_SAMPLE_FORMAT_DSP_ADPCM:

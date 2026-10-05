@@ -54,6 +54,11 @@ s64 PCOSTicksToNanoseconds(OSTime ticks);
  * VIWaitForRetrace without a retrace thread.) */
 BOOL PCOSSleepThreadUntil(OSThreadQueue* queue, OSTime time);
 
+/* The emulated memory blocks: index 0 is MEM1, 1 is MEM2. They are at the
+ * console's addresses (0x80000000, 0x90000000) when the host left those free.
+ * (The audio backend maps the DSP's sample addresses back to host pointers.) */
+BOOL PCOSGetMemBlock(int index, void** base, u32* size);
+
 #ifdef __cplusplus
 }
 #endif

@@ -90,6 +90,21 @@ void PCOSInitArena() {
 
 extern "C" {
 
+BOOL PCOSGetMemBlock(int index, void** base, u32* size) {
+    PCOSInitArena();
+    if (index == 0) {
+        *base = sMEM1;
+        *size = kMEM1Size;
+        return TRUE;
+    }
+    if (index == 1) {
+        *base = sMEM2;
+        *size = kMEM2Size;
+        return TRUE;
+    }
+    return FALSE;
+}
+
 void* OSGetMEM1ArenaHi(void) {
     PCOSInitArena();
     return sMEM1ArenaHi;

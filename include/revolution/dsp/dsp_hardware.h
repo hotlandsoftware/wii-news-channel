@@ -9,7 +9,11 @@ extern "C" {
 /**
  * DSP hardware registers
  */
+#ifdef TARGET_PC
+// PC: there is no DSP hardware. The DSP API is src/pc/sdk/dsp.cpp.
+#else
 volatile u16 DSP_HW_REGS[] : 0xCC005000;
+#endif
 
 /**
  * Hardware register indexes

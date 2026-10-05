@@ -1,0 +1,15 @@
+# SDK files compiled natively (see docs/pc_port.md, section 18).
+# AX is the SDK's own code: voice stacks, parameter-block synchronisation, the
+# command list, the aux ring buffers, depop and the output ring. What it talks
+# to (the DSP and the AI DMA) is the PC backend: src/pc/sdk/dsp.cpp,
+# src/pc/sdk/ai.cpp and src/pc/audio.
+# DSPCode.c (the DSP program for the console) is not compiled.
+AX.c
+AXAlloc.c
+AXAux.c
+AXCL.c
+AXComp.c
+AXOut.c
+AXProf.c
+AXSPB.c
+AXVPB.c
