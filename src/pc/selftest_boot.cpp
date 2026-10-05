@@ -176,11 +176,10 @@ void TestSoundArchive() {
         PC_CHECK(sounds > 0);
         PC_CHECK(archive.ConvertLabelStringToSoundId("no such sound label") == snd::SoundArchive::INVALID_ID);
 
-        // TODO(milestone 6): the sound files inside the archive (RSEQ, RBNK,
-        // RWSD, RWAR) have no converter yet. Until then a file is refused
-        // rather than handed out big-endian.
+        // The files inside the archive are converted when they are handed out
+        // (selftest_snd.cpp follows every sound down to its samples).
         const void* file = archive.ReadSoundInfo(0, &sound) ? archive.detail_GetFileAddress(sound.fileId) : nullptr;
-        PC_CHECK(file == nullptr || PCEndianIsHostOrder(file, 4));
+        PC_CHECK(file != nullptr && PCEndianIsHostOrder(file, 4));
 
         std::printf("self-test: rev_news.brsar: %u sounds (%u labels), %u players, %u groups, %u file positions\n",
                     sounds, labels, players, groups, files);

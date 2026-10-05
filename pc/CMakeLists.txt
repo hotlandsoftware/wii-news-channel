@@ -120,6 +120,10 @@ file(GLOB PC_GX_SOURCES     CONFIGURE_DEPENDS "${REPO}/src/pc/gx/*.cpp")
 # glyph sheets; NW4R is built without RTTI, so there is no typeinfo to refer to.
 set_source_files_properties("${REPO}/src/pc/gx/texdecode_tool.cpp" PROPERTIES
     COMPILE_OPTIONS "-fno-rtti")
+# The sound tool and its self-test derive from snd::detail::NoteOnCallback and
+# ut::FileStream, for the same reason.
+set_source_files_properties("${REPO}/src/pc/snd_tool.cpp" "${REPO}/src/pc/selftest_snd.cpp" PROPERTIES
+    COMPILE_OPTIONS "-fno-rtti")
 
 # The generated stubs are linked only into `newschannel`; `newschannel_nostubs`
 # is the same program without them, which pc/tools/gen_stubs.py links to get
