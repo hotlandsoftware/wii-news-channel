@@ -702,15 +702,20 @@ bool ArticleText::LayoutPicture(const math::VEC2* pos, f32 scale) {
     }
 
     math::VEC2 size;
-    f32 maxHeight = lbl_80192348[lbl_80356970];
-    size.x = mSmallPicture ? lbl_80192320[lbl_80356970] : lbl_801922F8[lbl_80356970];
-    f32 maxAspect = maxHeight / size.x;
-    f32 texWidth = mPicture->width;
-    f32 texHeight = mPicture->height;
-    size.y = maxHeight;
-    f32 aspect = texHeight / texWidth;
-
+    f32 texHeight;
+    f32 texWidth;
+    f32 aspect;
+    f32 maxAspect;
+    f32 maxHeight;
     f32 labelHeight;
+    maxHeight = lbl_80192348[lbl_80356970];
+    size.x = mSmallPicture ? lbl_80192320[lbl_80356970] : lbl_801922F8[lbl_80356970];
+    maxAspect = maxHeight / size.x;
+    texWidth = mPicture->width;
+    texHeight = mPicture->height;
+    size.y = maxHeight;
+    aspect = texHeight / texWidth;
+
     if (mPicLabel != NULL) {
         ut::TextWriterBase<wchar_t> writer;
         writer.SetFont(*gSysFont);
@@ -728,10 +733,9 @@ bool ArticleText::LayoutPicture(const math::VEC2* pos, f32 scale) {
     }
     texWidth *= mPicTargetScale;
 
+    mPicSize = size;
     f32 left = mRight - size.x;
-    mPicSize.y = size.y;
     mSubTarget.x = left;
-    mPicSize.x = size.x;
     mPicTarget.y = mCursor.y;
     mWrapRight = pos->x + left - mIndent;
     size.y = size.y + labelHeight;
@@ -740,7 +744,7 @@ bool ArticleText::LayoutPicture(const math::VEC2* pos, f32 scale) {
     mSubTarget.y = mPicBottom;
 
     if (mSub != NULL) {
-        mSub->mSize.x = size.x;
+        mSub->mSize.x = mPicSize.x;
         mSub->mSize.y = mPicSize.y;
         math::VEC2 origin(0.0f, 0.0f);
         mSub->Layout(&origin, 0.7f * scale);
