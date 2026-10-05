@@ -1848,6 +1848,23 @@ void SlideShow::PrevArticle() {
     }
 }
 
+static inline void SetPicCenter(SlideShow* s, f32 x, f32 y) {
+    s->mPicCenter[0] = x;
+    s->mPicCenter[1] = y;
+}
+
+// Not referenced, so the linker strips it. The original has a function here
+// that uses these two constants: they come before those of LayoutArticle in
+// the constant pool.
+void WrapGlobeAngles(math::VEC2& to, const math::VEC2& from) {
+    if (math::FAbs(to.x - from.x) > 180.0f) {
+        to.x -= 360.0f;
+    }
+    if (math::FAbs(to.y - from.y) > 180.0f) {
+        to.y -= 360.0f;
+    }
+}
+
 #pragma explicit_zero_data on
 static f32 sGlobeOfsX = 0.0f;
 static f32 sGlobeOfsY = 0.0f;
@@ -1856,16 +1873,16 @@ static f32 sGlobeOfsY = 0.0f;
 void SlideShow::LayoutArticle() {
     f32 y = 273.6f;
     if (mArticle->mLocation != NULL) {
-        mViewTarget[1] = y;
         mViewTarget[0] = 0.0f;
-        mTextTarget[1] = y;
+        mViewTarget[1] = y;
         mTextTarget[0] = GetSideMargin();
+        mTextTarget[1] = y;
         if (GetPictureTexture(mArticle) != NULL) {
-            mPicArea.top = 73.0f;
             mPicArea.left = 0.5f * (u32)GetScreenWidth();
+            mPicArea.top = 73.0f;
+            mPicArea.right = (u32)GetContentRight();
             mPicArea.bottom = y - 20.0f;
             mGlobeZoomTo = 0.6f;
-            mPicArea.right = (u32)GetContentRight();
         } else {
             mGlobeZoomTo = 0.0f;
         }
@@ -1881,12 +1898,14 @@ void SlideShow::LayoutArticle() {
         if (gGlobe != NULL) {
             GlobeCamera* camera = gGlobe->mCamera;
             if (camera != NULL) {
-                mGlobeFrom.x = camera->mLon;
-                mGlobeFrom.y = camera->mLat;
-                if (__fabsf(mGlobeTo.x - mGlobeFrom.x) > 180.0f) {
+                f32 lat = camera->mLat;
+                f32 lon = camera->mLon;
+                mGlobeFrom.x = lon;
+                mGlobeFrom.y = lat;
+                if (math::FAbs(mGlobeTo.x - mGlobeFrom.x) > 180.0f) {
                     mGlobeTo.x -= 360.0f;
                 }
-                if (__fabsf(mGlobeTo.y - mGlobeFrom.y) > 180.0f) {
+                if (math::FAbs(mGlobeTo.y - mGlobeFrom.y) > 180.0f) {
                     mGlobeTo.y -= 360.0f;
                 }
             }
@@ -1902,24 +1921,25 @@ void SlideShow::LayoutArticle() {
         }
         mShowPicture = false;
     } else {
-        mViewTarget[1] = y;
         mViewTarget[0] = 0.0f;
-        mTextTarget[1] = y;
+        mViewTarget[1] = y;
         mTextTarget[0] = GetSideMargin();
-        mPicArea.top = 73.0f;
+        mTextTarget[1] = y;
         mPicArea.left = GetSideMargin();
-        mPicArea.bottom = y - 20.0f;
+        mPicArea.top = 73.0f;
         mPicArea.right = (u32)GetContentRight();
+        mPicArea.bottom = y - 20.0f;
     }
 
-    f32 w = mPicArea.right - mPicArea.left;
-    f32 h = mPicArea.bottom - mPicArea.top;
-    mPicCenter[0] = mPicArea.left + 0.5f * w;
-    mPicCenter[1] = mPicArea.top + 0.5f * h;
+    f32 w = mPicArea.GetWidth();
+    f32 h = mPicArea.GetHeight();
+    SetPicCenter(this, mPicArea.left + 0.5f * w, mPicArea.top + 0.5f * h);
     if (GetPictureTexture(mArticle) != NULL) {
         f32 texWidth = GetPictureTexture(mArticle)->width;
         f32 texHeight = GetPictureTexture(mArticle)->height;
-        mPicScale = texHeight / texWidth > h / w ? h / texHeight : w / texWidth;
+        f32 aspect = h / w;
+        f32 texAspect = texHeight / texWidth;
+        mPicScale = texAspect > aspect ? h / texHeight : w / texWidth;
     } else {
         mPicScale = 1.0f;
     }
