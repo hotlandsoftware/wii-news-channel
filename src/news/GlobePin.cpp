@@ -526,8 +526,9 @@ void GlobePin::Update(Camera* camera) {
 }
 
 void GlobePin::UpdateCards(f32 alpha) {
-    math::MTX34* mtx;
     Quaternion* quat;
+    math::MTX34* mtx;
+    s32 i;
     Camera* camera = gGlobe->mCamera;
     s32 picIndex = -1;
     f32 distance = camera->mDistance;
@@ -544,10 +545,12 @@ void GlobePin::UpdateCards(f32 alpha) {
     C_QUATMtx(&camQuat, camMtx.mtx);
     mCardAlpha = (160.0f - 160.0f * t) * alpha;
 
-    s32 i = 0;
-    for (GlobePin* pin = this; pin != NULL; pin = pin->mNext, i++) {
+    // The first card with a picture goes to the front. (This loop has a
+    // counter of its own.)
+    s32 n = 0;
+    for (GlobePin* pin = this; pin != NULL; pin = pin->mNext, n++) {
         if (GetPictureTexture(pin->mArticle) != NULL) {
-            picIndex = i;
+            picIndex = n;
             break;
         }
     }
