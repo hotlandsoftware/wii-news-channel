@@ -1063,8 +1063,8 @@ Files are loaded as the game loads them (CNT, CX, ARC, `TPLBind()`, `ut::ResFont
 
 ### The textures in the contents
 
-From `--list-textures all`: 1445 textures, of which 932 I4, 280 IA4, 162 IA8, 66 RGB5A3, 3 RGB565, 1 I8, 1 CMPR.
-**No texture has a palette, and none is RGBA8**: C4, C8, C14X2 and RGBA8 are tested with synthetic data only.
+From `--list-textures all`: 1504 textures, of which 932 I4, 280 IA4, 191 IA8, 66 RGB5A3, 29 CMPR, 3 RGB565, 2 I8, 1 RGBA8 (59 of them, including 28 of the CMPR and the one RGBA8, are in the globe model, section 21).
+**No texture has a palette**: C4, C8 and C14X2 are tested with synthetic data only.
 
 Content 9 (main assets) and content 7 (archive fonts):
 
@@ -1673,5 +1673,5 @@ Drawing is checked by `--view-model`, not by `--selftest-gl`: it needs the game'
 
 - **In the game**: the globe is behind the news download. The first run of `LoadEarth()` on its own thread, `GlobePin`, the layouts drawn over the globe and the fade-in are untested.
 - **Animations and user data** of resource files: no converter (above).
-- **The pointer effect** (`nw4r::ef`, `.breff`/`.breft`): not started; the bypass in `PointerEffect::PointerEffect()` stays (section 15). The formats need the emitter and particle descriptors of `ef_res_emitter.h`, the key tables of `ef_res_animcurve.h` per curve type, and the guard in `RelocateCommand()` (section 12).
+- **The pointer effect** (`nw4r::ef`, `.breff`/`.breft`): not started; the bypass in `PointerEffect::PointerEffect()` stays (section 15). The formats need the emitter and particle descriptors of `ef_res_emitter.h`, the key tables of `ef_res_animcurve.h` per curve type, and the guard in `RelocateCommand()` (section 12). The files are small: `nw4r_defcursor_all01.breff` (17,740 bytes) has one project with 33 emitters (`def_cursor_open_0p`, `..._hold_1p` and so on), `.breft` (55,040 bytes) 11 textures. The owner does not need a visible pointer on PC (the host's mouse cursor is there), so this is the lowest priority of milestone 6.
 - **Speed**: the transform unit runs on the CPU (section 16). A globe frame takes about 34,000 vertices through it, which is no problem at 60 Hz on a desktop; if it ever is, the globe's shapes are the first candidates for a vertex shader.
