@@ -196,12 +196,13 @@ bool ArticleText::IsNoBreak(const wchar_t* p, const wchar_t* start) {
 
     if (gLanguage != 0) {
         wchar_t c = p[0];
-        const wchar_t* s = sSpaces;
-        while (*s != 0) {
-            if (*s == c) {
+        s32 i = 0;
+        while (sSpaces[i] != 0) {
+            wchar_t sp = sSpaces[i];
+            if (sp == c) {
                 return false;
             }
-            s++;
+            i++;
         }
         return true;
     }
