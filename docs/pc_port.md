@@ -26,6 +26,7 @@ Contents:
 17. [Texture formats and the texture codec](#17-texture-formats-and-the-texture-codec)
 18. [Audio (AX, DSP, AI)](#18-audio-ax-dsp-ai)
 19. [Sound files](#19-sound-files)
+20. [Sound: what plays](#20-sound-what-plays)
 
 ## 1. Decisions
 
@@ -52,6 +53,7 @@ pc/                         build system and tools of the PC port
   tools/status.py           which files compile
   tools/gen_stubs.py        writes src/pc/sdk/stubs_generated.cpp
   tools/wii_report_diff.py  proves the Wii build did not change
+  tools/snd_verify.py       compares the sound that came out with the sound that should (section 20)
 include/pc/                 PC-only headers (included as <pc/...>)
   compat.h                  force-included first in every file: CodeWarrior compatibility
   endian.h                  byte order: PCEndianFixFile(), swap helpers (section 12)
@@ -75,7 +77,9 @@ src/pc/                     PC-only sources
   gx/texdecode_tool.cpp     PNG writer, `--list-textures`, `--dump-texture`
   audio/                    the AX program of the DSP, the audio output and its clock (section 18);
                             pc_audio.h is what other PC code may call
-  snd_tool.cpp              `--list-sounds`: every sound followed down to its samples (section 18)
+  snd_tool.cpp              `--list-sounds`: every sound followed down to its samples (section 19)
+  snd_render.cpp            `--render-sounds`, `--dump-waves`, `--snd-stress`: sounds played without the
+                            game, reference waves, the thread stress test (section 20)
   endian/fmt_<format>.cpp   byte order: one converter per asset format, and the registry (section 12)
   libc/wchar16.cpp          16-bit wcslen(), swprintf() and so on
   deadstripped/<library>.cpp  definitions the DOL's linker removed but gcc needs
@@ -153,7 +157,8 @@ build/pc/newschannel --boot --contents path/to/contents --nand-dir path/to/nand 
 `newschannel --window-test` opens the window and runs empty frames without the game.
 `newschannel --audio-test` plays a two-second tone through AX and `nw4r::snd`'s voice (section 18).
 `newschannel --list-textures 9` and `newschannel --dump-texture 9:TPLCommon.tpl.LZ:0 build/scratch/t.png` list and decode the textures in the contents (section 17).
-`newschannel --list-sounds` lists the sounds of the channel's sound archive with the wave each one plays (section 18).
+`newschannel --list-sounds` lists the sounds of the channel's sound archive with the wave each one plays (section 19).
+`newschannel --render-sounds build/scratch/render` writes every sound of that archive as a WAV file, played through `nw4r::snd` and AX without the game (section 20).
 
 `extract_wad.py --contents` writes `orig/HAGE/contents/NN.app` (NN = content index: 00, 02 to 11). The game's archive number `n` is content `n + 2`.
 The program looks for them in `--contents` (or `--contents-dir`, or `contents =` in the settings file), `$NEWSCHANNEL_CONTENTS`, `./orig/HAGE/contents` and next to the build tree; save data goes to `--nand-dir`, `$NEWSCHANNEL_NAND` or `~/.local/share/newschannel/nand` (section 13).
@@ -251,7 +256,11 @@ Run it whenever the set of files in the build or the backend changes. If two bra
 | `tools/extract_wad.py --contents` | Section 3. |
 | `newschannel --list-textures CONTENT[:PATH[:INDEX]]` | Lists the textures of a content, or of a file or directory in it: size, format, palette, wrap, filter, mipmap levels (section 17). |
 | `newschannel --dump-texture CONTENT:PATH[:INDEX] OUT.png` | Decodes one texture to a PNG. Never commit the output (R12). |
-| `newschannel --list-sounds [CONTENT:PATH]` | Lists the sounds of a sound archive (default `9:rev_news.brsar`; the HOME Menu's is `6:HomeButton3/Huf8_HomeButtonSe.brsar`): type, file, notes, and format, sample rate, length, loop and data offset of the wave each one plays (section 18). Exit status 1 if a sound does not resolve. |
+| `newschannel --list-sounds [CONTENT:PATH]` | Lists the sounds of a sound archive (default `9:rev_news.brsar`; the HOME Menu's is `6:HomeButton3/Huf8_HomeButtonSe.brsar`): type, file, notes, and format, sample rate, length, loop and data offset of the wave each one plays, and the sound's volume, player and priority (section 19). Exit status 1 if a sound does not resolve. |
+| `newschannel --render-sounds DIR [CONTENT:PATH] [--sound ID] [--seconds S]` | Plays every sound of a sound archive (or one) through the real playback path, on a manual clock, into `DIR/NNN_LABEL.wav` (section 20). With `NEWSCHANNEL_AX_LOG=DIR/ax.log` the run can be checked by `snd_verify.py render`. Never commit the output (R12). |
+| `newschannel --dump-waves DIR [CONTENT:PATH]` | Decodes every wave of the archive's banks with the mixer's decoder into `DIR/wave_FF_NNN.wav`, and writes `DIR/waves.txt`: the reference that never went through `nw4r::snd` (section 20). |
+| `newschannel --snd-stress [CONTENT:PATH] [--seconds S]` | Starts, stops, pauses and mutes random sounds as fast as it can against the running sound thread and audio frames; no device (section 20). |
+| `pc/tools/snd_verify.py` | `waves`, `stats`, `render`, `dump`: the numeric checks of section 20. Needs numpy. |
 
 Adding a file to the build: fix it until `status.py -f <name>` passes, add it to `pc/ported/<library>.txt` (or run `status.py --update-ported`), run `gen_stubs.py`, build, run `newschannel`.
 
@@ -293,7 +302,7 @@ Stubs are not the whole picture: NWC24/SO/VF, KPAD/WPAD buttons and HBM are hand
 - [x] **3. It draws.** GX to OpenGL layer (state, TEV, textures, the FIFO), VI frame pacing; layouts and fonts on screen (sections 16 and 17; what was looked at and what is still missing: section 16, "Integration: what the screens look like").
 - [ ] **4. Input.** KPAD/WPAD from mouse, keyboard and game controllers; the pointer and buttons work.
 - [ ] **5. News.** NWC24 download tasks, VF and NET replaced by libcurl and host files; a news file loads, articles and slide show work, JPEG pictures decode.
-- [ ] **6. Globe, effects, sound.** `nw4r::g3d` globe, `nw4r::ef` pointer effects, AX/AI output through SDL audio, `nw4r::snd` playing the sound archive. Done so far: the audio backend (section 18). Sounds do not start yet, because the files inside the sound archive have no byte-order converters (section 15, "Bypasses").
+- [ ] **6. Globe, effects, sound.** `nw4r::g3d` globe, `nw4r::ef` pointer effects, AX/AI output through SDL audio, `nw4r::snd` playing the sound archive. Done so far: sound. The audio backend (section 18), the sound files (section 19), and the game's sounds playing, checked numerically (section 20). The globe and the pointer effects are not started.
 - [ ] **7. Polish.** HOME Menu, save data, settings and language selection, window scaling and aspect ratio, a decision on the Operations Guide (its viewer is PowerPC code), packaging, 64-bit.
 
 ## 9. Known hazards for later milestones
@@ -308,7 +317,7 @@ Stubs are not the whole picture: NWC24/SO/VF, KPAD/WPAD buttons and HBM are hand
 - **`gErrorSystemArc`** (the error-screen archive embedded in the DOL) and the other `auto_*` data have no source; the PC build reads them from the user's DOL at run time (section 10).
 - **Integer division by zero.** The PowerPC's `divw` does not trap; x86 raises SIGFPE. The game divides by a fade length that is still 0 in a few places (section 15, "Game-code findings"). Each site found is guarded with `PCDivW()` (`<pc/compat.h>`), which gives the PowerPC's result. Expect more: a SIGFPE in game code is this until proven otherwise.
 - **Sized `operator delete`.** The game only replaces `operator delete(void*)`. gcc calls the sized form (C++14), which would reach libstdc++ and `free()` a pointer of the game's heap; `src/pc/libc/sized_delete.cpp` forwards the sized forms to the game's. A new replaced form (aligned `new`, `nothrow`) needs the same treatment and an entry in `pc/cmake/private_symbols.ver`.
-- **Threads run in parallel** (section 11). Code that was only safe because of thread priorities can race on PC. The boot ran 24 times in a row without a failure, which proves little; `WiiConnect24.cpp` (download thread) and `nw4r::snd` (sound and task threads) are the places to look when something is flaky.
+- **Threads run in parallel** (section 11). Code that was only safe because of thread priorities can race on PC. The boot ran 24 times in a row without a failure, which proved little: `nw4r::snd` had exactly such a race, a crash when a sound was started while another was being stopped, found only by a stress test and fixed in the sound thread (section 20, "Threads"). `WiiConnect24.cpp` (download thread, priority 8, above the game's thread) has not been audited and is the next place to look when something is flaky; the cure used for the sound thread (hold the interrupt lock where the console's priorities gave exclusion) applies there too.
 
 ## 10. Data still taken from the DOL
 
@@ -430,7 +439,7 @@ What "every multi-byte field" means is decided per field by how the code reads i
 | Fields that the code assembles from bytes itself (`(p[0] << 8) + p[1]`) | **no** | such code is already independent of the host; swapping would break it. `nw4r::ef`'s name tables are read this way |
 | Texel and palette data of textures (TPL images, font sheets) | **no** | GX texture formats are big-endian by definition (RGB565, RGB5A3, IA8, CMPR...). The GX texture decoder (milestone 3) reads them with `PCReadBE16()`/`PCReadBE32()` |
 | CX-compressed data (`.LZ`, `Huf8_*`, the sheets of a `.brfna`) | **no** | the CX formats are little-endian by definition and read bytewise; see `src/pc/sdk/cx.cpp` |
-| PCM16 samples of a sound archive | **yes**, together with the file that describes them | the mixer reads host-order `s16` (section 18) |
+| PCM16 samples of a sound archive | **yes**, together with the file that describes them | the mixer reads host-order `s16` (section 19) |
 | DSP-ADPCM and PCM8 samples, sequence data | no | bytes; the MML parser builds its 16- and 24-bit values from bytes itself |
 | GX display lists inside models | no (later milestone) | a command stream; the FIFO interpreter reads it big-endian |
 
@@ -446,7 +455,7 @@ It is called at the places where a complete file first exists in memory, all ins
 | `ARCInitHandle()` (`arc.cpp`) | the header and node table of a U8 archive, however it got into memory (also the content archives that CNT opens) |
 | `ARCGetStartAddrInMem()` (`arc.cpp`) | each member of an archive, the first time it is used. This is where `lyt::ArcResourceAccessor` gets layouts, animations, textures and fonts |
 | `TPLBind()` (`tpl.cpp`) | a palette that reached memory some other way |
-| `nw4r::snd`, four places under `TARGET_PC` (section 18) | the files inside a sound archive, each with its wave data: these are not files of their own anywhere in the backend, only `nw4r::snd` knows where one starts |
+| `nw4r::snd`, four places under `TARGET_PC` (section 19) | the files inside a sound archive, each with its wave data: these are not files of their own anywhere in the backend, only `nw4r::snd` knows where one starts |
 
 Members of an archive are converted on first use and not when the archive is opened, because a handle may cover only the node table (CNT reads just that much of a content file).
 
@@ -478,7 +487,7 @@ Inside one file, a structure that several places refer to (a TPL header shared b
 | `fmt_lyt.cpp` | `RLYT`, `RLAN` |
 | `fmt_tpl.cpp` | TPL |
 | `fmt_snd.cpp` | `RSAR`: the archive's own tables |
-| `fmt_snd_files.cpp` | `RSEQ`, `RBNK`, `RWSD`, `RSTM`, wave information, `PCEndianFixSoundFile()` (section 18) |
+| `fmt_snd_files.cpp` | `RSEQ`, `RBNK`, `RWSD`, `RSTM`, wave information, `PCEndianFixSoundFile()` (section 19) |
 | `src/pc/sdk/arc.cpp` | U8 (`PCEndianSwapU8Archive()`) |
 
 A converter is `BOOL Convert(void* data, u32 size)`. It uses the real structs of the library that reads the format (`nw4r::lyt::res::Pane`, `nw4r::ut::FontInformation`, `TPLHeader`), so a field is swapped by name and its size comes from its type:
@@ -539,7 +548,7 @@ Converted (each has a self-test on the real files, section 13):
 | Archive font `.brfna` | `RFNA` | `ut::ArchiveFont` | the same plus GLGR and the size in front of each compressed sheet |
 | Layout `.brlyt` | `RLYT` | `nw4r::lyt` | lyt1, txl1, fnl1, mat1, pan1, bnd1, pic1, txt1, wnd1, grp1 (pas1/pae1/grs1/gre1 have no body) |
 | Layout animation `.brlan` | `RLAN` (and `RLPA`, `RLVI`, `RLVC`, `RLMC`, `RLTS`, `RLTP`) | `nw4r::lyt` | pai1 with all contents, infos, targets and keys |
-| Sound archive `.brsar` | `RSAR` | `snd::detail::SoundArchiveFileReader` | header, SYMB (string table, four label trees), INFO (sounds, banks, players, files, groups); **not** the FILE block: the files inside are converted one by one when `nw4r::snd` first has them (`fmt_snd.cpp`; section 18) |
+| Sound archive `.brsar` | `RSAR` | `snd::detail::SoundArchiveFileReader` | header, SYMB (string table, four label trees), INFO (sounds, banks, players, files, groups); **not** the FILE block: the files inside are converted one by one when `nw4r::snd` first has them (`fmt_snd.cpp`; section 19) |
 | Sequence | `RSEQ` | `snd::detail::SeqFileReader`, `MmlParser` | header, DATA block header and base offset, LABL; not the sequence data (a byte stream) |
 | Bank | `RBNK` | `snd::detail::BankFileReader`, `WaveFileReader` | header, instrument table with its key and velocity splits, instruments, WAVE block: wave information, channel information, ADPCM parameters |
 | Wave sounds | `RWSD` | `snd::detail::WsdFileReader`, `WaveFileReader` | header, sound, track and note tables, WAVE block (versions 1.0 to 1.2) |
@@ -730,6 +739,8 @@ What it draws is in section 16.
 
 The news itself (download, `InitNews()`, the globe, the slide show) is behind the connection screen and needs milestone 5.
 
+These screens have their sounds: the tick when the pointer enters a button, the decide sound on A, the pattern that repeats while the connection is tried and the error sound when it fails (section 20).
+
 ### Boot log
 
 `build/pc/newschannel --boot --frames 600` (the paths are the defaults):
@@ -757,7 +768,7 @@ audio:    SDL <driver>, device 48000 Hz, 2 channel(s), buffer 1024 frames
 newschannel: 600 frames done (--frames), exiting
 ```
 
-The AX line is the SDK registering its version, as on the console. The `audio:` line names the output (the driver and the device's format vary), or says why there is none (section 18).
+The AX line is the SDK registering its version, as on the console. The `audio:` line names the output (the driver and the device's format vary; or the player program that stands in for a device), or says why there is none (section 18, "The clock").
 
 When the window is closed instead, the last line is `OSShutdownSystem: the program ends here on PC`.
 The game prints nothing of its own on a good start: its `OSReport()` calls are all on error paths.
@@ -770,7 +781,7 @@ The one diagnostic, "content 11 is not an archive", is the game initialising a h
 | File | What |
 | --- | --- |
 | `src/pc/dol_data.cpp`, `dol_data.h` | the five variables of section 10, read from the user's DOL at run time; `--dol` |
-| `src/pc/endian/fmt_snd.cpp` | byte order of the sound archive's header, SYMB and INFO blocks (section 12); the files inside came later (section 18) |
+| `src/pc/endian/fmt_snd.cpp` | byte order of the sound archive's header, SYMB and INFO blocks (section 12); the files inside came later (section 19) |
 | `src/pc/libc/sized_delete.cpp` | `operator delete(void*, size_t)` forwarding to the game's `operator delete` (section 9) |
 | `include/pc/compat.h` | `PCDivW()`: signed division with the PowerPC's result for a zero divisor |
 | `src/pc/sdk/wpad.cpp`, `pc_input.h` | scripted input for automated runs (`--input`) |
@@ -780,7 +791,7 @@ The one diagnostic, "content 11 is not an archive", is the game initialising a h
 ### Bypasses
 
 Each of these skips something the Wii does. All are marked `TODO(milestone 6)` in the source.
-A third one, in `MemorySoundArchive::detail_GetFileAddress()`, is gone: the files inside a sound archive have converters (section 18) and sounds start.
+A third one, in `MemorySoundArchive::detail_GetFileAddress()`, is gone: the files inside a sound archive have converters (section 19), sounds start, and they are heard (section 20).
 
 | Where | What is skipped | Why | Remove when |
 | --- | --- | --- | --- |
@@ -1094,7 +1105,7 @@ What this means for the GX backend:
 ## 18. Audio (AX, DSP, AI)
 
 The audio backend replaces the placeholder of milestone 2. Voices that `nw4r::snd` (or anything else) starts through AX are decoded, resampled, mixed with their effects and played through SDL.
-The game itself is still silent, for a reason outside this backend: the files inside the sound archive have no byte-order converters yet, so `StartSound()` fails (section 15, "Bypasses"). "For the sound-file converters" below says what is needed.
+Section 19 is about the files `nw4r::snd` reads, section 20 about what the game plays through all of this and how it was checked.
 
 ```sh
 build/pc/newschannel --audio-test                  # a 440 Hz tone, left to right, through nw4r::snd's AxVoice
@@ -1154,9 +1165,10 @@ Per running voice, per frame:
 
 | Step | Details |
 | --- | --- |
-| Decode ("accelerator") | DSP-ADPCM: nibbles, high first; `sample = scale * nibble + (0x400 + c1 * yn1 + c2 * yn2 >> 11)`, with predictor and scale from the first byte of each 8-byte frame. PCM16: **big-endian** samples. PCM8: the byte is the high half. The gain field is not used (it is the identity for PCM as AX sets it) |
+| Decode ("accelerator") | DSP-ADPCM: nibbles, high first; `sample = scale * nibble + (0x400 + c1 * yn1 + c2 * yn2 >> 11)`, with predictor and scale from the first byte of each 8-byte frame. PCM16: host-order `s16` samples (a sound file's PCM16 data is swapped when the file is loaded, section 19; code that fills a buffer itself writes `s16` values). PCM8: the byte is the high half. The gain field is not used (it is the identity for PCM as AX sets it) |
 | End address | After the sample at the end address the current address becomes the loop address. With the loop flag: the predictor/scale comes from the loop context, and so do `yn1`/`yn2` unless the voice is a stream voice (`AX_VOICE_STREAM`). Without: the voice's state becomes stop. `nw4r::snd` points the loop address of a one-shot voice at `AxManager`'s zero buffer and detects the end by that address (`AxVoice::IsPlayFinished()`) |
 | Rate conversion | The position advances by `ratio` (16.16) per output sample over a history of four input samples (`AXPBSRC::last_samples`). `srcSelect` 2: none. 1: linear, between the two oldest (a delay of three samples at ratio 1). 0: 4-tap, 128 phases, coefficient set `coefSelect` (a delay of two samples at ratio 1) |
+| | The ratio has no upper limit: `nw4r::snd` does not clamp it and neither does the DSP. The channel's own sounds go up to 44 (a looped wave played five octaves above its recording, used as an oscillator) |
 | Volume envelope | `sample * currentVolume >> 15`, the volume stepping by `currentDelta` per sample |
 | Low-pass | `y = (a0 * x + b0 * y1) >> 15` when `lpf.on` (`AXGetLpfCoefs`) |
 | Mixer | 12 buses (main L/R/S, aux A/B/C each L/R/S), each enabled by its bit of `mixerCtrl`; `sample * volume >> 15`, the volume stepping by its delta per sample when the bus's ramp bit is set. The last value on each bus is the voice's depop value |
@@ -1192,9 +1204,25 @@ On the console the AI's interrupt comes every 3 ms, driven by the sound hardware
 - **With a device** the period follows the sound card: the amount of audio waiting in the SDL stream is held at a target (48 ms, or two device buffers if that is more) by stretching or shortening the period by at most 1 %. The stream starts filled with silence to the target. If the device stops taking data, the stream is emptied instead of growing.
 - **Without a device** the period is exactly 3 ms. Audio frames always run in real time, because the game's sound thread and its timing depend on them.
 
+- **With a player program** (below) the pipe to it is held at 24 ms in the same way.
+
 There is no device with `--mute` (or `NEWSCHANNEL_MUTE=1`), with `--no-window` (automated runs make no sound), when SDL has no audio driver, or when no playback device can be opened; the `audio:` line of the log says which. `--audio-dump` records in every case. SDL resamples 32 kHz stereo to the device's format.
 
 The thread is an ordinary host thread; it gets an implicit `OSThread` (section 11) and calls the DMA callback between `OSDisableInterrupts()` and `OSRestoreInterrupts()`. The mixing, the effects and the game's frame callbacks all run there, under the kernel lock, as they run with interrupts disabled on the console. When the program ends, an exit hook finishes the WAV file and closes the device; the thread is not joined.
+
+### When SDL finds no device: the 32-bit client libraries
+
+The program is a 32-bit process (section 1), so SDL is the 32-bit SDL and reaches the desktop's sound server only through that server's **32-bit** client library. On a 64-bit desktop these are separate packages and are often not installed, even though everything else plays sound:
+
+| Sound server | 32-bit library SDL needs | Arch Linux package |
+| --- | --- | --- |
+| PipeWire | `libpipewire-0.3.so.0` | `lib32-pipewire` |
+| PulseAudio (or PipeWire's PulseAudio server) | `libpulse.so.0` | `lib32-libpulse` |
+| ALSA routed to one of them | the ALSA plug-in | `lib32-alsa-plugins` |
+
+Without them the log says `audio: SDL has no audio (...)` or `audio: cannot open a playback device (ALSA: ...)`. Installing one of the packages is the fix (`sudo pacman -S lib32-pipewire`); nothing has to be rebuilt.
+
+Until then the output goes through a **player program**: `audio_out.cpp` starts `pacat` (or `pw-cat`), which are 64-bit programs of the host, with a pipe as their standard input and writes the same samples there. The log says `audio:    through the player program 'pacat' ...`. This costs some delay (the player's 40 ms buffer and 24 ms in the pipe). `NEWSCHANNEL_AUDIO_HELPER=0` switches it off; any other value is a shell command that plays raw 32 kHz stereo `s16` little-endian from its standard input (`NEWSCHANNEL_AUDIO_HELPER="ffplay -nodisp -f s16le -ar 32000 -ch_layout stereo -i -"`, or `"cat > build/scratch/out.raw"` to capture). The helper is not used with `--mute` or `--no-window`.
 
 ### Tools
 
@@ -1203,7 +1231,7 @@ The thread is an ordinary host thread; it gets an implicit `OSThread` (section 1
 | `--audio-test` | Starts AX and `nw4r::snd`'s `AxManager`/`AxVoiceManager`, plays a 2 s PCM16 tone through an `AxVoice` while a frame callback pans it from left to right, and checks that the voice ended on time and that audio frames ran at 3 ms. Works with `--mute`, `--audio-dump` and `SDL_AUDIODRIVER=dummy` |
 | `--audio-dump FILE.wav` | everything the AI plays, 32 kHz stereo 16-bit; the header is rewritten about once a second, so a killed run leaves a valid file |
 | `--mute` | no device |
-| `NEWSCHANNEL_AX_LOG=1` (or `=FILE`) | for every frame with a running voice: each voice's format, addresses, loop flag, resampler, ratio, envelope, the 12 mix volumes, low-pass and remote flags, `ENDED` when it reached its end; then the number of voices and the frame's peak |
+| `NEWSCHANNEL_AX_LOG=1` (or `=FILE`) | for every frame with a running voice: each voice's format, addresses, loop flag, resampler, ratio, envelope, the 12 mix volumes, low-pass and remote flags, `ENDED` when it reached its end; then the number of voices and the frame's peak. Also one line per sound that `nw4r::snd` starts or refuses: `[ax frame N] snd start: id 26 WTR_SE_COM_BUTTON -> ok (player ..., retrace 300)` (`PCSndTraceStartSound()`, called from `SoundStartable::detail_StartSound()` under `TARGET_PC`). `pc/tools/snd_verify.py` reads this log (section 20) |
 
 ### Self-test
 
@@ -1221,18 +1249,16 @@ The thread is an ordinary host thread; it gets an implicit `OSThread` (section 1
 - `nw4r::snd`'s `AxVoice` (acquired from `AxVoiceManager`, set up the way `Voice::Setup()` does): PCM16 at 32 kHz and 16 kHz, ADPCM, `IsPlayFinished()`, `GetCurrentPlayingSample()`, the drop callback
 - the WAV file
 
-### For the sound-file converters
+### What the mixer expects of sound data
 
-What the mixer and AX expect of the data that `nw4r::snd` hands over, for whoever writes the converters of section 12 (`RWSD`, `RBNK`, `RWAR`, `RWAV`, `RSEQ`, `RSTM`):
-
-- **Do not convert sample data.** PCM16 samples stay big-endian and ADPCM frames are bytes; the DSP program reads them as the console's DSP does.
-- **Do convert the ADPCM parameters**: the 16 coefficients, gain, predictor/scale and history of `AdpcmParam`, the loop context of `AdpcmLoopParam`, and the per-block history tables of a stream. They are `u16` values that `AxVoice::SetAdpcm()` copies into the parameter block.
-- Wave data must stay where its file offset puts it (aligned to 8 bytes for ADPCM), and should be in MEM1/MEM2 (the game's heaps), where addresses need no guessing.
-- A converted file that makes `detail_GetFileAddress()` return a pointer is all it takes: nothing in AX or below needs a change. To check a sound, run with `NEWSCHANNEL_AX_LOG=1` and `--audio-dump`; a voice with a wrong address is reported once (`AX: voice N stopped: ...`).
+- PCM16 samples are host-order `s16`; ADPCM frames and PCM8 are bytes. The ADPCM parameters `nw4r::snd` copies into the parameter block (`AdpcmParam`, `AdpcmLoopParam`) are host-order `u16`. Section 19 says how the files get there.
+- ADPCM wave data must start at a multiple of 8 bytes (above), and should be in MEM1/MEM2, where addresses need no guessing. The game's archives are loaded there; the sound renderer copies its archive there for the same reason.
+- To check a sound, run with `NEWSCHANNEL_AX_LOG=1` and `--audio-dump`; a voice with a wrong address is reported once (`AX: voice N stopped: ...`).
 
 ### Not done
 
 - Wii Remote speaker audio, ITD, biquad, real Dolby Pro Logic II (above).
+- The 4-tap resampler's coefficients and the compressor are reconstructions (above); section 20 says what that means for what is heard.
 - `AXSetVoiceSrcType(AX_SRC_TYPE_4TAP_AUTO)` is not an SDK value (`nw4r::snd` resolves it before the call).
 - A second DSP task, the AI's 48 kHz mode and its stream (`AIS*`) functions: nothing uses them.
 - 64-bit: the command list, the block chain and `AIInitDMA()` carry pointers in 32 bits.
@@ -1240,7 +1266,7 @@ What the mixer and AX expect of the data that `nw4r::snd` hands over, for whoeve
 ## 19. Sound files
 
 The files inside a sound archive are converted to host byte order on load, like every other format (section 12), and `nw4r::snd` starts sounds for real.
-Audio output is not part of this: AX is still the placeholder of section 14.
+Section 18 is the audio backend they are played through; section 20 is what plays.
 
 ### What the archives hold
 
@@ -1274,7 +1300,7 @@ From then on:
 
 | Format | In memory |
 | --- | --- |
-| PCM16 (`WaveFile::FORMAT_PCM16`, `AX_PB_FORMAT_PCM16`) | host-order `s16`. **The AX mixer must read PCM16 as native `s16`, not as big-endian.** |
+| PCM16 (`WaveFile::FORMAT_PCM16`, `AX_PB_FORMAT_PCM16`) | host-order `s16`, which is how the DSP program reads it (section 18) |
 | DSP-ADPCM | unchanged bytes (a header byte and seven bytes of nibbles per frame); its parameters in `AdpcmInfo` are host-order `u16` |
 | PCM8 | unchanged bytes |
 
@@ -1303,8 +1329,8 @@ A sequence is played without sound for `PC_SND_SEQ_FRAMES` (4000) sound frames w
 
 ```
   id  label                        type file      waves in  notes waves  format  rate  samples loop ch   offset
-  28  NEW_BGM_NEWS                 SEQ  5 RSEQ    file 6      210    10  ADPCM  44100    13061  yes  1  1042080
-  33  NEW_SE_KETTEI                SEQ  7 RSEQ    file 6       12     1  ADPCM  44100     7015  yes  1        0
+  28  NEW_BGM_NEWS                 SEQ  5 RSEQ    file 6      210    10  ADPCM  44100    13061  yes  1  1042080  vol  50 player  0 prio  64
+  33  NEW_SE_KETTEI                SEQ  7 RSEQ    file 6       12     1  ADPCM  44100     7015  yes  1        0  vol 115 player  4 prio  64
 ```
 
 A wave is accepted if its format, channel count (1 or 2), sample rate (8000 to 48000 Hz), loop points and data range are plausible and, for DSP-ADPCM, if the initial predictor/scale in its parameters equals the first byte of its samples (which ties a swapped `u16` to untouched sample data).
@@ -1318,27 +1344,11 @@ A wave is accepted if its format, channel count (1 or 2), sample rate (8000 to 4
 | `HomeButtonSe.brsar` | 28 sounds, 45 notes, 13 waves, one of them PCM16 and smooth in host order |
 | Both, from a second untouched copy | `SoundArchivePlayer::LoadGroup()` into a `SoundHeap` and `SoundArchiveLoader::LoadFile()`: the copies are converted, byte for byte what the archive's own files and wave data are after their conversion, and the archive they were read from is not touched |
 
-### Sounds start in a real boot
+### What `nw4r::snd` does with the files
 
-With the placeholder AX nothing can be observed (no audio frame, so no sequence advances). For this check only, a tracing AX was linked in locally (not committed): voices from a pool, the AX frame callback every 5 ms from a host thread in interrupt context, every parameter block logged.
-`--boot --no-window --frames 900 --input "P0:0@1,A@300"` then acquired 15 voices, all set up and started, none refused:
-
-```
-AX[   172] AXAcquireVoice(prio 16) -> voice 0 (1 so far)
-AX[   172]   voice 0 addr: format 0 loop 0 cur 244639C2 loop AD262482 end 24464198
-AX[   172]   voice 0 adpcm: coef 08BE F910 0C19 F87D.. gain 0 pred_scale 0029 yn1 0000 yn2 0000
-AX[   172]   voice 0 src: ratio 0002.99FF
-AX[   172]   voice 0 state: RUN (1 started so far)
-```
-
-Without the trace the scripted boot is unchanged: the screenshots at retraces 200, 500 and 880 are identical to those of the build before the converters.
-
-### For the AX backend
-
-- **PCM16 is host order**, ADPCM and PCM8 are bytes (above).
-- **Sequences advance only on the AX frame callback** (`AXRegisterCallback()`): `SoundThread::AxCallbackFunc()` posts a message and the sound thread runs `SeqPlayer::UpdateAllPlayers()`, the channels and the voices. Call it in interrupt context (section 11).
-- **DSP addresses are computed from host pointers and can wrap.** `AxVoice::GetDspAddressBySample()` takes `OSCachedToPhysical(p)` (`p - 0x80000000`), and for ADPCM multiplies it by 2 (nibbles) in 32 bits. For data in MEM1 or MEM2 mapped at the Wii's addresses (the usual case, section 11) that is exact: `cur 244639C2` above is nibble 2 of the byte at physical `0x12231CE0`, MEM2 `0x92231CE0`. For a pointer outside those ranges the top bit is lost: `loop AD262482` is the address of `AxManager`'s zero buffer, a static of the executable, and cannot be turned back into one pointer. The backend has to resolve an address against the buffers it knows (or keep the pointer when `AXSetVoiceAddr()` is called), and must not assume the arenas are at the Wii's addresses.
-- `AXPBADDR::format` is 0 for ADPCM, 10 for PCM16, 25 for PCM8 (`AxVoice::Format`); the loop address of a wave that does not loop points at that zero buffer.
+- **Sequences advance only on the AX frame callback** (`AXRegisterCallback()`): `SoundThread::AxCallbackFunc()` posts a message and the sound thread runs `SeqPlayer::UpdateAllPlayers()`, the channels and the voices.
+- **DSP addresses are computed from host pointers and can wrap.** `AxVoice::GetDspAddressBySample()` takes `OSCachedToPhysical(p)` (`p - 0x80000000`), and for ADPCM multiplies it by 2 (nibbles) in 32 bits. For data in MEM1 or MEM2 mapped at the Wii's addresses (the usual case, section 11) that is exact: `cur 244639C2` is nibble 2 of the byte at physical `0x12231CE0`, MEM2 `0x92231CE0`. For a pointer outside those ranges the top bit is lost: the loop address of every wave that does not loop is the address of `AxManager`'s zero buffer, a static of the executable. Section 18, "Sample addresses", says how the DSP program resolves these.
+- `AXPBADDR::format` is 0 for ADPCM, 10 for PCM16, 25 for PCM8 (`AxVoice::Format`).
 - The game's own effect (`FxVoice` in `sound_manager.cpp`, AUX B) and the reverb (AUX C) work on the `s32` buffers the AUX callbacks get; they read no file data.
 
 ### Not done
@@ -1347,3 +1357,177 @@ Without the trace the scripted boot is unchanged: the screenshots at retraces 20
 - **`DvdSoundArchive` and `NandSoundArchive`** read the archive's header, INFO block and SYMB block as separate pieces (`LoadHeader()`, `LoadLabelStringData()`), which the whole-file `RSAR` converter does not cover. Neither can run: there is no disc (section 13) and `ut::NandFileStream` is a stub (section 7). The game uses memory archives.
 - **`HBMPlaySound` and the HOME Menu library's own sound code** are not compiled (section 14); the HOME Menu's archive is converted and played through the game's `HbmSound` player like the channel's.
 - **`RWAR`/`RWAV`**: no reader in this revision of `nw4r::snd`, no such file; nothing to convert.
+
+## 20. Sound: what plays
+
+The game's sounds play: `--boot` makes the hover, decide, connection and error sounds of the screens it reaches, through `nw4r::snd`, the SDK's AX, the DSP program and the audio output.
+Every sound of both archives (88 and 28) was also played without the game and compared, sample for sample, with what its sequence, its bank and its waves say it should be.
+
+**Nobody has listened to any of this.** Everything below is measured. What numbers cannot say is in "What needs an ear".
+
+### How to hear it
+
+```sh
+build/pc/newschannel --boot          # a fresh --nand-dir shows the date question first
+```
+
+The `audio:` line of the log must name a device or a player program (section 18, "When SDL finds no device"). On a 64-bit desktop without the sound server's 32-bit client library the output goes through `pacat`; installing `lib32-pipewire` (or `lib32-libpulse`) gives SDL its device.
+
+What the screens that can be reached today should sound like (the news itself needs milestone 5):
+
+| Action | Sound | What it is |
+| --- | --- | --- |
+| The pointer moves onto a button ("Yes", "No", "Back to the Wii Menu") | 35 `NEW_SE_MENU_SEL` | a very short double tick, 42 ms, mono, quiet (peak 4635 of 32767) |
+| A (left click) on "Yes", or on the error screen's button | 26 `WTR_SE_COM_BUTTON` | six notes on up to three voices, 1.4 s, with reverb |
+| A on "No" | 27 `WTR_SE_COM_BUTTON_B` | the same instrument, other notes, 1.4 s |
+| The connection screen appears | 23 `WTR_SE_COM_RECEIVE` | a repeating pattern while the download is tried; the game stops it when the attempt ends (0.8 s here: there is no network) |
+| The connection fails | 25 `WTR_SE_COM_ERROR` | six low notes in three pairs, 2.9 s |
+
+Everything else is in the archive and plays in the renderer, but the game only starts it from screens behind the news download: the music (28 to 32; 29 has volume 0 in the archive and is raised by the game), the globe (0 to 21), the headline list, the article and slide show sounds (33 to 68, 85 to 87), the cat (69 to 71), the language list (72 to 74). `grep -n "PlaySE\\|PlaySound" src/news/*.cpp` lists every call with its id. The HOME Menu's 28 sounds are in the second archive and are never started: the HOME Menu is a placeholder (section 14).
+
+To listen to all of them without the game:
+
+```sh
+build/pc/newschannel --render-sounds build/scratch/render                # 88 WAV files, a few seconds
+build/pc/newschannel --render-sounds build/scratch/render_hbm 6:HomeButton3/Huf8_HomeButtonSe.brsar
+build/pc/newschannel --dump-waves build/scratch/waves                    # the 82 raw waves
+pc/tools/snd_check.sh                                                    # all of the above, three scripted boots, the reports
+```
+
+### The tools
+
+| Tool | What it does |
+| --- | --- |
+| `--render-sounds DIR` (`src/pc/snd_render.cpp`) | Sets up AX, `nw4r::snd`'s sound system and a `SoundArchivePlayer` on the archive, as `InitSound()` does, and calls `StartSound()` for each sound. The sound thread, the sequence player, channels, voices, AX and the DSP program are the real ones. Only the clock differs: the output is in manual mode, the renderer runs one audio frame, waits until the sound thread has finished its update (a `SoundThread::PlayerCallback`), calls `SoundArchivePlayer::Update()` at 59.94 Hz, and repeats. The result does not depend on the host's timing and is the same on every run. A sound that does not end (music, loops) is cut after `--seconds` (default 12). **No aux effect is installed**, so these files are dry; the game adds its reverb |
+| `--dump-waves DIR` | Each wave of the archive's banks decoded with `PCAXDecodeAdpcmNibble()` (the mixer's decoder) at the wave's own rate, no sequence, no voice. `waves.txt` lists them with their ADPCM parameters |
+| `NEWSCHANNEL_AX_LOG` | Per audio frame, every running voice as the DSP program got it, and every `StartSound()` (section 18) |
+| `--audio-dump FILE.wav` | The mixed output of a run of the game |
+| `pc/tools/snd_verify.py waves` | Decodes every wave from the content file with a DSP-ADPCM decoder written in Python, from the parameters in `waves.txt`, and compares it with the mixer's WAV |
+| `snd_verify.py render` / `dump` | Rebuilds the expected output from the reference waves and the logged voice parameters (address, pitch ratio, envelope, mix volumes), and compares it with a rendered sound or with a dump of the game: correlation, gain, delay; whether each voice's address advanced by its ratio; each note's pitch against its wave's rate. `dump --render-dir` also compares note onsets with the renderer's run of the same sound |
+| `snd_verify.py stats` | Peak, RMS, DC offset, clipping, silence and the bursts of a dump, each with the sound started before it |
+| `--snd-stress` | The thread test of "Threads" below |
+
+`snd_verify.py` rebuilds the output twice. `corr`/`gain` use plain linear interpolation of the reference wave, which knows nothing of the mixer's resampler; `corrF`/`gainF` use the mixer's 4-tap table (recomputed in Python). The first is the independent check, the second shows that what is left over is the resampler's frequency response and nothing else.
+
+### Results
+
+**Waves.** 82 DSP-ADPCM waves of `rev_news.brsar`, 2,222,149 samples: the Python decoder and the mixer's decoder agree on every sample.
+
+**Every sound, on the manual clock** (`build/scratch/render/verify.txt`, `render_hbm/verify.txt` after `snd_check.sh`):
+
+| | `rev_news.brsar` | `HomeButtonSe.brsar` |
+| --- | --- | --- |
+| Sounds started / refused | 88 / 0 | 28 / 0 |
+| With output | 77 | 28 |
+| Silent | 29 `NEW_BGM_READ` (volume 0 in the archive; its 175 notes run with envelope 0) and 75 to 84 `NEW_SE_FX_SET_ZOOM*` (sequences without notes) | none |
+| Notes (voices started) / voice frames | 1548 / 396,807 | 71 / 11,134 |
+| Most voices at once | 46 (sound 29); 24 for audible music | 2 |
+| Correlation with the linear rebuild, worst / median | 0.952 (43 `NEW_SE_KASEN`) / 1.000; all others at least 0.99 | 1.000 / 1.000 |
+| Gain against the linear rebuild | 0.79 to 1.01 | 1.00 |
+| Correlation / gain with the mixer's filter in the rebuild | 1.000 / 1.00 for every sound | 1.000 / 1.00 |
+| Delay | 0 samples for every sound | 0 |
+| Address against pitch ratio, largest difference | 1 sample | 0 |
+| Peak, loudest sound / clipped samples | 25050 (53) / 0 | 23520 / 0 |
+| Bad sample addresses | 0 | 0 |
+
+- The note counts equal those of `--list-sounds` (the silent `SeqPlayer` run of section 19) for sounds that end within the time, for example 210 for the music cut at 12 s, 12 for `NEW_SE_KETTEI`, 6 for `WTR_SE_COM_BUTTON`.
+- Pitches: every note of the HOME Menu archive, and of 50 of the 78 channel sounds that have notes, is a whole number of semitones from its wave's own rate. The other 28 sounds have detuned notes, by the same few amounts wherever an instrument is used: 5 to 9 cents (pairs and triples of the same note in the music and the decide sounds, a chorus), 50 cents (every second one of the ten zoom sounds: they rise by a quarter tone per level), 19 to 47 cents on single effects. Whether each of these is what the sound designer wrote cannot be checked without the console; none looks like a wrong table entry (those would be off by octaves or by a constant).
+- `HOMESE_START_CONNECT_WINDOW` plays the one PCM16 wave of the assets through the real path: correlation 1.000. (The wave is a chime with most of its energy between 2 and 12 kHz; read in the wrong byte order it is noise at a constant level.)
+- The low gain of `NEW_SE_KASEN` and the 0.94 to 0.98 of a few others are waves with much treble played above their rate with the "8 kHz" coefficient set. See "What needs an ear".
+
+**The game** (`build/scratch/dumps/boot_a`, `boot_b`, `boot_c`: the scripted boots of `snd_check.sh`, `--no-window`, real-time clock, real threads):
+
+| Dump | What happens | Peak | Clipped | DC offset L/R | Silent |
+| --- | --- | --- | --- | --- | --- |
+| `boot_a.wav` 15.9 s | first run: hover Yes, No, Yes; A; connection fails; hover the error button twice; A | 10735 | 0 | 1.9 / 1.5 | 69.9 % |
+| `boot_b.wav` 11.5 s | first run: hover No; A on No | 10249 | 0 | -0.5 / -0.5 | 85.5 % |
+| `boot_c.wav` 3.4 s | second run on a's save data: connection screen at once, error, the button | 10736 | 0 | 10.0 / 7.9 | 2.2 % |
+
+| Sound in the game | Burst | Correlation / gain against the rebuild | Notes found, onset difference to the manual clock |
+| --- | --- | --- | --- |
+| 35 `NEW_SE_MENU_SEL`, 7 times | starts 10 ms after `StartSound()`, 42 ms long, peak 4635, RMS 430.7 on both channels, every time | 0.999 / 0.96 (1.000 / 1.00 with the filter) | 2 of 2, 0 frames |
+| 26 `WTR_SE_COM_BUTTON`, 3 times | peak 10735; right channel louder (it is panned) | 0.990 to 0.993 / 1.00 | all, 0 frames |
+| 27 `WTR_SE_COM_BUTTON_B` | 1287 ms, peak 10249 | 0.991 / 1.00 | 6 of 6, 0 frames |
+| 23 `WTR_SE_COM_RECEIVE`, twice | stopped by the game after 0.4 to 0.8 s | 0.980 to 0.987 / 0.92 to 0.98 | all up to the stop, 0 frames |
+| 25 `WTR_SE_COM_ERROR`, twice | peak 9730 to 9822 | 0.973 to 0.974 / 1.05 | 6 of 6, 0 frames |
+
+- Every burst in the dumps follows a logged `StartSound()`; there is no sound without a cause and no start without a sound.
+- The sounds that send to AUX C correlate a little lower than in the renderer because the game's reverb (`FxReverbHi`, the SDK's `AXFXReverbHi` compiled natively) is in the dump and not in the rebuild. For `WTR_SE_COM_BUTTON_B` the difference between output and dry rebuild is 17.8 dB below the dry signal and dies away after the last voice: RMS 4.5, 2.4, 0.9, 0.4, 0.1 in successive 200 ms, then digital silence after 1 s.
+- Note timing is the renderer's to the audio frame: real threads change nothing that can be measured. The same parameters reach AX in both (ratio, envelope values and per-frame peaks are identical).
+- AUX B (the game's `FxVoice`: pitch up, pitch down, radio) gets no send from any sound that plays on these screens; that code runs every frame on silence and its effect paths are not exercised.
+
+**With a device.** `--boot --frames 480` with a window on a desktop with PipeWire: SDL found no device (no 32-bit client library), the output went through `pacat`, the sound server listed the stream (`News Channel`, `s16le 2ch 32000Hz`, not corked), the program left with status 0 and the player was gone afterwards. With `NEWSCHANNEL_AUDIO_HELPER="cat > file"` the bytes in the pipe are the bytes of `--audio-dump` after the 24 ms of leading silence. SDL's own device path was only ever run against SDL's dummy driver (section 18).
+
+### What was wrong, and where it was fixed
+
+| Symptom | Cause | Fix |
+| --- | --- | --- |
+| The two halves of the work disagreed on PCM16: the converters leave host-order samples, the DSP program read big-endian | merge | `ax_dsp.cpp` reads host-order `s16`; the audio self-test writes its PCM that way |
+| `NEW_SE_GENRE_SEL` and three more sounds flat (rebuild correlation 0.07 to 0.65) | the DSP program clamped the pitch ratio at 16; these sounds ask for 17.5 to 44 | no limit in `ax_dsp.cpp` (`ReadSamples()`); self-test at ratio 20 |
+| A crash in `SeqPlayer::UpdateAllPlayers()` when a sound is started while another is stopped (the game does this whenever a sound replaces one on a full player) | threads: see below | `SoundThread::SoundThreadProc()`, under `TARGET_PC` |
+| No sound on a desktop that has sound | 32-bit SDL without the sound server's 32-bit client library | the player program (section 18); the real fix is the package |
+| `newschannel --selftest` would leave through `return` with threads running | the sound self-test starts the sound and task threads, which never end | the self-test paths of `main.cpp` end with `PCExit()` |
+
+### Threads
+
+On the console the sound thread has priority 4 and the game's thread 16: nothing of the game runs while the sound thread is in its update, and the game's own changes to shared lists are made with interrupts disabled (`SeqPlayer::Start()`, `FinishPlayer()`, the instance pools, `Voice`, `Channel`: all take an `ut::AutoInterruptLock`), so the sound thread cannot come in halfway either.
+This revision of `nw4r::snd` relies on exactly that: `StartSound()`, `SoundHandle::Stop()` and the rest take no mutex.
+
+On PC the threads run in parallel (section 11). The interrupt lock still makes the game's changes atomic, but the sound thread's update was not under it, so it could walk the list of sequence players while the game's thread unlinked one.
+
+The fix is one guarded block: the sound thread's update holds the interrupt lock for its whole length (`snd_SoundThread.cpp`, `pcUpdateLock`). That gives back both of the console's guarantees. The audio "interrupt" (section 18) waits for an update that is in progress, which on the console would be an interrupt arriving a few microseconds later.
+
+`newschannel --snd-stress` is the test: for some seconds it calls `StartSound()`, `Stop()`, `Pause()`, `SetVolume()`, `SetTrackMute()`, `SetPitch()` and `SetPan()` on six handles with random sounds, about 80,000 calls per second, with the sound thread and the audio frames running in real time.
+
+| | Before the fix | After |
+| --- | --- | --- |
+| 3 runs / 8 runs of 6 to 8 s | SIGSEGV in `SeqPlayer::UpdateAllPlayers()` within the first seconds, every run | no failure; about 690,000 calls and 245,000 sounds started per run, up to 63 voices, every audio frame answered by the sound thread, no bad address, all voices released at the end |
+
+Not covered: the task thread (priority 3, above the sound thread) only works for archives that load from disc or NAND, which the game does not use. The game's download thread is outside sound (section 9).
+
+### Shared-source changes
+
+All under `TARGET_PC`; the Wii build is unchanged (`main.dol: OK`, no unit of `report.json` differs).
+
+| File | Change |
+| --- | --- |
+| `src/nw4r/snd/snd_SoundThread.cpp` | the update holds the interrupt lock (above) |
+| `src/nw4r/snd/snd_SoundStartable.cpp` | `PCSndTraceStartSound()` after `detail_SetupSound()`: the `snd start` line of the log; does nothing unless the log is on |
+| `src/nw4r/snd/snd_MemorySoundArchive.cpp`, `snd_SoundArchivePlayer.cpp`, `snd_SoundArchiveLoader.cpp`, `snd_StrmFile.cpp` | the conversion calls of section 19 |
+| `src/revolution/AX/AXVPB.c`, `include/revolution/dsp/dsp_hardware.h` | section 18 |
+| `src/pc/deadstripped/nw4r_snd.cpp` (PC only) | `SoundThread::RegisterPlayerCallback()` and `UnregisterPlayerCallback()`: declared in the header and used by `SoundThreadProc()`'s list, but nothing in the channel calls them, so they are not in the DOL |
+
+**For the main branch:** no logic bug was found in the three NonMatching files of `nw4r::snd` or in `sound_manager.cpp`. `SoundArchivePlayer`'s start path for sequences on a memory archive (`detail_SetupSound()`, `PrepareSeqImpl()`, the note-on callback) ran for all 116 sounds and gave the expected notes. Not exercised, so nothing can be said: `RemoteSpeaker` (the speaker is not mixed), `TaskManager` and the load tasks (memory archives load nothing), the wave sound and stream paths (no such sounds), `FxVoice`'s three effects (no send).
+
+### What needs an ear
+
+| What | Why numbers do not settle it |
+| --- | --- |
+| **Treble of sounds played above their recorded rate** | The 4-tap resampler's coefficient table is in the console's DSP ROM, not in the SDK source; ours is a windowed sinc per set (section 18). The addresses, pitch and level are right, but the "8 kHz" set as computed here takes 4 dB off at a quarter of the input rate (11 kHz for a 44.1 kHz wave) and 9 dB at 16 kHz. If the console's table is gentler, sounds here are duller than on a Wii: most audible on bright, noisy effects (`NEW_SE_KASEN`, `NEW_SE_SLIDE_MOVE`, the `NEW_SE_NEWS_*` set), least on the music |
+| **The reverb's character** | Its level and decay are measured and plausible; whether it sounds like the console's is not |
+| **Loudness and balance** between music and effects, and whether anything distorts when many sounds overlap | Single sounds peak at 25050 at most and nothing clips, but the compressor (a reconstruction, section 18) only acts when the sum passes 16 bits, which no test here reaches |
+| **Delay** between an action and its sound | 10 ms inside the program (measured); the device's or the player program's buffer comes on top and is not measured (about 64 ms through `pacat`, by its settings) |
+| **Clicks at the start and end of notes**, and dropouts over minutes | AX's depop is the SDK's code and is tested on a synthetic voice; the clock's drift correction was run for seconds, not minutes |
+
+### Bypasses and things left
+
+| What | State |
+| --- | --- |
+| Wii Remote speaker | not mixed; the remote ring gets silence (`TODO(milestone 7)` in `ax_dsp.cpp`). `nw4r::snd`'s `RemoteSpeaker` runs against the WPAD placeholder |
+| HOME Menu sounds | the archive is converted, set up by the game and plays in the renderer; nothing starts them because the HOME Menu library is a placeholder (section 14, milestone 7) |
+| Music, globe, article and slide show sounds in the game | need the news download (milestone 5); verified in the renderer only |
+| Streams and wave sounds | none in the assets; their converters are tested on files built in the self-test, PCM16 stream blocks are not converted (section 19) |
+| ITD, biquad, Dolby Pro Logic II, the DSP ROM's resampler table, the compressor | section 18 |
+| The sound thread's update under the interrupt lock | a PC-only difference in locking, not a bypass; it stays |
+| 64-bit | section 18 |
+
+### Self-test
+
+`newschannel --selftest` (no device; `PCSelfTestSndRender()` in `selftest_snd.cpp`, after the audio self-test) plays through the real path, on the manual clock:
+
+- `NEW_SE_MENU_SEL`: starts, one voice, 10 to 40 voice frames, ends by itself, mono; a second run gives the same samples
+- `WTR_SE_COM_BUTTON`: three voices, 1.1 to 1.7 s, the two channels differ
+- `NEW_SE_GENRE_SEL` (pitch ratio 17.5), `NEW_BGM_READ` (volume 0: voices but silence), `NEW_BGM_NEWS` (at least four voices, no clipping), an id that does not exist (refused, silent)
+- HOME Menu archive: a stereo wave on two voices; the PCM16 wave dying away (its level after one second is under a twentieth of its start), which it would not if its bytes were the wrong way round
+
+and in the audio self-test a voice at ratio 20 advances 1920 samples per frame. `--snd-stress` and `snd_verify.py` are run by hand (`pc/tools/snd_check.sh`); they need seconds, and the second needs numpy.
