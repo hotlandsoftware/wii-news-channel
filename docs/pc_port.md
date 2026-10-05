@@ -281,7 +281,7 @@ Stubs are not the whole picture: AX/AI, NWC24/SO/VF, KPAD/WPAD buttons and HBM a
 - [x] **0. Scaffolding.** CMake build, backend skeleton, compatibility layer, content extraction, this document.
 - [x] **1. It compiles.** Every file of `src/news` and `src/nw4r` compiles and links (217 / 217). Thunks for the CodeWarrior names.
 - [x] **2. It boots.** `--boot` runs the game's `main()` and its main loop in a window, and shuts down cleanly when the window is closed (section 15): OS (threads, mutexes, message queues, alarms, time, arenas), MEM heaps, MTX, CNT/ARC/NAND file access on `orig/HAGE/contents`, CX decompression, SC settings, a window, byte order of the formats the boot parses (archives, palettes, fonts, layouts, layout animations, the sound archive's tables). Formats of later milestones are not converted yet and their loaders are guarded (section 15, "Bypasses").
-- [ ] **3. It draws.** GX to OpenGL layer (state, TEV, textures, the FIFO), VI frame pacing; layouts and fonts on screen.
+- [x] **3. It draws.** GX to OpenGL layer (state, TEV, textures, the FIFO), VI frame pacing; layouts and fonts on screen (sections 16 and 17; what was looked at and what is still missing: section 16, "Integration: what the screens look like").
 - [ ] **4. Input.** KPAD/WPAD from mouse, keyboard and game controllers; the pointer and buttons work.
 - [ ] **5. News.** NWC24 download tasks, VF and NET replaced by libcurl and host files; a news file loads, articles and slide show work, JPEG pictures decode.
 - [ ] **6. Globe, effects, sound.** `nw4r::g3d` globe, `nw4r::ef` pointer effects, AX/AI output through SDL audio, `nw4r::snd` playing the sound archive.
@@ -639,7 +639,7 @@ What each placeholder promises:
 
 ### Video (VI)
 
-- `VIInit()` opens the window: 640x456, or 810x456 with `aspect = 16:9`, resizable. It first asks for an OpenGL 3.3 core context and falls back to whatever the driver has. Without a display, with `--no-window`, or with `SDL_VIDEODRIVER=dummy`, everything still runs, without a window or without a context.
+- `VIInit()` opens the window: 640x480, or 854x480 with `aspect = 16:9`, resizable (the shape of the television screen, so the picture fills it; the game's 456 lines are scaled to it). It first asks for an OpenGL 3.3 core context and falls back to whatever the driver has. Without a display, with `--no-window`, or with `SDL_VIDEODRIVER=dummy`, everything still runs, without a window or without a context.
 - `VIWaitForRetrace()` is the retrace. It sleeps until the next retrace time (59.94 Hz; 50 Hz if the configured TV mode is PAL), increments the count, calls the pre-retrace callback, latches the registers if `VIFlush()` was called, calls the post-retrace callback, pumps SDL events and presents. There is no interrupt, so a retrace only happens while the application waits for one. The swap interval is 0: pacing is ours, not the driver's.
 - Only the thread that called `VIInit()` runs retraces. Another thread that calls `VIWaitForRetrace()` waits for the count to change.
 - The picture: at each retrace `Present()` gives the current XFB pointer (or NULL while `VISetBlack(TRUE)` is latched) to `PCGXRetrace()`, which saves a requested screenshot, and to `PCGXPresent()`, which scales that XFB's frame into `PCVIGetPictureRect()` (the window letterboxed to 4:3 or 16:9) on black (section 16).
@@ -849,6 +849,7 @@ Texels from files are big-endian. Buffers whose 16-bit texels are in host order 
 ### Looking at the result
 
 - `--screenshot N[,N...] --screenshot-dir DIR` writes `frame_NNNNNN.png` for retrace N: the frame the window shows at that retrace, or black while the screen is blanked. The picture is the XFB as copied (640 x 456 for the game's mode), not stretched to the display's aspect ratio: on a 4:3 television it is about 5 % narrower, and in 16:9 mode it is anamorphic. Works with `--no-window` (hidden window) and with `SDL_VIDEODRIVER=offscreen`. **Never commit screenshots**: they show the game's assets.
+- `--screenshot-window` (with a visible window) also writes `frame_NNNNNN_window.png`: the window's back buffer after `PCGXPresent()`, in window pixels, read just before the swap. This is the picture as presented (scaled to 4:3 or 16:9, with bars if the window has another shape).
 - `NEWSCHANNEL_GX_LOG=N[,N...]` (or `all`) dumps every primitive of those frames: vertex format, the first four vertices after the transform (in EFB pixels), matrices, viewport and scissor, lighting channels, each TEV stage, register and konst colours, the textures (pointer, size, format, wrap, filter), coordinate scales, blend, depth, alpha compare and cull state, and the EFB copies. `NEWSCHANNEL_GX_LOG_FILE=path` writes to a file instead of stderr. The frame number is the retrace that shows the frame, so the log of frame N describes screenshot N as long as the game draws one frame per retrace.
 - `PCGXGetStats()` counts primitives, vertices, register loads, display lists, copies, programs, textures and FIFO bytes that were not a command (`badCommands`: if this is not 0 the command stream lost step, which means a vertex descriptor and the data written for it disagree).
 - Problems are printed once each (`PCGXWarnOnce()`): an undecodable texture format (drawn magenta), an unknown FIFO command, an indexed attribute without an array, a copy format that is not implemented.
@@ -881,6 +882,39 @@ Texels from files are big-endian. Buffers whose 16-bit texels are in host order 
 - **The globe** (milestone 6): `nw4r::g3d` sends its state as raw register loads and display lists, which the decoder handles; what it needs is (a) the two colour-punning sites in `g3d_gpu.h` and `g3d_anmscn.cpp` (section 12), (b) a decision per vertex array on byte order (`PCGXSetArrayBigEndian()`, or convert the arrays on load), (c) host pointers for anything g3d puts into a register: check how `ResShp` patches array bases and texture addresses into its display lists; `PCGXAddressToHost()` only understands MEM1/MEM2 at the console's addresses, (d) fog and Z-compare location if the model uses them.
 - **The locked cache** is mapped by `OSInit()` now, before `VIInit()` loads the OpenGL driver: with a context the driver's libraries could otherwise occupy `0xE0000000`, which `nw4r::ut::LC::GetBase()` hands to g3d.
 - **Speed**: 600 frames of the connection screens take 0.7 s of CPU time; there is no batching and no need for it yet. Each `GXBegin()`/`GXEnd()` is one `glBufferData()` and one draw call.
+### Integration: what the screens look like
+
+The two halves of milestone 3 (the backend and the codec of section 17) were merged and the result was looked at, frame by frame, in screenshots of fresh-NAND runs (`--input "P0:0@1,A@300"`, English, French and Spanish, 4:3 and `--wide`, hidden window and visible window with `--screenshot-window`).
+
+| Retraces | Screen | What is on it | Verdict |
+| --- | --- | --- | --- |
+| 1 to 5 | - | black (`VISetBlack`) | correct |
+| 6 to about 40 | start-up (`DrawStartup`) | the grey paper background (the 608x456 CMPR texture), the "News Channel" label bottom left, the fader going to black | correct |
+| about 40 to 300 | first-run question (`DrawDialog`) | dark green rounded panel with white "Is this date and time correct?", a lighter band with the date and time in black, the "Yes" and "No" buttons (bevelled, dark; the one under the pointer turns light with black text) | correct; the pointer itself is missing (below) |
+| 300 to 325 | fade | the same picture going to black | correct |
+| 325 to about 365 | connection screen (`DrawIntro`) | panel with "One moment, please...", the cat walking along the panel's top edge (green eye), six page icons below with a running highlight, the "News Channel" label | correct |
+| from about 385 | connection error | panel with the four-line "Unable to connect to the Internet..." text and "Error Code: 051099", the "Back to the Wii Menu" button; with the pointer on it (`P0:0.4@500`) it lights up and A ends the program through `OSReturnToMenu()` | correct |
+
+Text is sharp and readable in every state, including the accented letters of the French strings; nothing is mirrored, flipped or mis-coloured; the fades (fader quads and the `GXCopyTex()` capture) work. The picture in the window is the same frame scaled to 4:3 (or 16:9).
+
+Fixes made during integration:
+
+- The default window was 640x456 (810x456 wide), which is not 4:3: the 4:3 picture rectangle left bars at the sides. It is 640x480 (854x480) now (`vi.cpp`).
+- `--screenshot-window` was added to check the presented picture without capturing the desktop.
+- No converter, codec or game-code defect showed up in these three screens. The only shared-source edits of milestone 3 are the three colour sites of `Draw2D_FillBox()` (`System.cpp`), `Draw2D_FillQuad()` and `Draw2D_FillQuadGradient()` (`DrawUtil.cpp`), under `TARGET_PC`; the Wii build is byte-identical.
+
+Known gaps (none is a bypass in the backend; there are no `TODO(milestone N)` hacks in `src/pc/gx`):
+
+- **No pointer on screen.** The game draws the pointer (hand, trail) as an `nw4r::ef` effect: `Scene::UpdatePointers()` → `SetPointerState(chan, STATE_NORMAL)`, drawn by `PointerEffect::Draw()` → `ef::EffectSystem::Draw()`. Nothing comes out of it yet: the effect files (`.breff`, `.breft`) have no byte-order converter (section 12) and `nw4r::ef` has not been brought up. Hovering and pressing already work. This is milestone 6 by the plan, but milestone 4 (input) is hard to use without a pointer: either bring the pointer effect forward or show the host's mouse cursor until then.
+- **`--lang ja`, `de`, `it` and `nl` show the game's fatal error screen** (`SCENE_FATAL`, `gErrorScreen`: white centred text on black, "the News Channel's system files are damaged ... press the A Button to return to the Wii Menu", in that language, from the error archive embedded in the DOL) after the log line `d_scene.cpp[388]`; A ends the program through `OSReturnToMenu()`. The US contents have no HOME Menu archive for those languages (`HomeButton3/LZ77_homeBtn*.arc`), so `HomeMenu` does not initialise and the game gives up, as its code says. English, French and Spanish, the US channel's languages, run normally. The error screen itself is drawn correctly (looked at in German, Italian and Dutch), so this is a fourth screen that works, not a drawing problem.
+- **Two PNG writers**: `PCWritePNG()` (`gx/png.cpp`, screenshots) and `PCGXWritePNG()` (`gx/texdecode_tool.cpp`, texture dumps). Harmless; merge them when one is touched.
+- Not seen yet because nothing reaches them: news pictures (host-order JPEG output, milestone 5), mipmapped textures with `GX_LIN_MIP_LIN` (eight in the contents), `GX_REPEAT` textures, the HOME Menu, everything behind the connection screen (headline list, article text, slide show, weather-style fonts), the globe and effects (milestone 6). Expect layout and text defects there that these three screens could not show.
+
+What is left for the next milestones:
+
+- **Milestone 4 (input):** mouse to pointer and buttons (the picture rectangle is `PCVIGetPictureRect()`), keyboard and controllers, more than one remote; the pointer picture (above). The HOME button opens HBM, which is still a placeholder.
+- **Milestone 6 (globe, effects, sound):** the g3d colour sites (`g3d_gpu.h:104/108`, `g3d_anmscn.cpp:30`), byte order of model vertex arrays and of `.brres`/`.breff`/`.breft`, register pointers from g3d display lists (`PCGXAddressToHost()`), fog, `GXSetZCompLoc(GX_TRUE)`, `GXDrawCube` and friends for `nw4r::ef`, textures inside `earth.brres.LZ` and `.breft`.
+
 ## 17. Texture formats and the texture codec
 
 Part of milestone 3. `src/pc/gx/texdecode.cpp` turns GX texture images into RGBA8 and back. It has no OpenGL in it and knows nothing about `GXTexObj`: the GX backend calls it when it uploads a texture or copies the frame buffer.

@@ -109,9 +109,12 @@ void OpenWindow() {
         return;
     }
 
-    // The game's screen is 456 lines high; 4:3 or 16:9 decides the width.
-    int width = Wide() ? 810 : 640;
-    int height = 456;
+    // The window has the shape of the television screen, 4:3 or 16:9, so that
+    // the picture (PCVIGetPictureRect()) fills it without bars. The game's 456
+    // lines are scaled to it, as the 640 (or 608) pixels of a line are scaled
+    // to viWidth by the video interface.
+    int width = Wide() ? 854 : 640;
+    int height = 480;
 
     // An OpenGL 3.3 core context for the GX layer of milestone 3, or whatever
     // the driver offers if that is not available.
@@ -171,6 +174,7 @@ void Present() {
         h = h * height / pointsH;
     }
     PCGXPresent(frame, x, y, w, h, width, height);
+    PCGXAfterPresent(width, height);
     SDL_GL_SwapWindow(s.window);
 }
 

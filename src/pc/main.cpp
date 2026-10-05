@@ -84,6 +84,8 @@ void PrintHelp(const char* program) {
     std::printf("  --no-window      do not open a window\n");
     std::printf("  --screenshot N[,N...]  save the picture shown at these retraces as PNG files\n");
     std::printf("                   (frame_NNNNNN.png); works with --no-window too\n");
+    std::printf("  --screenshot-window    also save the window's back buffer (frame_NNNNNN_window.png);\n");
+    std::printf("                         needs a visible window\n");
     std::printf("  --screenshot-dir DIR   where to save them (default: the current directory)\n");
     std::printf("  --input SCRIPT   scripted remote for automated runs, e.g. \"P0:0@1,A@300\":\n");
     std::printf("                   point at the centre from frame 1, press A at frame 300\n");
@@ -347,6 +349,8 @@ int main(int argc, char** argv) {
                              frames);
                 return 2;
             }
+        } else if (std::strcmp(arg, "--screenshot-window") == 0) {
+            PCGXSetScreenshotWindow(true);
         } else if (std::strcmp(arg, "--screenshot-dir") == 0) {
             PCGXSetScreenshotDir(OptionValue(argc, argv, &i));
         } else if (std::strcmp(arg, "--selftest-gl") == 0) {

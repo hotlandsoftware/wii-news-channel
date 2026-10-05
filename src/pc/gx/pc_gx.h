@@ -28,6 +28,12 @@ void PCGXRetrace(u32 retraceCount, const void* xfb);
 // for a malformed list.
 bool PCGXRequestScreenshots(const char* frames);
 void PCGXSetScreenshotDir(const char* dir);
+// --screenshot-window: with each screenshot also save what PCGXPresent() drew
+// into the window's back buffer, as <dir>/frame_NNNNNN_window.png (window
+// pixels: scaled picture and black bars). PCGXAfterPresent() is called by the
+// VI backend between PCGXPresent() and the swap.
+void PCGXSetScreenshotWindow(bool enable);
+void PCGXAfterPresent(int windowWidth, int windowHeight);
 // True if a screenshot is still pending: the VI backend then creates a hidden
 // window with an OpenGL context even under --no-window.
 bool PCGXWantsContext();

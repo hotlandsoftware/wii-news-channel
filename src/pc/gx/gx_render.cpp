@@ -816,6 +816,28 @@ bool PCGXSaveScreenshot(const char* path, const void* xfb) {
     return ok;
 }
 
+static bool sScreenshotWindow;
+static u32 sWindowShotPending;
+
+void PCGXSetScreenshotWindow(bool enable) {
+    sScreenshotWindow = enable;
+}
+
+void PCGXAfterPresent(int windowWidth, int windowHeight) {
+    if (sWindowShotPending == 0 || windowWidth <= 0 || windowHeight <= 0 || !EnsureGL()) {
+        return;
+    }
+    char path[680];
+    std::snprintf(path, sizeof(path), "%s/frame_%06u_window.png", sScreenshotDir, sWindowShotPending);
+    sWindowShotPending = 0;
+    u8* pixels = ReadPixels(0, windowHeight, 0, 0, windowWidth, windowHeight);
+    if (PCWritePNG(path, pixels, static_cast<u32>(windowWidth), static_cast<u32>(windowHeight))) {
+        std::printf("screenshot: %s (window back buffer)\n", path);
+    }
+    std::free(pixels);
+    BindEfb();
+}
+
 void PCGXRetrace(u32 retraceCount, const void* xfb) {
     for (u32 i = 0; i < sNumScreenshots; i++) {
         if (sScreenshotFrames[i] != retraceCount) {
@@ -826,6 +848,7 @@ void PCGXRetrace(u32 retraceCount, const void* xfb) {
         if (PCGXSaveScreenshot(path, xfb)) {
             std::printf("screenshot: %s%s\n", path, xfb == nullptr ? " (screen blanked)" : "");
         }
+        sWindowShotPending = sScreenshotWindow ? retraceCount : 0;
         sScreenshotFrames[i] = sScreenshotFrames[--sNumScreenshots];
         break;
     }
