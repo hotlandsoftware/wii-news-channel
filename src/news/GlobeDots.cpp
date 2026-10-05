@@ -11,6 +11,9 @@
 using namespace nw4r;
 
 struct GlobeView {
+    // Draw() reads the camera through this getter (it changes the saved registers).
+    Camera* GetCamera() { return mCamera; }
+
     u8 unk0[0x4];
     Camera* mCamera; // at 0x04
 };
@@ -93,7 +96,7 @@ void GlobeDots::UpdateAlpha(f32 dx, f32 dy) {
 }
 
 void GlobeDots::Draw() {
-    Camera* camera = gGlobe->mCamera;
+    Camera* camera = gGlobe->GetCamera();
     Draw2D_SetupGX();
     GXSetZMode(GX_FALSE, GX_LEQUAL, GX_FALSE);
 

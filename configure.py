@@ -578,7 +578,7 @@ config.libs = [
         "cflags": cflags_game,
         "progress_category": "game",
         "objects": [
-            Object(NonMatching, "news/GlobeDots.cpp"),
+            Object(Matching, "news/GlobeDots.cpp"),
             Object(Matching, "news/System.cpp"),
             Object(Matching, "news/WiiConnect24.cpp"),
             Object(Matching, "news/PointerScroll.cpp"),
