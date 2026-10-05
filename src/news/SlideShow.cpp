@@ -131,6 +131,15 @@ extern f32 sPictureScale;
 
 static f32 sTitleY = 45.0f;
 
+static inline void DisableButton(PaneButton* button) {
+    button->mDisabled = true;
+    button->Press();
+}
+
+static inline void EnableButton(PaneButton* button) {
+    button->mDisabled = false;
+}
+
 static inline Category* GetCategory(s32 idx) {
     return &gNewsData->mCategories[idx];
 }
@@ -508,6 +517,23 @@ void SlideShow::Stop() {
     Article_Reset();
 }
 
+static inline void UpdateGlobePos(const math::VEC2& from, const math::VEC2& to, const s32& angle) {
+    Globe* g = gGlobe;
+    if (g != NULL) {
+        GlobeCamera* camera = g->mCamera;
+        if (camera != NULL) {
+            f32 t = CosineEase(angle);
+            f32 dx = to.x - from.x;
+            f32 lon = from.x + dx * t;
+            camera->mLon = lon;
+            f32 dy = to.y - from.y;
+            camera->mLat = from.y + dy * t;
+            g->mLon = lon;
+            g->mLat = camera->mLat;
+        }
+    }
+}
+
 void SlideShow::Calc() {
     SetDPDAll(1);
     Globe_ResetFocus();
@@ -526,14 +552,12 @@ void SlideShow::Calc() {
     mDownPressed = false;
 
     if (lbl_80356970 <= 0) {
-        mZoomOutButton->mDisabled = true;
-        mZoomOutButton->Press();
+        DisableButton(mZoomOutButton);
     } else {
         mZoomOutButton->mDisabled = false;
     }
     if (lbl_80356970 >= 9) {
-        mZoomInButton->mDisabled = true;
-        mZoomInButton->Press();
+        DisableButton(mZoomInButton);
     } else {
         mZoomInButton->mDisabled = false;
     }
@@ -604,18 +628,7 @@ void SlideShow::Calc() {
         globe->mZoom = mGlobeZoom;
         globe->UpdateZoom(lbl_80192370);
 
-        Globe* g = gGlobe;
-        if (g != NULL) {
-            GlobeCamera* camera = g->mCamera;
-            if (camera != NULL) {
-                f32 s = CosineEase(mGlobeAngle);
-                f32 lon = mGlobeFrom.x + (mGlobeTo.x - mGlobeFrom.x) * s;
-                camera->mLon = lon;
-                camera->mLat = mGlobeFrom.y + (mGlobeTo.y - mGlobeFrom.y) * s;
-                g->mLon = lon;
-                g->mLat = camera->mLat;
-            }
-        }
+        UpdateGlobePos(mGlobeFrom, mGlobeTo, mGlobeAngle);
 
         globe->UpdateTilt(0, lbl_80192398);
         globe->UpdateSpin(0);
@@ -1103,8 +1116,7 @@ BOOL SlideShow::StateZoom(const s32* arg) {
         break;
     case 0:
         mStateFrame++;
-        mUpButton->mDisabled = true;
-        mUpButton->Press();
+        DisableButton(mUpButton);
         f32 volume = 0.0f;
         Bgm_SetSlideshowVolume(volume);
         mZoomed = true;
@@ -1516,18 +1528,14 @@ void SlideShow::SubStateScroll() {
         }
 
         if (Article_IsAtTop()) {
-            PaneButton* button = mMainLayout->FindButton("up");
-            button->mDisabled = true;
-            button->Press();
+            DisableButton(mMainLayout->FindButton("up"));
         } else {
-            mMainLayout->FindButton("up")->mDisabled = false;
+            EnableButton(mMainLayout->FindButton("up"));
         }
         if (Article_IsAtBottom()) {
-            PaneButton* button = mMainLayout->FindButton("down");
-            button->mDisabled = true;
-            button->Press();
+            DisableButton(mMainLayout->FindButton("down"));
         } else {
-            mMainLayout->FindButton("down")->mDisabled = false;
+            EnableButton(mMainLayout->FindButton("down"));
         }
 
         if (mDownPressed && !Article_IsAtBottom()) {
@@ -1552,18 +1560,20 @@ void SlideShow::SubStateDrag() {
     bool dragging = false;
     switch (mSubStateFrame) {
     case -1:
-        lbl_803575BA = 0;
         lbl_801EDFD0[0] = 1;
         lbl_801EDFD0[1] = 1;
         lbl_801EDFD0[2] = 1;
         lbl_801EDFD0[3] = 1;
+        lbl_803575BA = 0;
         lbl_803575BB = 0;
         mScrollTarget = Article_ScrollTo(mScroll, mScrollSpeed);
         break;
     case 0:
         mSubStateFrame++;
         lbl_801EDFA0[1] = gWidescreen ? 19 : 34;
-        lbl_801EDFB8[1] = (456 - (gWidescreen ? 19 : 34)) - lbl_803575D0;
+        f32 y = 456 - (gWidescreen ? 19 : 34);
+        f32 d = lbl_803575D0;
+        lbl_801EDFB8[1] = y - d;
         lbl_80357600.a = 100;
         PlaySE(0x16);
         break;
@@ -1610,16 +1620,14 @@ void SlideShow::SubStateDrag() {
 
         if (mScroll >= 0.0f) {
             lbl_803575BA = 0;
-            mUpButton->mDisabled = true;
-            mUpButton->Press();
+            DisableButton(mUpButton);
         } else {
             lbl_803575BA = 1;
             mUpButton->mDisabled = false;
         }
         if (mScroll <= min) {
             lbl_803575BB = 0;
-            mDownButton->mDisabled = true;
-            mDownButton->Press();
+            DisableButton(mDownButton);
         } else {
             lbl_803575BB = 1;
             mDownButton->mDisabled = false;
