@@ -41,7 +41,6 @@ extern "C" bool gHideClock;
 extern "C" u8 gPointerOverClock;
 extern "C" const wchar_t* lbl_80357564; // title text
 extern "C" ArticleText* lbl_80357568;
-extern "C" f32 lbl_80356940[2];
 extern "C" const f32 lbl_801922D0[]; // text scale per setting
 extern "C" const s32 lbl_80192370[];
 extern "C" const s32 lbl_80192398[];
@@ -122,13 +121,17 @@ static f32 sUnused[3] = {5.0f, 25.0f, 50.0f};
 
 static ut::Color sWhite(0xFFFFFFFF);
 
-#pragma explicit_zero_data on
-static f32 sPrevPicZ = 0.0f;
-static f32 sPicZ = 0.0f;
-static f32 sGlobeOfsX = 0.0f;
-static f32 sGlobeOfsY = 0.0f;
-#pragma explicit_zero_data reset
 static math::VEC2 sArrowSize(20.0f, 20.0f);
+
+// Tweakable values (.sdata). They are emitted where they are defined, so
+// each one sits next to the function that uses it; the footer colour and the
+// picture scale are defined after their first use.
+extern u8 sFooterRed;
+extern u8 sFooterGreen;
+extern u8 sFooterBlue;
+extern f32 sPictureScale;
+
+static f32 sTitleY = 45.0f;
 
 static inline Category* GetCategory(s32 idx) {
     return &gNewsData->mCategories[idx];
@@ -352,7 +355,7 @@ SlideShow::SlideShow(u32 arc)
 
     mTitleRect.right = GetScreenWidth();
     mTitleRight = GetContentRight() - 2;
-    mTitleY = 45.0f;
+    mTitleY = sTitleY;
     mTitleMaxWidth = mTitleRight - 160.0f;
 }
 
@@ -395,7 +398,7 @@ static inline void SetArticleText(SlideShow* s) {
     math::VEC2 size(s->mText.right - s->mText.left, s->mText.bottom - s->mText.top);
     NewsArticle* article = s->mArticle;
     Article_Set(article, GetCategory(s->mCategory)->mName, (BOOL)GetPictureTexture(article), &start,
-                &start, lbl_80356940, size, true, gTextScale, false);
+                &start, &sPictureScale, size, true, gTextScale, false);
     Article_Arrange(gTextScale);
     Article_Reset();
 }
@@ -685,30 +688,38 @@ void SlideShow::Calc() {
     }
 }
 
+static inline void DrawFooter(SlideShow* s) {
+    if (s->mFooterAlpha != 0 && s->mDrawFooter) {
+        Draw2D_SetupGX();
+        Draw2D_SetOrtho();
+//FOOTER-BEGIN
+        static const GXColor sFooterColor1 = {0, 192, 0, 0};
+        GXSetTevColor(GX_TEVREG0, (GXColor){sFooterRed, sFooterGreen, sFooterBlue, s->mFooterAlpha});
+        GXSetTevColor(GX_TEVREG1, sFooterColor1);
+//FOOTER-END
+        (s->*s->mDrawFooter)();
+    }
+}
+
+#pragma explicit_zero_data on
+static f32 sLineFromZ = 0.0f;
+static f32 sLineToZ = 0.0f;
+#pragma explicit_zero_data reset
+
 void SlideShow::Draw() {
     if (mAlpha != 0) {
         mSlideLayout->SetAlpha(mAlpha);
         mSlideLayout->Draw();
         fn_80036328(mAlpha, mView.top);
-        if (mFooterAlpha != 0 && mDrawFooter) {
-            Draw2D_SetupGX();
-            Draw2D_SetOrtho();
-            static const GXColor sFooterColor = {255, 255, 255, 0};
-            GXColor c0 = sFooterColor;
-            c0.a = mFooterAlpha;
-            GXSetTevColor(GX_TEVREG0, c0);
-            GXColor c1 = {255, 255, 255, 255};
-            GXSetTevColor(GX_TEVREG1, c1);
-            (this->*mDrawFooter)();
-        }
+        DrawFooter(this);
     }
 
     static ut::Color sLineColor(0, 0, 0, 255);
     static ut::Color sLightColor(255, 255, 255, 255);
     static ut::Color sBackColor(222, 222, 222, 255);
 
-    math::VEC3 from(mView.left, mView.top, 0.0f);
-    math::VEC3 to(mView.right, mView.top, 0.0f);
+    math::VEC3 from(mView.left, mView.top, sLineFromZ);
+    math::VEC3 to(mView.right, mView.top, sLineToZ);
     Draw2D_SetupGX();
     Draw2D_SetOrtho();
     Draw2D_FillRect(&mView, &sBackColor);
@@ -1619,6 +1630,11 @@ void SlideShow::SubStateDrag() {
     }
 }
 
+#pragma explicit_zero_data on
+static f32 sPrevPicZ = 0.0f;
+static f32 sPicZ = 0.0f;
+#pragma explicit_zero_data reset
+
 void SlideShow::DrawPictures() {
     f32 fade;
     if (mBounceTimer > 0) {
@@ -1719,6 +1735,10 @@ void SlideShow::DrawSelection() {
     }
 }
 
+u8 sFooterRed = 255;
+u8 sFooterGreen = 255;
+u8 sFooterBlue = 255;
+
 void SlideShow::DrawFooterA() {
     f32 width = TPL_GetWidth(gCommonTpl, 0x41) + TPL_GetWidth(gCommonTpl, 0x42);
     f32 y = mPicCenter[1] - 0.5f * TPL_GetHeight(gCommonTpl, 0x41);
@@ -1808,6 +1828,11 @@ void SlideShow::PrevArticle() {
         }
     }
 }
+
+#pragma explicit_zero_data on
+static f32 sGlobeOfsX = 0.0f;
+static f32 sGlobeOfsY = 0.0f;
+#pragma explicit_zero_data reset
 
 void SlideShow::LayoutArticle() {
     f32 y = 273.6f;
@@ -2041,3 +2066,5 @@ void SlideShow::LayoutTitle() {
         mTitleRect.left = mTitleRight - width;
     }
 }
+
+f32 sPictureScale = 1.0f;
