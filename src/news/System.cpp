@@ -312,9 +312,9 @@ void SystemCalc() {
     rect.bottom = 456.0f;
 
     for (s32 i = 0; i < 4; i++) {
+        u32 prevHold = gHold[i];
         bool wasConnected = gConnected[i];
         gConnected[i] = false;
-        u32 prevHold = gHold[i];
         s32 n = gKPADCount[i] = KPADRead(i, gKPADStatus[i], 16);
         if (n > 0) {
             for (s32 j = 0; j < n; j++) {
