@@ -61,4 +61,51 @@ bool PCSndWavePlausible(const PCSndWave& wave, u32 waveDataSize);
 // `newschannel --list-sounds [CONTENT:PATH]`: the table of all sounds.
 int PCSndListSoundsMain(const char* spec);
 
+// --- snd_render.cpp: sounds played without the game ---------------------------------
+//
+// One sound through the real playback path (SoundArchivePlayer, the sound
+// thread, the sequence player, channels, voices, AX, the DSP program) with the
+// audio output in manual mode: a frame is mixed when the renderer asks for it
+// and the renderer waits for the sound thread after each one, so the result
+// does not depend on the host's timing and takes a fraction of real time.
+// No aux effect is installed (the game adds a reverb on AUX C and its voice
+// effect on AUX B).
+
+struct PCSndRendered {
+    int startResult;  // 0 = started, else StartSound() refused
+    s16* samples;     // interleaved left, right, 32 kHz; free() it
+    u32 frames;       // sample frames in `samples`
+    s32 peak;         // largest |sample|
+    u32 clipped;      // samples at full scale
+    u32 maxVoices;    // most AX voices running in one audio frame
+    u32 voiceFrames;  // sum of running voices over all audio frames
+    u32 firstFrame;   // first audio frame with a running voice (~0u: none)
+    u32 lastFrame;    // last audio frame with a running voice
+    u32 badAddresses; // voices the DSP stopped for an unmapped sample address
+    bool cut;         // still playing after `seconds` (a loop): stopped there
+};
+
+// Sets up AX and nw4r::snd's sound system for `archive` (a buffer from
+// PCSndLoadArchive(); it is copied into MEM2, where sample addresses are the
+// console's). Needs PCAudioSetManual(true) before the first AXInit(). One
+// archive at a time.
+bool PCSndRenderOpen(const void* archive, u32 size);
+bool PCSndRenderSound(u32 id, f32 seconds, PCSndRendered* out);
+u32 PCSndRenderSoundCount();
+const char* PCSndRenderSoundLabel(u32 id);
+void PCSndRenderClose();
+
+// `newschannel --render-sounds DIR [CONTENT:PATH] [--sound ID] [--seconds S]`:
+// every sound of the archive (or one) as DIR/NNN_LABEL.wav.
+int PCSndRenderMain(const char* spec, const char* dir, int onlyId, f32 seconds);
+
+// `newschannel --dump-waves DIR [CONTENT:PATH]`: every wave of the archive's
+// banks decoded with the mixer's own decoder, at the wave's sample rate, as
+// DIR/wave_FF_NNN.wav (FF = file id), and DIR/waves.txt describing them.
+// These are references that never went through nw4r::snd's playback.
+int PCSndDumpWavesMain(const char* spec, const char* dir);
+
+// Writes a 16-bit WAV file. FALSE if the file cannot be written.
+bool PCSndWriteWav(const char* path, const s16* samples, u32 frames, u32 channels, u32 rate);
+
 #endif

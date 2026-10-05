@@ -85,6 +85,13 @@ void PrintHelp(const char* program) {
     std::printf("                   list the sounds of a sound archive (default 9:rev_news.brsar; the\n");
     std::printf("                   HOME Menu's is 6:HomeButton3/Huf8_HomeButtonSe.brsar) with the wave\n");
     std::printf("                   each one plays: format, sample rate, length\n");
+    std::printf("  --render-sounds DIR [CONTENT:PATH] [--sound ID] [--seconds S]\n");
+    std::printf("                   play every sound of a sound archive (or one) through nw4r::snd and AX,\n");
+    std::printf("                   without the game and faster than real time, into DIR/NNN_LABEL.wav\n");
+    std::printf("                   (S: where a sound that does not end is cut, default 12)\n");
+    std::printf("  --dump-waves DIR [CONTENT:PATH]\n");
+    std::printf("                   decode every wave of a sound archive's banks with the mixer's decoder\n");
+    std::printf("                   into DIR/wave_FF_NNN.wav and DIR/waves.txt (reference for the above)\n");
     std::printf("  --version        print build information\n");
     std::printf("  --help           this text\n\n");
     std::printf("Options for --boot:\n");
@@ -313,6 +320,11 @@ int main(int argc, char** argv) {
     const char* dump_texture = nullptr;
     const char* dump_texture_out = nullptr;
     const char* list_sounds = nullptr;
+    const char* render_sounds = nullptr;
+    const char* dump_waves = nullptr;
+    const char* snd_archive = "";
+    int render_sound_id = -1;
+    f32 render_seconds = 0.0f;
     PCConfig* config = PCGetConfig();
 
     // --config first: the other options override the file.
@@ -393,6 +405,15 @@ int main(int argc, char** argv) {
         } else if (std::strcmp(arg, "--list-sounds") == 0) {
             // The archive is optional: "" means the channel's own.
             list_sounds = i + 1 < argc && argv[i + 1][0] != '-' ? argv[++i] : "";
+        } else if (std::strcmp(arg, "--render-sounds") == 0 || std::strcmp(arg, "--dump-waves") == 0) {
+            (arg[2] == 'r' ? render_sounds : dump_waves) = OptionValue(argc, argv, &i);
+            if (i + 1 < argc && argv[i + 1][0] != '-') {
+                snd_archive = argv[++i];
+            }
+        } else if (std::strcmp(arg, "--sound") == 0) {
+            render_sound_id = std::atoi(OptionValue(argc, argv, &i));
+        } else if (std::strcmp(arg, "--seconds") == 0) {
+            render_seconds = static_cast<f32>(std::atof(OptionValue(argc, argv, &i)));
         } else if (std::strcmp(arg, "--dump-texture") == 0) {
             dump_texture = OptionValue(argc, argv, &i);
             dump_texture_out = OptionValue(argc, argv, &i);
@@ -423,6 +444,14 @@ int main(int argc, char** argv) {
     // Development tool of the sound converters (snd_tool.cpp).
     if (list_sounds != nullptr) {
         return PCSndListSoundsMain(list_sounds);
+    }
+
+    if (dump_waves != nullptr) {
+        return PCSndDumpWavesMain(snd_archive, dump_waves);
+    }
+    if (render_sounds != nullptr) {
+        // PCOSExit(): the sound and task threads are still running.
+        PCOSExit(PCSndRenderMain(snd_archive, render_sounds, render_sound_id, render_seconds));
     }
 
     if (selftest_only) {

@@ -81,6 +81,11 @@ struct PCAXDspStats {
 };
 const PCAXDspStats* PCAXDspGetStats();
 
+// NEWSCHANNEL_AX_LOG: is the log switched on, and one more line for it,
+// prefixed with the number of the audio frame it belongs to.
+bool PCAudioLogEnabled();
+void PCAudioLog(const char* format, ...) __attribute__((format(printf, 1, 2)));
+
 // Self-test: do not print the warning about a bad sample address.
 void PCAXDspSetQuiet(bool quiet);
 

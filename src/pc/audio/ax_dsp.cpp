@@ -41,6 +41,7 @@
 #include <pc/os.h>
 
 #include <cmath>
+#include <cstdarg>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -115,6 +116,30 @@ FILE* LogFile() {
     }
     return sLog;
 }
+
+} // namespace
+
+bool PCAudioLogEnabled() {
+    return LogFile() != NULL;
+}
+
+void PCAudioLog(const char* format, ...) {
+    FILE* log = LogFile();
+    if (log == NULL) {
+        return;
+    }
+    // One line, written in one call: other threads log too.
+    char line[512];
+    int used = std::snprintf(line, sizeof(line), "[ax frame %llu] ", static_cast<unsigned long long>(sStats.frames));
+    va_list args;
+    va_start(args, format);
+    std::vsnprintf(line + used, sizeof(line) - static_cast<size_t>(used), format, args);
+    va_end(args);
+    std::fputs(line, log);
+    std::fflush(log);
+}
+
+namespace {
 
 // --- helpers ---------------------------------------------------------------------
 
@@ -421,11 +446,11 @@ void ReadSamples(AXPB* pb, Accelerator* acc, s16* out) {
             last[i] = out[kFrame - 4 + i];
         }
     } else {
-        u32 ratio = HiLo(pb->src.ratioHi, pb->src.ratioLo);
-        if (ratio > 0x00100000u) {
-            ratio = 0x00100000u; // 16x: far beyond what AX accepts; bounds the work
-        }
-        u32 position = pb->src.currentAddressFrac;
+        // No upper limit: nw4r::snd does not clamp the ratio and the DSP takes
+        // what it is given. The channel's own sounds go up to 17.5 (a wave
+        // played 44 semitones above its recording, NEW_SE_GENRE_SEL).
+        const u32 ratio = HiLo(pb->src.ratioHi, pb->src.ratioLo);
+        u64 position = pb->src.currentAddressFrac;
         const s16* coefs = NULL;
         if (pb->srcSelect == 0) {
             coefs = sSrcCoefs[pb->coefSelect < 3 ? pb->coefSelect : 2];
@@ -482,7 +507,7 @@ void LogVoice(FILE* log, const AXPB* pb, u32 index, const Accelerator& before, c
                                     ? "pcm16"
                                     : (pb->addr.format == AX_SAMPLE_FORMAT_PCM_S8 ? "pcm8" : "?"));
     std::fprintf(log,
-                 "  voice %2u %s%s cur=%08x loop=%08x end=%08x%s src=%u/%u ratio=%.4f ve=%04x%+d "
+                 "  voice %2u %s%s cur=%08x loop=%08x end=%08x%s src=%u/%u ratio=%.6f ve=%04x%+d "
                  "L=%04x R=%04x S=%04x A=%04x/%04x/%04x B=%04x/%04x/%04x C=%04x/%04x/%04x lpf=%u rmt=%u%s%s\n",
                  index, format, pb->type == AX_VOICE_STREAM ? " stream" : "", before.current, before.loop, before.end,
                  pb->addr.loopFlag ? " looped" : "", pb->srcSelect, pb->coefSelect,

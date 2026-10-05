@@ -127,7 +127,7 @@ set_source_files_properties("${REPO}/src/pc/gx/texdecode_tool.cpp" PROPERTIES
     COMPILE_OPTIONS "-fno-rtti")
 # The sound tool and its self-test derive from snd::detail::NoteOnCallback and
 # ut::FileStream, for the same reason.
-set_source_files_properties("${REPO}/src/pc/snd_tool.cpp" "${REPO}/src/pc/selftest_snd.cpp" PROPERTIES
+set_source_files_properties("${REPO}/src/pc/snd_tool.cpp" "${REPO}/src/pc/snd_render.cpp" "${REPO}/src/pc/selftest_snd.cpp" PROPERTIES
     COMPILE_OPTIONS "-fno-rtti")
 
 # The generated stubs are linked only into `newschannel`; `newschannel_nostubs`

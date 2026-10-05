@@ -470,6 +470,11 @@ int PCSndListSoundsMain(const char* spec) {
                 std::printf("  %-6s %5u %8u %4s %2u %8u", FormatName(wave.format), wave.rate, wave.samples,
                             wave.loop ? "yes" : "no", wave.channels, wave.dataOffset);
             }
+            SoundArchive::SoundInfo soundInfo;
+            if (archive.ReadSoundInfo(id, &soundInfo)) {
+                std::printf("  vol %3d player %2u prio %3d", soundInfo.volume, soundInfo.playerId,
+                            soundInfo.playerPriority);
+            }
             if (sound.problem != nullptr) {
                 std::printf("  ** %s", sound.problem);
                 failed++;
