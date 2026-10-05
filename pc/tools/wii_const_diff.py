@@ -9,6 +9,10 @@ both the original object (build/HAGE/obj) and the compiled one
 (build/HAGE/src) it lists the value behind each lfs/lfd and prints the
 functions whose lists differ.
 
+The same goes for pointers in data, above all pointers to member functions
+(`IsState(&SlideShow::StateZoom)` is a 12-byte constant in .data): the tool
+also compares, per data section, the symbols the data points to, in order.
+
     pc/tools/wii_const_diff.py                 # every unit that has both objects
     pc/tools/wii_const_diff.py news/Globe      # some units
     pc/tools/wii_const_diff.py -v news/Globe   # also print matching functions
@@ -74,6 +78,25 @@ class Elf:
                 out[sym["name"]] = sym
         return out
 
+    def data_pointers(self):
+        """The symbols that initialised data points to, per section, in order.
+
+        Pointers to member functions and tables of them are data: a function
+        can match while the state it compares with is a different one."""
+        out = {}
+        for index, sec in enumerate(self.sections):
+            if not sec["name"].startswith((".data", ".sdata", ".rodata")) or index not in self.relocs:
+                continue
+            names = []
+            for offset in sorted(self.relocs[index]):
+                sym = self.symbols[self.relocs[index][offset][0]]
+                name = sym["name"]
+                # switch tables and string pools have no stable names
+                if sym["type"] == STT_FUNC or "__" in name:
+                    names.append(name)
+            out[sec["name"]] = names
+        return out
+
     def constants(self, func):
         """The values loaded by lfs/lfd through a relocation, in code order."""
         sec = self.sections[func["shndx"]]
@@ -133,6 +156,20 @@ def compare(unit, verbose):
         for tag, i1, i2, j1, j2 in difflib.SequenceMatcher(None, na, nb, autojunk=False).get_opcodes():
             if tag != "equal":
                 print("    #%d original %s | source %s" % (i1, " ".join(na[i1:i2]) or "-", " ".join(nb[j1:j2]) or "-"))
+    # Only for the game: library units differ in vtables of inline classes
+    # and in switch tables, which is noise here.
+    if not unit.startswith("news/"):
+        return bad
+    pa, pb = a.data_pointers(), b.data_pointers()
+    for section in sorted(set(pa) | set(pb)):
+        na, nb = pa.get(section, []), pb.get(section, [])
+        if na == nb:
+            continue
+        bad += 1
+        print("%s: pointers in %s (%d original, %d source)" % (unit, section, len(na), len(nb)))
+        for tag, i1, i2, j1, j2 in difflib.SequenceMatcher(None, na, nb, autojunk=False).get_opcodes():
+            if tag != "equal":
+                print("    #%d original %s | source %s" % (i1, " ".join(na[i1:i2]) or "-", " ".join(nb[j1:j2]) or "-"))
     return bad
 
 
@@ -156,7 +193,7 @@ def main():
             continue
         seen += 1
         total += n
-    print("%d function(s) load different float constants (%d units compared)" % (total, seen))
+    print("%d function(s) or data section(s) differ in their constants (%d units compared)" % (total, seen))
     return 1 if total else 0
 
 

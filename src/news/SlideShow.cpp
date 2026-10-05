@@ -723,7 +723,7 @@ void SlideShow::Draw() {
 
     DrawPictures();
 
-    if (IsState(&SlideShow::StateShow) || IsState(&SlideShow::StateMove)) {
+    if (IsState(&SlideShow::StateZoom) || IsState(&SlideShow::StateMessage)) {
         mMainLayout->Draw();
     }
 
@@ -889,7 +889,7 @@ void SlideShow::CalcTextPos() {
 
 BOOL SlideShow::CheckInput() {
     bool dragging = false;
-    if (!(IsState(&SlideShow::StateShow) || IsState(&SlideShow::StateMove))) {
+    if (!(IsState(&SlideShow::StateZoom) || IsState(&SlideShow::StateMessage))) {
         if (gRepeatFastAll & 0x1000) {
             mZoomOutPressed = true;
         }
