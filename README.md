@@ -78,5 +78,46 @@ decomp-toolkit, the CodeWarrior compilers, binutils and objdiff-cli are download
 
 Project layout follows [dtk-template](https://github.com/encounter/dtk-template).
 
+## Native PC port (branch `pc-port`)
+
+The [`pc-port`](https://github.com/hotlandsoftware/wii-news-channel/tree/pc-port) branch builds the decompiled game and NW4R code as a native program, with no emulator: 32-bit x86 Linux, SDL3 for the window, input and audio, OpenGL for graphics, and a PC backend in place of the Wii SDK.
+
+**It runs.** The channel boots, draws its real layouts and fonts through a GX→OpenGL layer, plays its sounds and music, takes mouse and keyboard input, and shows a day's real news: section list, headline lists, articles with photos, the globe with location pins, and the slide show.
+
+| Milestone | Status |
+| --- | --- |
+| Compiles (all 217 game and NW4R files) | done |
+| Boots (OS, memory, files, byte order of the asset formats) | done |
+| Draws (GX → OpenGL, all GX texture formats) | done |
+| Input | mouse and keyboard done (left click = A, right click = B); game controllers not yet |
+| Sound (the SDK's AX compiled natively, a DSP mixer, SDL3 audio) | done |
+| News | loads from disk; automatic download not yet |
+| Globe | done |
+
+Not planned on PC: the HOME Menu, the Wii pointer cursor, the Operations Guide viewer (it runs a PowerPC build of Opera).
+
+News comes from [WiiLink](https://www.wiilink24.com/)'s servers, which host the same files Nintendo's did: `http://news.wiilink.ca/v2/1/049/news.bin.00` to `.23` (language 1 = English, country 049 = USA, one file per hour). For now you download them yourself:
+
+```sh
+mkdir -p orig/HAGE/news/v2/1/049
+for h in $(seq -w 0 23); do
+  curl -s -o orig/HAGE/news/v2/1/049/news.bin.$h http://news.wiilink.ca/v2/1/049/news.bin.$h
+done
+```
+
+Build and run (on the `pc-port` branch; needs `gcc` with 32-bit support, `cmake`, `ninja`, and the 32-bit SDL3, OpenGL and libcurl libraries):
+
+```sh
+.venv/bin/python tools/extract_wad.py --contents "path/to/News Channel (USA) (v7) (Channel).wad"
+python3 configure.py && ninja          # the Wii build, needed once
+cmake -S pc -B build/pc -G Ninja && ninja -C build/pc
+build/pc/newschannel --boot --news-dir orig/HAGE/news
+```
+
+Like the decompilation, the port needs your own WAD: layouts, fonts, textures and sounds are loaded from its contents at run time, and nothing from the game is stored in the repository.
+On `pc-port`, `docs/pc_port.md` has the architecture, every option, and the rules for changing shared code. The Wii build on that branch still produces a byte-identical `main.dol`.
+
+Running the port also found real decompilation errors that the match percentage could not see (wrong float constants and state checks in functions scored at 100%). They are fixed on `main`, and `tools/decomp/wii_const_diff.py` now checks for that kind of error.
+
 # DISCLAIMER
 This is "vibecoded" (in the sense I am telling an AI Agent what to do, reviewing its code, and if it looks good, continuing). I am making this because I want to run the Wii News Channel (and eventually Wii Forecast Channel) on my PC. If this bothers you, please do not use it. Thank you!
