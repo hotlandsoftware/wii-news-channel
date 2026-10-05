@@ -548,7 +548,13 @@ void ArticleText::Draw(const math::VEC2* pos, bool clip, f32 alpha, f32 zoom) {
 
     TextChar* u = &mChars[mFirstVisible];
     math::VEC3 line[2];
+    // The original clears z of four points, but the array has two: the other
+    // two stores land in the stack space of the (dead) label writer above.
+#ifdef __MWERKS__
     line[0].z = line[1].z = line[2].z = line[3].z = 0.0f;
+#else
+    line[0].z = line[1].z = 0.0f;
+#endif
     f32 lineOfs = gNewsData->mHeader->unk2C[0] == 0 ? 2.0f : 0.0f;
     SetupTexGX();
     for (s32 j = mFirstVisible; j <= mLastVisible; j++, u++) {
@@ -1002,6 +1008,7 @@ bool ArticleText::Select(const ut::Rect* rect) {
     f32 left = rect->left;
     f32 right = rect->right;
     TextChar* c = mChars;
+    TextChar* p = c;
     if (left < right) {
         minX = left;
         maxX = right;
@@ -1011,7 +1018,17 @@ bool ArticleText::Select(const ut::Rect* rect) {
     }
 
     s32 first0, last0;
-    GetSelection(c, mCount, first0, last0);
+    s32 j;
+    last0 = -1;
+    first0 = -1;
+    for (j = 0; j < mCount; j++, p++) {
+        if (first0 < 0 && p->mSelected) {
+            first0 = j;
+        }
+        if (p->mSelected) {
+            last0 = j;
+        }
+    }
 
     for (s32 i = 0; i < mCount; i++, c++) {
         f32 top = rect->top;
