@@ -523,20 +523,17 @@ f32 sGlobe2Y = 0.0f;
 void MainScreen::Draw() {
     Draw2D_SetupGX();
     Draw2D_SetOrtho();
+    // The original frame has 24 bytes in front of `end` and `pos` that no instruction
+    // touches. A copy MWCC only removes after laying out the frame reproduces them; what
+    // the original source had there is unknown.
+    math::VEC3 unused[2];
+    unused[0] = unused[0];
     f32 scale = gWidescreen ? 832.0f / 608.0f : 1.0f;
-    f32 alpha = mUnk248;
-    GXColor black;
-    black.r = 0;
-    black.g = 0;
-    black.b = 0;
-    GXColor white;
-    white.r = 255;
-    u8 a = 255.0f * alpha;
-    black.a = a;
-    u8 bgAlpha = mUnk324 * alpha;
-    white.g = 255;
-    white.b = 255;
-    white.a = a;
+    u8 bgAlpha = mUnk324 * mUnk248;
+    u8 a = 255.0f * mUnk248;
+    ut::Color black(0, 0, 0, a);
+    ut::Color white(255, 255, 255, a);
+    math::VEC3 end;
     math::VEC3 pos;
     pos.x = mScreenRect.right - scale * TPL_GetWidth(gCommonTpl, 0);
     pos.y = sCursorY;
@@ -548,8 +545,11 @@ void MainScreen::Draw() {
         GXSetTevColor(GX_TEVREG0, ut::Color(255, 255, 255, bgAlpha));
         Draw2D_Tex(gCommonTpl, 0, &pos, scale, 1.0f);
     }
+    f32 bottom = 456.0f;
     pos.x = mScreenRect.right - 2.0f;
-    math::VEC3 end(pos.x, 456.0f, sLineZ);
+    end.x = pos.x;
+    end.y = bottom;
+    end.z = sLineZ;
     Draw2D_SetupGX();
     Draw2D_Line(pos, end, 12, white, white);
     pos.x += 1.0f;
@@ -594,21 +594,12 @@ void MainScreen::DrawRelated() {
     if (!mShowRelated) {
         return;
     }
-    f32 alpha = mUnk25C;
+    u8 a = 255.0f * mUnk25C;
+    u8 bgAlpha = 220.0f * mUnk25C;
     ut::Color highlight = gHighlightColor;
     ut::Color sep = gSeparatorColor;
-    GXColor black;
-    GXColor white;
-    u8 a = 255.0f * alpha;
-    u8 bgAlpha = 220.0f * alpha;
-    black.r = 0;
-    black.g = 0;
-    black.b = 0;
-    black.a = a;
-    white.r = 255;
-    white.g = 255;
-    white.b = 255;
-    white.a = a;
+    ut::Color black(0, 0, 0, a);
+    ut::Color white(255, 255, 255, a);
     math::VEC2 pos;
     pos.y = mUnk1A0;
     pos.x = mUnk19C - 0.5f * mUnk1A4;
@@ -648,24 +639,24 @@ void MainScreen::DrawRelated() {
     rect.left = left - 1.0f;
     rect.top = top - 2.0f;
     rect.bottom = 1.0f + bottom;
-    Draw2D_FillRect(&rect, (ut::Color*)&black);
+    Draw2D_FillRect(&rect, &black);
     rect.left = 1.0f + right;
     rect.right = 2.0f + right;
-    Draw2D_FillRect(&rect, (ut::Color*)&black);
+    Draw2D_FillRect(&rect, &black);
     rect.bottom = top - 1.0f;
     rect.left = left - 1.0f;
-    Draw2D_FillRect(&rect, (ut::Color*)&black);
+    Draw2D_FillRect(&rect, &black);
     rect.top = bottom;
     rect.bottom = 1.0f + bottom;
-    Draw2D_FillRect(&rect, (ut::Color*)&black);
+    Draw2D_FillRect(&rect, &black);
     rect.left = left;
     rect.bottom = top;
     rect.right = 1.0f + right;
     rect.top = top - 1.0f;
-    Draw2D_FillRect(&rect, (ut::Color*)&white);
+    Draw2D_FillRect(&rect, &white);
     rect.left = right;
     rect.bottom = bottom;
-    Draw2D_FillRect(&rect, (ut::Color*)&white);
+    Draw2D_FillRect(&rect, &white);
     rect.left = left;
     rect.right = right;
 
@@ -746,7 +737,8 @@ void MainScreen::DrawRelated() {
     mWriter->SetDrawFlag(0x100);
     mWriter->SetFont(*gSysFont);
     mWriter->SetupGX();
-    mWriter->SetCharSpace(gCharSpaceScale);
+    f32 space = gCharSpaceScale;
+    mWriter->SetCharSpace(space);
     mWriter->SetScale(0.8f * scale);
     Draw2D_SetScissor(pos.x, clipTop, 5.0f + mRelated->mLocationScroller.mViewWidth, clipBottom);
 
