@@ -82,15 +82,27 @@ void DrawScreenFade(s32 alpha);
 
 
 extern "C" {
-
-
 void fn_8001F730(nw4r::lyt::Pane* pane, const nw4r::ut::Color& color);
-// DrawPointerEffect(u8, u16); the call passes a u32 height without truncating it.
+}
+
+// DrawPointerEffect(u8, u16) and DrawTabRect(const ut::Rect&, u8, f32) are
+// called with a wider argument that is not truncated (a u32 height, an s32
+// alpha). CodeWarrior only does that for a matching prototype, so the calls
+// go through declarations of the mangled names; other compilers call the
+// real functions.
+#ifdef __MWERKS__
+extern "C" {
 void DrawPointerEffect__FUcUs(u8 alpha, u32 y);
-// DrawTabRect(const ut::Rect&, u8, f32); the call passes an s32 alpha without
-// truncating it.
 void DrawTabRect__FRCQ34nw4r2ut4RectUcf(const nw4r::ut::Rect& rect, s32 alpha, f32 z);
 }
+#else
+static inline void DrawPointerEffect__FUcUs(u8 alpha, u32 y) {
+    DrawPointerEffect(alpha, y);
+}
+static inline void DrawTabRect__FRCQ34nw4r2ut4RectUcf(const nw4r::ut::Rect& rect, s32 alpha, f32 z) {
+    DrawTabRect(rect, alpha, z);
+}
+#endif
 
 // OSu16tof32: u16 to f32 through the paired-single unit (GQR3 = u16).
 static inline f32 U16ToF32(register u16* in) {
