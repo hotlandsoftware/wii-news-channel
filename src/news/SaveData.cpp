@@ -508,8 +508,7 @@ s32 CheckNewsFiles(NewsHeader** files, u32* sizes, s32* current, u32* mask) {
                 result = -2;
             }
         }
-        u32 size = header->fileSize;
-        if (header->messageOfs >= size) {
+        if (header->messageOfs >= header->fileSize) {
             return -1;
         }
         if (header->messageOfs & 1) {
@@ -538,31 +537,31 @@ s32 CheckNewsFiles(NewsHeader** files, u32* sizes, s32* current, u32* mask) {
         if (header->unk2E >= 2) {
             result = -1;
         }
-        if (header->topicsOfs + header->numTopics * sizeof(NewsTopicRec) > size) {
+        if (header->topicsOfs + header->numTopics * sizeof(NewsTopicRec) > header->fileSize) {
             result = -1;
         }
         if (header->topicsOfs & 3) {
             result = -1;
         }
-        if (header->articlesOfs + header->numArticles * sizeof(NewsTextBuffer) > size) {
+        if (header->articlesOfs + header->numArticles * sizeof(NewsTextBuffer) > header->fileSize) {
             result = -1;
         }
         if (header->articlesOfs & 3) {
             result = -1;
         }
-        if (header->sourcesOfs + header->numSources * sizeof(NewsSourceRec) > size) {
+        if (header->sourcesOfs + header->numSources * sizeof(NewsSourceRec) > header->fileSize) {
             result = -1;
         }
         if (header->sourcesOfs & 3) {
             result = -1;
         }
-        if (header->locationsOfs + header->numLocations * sizeof(NewsLocationRec) > size) {
+        if (header->locationsOfs + header->numLocations * sizeof(NewsLocationRec) > header->fileSize) {
             result = -1;
         }
         if (header->locationsOfs & 3) {
             result = -1;
         }
-        if (header->picturesOfs + header->numPictures * sizeof(NewsPictureRec) > size) {
+        if (header->picturesOfs + header->numPictures * sizeof(NewsPictureRec) > header->fileSize) {
             result = -1;
         }
         if (header->picturesOfs & 3) {
