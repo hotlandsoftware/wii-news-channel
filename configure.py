@@ -1497,7 +1497,7 @@ config.libs = [
             Object(Matching, "news/Bubbles.cpp"),
             Object(Matching, "news/GlobePoint.cpp"),
             Object(Matching, "news/TextChar.cpp"),
-            Object(NonMatching, "news/GlobePin.cpp"),
+            Object(Matching, "news/GlobePin.cpp"),
         ],
     },
     {
@@ -1515,7 +1515,7 @@ config.libs = [
         "cflags": cflags_game,
         "progress_category": "game",
         "objects": [
-            Object(NonMatching, "news/Globe.cpp"),
+            Object(Matching, "news/Globe.cpp"),
             Object(Matching, "news/Resource.cpp", extra_cflags=["-ipa file"]),
             Object(NonMatching, "news/sound_manager.cpp"),
         ],

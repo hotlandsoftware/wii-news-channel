@@ -1,3 +1,6 @@
+// The nw4r::math inline-asm helpers (VEC3Dot, VEC3Sub) allocate their work
+// registers in this file in the opposite order from the NW4R libraries.
+#define NW4R_MATH_WORK_REGS_REVERSED
 #include <news/GlobePin.h>
 #include <news/Camera.h>
 #include <news/Common.h>
@@ -16,6 +19,10 @@
 #include <wchar.h>
 
 using namespace nw4r;
+
+// Latest pointer position of a channel (the same helpers as in Connect.cpp).
+static inline f32 GetCursorX(s32 chan) { return gCursorX[chan][0]; }
+static inline f32 GetCursorY(s32 chan) { return gCursorY[chan][0]; }
 
 // Not yet decompiled: globals of the globe screen.
 struct GlobeView {
@@ -146,16 +153,19 @@ void GlobePin::Draw(u8 alpha) {
         math::VEC3 pos(0.0f, 0.0f, 0.0f);
         f32 halfW = 0.5f * TPL_GetWidth(gCommonTpl, 0x52);
         f32 halfH = 0.5f * TPL_GetHeight(gCommonTpl, 0x52);
+        f32 scale;
+        f32 w;
+        f32 h;
         f32 k = 1.5f;
         Draw2D_SetupGX();
         Draw2D_SetOrtho();
         GXSetZMode(GX_TRUE, GX_LEQUAL, GX_FALSE);
         for (s32 i = 0; i < 2; i++, ripple++) {
             if (ripple->mScale > 0.0f && ripple->mAlpha != 0) {
-                f32 scale = ripple->mScale;
+                scale = ripple->mScale;
                 scale *= k;
-                f32 w = halfW * scale;
-                f32 h = halfH * scale;
+                w = halfW * scale;
+                h = halfH * scale;
                 color.a = ripple->mAlpha;
                 pos.x = GetPos().x - w;
                 pos.y = GetPos().y - h;
@@ -363,7 +373,7 @@ void GlobePin::DrawLabel() {
 
     if (lbl_80357598 == 1 || lbl_803575A8 > 0) {
         f32 offset = 0.5f * TPL_GetHeight(gCommonTpl, 0x52);
-        writer.SetCursor(GetScreenPos().x, offset + GetScreenPos().y);
+        writer.SetCursor(GetPos().x, offset + GetPos().y);
     } else {
         writer.SetCursor(mLabelPos.x, mLabelPos.y);
     }
@@ -389,7 +399,7 @@ void GlobePin::DrawName() {
     writer.SetTextColor(ut::Color(255, 255, 255, 255));
     if (lbl_80357598 == 1 || lbl_803575A8 > 0) {
         f32 offset = 0.5f * TPL_GetHeight(gCommonTpl, 0x52);
-        writer.SetCursor(GetScreenPos().x, offset + GetScreenPos().y);
+        writer.SetCursor(GetPos().x, offset + GetPos().y);
     } else {
         writer.SetCursor(mLabelPos.x, mLabelPos.y);
     }
@@ -476,7 +486,7 @@ void GlobePin::Update(Camera* camera) {
             mE4 = 0xFF;
             for (s32 i = 0; i < 4; i++) {
                 if (IsPointerValid(i)) {
-                    math::VEC2 cursor(gCursorX[i][0], gCursorY[i][0]);
+                    math::VEC2 cursor(GetCursorX(i), GetCursorY(i));
                     if (cursor.y > minY && cursor.y < maxY) {
                         math::VEC2 screen = GetPos();
     f32 maxDist = 35.0f;
@@ -516,11 +526,13 @@ void GlobePin::Update(Camera* camera) {
 }
 
 void GlobePin::UpdateCards(f32 alpha) {
-    math::MTX34* mtx;
     Quaternion* quat;
+    math::MTX34* mtx;
+    s32 i;
     Camera* camera = gGlobe->mCamera;
     s32 picIndex = -1;
-    f32 zoom = 0.00019f * camera->mDistance;
+    f32 distance = camera->mDistance;
+    f32 zoom = 0.00019f * distance;
     if (mCount == 0) {
         return;
     }
@@ -533,10 +545,12 @@ void GlobePin::UpdateCards(f32 alpha) {
     C_QUATMtx(&camQuat, camMtx.mtx);
     mCardAlpha = (160.0f - 160.0f * t) * alpha;
 
-    s32 i = 0;
-    for (GlobePin* pin = this; pin != NULL; pin = pin->mNext, i++) {
+    // The first card with a picture goes to the front. (This loop has a
+    // counter of its own.)
+    s32 n = 0;
+    for (GlobePin* pin = this; pin != NULL; pin = pin->mNext, n++) {
         if (GetPictureTexture(pin->mArticle) != NULL) {
-            picIndex = i;
+            picIndex = n;
             break;
         }
     }
@@ -574,7 +588,8 @@ void GlobePin::UpdateCards(f32 alpha) {
         } else {
             order = i;
         }
-        f32 target = (1.0f + 0.5f * (zoom * ((mCount - order) - 1.0f))) * mRadius;
+        f32 target = 1.0f + 0.5f * (zoom * ((mCount - order) - 1.0f));
+        target *= mRadius;
         f32 dist = 0.9f * pin->mCardDist + 0.1f * target;
         pin->mCardDist = dist;
         C_QUATSlerp(quat, &mQuat, quat, 0.1f);
