@@ -11,6 +11,9 @@
 using namespace nw4r;
 
 struct GlobeView {
+    // Draw() reads the camera through this getter (it changes the saved registers).
+    Camera* GetCamera() { return mCamera; }
+
     u8 unk0[0x4];
     Camera* mCamera; // at 0x04
 };
@@ -93,7 +96,7 @@ void GlobeDots::UpdateAlpha(f32 dx, f32 dy) {
 }
 
 void GlobeDots::Draw() {
-    Camera* camera = gGlobe->mCamera;
+    Camera* camera = gGlobe->GetCamera();
     Draw2D_SetupGX();
     GXSetZMode(GX_FALSE, GX_LEQUAL, GX_FALSE);
 
@@ -130,11 +133,8 @@ void GlobeDots::Draw() {
     GXSetTevColor(GX_TEVREG0, (GXColor){0, 0, 0, mAlpha});
 
     GXBegin(GX_TRIANGLES, GX_VTXFMT0, GLOBE_DOT_COUNT * 3);
-    // The dot index is not the loop counter: the original keeps a count, the
-    // index and a pointer into the colour table as three induction variables.
-    s32 pos = 0;
-    s32 i = 0;
-    for (s32 n = 0; n < GLOBE_DOT_COUNT; n++) {
+    // The loop counts vertices; the dot index runs alongside.
+    for (s32 pos = 0, i = 0; pos < GLOBE_DOT_COUNT * 3; pos += 3, i++) {
         u8 c = gGlobeDotColorIdx[i];
         GXPosition1x16(pos);
         GXColor1x8(c);
@@ -145,8 +145,6 @@ void GlobeDots::Draw() {
         GXPosition1x16(pos + 2);
         GXColor1x8(c);
         GXTexCoord1x8(2);
-        pos += 3;
-        i++;
     }
     GXEnd();
 }

@@ -204,8 +204,7 @@ s32 NewsData::Init(NewsHeader** files, s32 current) {
     mNumCategories = file->numTopics;
 
     // Count the source logos of each file.
-    topicRec = (NewsTopicRec*)file->At(file->topicsOfs);
-    for (i = 0; i < mNumCategories; i++, topicRec++) {
+    for (i = 0, topicRec = (NewsTopicRec*)file->At(file->topicsOfs); i < mNumCategories; i++, topicRec++) {
         entry = (NewsEntryRec*)file->At(topicRec->entriesOfs);
         for (j = 0; j < topicRec->numEntries; j++, entry++) {
             src = GetFile(entry->fileId);
@@ -251,7 +250,7 @@ s32 NewsData::Init(NewsHeader** files, s32 current) {
     }
 
     topicRec = (NewsTopicRec*)file->At(file->topicsOfs);
-    for (i = 0; i < mNumCategories; topicRec++, i++) {
+    for (i = 0; i < mNumCategories; i++, topicRec++) {
         if (topicRec->numEntries == 0) {
             continue;
         }
@@ -281,7 +280,7 @@ s32 NewsData::Init(NewsHeader** files, s32 current) {
 
     topic = mCategories;
     topicRec = (NewsTopicRec*)file->At(file->topicsOfs);
-    for (i = 0; i < mNumCategories; topicRec++, topic++, i++) {
+    for (i = 0; i < mNumCategories; i++, topic++, topicRec++) {
         count = topicRec->numEntries;
         topic->mNumArticles = count;
         if (count != 0) {
@@ -295,7 +294,7 @@ s32 NewsData::Init(NewsHeader** files, s32 current) {
 
     topic = mCategories;
     topicRec = (NewsTopicRec*)file->At(file->topicsOfs);
-    for (i = 0; i < mNumCategories; topicRec++, topic++, i++) {
+    for (i = 0; i < mNumCategories; i++, topic++, topicRec++) {
         topic->mRec = topicRec;
         topic->mName = (wchar_t*)file->At(topicRec->nameOfs);
         if (topicRec->numEntries == 0) {
@@ -315,14 +314,16 @@ s32 NewsData::Init(NewsHeader** files, s32 current) {
     }
 
     // Link articles that appear in several topics.
-    topic = mCategories;
-    for (s32 i = 0; i < mNumCategories; topic++, i++) {
-        slot = topic->mArticles;
-        for (j = 0; j < topic->mNumArticles; j++, slot++) {
-            same = FindArticle((*slot)->mText, i, j + 1);
-            if (same != NULL) {
-                (*slot)->mNextSame = *same;
-                (*same)->mPrevSame = *slot;
+    {
+        Category* cat = mCategories;
+        for (s32 i = 0; i < mNumCategories; i++, cat++) {
+            NewsArticle** art = cat->mArticles;
+            for (j = 0; j < cat->mNumArticles; j++, art++) {
+                same = FindArticle((*art)->mText, i, j + 1);
+                if (same != NULL) {
+                    (*art)->mNextSame = *same;
+                    (*same)->mPrevSame = *art;
+                }
             }
         }
     }
@@ -347,18 +348,20 @@ s32 NewsData::Init(NewsHeader** files, s32 current) {
     }
 
     // Move the articles whose picture failed to the end.
-    topic = mCategories;
-    for (i = 0; i < mNumCategories; i++, topic++) {
-        slot = topic->mArticles;
-        for (j = 0; j < topic->mRec->numEntries; j++, slot++) {
-            article = *slot;
-            if (article->mPictureError) {
-                next = slot + 1;
-                for (k = j + 1; k < topic->mRec->numEntries; k++, next++) {
-                    if (!(*next)->mPictureError) {
-                        *slot = *next;
-                        *next = article;
-                        break;
+    {
+        Category* cat = mCategories;
+        for (i = 0; i < mNumCategories; i++, cat++) {
+            NewsArticle** art = cat->mArticles;
+            for (j = 0; j < cat->mRec->numEntries; j++, art++) {
+                article = *art;
+                if (article->mPictureError) {
+                    NewsArticle** other = art + 1;
+                    for (u32 k = j + 1; k < cat->mRec->numEntries; k++, other++) {
+                        if (!(*other)->mPictureError) {
+                            *art = *other;
+                            *other = article;
+                            break;
+                        }
                     }
                 }
             }
