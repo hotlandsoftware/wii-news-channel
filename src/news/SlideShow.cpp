@@ -1652,7 +1652,7 @@ static f32 sPicZ = 0.0f;
 void SlideShow::DrawPictures() {
     f32 fade;
     if (mBounceTimer > 0) {
-        fade = math::CosFIdx(FIdxRad(1.5707964f * mBounceTimer * 0.125f));
+        fade = math::CosFIdx(FIdxRad((1.5707964f * mBounceTimer) / 8.0f));
     } else {
         fade = 1.0f;
     }
@@ -1662,11 +1662,11 @@ void SlideShow::DrawPictures() {
     if (mQuickMove) {
         if (mZoomed) {
             Article_Draw(pos, 2, 1, fade,
-                        1.0f + 0.05f * math::SinFIdx(FIdxRad(1.5707964f * (mHoldTimer * 0.125f))));
+                        1.0f + 0.05f * math::SinFIdx(FIdxRad(1.5707964f * (mHoldTimer / 8.0f))));
         }
     } else if (mZoomed) {
         Article_Draw(pos, 2, 0, fade,
-                    1.0f + 0.05f * math::SinFIdx(FIdxRad(1.5707964f * (mHoldTimer * 0.125f))));
+                    1.0f + 0.05f * math::SinFIdx(FIdxRad(1.5707964f * (mHoldTimer / 8.0f))));
         Article_DrawHeadline(&pos, 0, 1.0f);
     } else {
         Article_DrawHeadline(&pos, 1, 1.0f);
@@ -1682,14 +1682,17 @@ void SlideShow::DrawPictures() {
     if (prev != NULL) {
         s32 alpha = mPrevPicAlpha * fade;
         if (alpha != 0) {
+            f32 ofs = mSlideDist * slide;
             f32 width = mPrevPicScale * prev->width;
             f32 height = mPrevPicScale * prev->height;
-            f32 border = 0.05f * height;
-            pos2.x = (mPrevPicCenter[0] + mSlideDist * slide) - 0.5f * width;
-            pos2.y = mPrevPicCenter[1] - 0.5f * height;
+            f32 x = (mPrevPicCenter[0] + ofs) - 0.5f * width;
+            f32 y = mPrevPicCenter[1] - 0.5f * height;
+            pos2.x = x;
+            pos2.y = y;
             pos2.z = sPrevPicZ;
-            rect.left = 10.0f + pos2.x;
-            rect.top = 10.0f + pos2.y;
+            f32 border = 0.05f * height;
+            rect.left = 10.0f + x;
+            rect.top = 10.0f + y;
             rect.right = border + (rect.left + width);
             rect.bottom = border + (rect.top + height);
             Draw2D_SetupGX();
@@ -1698,8 +1701,7 @@ void SlideShow::DrawPictures() {
             GXSetTevColor(GX_TEVREG0, shadow);
             Draw2D_TexRect(gCommonTpl, 0x53, &rect, 0.0f, 0);
             Draw2D_SetupGX();
-            ut::Color white(255, 255, 255, alpha);
-            GXSetTevColor(GX_TEVREG0, white);
+            GXSetTevColor(GX_TEVREG0, ut::Color(255, 255, 255, alpha));
             Draw2D_Texture(mPrevPicture, (math::VEC3*)&pos2, mPrevPicScale);
             if (mPrevCaption != NULL) {
                 DrawCaption(mPrevCaption, alpha, pos2.x, pos2.y, width, height);
@@ -1707,18 +1709,21 @@ void SlideShow::DrawPictures() {
         }
     }
 
-    NewsPicture* picture = mArticle->mPicture;
-    if ((picture != NULL ? picture->texture : NULL) != NULL) {
+    if (GetPictureTexture(mArticle) != NULL) {
         s32 alpha = mPicAlpha * fade;
         if (alpha != 0) {
-            f32 width = mPicScale * (picture != NULL ? picture->texture : NULL)->width;
-            f32 height = mPicScale * (picture != NULL ? picture->texture : NULL)->height;
-            f32 border = 0.05f * height;
-            pos2.x = (mPicCenter[0] - mSlideDist * (1.0f - slide)) - 0.5f * width;
-            pos2.y = mPicCenter[1] - 0.5f * height;
+            f32 ofs = mSlideDist * (1.0f - slide);
+            f32 width = mPicScale * GetPictureTexture(mArticle)->width;
+            f32 height = mPicScale * GetPictureTexture(mArticle)->height;
+            f32 hw = 0.5f * width;
+            f32 x = (mPicCenter[0] - ofs) - hw;
+            f32 y = mPicCenter[1] - 0.5f * height;
+            pos2.x = x;
+            pos2.y = y;
             pos2.z = sPicZ;
-            rect.left = 10.0f + pos2.x;
-            rect.top = 10.0f + pos2.y;
+            f32 border = 0.05f * height;
+            rect.left = 10.0f + x;
+            rect.top = 10.0f + y;
             rect.right = border + (rect.left + width);
             rect.bottom = border + (rect.top + height);
             Draw2D_SetupGX();
@@ -1727,8 +1732,7 @@ void SlideShow::DrawPictures() {
             GXSetTevColor(GX_TEVREG0, shadow);
             Draw2D_TexRect(gCommonTpl, 0x53, &rect, 0.0f, 0);
             Draw2D_SetupGX();
-            ut::Color white(255, 255, 255, alpha);
-            GXSetTevColor(GX_TEVREG0, white);
+            GXSetTevColor(GX_TEVREG0, ut::Color(255, 255, 255, alpha));
             Draw2D_Texture(GetPictureTexture(mArticle), (math::VEC3*)&pos2, mPicScale);
             if (GetPictureCaption(mArticle) != NULL) {
                 DrawCaption(GetPictureCaption(mArticle), alpha, pos2.x, pos2.y, width, height);
@@ -1743,7 +1747,7 @@ void SlideShow::DrawSelection() {
     ut::Rect text(0.0f, 0.0f, 0.0f, 0.0f);
     ut::Rect select(0.0f, 0.0f, 0.0f, 0.0f);
     if (Article_GetPictureRect(&text, mText.left, mTextOfs + (mText.top + mScroll),
-                    1.0f + 0.05f * math::SinFIdx(FIdxRad(1.5707964f * (mHoldTimer * 0.125f)))) &&
+                    1.0f + 0.05f * math::SinFIdx(FIdxRad(1.5707964f * (mHoldTimer / 8.0f)))) &&
         Article_GetZoomedPictureRect(&select)) {
         Article_DrawZoomedPicture(text, select, t);
     }
@@ -1771,7 +1775,7 @@ void SlideShow::DrawFooterB() {
     Draw2D_Tex(gCommonTpl, 0x42, &pos, 1.0f, 1.0f);
 }
 
-void SlideShow::DrawCaption(const wchar_t* text, u8 alpha, f32 x, f32 y, f32 width, f32 height) {
+void SlideShow::DrawCaption(const wchar_t* text, s32 alpha, f32 x, f32 y, f32 width, f32 height) {
     ut::TextWriterBase<wchar_t> writer;
     Draw2D_SetupGX();
     Draw2D_SetOrtho();

@@ -50,7 +50,7 @@ public:
     void DrawSelection();
     void DrawFooterA();
     void DrawFooterB();
-    void DrawCaption(const wchar_t* text, u8 alpha, f32 x, f32 y, f32 width, f32 height);
+    void DrawCaption(const wchar_t* text, s32 alpha, f32 x, f32 y, f32 width, f32 height);
 
     void NextArticle();
     void PrevArticle();
