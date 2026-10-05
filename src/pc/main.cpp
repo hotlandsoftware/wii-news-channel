@@ -33,6 +33,7 @@
 #include "gx/pc_gx.h"
 #include "gx/texdecode.h"
 #include "pc_config.h"
+#include "pc_g3d_tool.h"
 #include "pc_input.h"
 #include "audio/pc_audio.h"
 #include "news/pc_news.h"
@@ -51,6 +52,11 @@ static void WindowClosed() {
     if (!PCOSPressPowerButton()) {
         PCExit(0);
     }
+}
+
+// --view-model has no game loop to ask: closing the window ends the process.
+static void ViewModelClosed() {
+    PCExit(0);
 }
 
 namespace {
@@ -99,6 +105,11 @@ void PrintHelp(const char* program) {
     std::printf("  --list-news [FILE|DIR]\n");
     std::printf("                   list the headlines of the news files (the news directory, another\n");
     std::printf("                   one, or one served file), read through the game's own parser\n");
+    std::printf("  --view-model CONTENT:PATH\n");
+    std::printf("                   draw a model file with the game's own globe code, without the news\n");
+    std::printf("                   (8:earth.brres.LZ). Takes --frames, --no-window, --screenshot,\n");
+    std::printf("                   --wide, and --view-rot LAT,LON (degrees), --view-zoom 0..9,\n");
+    std::printf("                   --view-tilt 0..10, --view-spin DEGREES (per frame)\n");
     std::printf("  --version        print build information\n");
     std::printf("  --help           this text\n\n");
     std::printf("Options for --boot:\n");
@@ -280,6 +291,7 @@ static int RunSelfTest() {
 
     PCSelfTestMtx();
     PCSelfTestG3d();
+    PCSelfTestG3dRes();
     PCSelfTestMem();
     PCSelfTestOS();
     PCSelfTestFiles();
@@ -346,6 +358,7 @@ int main(int argc, char** argv) {
     const char* snd_archive = "";
     int render_sound_id = -1;
     f32 render_seconds = 0.0f;
+    PCViewModelOptions view_model = {nullptr, 0.0f, 0.0f, 8, 5, 0.0f};
     PCConfig* config = PCGetConfig();
 
     // --config first: the other options override the file.
@@ -454,6 +467,25 @@ int main(int argc, char** argv) {
             render_sound_id = std::atoi(OptionValue(argc, argv, &i));
         } else if (std::strcmp(arg, "--seconds") == 0) {
             render_seconds = static_cast<f32>(std::atof(OptionValue(argc, argv, &i)));
+        } else if (std::strcmp(arg, "--view-model") == 0) {
+            view_model.spec = OptionValue(argc, argv, &i);
+        } else if (std::strcmp(arg, "--view-rot") == 0) {
+            const char* value = OptionValue(argc, argv, &i);
+            if (std::sscanf(value, "%f,%f", &view_model.latitude, &view_model.longitude) != 2) {
+                std::fprintf(stderr, "%s: bad value '%s' for --view-rot (LAT,LON in degrees)\n", argv[0], value);
+                return 2;
+            }
+        } else if (std::strcmp(arg, "--view-zoom") == 0 || std::strcmp(arg, "--view-tilt") == 0) {
+            const bool zoom = arg[7] == 'z';
+            const char* value = OptionValue(argc, argv, &i);
+            const int level = std::atoi(value);
+            if (value[0] < '0' || value[0] > '9' || level > (zoom ? 9 : 10)) {
+                std::fprintf(stderr, "%s: bad value '%s' for %s\n", argv[0], value, arg);
+                return 2;
+            }
+            (zoom ? view_model.zoom : view_model.tilt) = level;
+        } else if (std::strcmp(arg, "--view-spin") == 0) {
+            view_model.spin = static_cast<f32>(std::atof(OptionValue(argc, argv, &i)));
         } else if (std::strcmp(arg, "--dump-texture") == 0) {
             dump_texture = OptionValue(argc, argv, &i);
             dump_texture_out = OptionValue(argc, argv, &i);
@@ -530,6 +562,17 @@ int main(int argc, char** argv) {
         // PCOSExit(), not PCExit(): the audio backend's exit hook closes the
         // device before SDL goes away.
         PCOSExit(PCAudioTestMain());
+    }
+
+    if (view_model.spec != nullptr) {
+        // The globe on its own (g3d_tool.cpp). It runs the game's SystemInit(),
+        // so it needs what --boot needs.
+        std::printf("contents: %s\nnand:     %s\n", PCGetContentsDir(), PCGetNandDir());
+        if (!PCDolDataLoad()) {
+            return 1;
+        }
+        PCVISetCloseHandler(ViewModelClosed);
+        PCOSExit(PCViewModelMain(&view_model));
     }
 
     if (!boot) {

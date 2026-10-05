@@ -111,6 +111,7 @@ BOOL PCEndianSwapStrmFile(void* data, u32 size);     /* RSTM: file header and HE
 BOOL PCEndianSwapFont(void* data, u32 size);        /* RFNT (.brfnt) and RFNA (.brfna) */
 BOOL PCEndianSwapLayout(void* data, u32 size);      /* RLYT (.brlyt) */
 BOOL PCEndianSwapLayoutAnim(void* data, u32 size);  /* RLAN (.brlan) */
+BOOL PCEndianSwapResFile(void* data, u32 size);     /* bres (.brres): MDL0, TEX0, PLT0; not animations */
 
 /**
  * A news file (news.bin.NN, decompressed): include/news/NewsData.h.

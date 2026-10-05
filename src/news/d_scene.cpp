@@ -536,18 +536,14 @@ void Scene::Execute() {
             sEarthReadBuf = NULL;
         }
 #ifdef TARGET_PC
-        // The model arrives through streaming LZ, which does not convert byte
-        // order; do it now that the file is complete.
-        // TODO(milestone 6): .brres has no converter yet (src/pc/endian), so
-        // the file stays big-endian and the globe model is not created.
-        if (gEarthModel == NULL && (PCEndianFixFile(sEarthData, sEarthSize), PCEndianIsHostOrder(sEarthData, 4))) {
-            gEarthModel = new (-32) Model(sEarthData);
-        }
-#else
+        // The model arrives through the streaming LZ reader, which cannot
+        // convert byte order: its output is assembled in pieces. The file is
+        // complete now (src/pc/endian/fmt_g3d.cpp; a second call does nothing).
+        PCEndianFixFile(sEarthData, sEarthSize);
+#endif
         if (gEarthModel == NULL) {
             gEarthModel = new (-32) Model(sEarthData);
         }
-#endif
     }
 
     CheckPointerOverClock(mClockBottom);

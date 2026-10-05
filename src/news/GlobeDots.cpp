@@ -50,8 +50,15 @@ GlobeDots::GlobeDots() {
     for (s32 i = 0; i < GLOBE_DOT_COUNT; i++) {
         s32 a = i * 2;
         s32 idx = i * 9;
+#ifdef TARGET_PC
+        // The table is the DOL's bytes (GlobeDotAngles.inc): big-endian u16.
+        // Reading them through the union is right only on a big-endian host.
+        u16 rotX = gGlobeDotAngles.bytes[a * 2] << 8 | gGlobeDotAngles.bytes[a * 2 + 1];
+        u16 rotY = gGlobeDotAngles.bytes[a * 2 + 2] << 8 | gGlobeDotAngles.bytes[a * 2 + 3];
+#else
         u16 rotX = gGlobeDotAngles.angles[a];
         u16 rotY = gGlobeDotAngles.angles[a + 1];
+#endif
         f32 size = 0.0045f * gGlobeDotSizes[i];
         f32 size3 = 3.0f * size;
 

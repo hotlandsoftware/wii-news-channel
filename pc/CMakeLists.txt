@@ -133,6 +133,11 @@ set_source_files_properties("${REPO}/src/pc/gx/texdecode_tool.cpp" PROPERTIES
 set_source_files_properties("${REPO}/src/pc/snd_tool.cpp" "${REPO}/src/pc/snd_render.cpp" "${REPO}/src/pc/selftest_snd.cpp" PROPERTIES
     COMPILE_OPTIONS "-fno-rtti")
 
+# The globe viewer and the g3d resource self-test use the game's and g3d's
+# classes (Globe, Model, ScnObj), which have virtual functions.
+set_source_files_properties("${REPO}/src/pc/g3d_tool.cpp" "${REPO}/src/pc/selftest_g3d_res.cpp" PROPERTIES
+    COMPILE_OPTIONS "-fno-rtti")
+
 # The generated stubs are linked only into `newschannel`; `newschannel_nostubs`
 # is the same program without them, which pc/tools/gen_stubs.py links to get
 # the list of undefined symbols.

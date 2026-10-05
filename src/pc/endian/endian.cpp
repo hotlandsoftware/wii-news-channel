@@ -49,6 +49,8 @@ const Format sBuiltin[] = {
     {PC_FOURCC('R', 'L', 'M', 'C'), "RLMC", PCEndianSwapLayoutAnim},
     {PC_FOURCC('R', 'L', 'T', 'S'), "RLTS", PCEndianSwapLayoutAnim},
     {PC_FOURCC('R', 'L', 'T', 'P'), "RLTP", PCEndianSwapLayoutAnim},
+    // Resource files of nw4r::g3d (fmt_g3d.cpp).
+    {PC_FOURCC('b', 'r', 'e', 's'), "bres", PCEndianSwapResFile},
 };
 
 const u32 MAX_DYNAMIC = 32;
@@ -75,7 +77,7 @@ const Format* Find(u32 magic) {
 // claim, so that arbitrary data (a decompressed texture, a news file) is not
 // converted by accident. NW4R files carry a byte-order mark at offset 4.
 bool LooksBigEndian(const Format* format, const u8* bytes, u32 size) {
-    if (format->magic >> 24 == 'R') {
+    if (format->magic >> 24 == 'R' || format->magic == PC_FOURCC('b', 'r', 'e', 's')) {
         return size >= 16 && bytes[4] == 0xFE && bytes[5] == 0xFF;
     }
     return true;

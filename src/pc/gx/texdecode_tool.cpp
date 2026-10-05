@@ -22,6 +22,7 @@
 #include <cstring>
 #include <strings.h>
 
+#include <nw4r/g3d.h>
 #include <nw4r/ut.h>
 #include <nw4r/ut/ut_ArchiveFont.h>
 #include <revolution/arc.h>
@@ -384,6 +385,43 @@ void VisitArchiveFont(Walk& walk, const char* path, void* data) {
     std::free(buffer);
 }
 
+// The TEX0 textures of a resource file (.brres), through nw4r::g3d's own
+// accessors. Nothing is bound or initialised: the headers are enough.
+void VisitResFile(Walk& walk, const char* path, void* data, u32 size) {
+    const u8* begin = static_cast<const u8*>(data);
+    const u8* end = begin + size;
+    g3d::ResFile file(data);
+    const u32 count = file.GetResTexNumEntries();
+    for (u32 i = 0; i < count && !walk.stop; i++) {
+        g3d::ResTex tex = file.GetResTex(i);
+        if (!tex.IsValid()) {
+            continue;
+        }
+        const u8* texels = static_cast<const u8*>(tex.GetTexData());
+        if (texels == nullptr || texels < begin || texels >= end) {
+            continue;
+        }
+        PCGXAssetTexture texture = {};
+        std::snprintf(texture.path, sizeof(texture.path), "%s", path);
+        texture.kind = "TEX0";
+        texture.index = i;
+        texture.count = count;
+        texture.data = texels;
+        texture.dataSize = static_cast<u32>(end - texels);
+        texture.fmt = tex.ref().fmt;
+        texture.width = tex.GetWidth();
+        texture.height = tex.GetHeight();
+        // Wrap modes and filters belong to the material that uses the
+        // texture (ResTexPlttInfoData), not to the texture.
+        texture.wrapS = GX_CLAMP;
+        texture.wrapT = GX_CLAMP;
+        texture.minFilter = GX_LINEAR;
+        texture.magFilter = GX_LINEAR;
+        texture.levels = tex.ref().mipmap_level > 1 ? tex.ref().mipmap_level : 1;
+        Report(walk, texture);
+    }
+}
+
 // A complete, uncompressed file in memory. `data` is converted in place.
 void VisitData(Walk& walk, const char* path, void* data, u32 size) {
     PCEndianFixFile(data, size);
@@ -407,6 +445,8 @@ void VisitData(Walk& walk, const char* path, void* data, u32 size) {
         }
     } else if (std::strcmp(format, "RFNA") == 0) {
         VisitArchiveFont(walk, path, data);
+    } else if (std::strcmp(format, "bres") == 0) {
+        VisitResFile(walk, path, data, size);
     }
 }
 
@@ -443,7 +483,7 @@ void VisitFile(Walk& walk, const char* path, void* data, u32 size) {
 
 // Could this file hold textures? Only such files are read from a content.
 bool Interesting(const char* name) {
-    static const char* const suffixes[] = {".tpl", ".brfnt", ".brfna", ".arc", ".LZ"};
+    static const char* const suffixes[] = {".tpl", ".brfnt", ".brfna", ".brres", ".arc", ".LZ"};
     for (const char* suffix : suffixes) {
         if (HasSuffix(name, suffix)) {
             return true;
