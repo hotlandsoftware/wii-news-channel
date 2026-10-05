@@ -662,7 +662,6 @@ s32 CWiiConnect24::setupDlTasks(BOOL first, BOOL second, u8 force, u16 interval,
     const char* url[2];
     NWC24DlTask dl[2];
     u8 dta[0x448];
-    s32 i;
     NWC24Err err;
     s32 result;
     BOOL mounted = FALSE;
@@ -684,7 +683,7 @@ s32 CWiiConnect24::setupDlTasks(BOOL first, BOOL second, u8 force, u16 interval,
         url[1] = NULL;
     }
 
-    for (i = 0; i < 2; i++) {
+    for (s32 i = 0; i < 2; i++) {
         if (kind[i] == 0) {
             continue;
         }
@@ -766,7 +765,7 @@ s32 CWiiConnect24::setupDlTasks(BOOL first, BOOL second, u8 force, u16 interval,
     }
 
     if (!add) {
-        for (i = 0; i < 2; i++) {
+        for (s32 i = 0; i < 2; i++) {
             if (kind[i] == 0) {
                 continue;
             }
@@ -797,7 +796,7 @@ s32 CWiiConnect24::setupDlTasks(BOOL first, BOOL second, u8 force, u16 interval,
 
     if (add) {
         BOOL vfCreated = FALSE;
-        for (i = 0; i < 2; i++) {
+        for (s32 i = 0; i < 2; i++) {
             if (kind[i] == 0) {
                 continue;
             }
@@ -841,7 +840,10 @@ s32 CWiiConnect24::setupDlTasks(BOOL first, BOOL second, u8 force, u16 interval,
             }
             switch (kind[i]) {
             case 2:
-                err = NWC24SetDlServerInterval(&dl[i], 1440);
+                // The original takes the task through a pointer to const here
+                // (it shares the induction variable of the getters).
+                const NWC24DlTask* task = &dl[i];
+                err = NWC24SetDlServerInterval((NWC24DlTask*)task, 1440);
                 if (err != NWC24_OK) {
                     SetError(this, "NWC24SetDlServerInterval() failed.", NWC24GetErrorCode(), err);
                     return ConvertError(err);
@@ -883,7 +885,7 @@ s32 CWiiConnect24::setupDlTasks(BOOL first, BOOL second, u8 force, u16 interval,
         }
     }
 
-    for (i = 0; i < 2; i++) {
+    for (s32 i = 0; i < 2; i++) {
         if (kind[i] == 0) {
             continue;
         }
