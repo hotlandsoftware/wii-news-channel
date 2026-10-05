@@ -17,7 +17,7 @@ using namespace nw4r;
 
 void* operator new[](u32 size, MEMAllocator* allocator);
 
-extern "C" void fn_80036358();  // sets up GX for Draw2D_Texture
+void SetupTexGX();  // d_s_news.cpp: sets up GX for Draw2D_Texture
 
 extern "C" ArticleText* lbl_80357574;  // the shared caption text
 extern "C" f32 lbl_803575CC;           // extra line spacing
@@ -435,7 +435,8 @@ bool ArticleText::Set(const wchar_t* text, NewsPicture* picture, const math::VEC
     {                                                                                              \
         f32 sy = c->mScale * mScale;                                                               \
         mWriter->SetScale(mScale * (c->mScale * c->mScaleX), sy);                                  \
-        mWriter->SetCursor(pos->x + c->mPos.x, yOfs * sy + (pos->y + c->mPos.y));                  \
+        f32 cy = yOfs * sy; \
+        mWriter->SetCursor(pos->x + c->mPos.x, cy + (pos->y + c->mPos.y)); \
         color.r = c->mColor.r;                                                                     \
         color.g = c->mColor.g;                                                                     \
         color.b = c->mColor.b;                                                                     \
@@ -474,8 +475,7 @@ void ArticleText::Draw(const math::VEC2* pos, bool clip, f32 alpha, f32 zoom) {
             if (!c->mHidden) {
                 DRAW_CHAR(c, yOfs);
                 if (mTruncated) {
-                    f32 h = 2.0f * mWriter->GetScaleH();
-                    mWriter->MoveCursorY(mWriter->GetFontDescent() + h);
+                    mWriter->MoveCursorY(mWriter->GetFontDescent() + 2.0f * mWriter->GetScaleH());
                     mWriter->Print(0x2026);
                 } else {
                     mWriter->Print(c->mChar);
@@ -501,8 +501,7 @@ void ArticleText::Draw(const math::VEC2* pos, bool clip, f32 alpha, f32 zoom) {
             if (!c->mHidden) {
                 DRAW_CHAR(c, yOfs);
                 if (mTruncated) {
-                    f32 h = 2.0f * mWriter->GetScaleH();
-                    mWriter->MoveCursorY(mWriter->GetFontDescent() + h);
+                    mWriter->MoveCursorY(mWriter->GetFontDescent() + 2.0f * mWriter->GetScaleH());
                     mWriter->Print(0x2026);
                 } else {
                     mWriter->Print(c->mChar);
@@ -525,9 +524,8 @@ void ArticleText::Draw(const math::VEC2* pos, bool clip, f32 alpha, f32 zoom) {
         picPos.y = pos->y + mPicPos.y - 0.5f * (grow * mPicScale * mPicture->height);
         picPos.z = 0.0f;
         f32 picScale = zoom * mPicScale;
-        fn_80036358();
-        GXColor white = {255, 255, 255, a};
-        GXSetTevColor(GX_TEVREG0, white);
+        SetupTexGX();
+        GXSetTevColor(GX_TEVREG0, (GXColor){255, 255, 255, a});
         Draw2D_Texture(mPicture, &picPos, picScale);
 
         if (mPicLabel != NULL) {
@@ -549,26 +547,28 @@ void ArticleText::Draw(const math::VEC2* pos, bool clip, f32 alpha, f32 zoom) {
         }
     }
 
-    f32 lineOfs = 0.0f;
-    TextChar* u = &mChars[mFirstVisible];
-    math::VEC3 from(0.0f, 0.0f, 0.0f);
-    math::VEC3 to(0.0f, 0.0f, 0.0f);
-    if (gNewsData->mHeader->unk2C[0] == 0) {
-        lineOfs = 2.0f;
-    }
-    fn_80036358();
-    for (s32 j = mFirstVisible; j <= mLastVisible; j++, u++) {
-        if (!u->mHidden && u->mSelected && u->mChar != L'\n') {
-            color.r = u->mColor.r;
-            from.x = u->mLeft;
-            color.g = u->mColor.g;
-            to.x = u->mRight;
-            color.b = u->mColor.b;
-            f32 y = u->mBottom - lineOfs;
-            color.a = a;
-            to.y = y;
-            from.y = y;
-            Draw2D_Line(from, to, 12, color, color);
+    {
+        f32 lineOfs = 0.0f;
+        TextChar* u = &mChars[mFirstVisible];
+        math::VEC3 line[2];
+        line[0].z = line[1].z = line[2].z = line[3].z = 0.0f;
+        if (gNewsData->mHeader->unk2C[0] == 0) {
+            lineOfs = 2.0f;
+        }
+        SetupTexGX();
+        for (s32 j = mFirstVisible; j <= mLastVisible; j++, u++) {
+            if (!u->mHidden && u->mSelected && u->mChar != L'\n') {
+                color.r = u->mColor.r;
+                color.g = u->mColor.g;
+                color.b = u->mColor.b;
+                color.a = a;
+                line[0].x = u->mLeft;
+                line[1].x = u->mRight;
+                f32 y = u->mBottom - lineOfs;
+                line[1].y = y;
+                line[0].y = y;
+                Draw2D_Line(line[0], line[1], 12, color, color);
+            }
         }
     }
 
