@@ -594,21 +594,12 @@ void MainScreen::DrawRelated() {
     if (!mShowRelated) {
         return;
     }
-    f32 alpha = mUnk25C;
+    u8 a = 255.0f * mUnk25C;
+    u8 bgAlpha = 220.0f * mUnk25C;
     ut::Color highlight = gHighlightColor;
     ut::Color sep = gSeparatorColor;
-    GXColor black;
-    GXColor white;
-    u8 a = 255.0f * alpha;
-    u8 bgAlpha = 220.0f * alpha;
-    black.r = 0;
-    black.g = 0;
-    black.b = 0;
-    black.a = a;
-    white.r = 255;
-    white.g = 255;
-    white.b = 255;
-    white.a = a;
+    ut::Color black(0, 0, 0, a);
+    ut::Color white(255, 255, 255, a);
     math::VEC2 pos;
     pos.y = mUnk1A0;
     pos.x = mUnk19C - 0.5f * mUnk1A4;
@@ -648,24 +639,24 @@ void MainScreen::DrawRelated() {
     rect.left = left - 1.0f;
     rect.top = top - 2.0f;
     rect.bottom = 1.0f + bottom;
-    Draw2D_FillRect(&rect, (ut::Color*)&black);
+    Draw2D_FillRect(&rect, &black);
     rect.left = 1.0f + right;
     rect.right = 2.0f + right;
-    Draw2D_FillRect(&rect, (ut::Color*)&black);
+    Draw2D_FillRect(&rect, &black);
     rect.bottom = top - 1.0f;
     rect.left = left - 1.0f;
-    Draw2D_FillRect(&rect, (ut::Color*)&black);
+    Draw2D_FillRect(&rect, &black);
     rect.top = bottom;
     rect.bottom = 1.0f + bottom;
-    Draw2D_FillRect(&rect, (ut::Color*)&black);
+    Draw2D_FillRect(&rect, &black);
     rect.left = left;
     rect.bottom = top;
     rect.right = 1.0f + right;
     rect.top = top - 1.0f;
-    Draw2D_FillRect(&rect, (ut::Color*)&white);
+    Draw2D_FillRect(&rect, &white);
     rect.left = right;
     rect.bottom = bottom;
-    Draw2D_FillRect(&rect, (ut::Color*)&white);
+    Draw2D_FillRect(&rect, &white);
     rect.left = left;
     rect.right = right;
 
