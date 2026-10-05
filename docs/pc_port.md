@@ -23,6 +23,7 @@ Contents:
 14. [Window, settings, input, placeholders](#14-window-settings-input-placeholders)
 15. [Milestone 2: the boot](#15-milestone-2-the-boot)
 16. [GX backend (milestone 3)](#16-gx-backend-milestone-3)
+17. [Texture formats and the texture codec](#17-texture-formats-and-the-texture-codec)
 
 ## 1. Decisions
 
@@ -68,6 +69,8 @@ src/pc/                     PC-only sources
   gx/                       GX on OpenGL: registers, FIFO decoder, transform, TEV shaders,
                             textures, EFB (section 16); pc_gx.h is what other PC code may call
   sdk/stubs_generated.cpp   generated; never edit
+  gx/texdecode.h/.cpp       GX texture images to and from RGBA8 (section 17)
+  gx/texdecode_tool.cpp     PNG writer, `--list-textures`, `--dump-texture`
   endian/fmt_<format>.cpp   byte order: one converter per asset format, and the registry (section 12)
   libc/wchar16.cpp          16-bit wcslen(), swprintf() and so on
   deadstripped/<library>.cpp  definitions the DOL's linker removed but gcc needs
@@ -143,6 +146,7 @@ build/pc/newschannel --boot --contents path/to/contents --nand-dir path/to/nand 
 `newschannel` without options prints its build information, initialises SDL, runs the self-test and exits with status 0.
 `newschannel --boot` calls the game's own `main()` (renamed to `NewsMain` by the build). The game starts, loads its assets, creates its news scene, runs its frame loop and draws its 2D screens in the window (section 16); closing the window shuts it down through the game's own power-button path. Section 15 describes how far it gets and section 14 lists the options (`--frames N`, `--contents DIR`, `--nand-dir DIR`, `--dol FILE`, `--lang`, `--wide`, `--no-window`, `--input SCRIPT`, `--screenshot N[,N...]`, `--screenshot-dir DIR`).
 `newschannel --window-test` opens the window and runs empty frames without the game.
+`newschannel --list-textures 9` and `newschannel --dump-texture 9:TPLCommon.tpl.LZ:0 build/scratch/t.png` list and decode the textures in the contents (section 17).
 
 `extract_wad.py --contents` writes `orig/HAGE/contents/NN.app` (NN = content index: 00, 02 to 11). The game's archive number `n` is content `n + 2`.
 The program looks for them in `--contents` (or `--contents-dir`, or `contents =` in the settings file), `$NEWSCHANNEL_CONTENTS`, `./orig/HAGE/contents` and next to the build tree; save data goes to `--nand-dir`, `$NEWSCHANNEL_NAND` or `~/.local/share/newschannel/nand` (section 13).
@@ -238,6 +242,8 @@ Run it whenever the set of files in the build or the backend changes. If two bra
 | `pc/tools/gen_stubs.py` | Section 5. `--check` fails if the stubs file is stale. |
 | `pc/tools/wii_report_diff.py` | Compares two `report.json` files of the Wii build (rule R1). |
 | `tools/extract_wad.py --contents` | Section 3. |
+| `newschannel --list-textures CONTENT[:PATH[:INDEX]]` | Lists the textures of a content, or of a file or directory in it: size, format, palette, wrap, filter, mipmap levels (section 17). |
+| `newschannel --dump-texture CONTENT:PATH[:INDEX] OUT.png` | Decodes one texture to a PNG. Never commit the output (R12). |
 
 Adding a file to the build: fix it until `status.py -f <name>` passes, add it to `pc/ported/<library>.txt` (or run `status.py --update-ported`), run `gen_stubs.py`, build, run `newschannel`.
 
@@ -775,7 +781,7 @@ No logic bug was found in a NonMatching file during the boot.
 This list was written before the GX backend existed; section 16 says what became of each point (1, 3, 5 and 6 are done, 4 for the game's 2D code; 2 is `src/pc/gx/texdecode.cpp`).
 
 1. **A GX backend in place of `src/pc/sdk/gx_noop.cpp`.** The first things the game draws are 2D: `SystemDraw()` → the scene's `mDraw` (`DrawStartup`, `DrawDialog`, `DrawIntro`) → `lyt::Layout::Draw()`, `ut::TextWriter`, and the game's own quads (`Draw2D.cpp`, `DrawUtil.cpp`, the fader). That needs: the FIFO (`gPCGXFifo`, `<pc/gx_fifo.h>`) collecting vertices between `GXBegin`/`GXEnd`; vertex descriptors and formats; projection and position/texture matrices; TEV stages, colour and alpha combiners, konst and register colours; blend, alpha compare, Z mode, scissor, cull; `GXLoadTexObj` and `GXInitTexObj*`. The object functions that NW4R reads back already work (section 14).
-2. **Texture decoding from big-endian GX formats.** `.tpl` texels, font sheets and palettes were deliberately left big-endian (section 12): decode with `PCReadBE16/32`. The fonts are I4 sheets; layouts can name any GX texture format, so plan for all of them (I4, I8, IA4, IA8, RGB565, RGB5A3, RGBA8, CMPR, and C4/C8/C14X2 with palettes). The TMCC JPEG decoder's RGB565 output is host order (section 14).
+2. **Texture decoding from big-endian GX formats.** `.tpl` texels, font sheets and palettes were deliberately left big-endian (section 12): decode with `PCReadBE16/32`. The fonts are I4 sheets; layouts can name any GX texture format, so plan for all of them (I4, I8, IA4, IA8, RGB565, RGB5A3, RGBA8, CMPR, and C4/C8/C14X2 with palettes). The TMCC JPEG decoder's RGB565 output is host order (section 14). **Done:** `PCGXDecodeTexture()` in `src/pc/gx/texdecode.cpp`; section 17 has the interface and the formats the game's files use.
 3. **Presenting a frame.** The game renders to the EFB and ends a frame with `GXCopyDisp(gCurXfb)`, `VISetNextFrameBuffer()`, `VIFlush()`, `VIWaitForRetrace()` (`System.cpp`, `SystemDraw()`). The simplest correct mapping: the EFB is an OpenGL framebuffer object of the render mode's `fbWidth` x `efbHeight`, `GXCopyDisp()` marks it as the frame for that XFB pointer, and `Present()` in `vi.cpp` (it has the `TODO(milestone 3)`) scales it into `PCVIGetPictureRect()`. The game also copies the EFB into a texture for its fades (`gFadeTex`, `GXCopyTex()` in `System.cpp`), as RGB565.
 4. **The colour punning sites** listed in section 12 ("Colours"): `DrawUtil.cpp:172`, `System.cpp:925-931`, `g3d_gpu.h:104/108`, `g3d_anmscn.cpp:30`. They are wrong on a little-endian host as soon as their output is drawn.
 5. **A way to look at the result.** `--input` drives the game past the save dialog (`P0:0@1,A@300`); add a `--screenshot FRAME` to the boot driver early, so that automated runs can compare pictures.
@@ -808,7 +814,6 @@ build/pc/newschannel --boot --no-window --nand-dir build/nand --frames 900 \
 | `gx/gx_log.cpp` | `NEWSCHANNEL_GX_LOG`, `PCGXWarnOnce()` |
 | `gx/png.cpp` | PNG writer (stored deflate blocks, no library) |
 | `gx/texdecode.h` | the texture codec's interface (`PCGXDecodeTexture`, `PCGXTextureDataSize`, `PCGXEncodeTexture`); `texdecode.cpp` implements it |
-| `gx/texdecode_fallback.cpp` | **temporary**: weak definitions of the codec so that the backend builds alone. Delete it when `texdecode.cpp` is in the build |
 | `sdk/gx_fifo.cpp` | the write-gather pipe: values become big-endian bytes for `PCGXFifoWrite()` |
 | `selftest_gx.cpp` | self-tests (below) |
 
@@ -871,8 +876,158 @@ Texels from files are big-endian. Buffers whose 16-bit texels are in host order 
 
 ### For the next tasks
 
-- **Texture codec.** `texdecode_fallback.cpp` is weak and must be deleted once `texdecode.cpp` exists. The `--selftest-gl` checks call `PCGXEncodeTexture()` for `GX_TF_RGBA8` and `GX_TF_RGB565` and decode host-order RGB565 back, so they also test the real codec.
+- **Texture codec.** The codec is `texdecode.cpp` (section 17); the temporary fallback is gone. The `--selftest-gl` checks call `PCGXEncodeTexture()` for `GX_TF_RGBA8` and `GX_TF_RGB565` and decode host-order RGB565 back, so they also test the real codec.
 - **JPEG pictures** (milestone 5): call `PCGXSetTextureHostOrder(buffer, true)` for the buffer the TMCC decoder writes.
 - **The globe** (milestone 6): `nw4r::g3d` sends its state as raw register loads and display lists, which the decoder handles; what it needs is (a) the two colour-punning sites in `g3d_gpu.h` and `g3d_anmscn.cpp` (section 12), (b) a decision per vertex array on byte order (`PCGXSetArrayBigEndian()`, or convert the arrays on load), (c) host pointers for anything g3d puts into a register: check how `ResShp` patches array bases and texture addresses into its display lists; `PCGXAddressToHost()` only understands MEM1/MEM2 at the console's addresses, (d) fog and Z-compare location if the model uses them.
 - **The locked cache** is mapped by `OSInit()` now, before `VIInit()` loads the OpenGL driver: with a context the driver's libraries could otherwise occupy `0xE0000000`, which `nw4r::ut::LC::GetBase()` hands to g3d.
 - **Speed**: 600 frames of the connection screens take 0.7 s of CPU time; there is no batching and no need for it yet. Each `GXBegin()`/`GXEnd()` is one `glBufferData()` and one draw call.
+## 17. Texture formats and the texture codec
+
+Part of milestone 3. `src/pc/gx/texdecode.cpp` turns GX texture images into RGBA8 and back. It has no OpenGL in it and knows nothing about `GXTexObj`: the GX backend calls it when it uploads a texture or copies the frame buffer.
+
+| File | Contents |
+| --- | --- |
+| `src/pc/gx/texdecode.h` | the interface (below) |
+| `src/pc/gx/texdecode.cpp` | `PCGXDecodeTexture()`, `PCGXTextureDataSize()`, `PCGXEncodeTexture()` |
+| `src/pc/gx/texdecode_tool.cpp` | `PCGXWritePNG()`, `PCGXDumpTexture()`, `PCGXForEachAssetTexture()`, the `--list-textures` and `--dump-texture` modes |
+| `src/pc/gx/texdecode_selftest.cpp` | `PCSelfTestTexDecode()`, run by `newschannel --selftest` |
+
+`pc/CMakeLists.txt` builds every `src/pc/gx/*.cpp` into `pc_backend`. `texdecode_tool.cpp` is compiled with `-fno-rtti` because it derives from `ut::ResFont` and `ut::ArchiveFont` to reach their glyph sheets.
+
+### Interface
+
+```cpp
+bool PCGXDecodeTexture(const void* data, u32 fmt, u32 width, u32 height,
+                       const void* tlut, u32 tlutFmt, u32 tlutCount, bool hostOrder16, u8* out);
+u32  PCGXTextureDataSize(u32 fmt, u32 width, u32 height);
+bool PCGXEncodeTexture(const u8* rgba, u32 fmt, u32 width, u32 height, void* out);
+```
+
+RGBA8 is tightly packed, four bytes per pixel in the order R, G, B, A, row 0 at the top. Sizes from 1x1 to 1024x1024 are accepted. The functions do not allocate and can be called from any thread.
+
+### Decoding
+
+An image is a sequence of tiles, left to right and top to bottom; inside a tile the texels are in row order. An image whose size is not a multiple of the tile size still holds whole tiles, and the texels beyond the right and bottom edges are skipped.
+
+| Format | Value | Tile | Bytes per tile | Decoded as |
+| --- | --- | --- | --- | --- |
+| `GX_TF_I4` | 0 | 8x8 | 32 | R = G = B = A = I; high nibble first |
+| `GX_TF_I8` | 1 | 8x4 | 32 | R = G = B = A = I |
+| `GX_TF_IA4` | 2 | 8x4 | 32 | A in the high nibble, I in the low nibble |
+| `GX_TF_IA8` | 3 | 4x4 | 32 | 16 bits: A in the high byte, I in the low byte |
+| `GX_TF_RGB565` | 4 | 4x4 | 32 | 16 bits; A = 255 |
+| `GX_TF_RGB5A3` | 5 | 4x4 | 32 | 16 bits: bit 15 set RGB555 with A = 255, clear 3 bits of alpha and RGB444 |
+| `GX_TF_RGBA8` | 6 | 4x4 | 64 | per tile 16 x (A, R), then 16 x (G, B) |
+| `GX_TF_C4` | 8 | 8x8 | 32 | 4-bit index into the palette |
+| `GX_TF_C8` | 9 | 8x4 | 32 | 8-bit index |
+| `GX_TF_C14X2` | 10 | 4x4 | 32 | 16 bits, index in the low 14 |
+| `GX_TF_CMPR` | 14 | 8x8 | 32 | four S3TC blocks of 4x4 per tile |
+
+- **An intensity texture is its own alpha.** I4 and I8 put the intensity in all four channels, which is what the texture unit delivers. The fonts depend on it (an I4 sheet drawn with the text colour), so the backend needs no special case for intensity formats.
+- **Bit widths.** A channel of fewer than 8 bits is extended by repeating its top bits (`abcde` becomes `abcdeabc`): 0 stays 0 and the maximum becomes 255. The 3-bit alpha of RGB5A3 gives 0, 36, 73, 109, 146, 182, 219, 255.
+- **CMPR.** The four blocks of a tile are top left, top right, bottom left, bottom right. A block is two big-endian RGB565 colours and four bytes of 2-bit selectors, one byte per row with the leftmost texel in the top two bits. The interpolated colours are the hardware's, not those of the S3TC specification: with colour 0 > colour 1, `(5 c0 + 3 c1) >> 3` and `(3 c0 + 5 c1) >> 3` per 8-bit channel; otherwise the average `(c0 + c1) >> 1`, and selector 3 is that same average with alpha 0 (not transparent black).
+- **Palettes.** `tlutFmt` is a `GXTlutFmt` (`GX_TL_IA8`, `GX_TL_RGB565`, `GX_TL_RGB5A3`); an entry decodes like a texel of the format with the same name. An index of `tlutCount` or more decodes to transparent black. A colour-index format without a palette fails.
+- **Failures.** `false` for anything else: Z textures (`GX_TF_Z8`, `Z16`, `Z24X8`), copy-only formats (`GX_CTF_*`), a size of 0 or above 1024, a missing buffer.
+
+`PCGXTextureDataSize()` is `GXGetTexBufferSize()` without mipmaps, including the copy and Z formats (0 for a value the SDK's table does not know). **Mipmaps** are separate images: level n + 1 has half the width and height (at least 1) and starts where level n ends, so the backend decodes each level with its own call and adds up the sizes.
+
+### Byte order
+
+Texels and palette entries in asset files are big-endian and are read that way (section 12). Two kinds of image are written on this machine as `u16` values instead, and are decoded with `hostOrder16 = true`:
+
+| Image | Made by | Format |
+| --- | --- | --- |
+| The fade picture `gFadeTex` (`System.cpp`) | `GXCopyTex()`, which the backend implements with `PCGXEncodeTexture()` | RGB565, `fbWidth` x `efbHeight` |
+| News pictures (`JPEGDecoder::Decode()` in `Resource.cpp`, drawn by `Draw2D_Texture()` and `GlobePin.cpp`) | the TMCC JPEG decoder, compiled natively (section 14) | RGB565 |
+
+The flag applies to the formats whose texel is one 16-bit value (IA8, RGB565, RGB5A3, C14X2). I4, I8, IA4, C4, C8, RGBA8 and CMPR are defined bytewise and are not affected; the palette is always big-endian.
+
+`GXInitTexObj()` gets a pointer and a format and cannot tell the two cases apart, so **the backend has to remember which images are host-order**: for instance a small set of image pointers that `GXCopyTex()` fills with its destination, plus one entry made where the JPEG decoder's output becomes a texture. (The alternative for JPEG, swapping the decoder's output to big-endian in a `TARGET_PC` block of `Resource.cpp`, keeps every texture that comes from game code big-endian.)
+
+### Encoding
+
+`PCGXEncodeTexture()` is the conversion of a frame-buffer copy, so that decoding its output with `hostOrder16 = true` gives what the texture unit would sample after `GXCopyTex()`:
+
+| Target | Stored |
+| --- | --- |
+| `GX_TF_RGB565` | the top 5, 6 and 5 bits |
+| `GX_TF_RGB5A3` | alpha `0xE0` or more: RGB555; less: the top 3 bits of alpha and RGB444 |
+| `GX_TF_RGBA8` | unchanged |
+| `GX_TF_I4`, `I8`, `IA4`, `IA8` | I is the luma of the copy, `(66 R + 129 G + 25 B + 4096) >> 8` (16 to 235, not 0 to 255); A is the alpha |
+| `GX_CTF_R4`, `RA4`, `RA8`, `A8`, `R8`, `G8`, `B8` | the named channels, laid out as I4, IA4, IA8 and I8 (decode them as those) |
+
+16-bit texels are written in host order. Texels of a partial tile outside the image are 0. Colour-index formats, CMPR, Z formats and `GX_CTF_YUVA8`, `RG8`, `GB8` are refused.
+The input is 8 bits per channel: reducing the frame buffer to the 6 bits per channel of an EFB with alpha, and reading alpha as 255 from an EFB without, is the caller's business.
+
+### Tools
+
+```sh
+build/pc/newschannel --list-textures 9                              # every texture of content 9
+build/pc/newschannel --list-textures 9:news_layout.arc.LZ/arc/timg  # a directory inside an archive file
+build/pc/newschannel --list-textures all
+build/pc/newschannel --dump-texture 9:TPLCommon.tpl.LZ:0 build/scratch/t.png
+build/pc/newschannel --dump-texture 7:wbf1.brfna:3 build/scratch/sheet3.png
+```
+
+The argument is `CONTENT[:PATH[:INDEX]]`: the content index, a file, directory or archive file in it (members of an archive file are reached with `/`), and the texture in the file (the descriptor of a `.tpl`, the glyph sheet of a font). `--list-textures` prints size, format, palette, wrap modes, filters and mipmap levels; `--dump-texture` writes the first match as a PNG.
+Files are loaded as the game loads them (CNT, CX, ARC, `TPLBind()`, `ut::ResFont`, `ut::ArchiveFont`).
+**A PNG written this way is a picture of the game's assets: write it below `build/` or to a scratch directory and never commit it (R12).**
+
+`PCGXWritePNG(path, rgba, width, height)` and `PCGXDumpTexture()` are there for other backend code too (a `--screenshot` option, looking at a texture the backend has just decoded). The PNG holds uncompressed data, so no compression library is needed. `PCGXForEachAssetTexture(spec, callback, user)` is the walk behind both modes.
+
+### Self-tests
+
+`PCSelfTestTexDecode()`, without a display:
+
+- sizes against the SDK's `GXGetTexBufferSize()` formula for 27 formats and every size up to 40x40;
+- hand-built tiles with known pixels for every decoded format: tile and texel order, images of 9x9, 9x5 and 5x5 that end inside a tile, bit extension, both halves of RGB5A3, the four-colour and three-colour CMPR modes with the block order inside a tile, palettes in all three formats with an index past the end, host-order texels;
+- encode and decode of 14 target formats in 9 sizes against an independent model of the copy, the same data byte-swapped and decoded as big-endian, known encoded values, guard bytes behind every output buffer;
+- the PNG writer, read back by a parser that checks the chunk CRCs, the stored blocks and the Adler-32;
+- with the contents: all 280 textures of content 9 and the 70 sheets of `wbf1.brfna` decode, every image fits in its file (with all mipmap levels), every pixel is one its format can produce (intensity equal in the channels and a multiple of 17 for 4 bits, RGB565 opaque, RGB5A3 alpha one of the eight values), the counts per format are the ones below, and three known pictures look as expected (size, alpha range, not flat).
+
+### The textures in the contents
+
+From `--list-textures all`: 1445 textures, of which 932 I4, 280 IA4, 162 IA8, 66 RGB5A3, 3 RGB565, 1 I8, 1 CMPR.
+**No texture has a palette, and none is RGBA8**: C4, C8, C14X2 and RGBA8 are tested with synthetic data only.
+
+Content 9 (main assets) and content 7 (archive fonts):
+
+| File | Textures | Format | Size | Notes |
+| --- | --- | --- | --- | --- |
+| `font_news_date.brfnt.LZ` | 16 sheets | I4 | 256x128 | |
+| `font_weather_city.brfnt.LZ` | 14 sheets | IA4 | 256x1024 | |
+| `font_weather_time.brfnt.LZ` | 2 sheets | IA4 | 64x128 | white digits with a dark outline: intensity and alpha differ |
+| `font_weather_timeWW.brfnt.LZ` | 6 sheets | IA4 | 64x32 | |
+| `news_layout.arc.LZ/arc/font/font_news.brfnt` | 22 sheets | I4 | 128x1024 | the font of the layouts' text boxes |
+| `news_layout.arc.LZ/arc/timg/*.tpl` | 26 files, one texture each | 16 IA4, 9 IA8, 1 I4 | 8x8 to 168x24, 8x456 | the `btn*` textures are IA8 strips 8 wide; `plate1.tpl` (I4, 8x8) and `plate1r.tpl` (IA4, 16x16) repeat in both directions |
+| `TPLCommon.tpl.LZ` | 103 | 0 to 2 RGB5A3, 3 to 95 IA4, 96 I8, 97 to 102 IA4 | 24x16 to 323x72 | 96 (64x64) has 7 mipmap levels |
+| `TPLNews.tpl.LZ` | 91 | see below | 8x19 to 608x456 | |
+| `wbf1.brfna` (content 7) | 70 sheets | I4 | 128x1024 | Huffman-compressed in the file; `ut::ArchiveFont` expands them |
+| `wbf2.brfna` (content 7) | 64 sheets | I4 | 256x512 | the same |
+
+`TPLNews.tpl.LZ` by index:
+
+| Index | Format | Size |
+| --- | --- | --- |
+| 0 | CMPR | 608x456 (the background) |
+| 1, 2, 5, 6, 9, 10 | IA8 | 8x28 to 608x56 |
+| 3, 4, 7, 8 | IA4 | 8x22 to 200x56 |
+| 11 | I4 | 32x32 |
+| 12 to 50 | RGB5A3 | 32x24 to 64x32 |
+| 51 to 57 | IA4 | 120x24 to 168x24 |
+| 58 to 60 | RGB565 | 193x103, 221x52, 115x116 |
+| 61 to 64, 67 to 69, 80 | RGB5A3 | 93x19 to 229x46, 30x44, 64x64 |
+| 65, 66, 77 to 79, 81 | IA4 | 144x168 to 192x168, 30x44, 64x64 |
+| 70 to 76 | I4 | 128x128, 7 mipmap levels each |
+| 82, 83 | I4 | 64x64, 128x128 |
+| 84 to 90 | IA8 | 416x88 |
+
+Content 6 (HOME Menu, milestone 7): each of the 16 `LZ77_homeBtn*.arc` archives has 59 or 60 one-texture palettes (39 or 40 I4, 9 IA4, 10 IA8, 1 RGB5A3; 27 of them repeat in both directions) and a font of 14 I4 sheets of 32x256; `homeBtnIcon.tpl` is RGB5A3, 56x56.
+
+What this means for the GX backend:
+
+- **Sizes are arbitrary.** 89 of the 414 textures of contents 7 and 9 have a width or height that is not a multiple of 8, and few are powers of two. OpenGL 3.3 takes them as they are.
+- **Wrap modes:** clamp almost everywhere; `GX_REPEAT` on three textures of content 9 (one of them in S only) and on the HOME Menu's backgrounds; no `GX_MIRROR`.
+- **Filters:** `GX_LINEAR` for both everywhere, except the eight textures with mipmaps, which ask for `GX_LIN_MIP_LIN` and store 7 levels.
+- **A texture's pixels can change under the same pointer:** `gFadeTex` is written by every `GXCopyTex()`, and the buffers of news pictures are allocated and freed as articles change. A cache of decoded textures keyed by the image pointer needs an invalidation rule for these (`GXInvalidateTexAll()` is one signal; the copy itself is another).
+- **Not in this survey:** the textures inside `earth.brres.LZ` (content 8, `TEX0`) and in the effect files (`.breft`). Their containers have no byte-order converter yet (section 12), so the walk does not open them; both belong to milestone 6.

@@ -31,6 +31,7 @@
 
 #include "dol_data.h"
 #include "gx/pc_gx.h"
+#include "gx/texdecode.h"
 #include "pc_config.h"
 #include "pc_input.h"
 #include "pc_selftest.h"
@@ -70,6 +71,12 @@ void PrintHelp(const char* program) {
     std::printf("                   without a display)\n");
     std::printf("  --boot           run the game\n");
     std::printf("  --window-test    open the window and run empty frames (with --frames N; default 120)\n");
+    std::printf("  --list-textures CONTENT[:PATH[:INDEX]]\n");
+    std::printf("                   list the textures of a content (9), of a file or directory in it\n");
+    std::printf("                   (9:TPLCommon.tpl.LZ, 9:news_layout.arc.LZ/arc/timg), or of 'all'\n");
+    std::printf("  --dump-texture CONTENT:PATH[:INDEX] OUT.png\n");
+    std::printf("                   decode one texture to a PNG file (write it outside the repository's\n");
+    std::printf("                   tracked files, e.g. below build/)\n");
     std::printf("  --version        print build information\n");
     std::printf("  --help           this text\n\n");
     std::printf("Options for --boot:\n");
@@ -120,6 +127,7 @@ void PCSelfTestFiles();   // selftest_files.cpp
 void PCSelfTestBackend(); // selftest_backend.cpp
 void PCSelfTestBoot();    // selftest_boot.cpp
 // PCSelfTestGX() and PCSelfTestGXWithContext() (selftest_gx.cpp): gx/pc_gx.h
+void PCSelfTestTexDecode(); // gx/texdecode_selftest.cpp
 static void PCSelfTestDolData();
 
 static int sFailures;
@@ -240,6 +248,7 @@ static int RunSelfTest() {
     PCSelfTestGX();
     PCSelfTestDolData();
     PCSelfTestBoot();
+    PCSelfTestTexDecode();
 
     if (sFailures == 0) {
         std::printf("self-test: all checks passed\n");
@@ -280,6 +289,9 @@ int main(int argc, char** argv) {
     bool boot = false;
     bool window_test = false;
     bool selftest_gl = false;
+    const char* list_textures = nullptr;
+    const char* dump_texture = nullptr;
+    const char* dump_texture_out = nullptr;
     PCConfig* config = PCGetConfig();
 
     // --config first: the other options override the file.
@@ -347,6 +359,11 @@ int main(int argc, char** argv) {
             SetOption(argv[0], arg, "language", OptionValue(argc, argv, &i));
         } else if (std::strcmp(arg, "--wide") == 0) {
             SetOption(argv[0], arg, "aspect", "16:9");
+        } else if (std::strcmp(arg, "--list-textures") == 0) {
+            list_textures = OptionValue(argc, argv, &i);
+        } else if (std::strcmp(arg, "--dump-texture") == 0) {
+            dump_texture = OptionValue(argc, argv, &i);
+            dump_texture_out = OptionValue(argc, argv, &i);
         } else {
             std::fprintf(stderr, "%s: unknown option '%s'\n", argv[0], arg);
             PrintHelp(argv[0]);
@@ -361,6 +378,14 @@ int main(int argc, char** argv) {
     }
     if (config->nandDir[0] != '\0') {
         PCSetNandDir(config->nandDir);
+    }
+
+    // Development tools of the texture codec (gx/texdecode_tool.cpp).
+    if (list_textures != nullptr) {
+        return PCGXListTexturesMain(list_textures);
+    }
+    if (dump_texture != nullptr) {
+        return PCGXDumpTextureMain(dump_texture, dump_texture_out);
     }
 
     if (selftest_only) {
