@@ -314,14 +314,16 @@ s32 NewsData::Init(NewsHeader** files, s32 current) {
     }
 
     // Link articles that appear in several topics.
-    topic = mCategories;
-    for (s32 i = 0; i < mNumCategories; topic++, i++) {
-        slot = topic->mArticles;
-        for (j = 0; j < topic->mNumArticles; j++, slot++) {
-            same = FindArticle((*slot)->mText, i, j + 1);
-            if (same != NULL) {
-                (*slot)->mNextSame = *same;
-                (*same)->mPrevSame = *slot;
+    {
+        Category* cat = mCategories;
+        for (s32 i = 0; i < mNumCategories; i++, cat++) {
+            NewsArticle** art = cat->mArticles;
+            for (j = 0; j < cat->mNumArticles; j++, art++) {
+                same = FindArticle((*art)->mText, i, j + 1);
+                if (same != NULL) {
+                    (*art)->mNextSame = *same;
+                    (*same)->mPrevSame = *art;
+                }
             }
         }
     }
