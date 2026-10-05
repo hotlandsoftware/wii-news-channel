@@ -287,8 +287,8 @@ static inline f32 GetScreenHalfHeight() {
 }
 
 // The cursor follows the pointer faster the further away it is.
-static inline f32 GetSmoothRate(f32 current, f32 target) {
-    f32 t = 0.002f * __fabsf(target - current);
+static inline f32 GetSmoothRate(f32 d) {
+    f32 t = 0.002f * math::FAbs(d);
     if (t < 0.1f) {
         t = 0.1f;
     }
@@ -300,6 +300,14 @@ static inline f32 GetSmoothRate(f32 current, f32 target) {
 
 static inline void LerpTo(f32& a, f32 b, f32 t) {
     a = (1.0f - t) * a + t * b;
+}
+
+// One axis of the cursor smoothing. Both axes go through this inline: the
+// original interleaves the two expansions (the y difference is computed before
+// the x store), which is the scheduler's doing, not the source order.
+static inline void SmoothTo(f32& pos, const f32& target) {
+    f32 d = target - pos;
+    LerpTo(pos, target, GetSmoothRate(d));
 }
 
 void SystemCalc() {
@@ -371,24 +379,8 @@ void SystemCalc() {
             gPointerValid[i][j] = false;
         }
 
-        f32 d = gCursorX[i][0] - gPointerX[i];
-        f32 tx = 0.002f * __fabsf(d);
-        if (tx < 0.1f) {
-            tx = 0.1f;
-        }
-        if (tx > 1.0f) {
-            tx = 1.0f;
-        }
-        d = gCursorY[i][0] - gPointerY[i];
-        LerpTo(gPointerX[i], gCursorX[i][0], tx);
-        f32 ty = 0.002f * math::FAbs(d);
-        if (ty < 0.1f) {
-            ty = 0.1f;
-        }
-        if (ty > 1.0f) {
-            ty = 1.0f;
-        }
-        LerpTo(gPointerY[i], gCursorY[i][0], ty);
+        SmoothTo(gPointerX[i], gCursorX[i][0]);
+        SmoothTo(gPointerY[i], gCursorY[i][0]);
 
         n = gKPADCount[i];
         BOOL found = FALSE;
@@ -869,7 +861,8 @@ void* LoadArcFile(u32 archive, const char* name, s32 align, u32* size, MEMHeapHa
                 break;
             default:
 #line 2247
-                OSPanic(__FILE__, __LINE__, "CXCompressionType unsupported.");
+                // The original format has a %d but passes no argument.
+                OSPanic(__FILE__, __LINE__, "CXCompressionType %d unsupported.");
                 break;
             }
             MEMFreeToExpHeap(heap, comp);
