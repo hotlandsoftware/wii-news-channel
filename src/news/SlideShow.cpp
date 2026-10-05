@@ -41,7 +41,6 @@ extern "C" bool gHideClock;
 extern "C" u8 gPointerOverClock;
 extern "C" const wchar_t* lbl_80357564; // title text
 extern "C" ArticleText* lbl_80357568;
-extern "C" f32 lbl_80356940[2];
 extern "C" const f32 lbl_801922D0[]; // text scale per setting
 extern "C" const s32 lbl_80192370[];
 extern "C" const s32 lbl_80192398[];
@@ -81,19 +80,29 @@ extern "C" Globe* gGlobe;
 
 void DrawScreenFade(s32 alpha);
 
-// The original calls Layout::SetBlend(s32, s32, s32) and only sets up the
-// first argument; r5 and r6 still hold mFooterFade and 15 from computing it,
-// so the callee receives (alpha, mFooterFade, 15). Declaring the mangled name
-// with C linkage and one argument reproduces that code.
-extern "C" void SetBlend__6LayoutFlll(Layout* layout, s32 alpha);
 
 extern "C" {
-
-
 void fn_8001F730(nw4r::lyt::Pane* pane, const nw4r::ut::Color& color);
-// DrawPointerEffect__FUcUs; the call passes a u32 height without truncating it.
-void fn_80036328(u8 alpha, u32 y);
 }
+
+// DrawPointerEffect(u8, u16) and DrawTabRect(const ut::Rect&, u8, f32) are
+// called with a wider argument that is not truncated (a u32 height, an s32
+// alpha). CodeWarrior only does that for a matching prototype, so the calls
+// go through declarations of the mangled names; other compilers call the
+// real functions.
+#ifdef __MWERKS__
+extern "C" {
+void DrawPointerEffect__FUcUs(u8 alpha, u32 y);
+void DrawTabRect__FRCQ34nw4r2ut4RectUcf(const nw4r::ut::Rect& rect, s32 alpha, f32 z);
+}
+#else
+static inline void DrawPointerEffect__FUcUs(u8 alpha, u32 y) {
+    DrawPointerEffect(alpha, y);
+}
+static inline void DrawTabRect__FRCQ34nw4r2ut4RectUcf(const nw4r::ut::Rect& rect, s32 alpha, f32 z) {
+    DrawTabRect(rect, alpha, z);
+}
+#endif
 
 // OSu16tof32: u16 to f32 through the paired-single unit (GQR3 = u16).
 static inline f32 U16ToF32(register u16* in) {
@@ -116,19 +125,37 @@ static inline s32 GetFrameRate() {
     return gRenderMode.viTVmode == 4 ? 50 : 60;
 }
 
-#pragma explicit_zero_data on
-static f32 sUnused[3] = {5.0f, 25.0f, 50.0f};
-#pragma explicit_zero_data reset
+// Not referenced anywhere. It is not static: the file is built with
+// "-ipa file", which drops unused statics.
+f32 sUnused[3] = {5.0f, 25.0f, 50.0f};
 
 static ut::Color sWhite(0xFFFFFFFF);
 
-#pragma explicit_zero_data on
-static f32 sPrevPicZ = 0.0f;
-static f32 sPicZ = 0.0f;
-static f32 sGlobeOfsX = 0.0f;
-static f32 sGlobeOfsY = 0.0f;
-#pragma explicit_zero_data reset
 static math::VEC2 sArrowSize(20.0f, 20.0f);
+
+// Tweakable values (.sdata). They are emitted where they are defined, so
+// each one sits next to the function that uses it; the footer colour and the
+// picture scale are defined after their first use.
+extern u8 sFooterRed;
+extern u8 sFooterGreen;
+extern u8 sFooterBlue;
+extern f32 sPictureScale;
+
+static f32 sTitleY = 45.0f;
+
+static inline void DisableButton(PaneButton* button) {
+    button->mDisabled = true;
+    button->Press();
+}
+
+static inline void EnableButton(PaneButton* button) {
+    button->mDisabled = false;
+}
+
+// The clock stays hidden while the update message is shown.
+static inline void SetHideClock(bool hide) {
+    gHideClock = gUpdateMsgType == 1 ? true : hide;
+}
 
 static inline Category* GetCategory(s32 idx) {
     return &gNewsData->mCategories[idx];
@@ -147,11 +174,20 @@ static inline s32 ClampZero(s32 x) {
 }
 
 static inline ut::Color operator-(const ut::Color& a, const ut::Color& b) {
-    s32 al = ClampZero(a.a - b.a);
+    s32 al = a.a - b.a;
+    al = ClampZero(al);
     s32 bl = ClampZero(a.b - b.b);
     s32 g = ClampZero(a.g - b.g);
     s32 r = ClampZero(a.r - b.r);
     return ut::Color(r, g, bl, al);
+}
+
+static inline void ApplyView(SlideShow* s) {
+    s->mViewWidth = s->mView.GetWidth();
+    s->mViewHeight = s->mView.GetHeight();
+    s->mText.right = GetContentRight();
+    s->mText.bottom = s->mView.bottom - 63.0f;
+    Article_SetHeight(s->mText.bottom - s->mText.top);
 }
 
 SlideShow::SlideShow(u32 arc)
@@ -325,15 +361,11 @@ SlideShow::SlideShow(u32 arc)
     mWriter.SetScale(0.8f);
     mWriter.SetCharSpace(3.0f);
 
-    mView.top = 0.0f;
     mView.left = 0.3f * GetScreenWidth();
-    mView.bottom = GetScreenHeight();
-    mViewHeight = GetScreenHeight() - mView.top;
+    mView.top = 0.0f;
     mView.right = GetScreenWidth();
-    mViewWidth = mView.right - mView.left;
-    mText.bottom = mView.bottom - 63.0f;
-    mText.right = GetContentRight();
-    Article_SetHeight(mText.bottom - mText.top);
+    mView.bottom = GetScreenHeight();
+    ApplyView(this);
 
     s32 numCategories = lbl_803575E0;
     while (GetCategory(mCategory)->mArticles == NULL) {
@@ -352,7 +384,7 @@ SlideShow::SlideShow(u32 arc)
 
     mTitleRect.right = GetScreenWidth();
     mTitleRight = GetContentRight() - 2;
-    mTitleY = 45.0f;
+    mTitleY = sTitleY;
     mTitleMaxWidth = mTitleRight - 160.0f;
 }
 
@@ -362,19 +394,11 @@ SlideShow::~SlideShow() {
     delete mMainLayout;
 }
 
-static inline void ApplyView(SlideShow* s) {
-    s->mViewWidth = s->mView.right - s->mView.left;
-    s->mViewHeight = s->mView.bottom - s->mView.top;
-    s->mText.right = GetContentRight();
-    s->mText.bottom = s->mView.bottom - 63.0f;
-    Article_SetHeight(s->mText.bottom - s->mText.top);
-}
-
 static inline void SetViewToTarget(SlideShow* s) {
-    s->mText.left = s->mTextTarget[0];
-    s->mText.top = s->mTextTarget[1];
     s->mView.left = s->mViewTarget[0];
     s->mView.top = s->mViewTarget[1];
+    s->mText.left = s->mTextTarget[0];
+    s->mText.top = s->mTextTarget[1];
     ApplyView(s);
 }
 
@@ -395,9 +419,13 @@ static inline void SetArticleText(SlideShow* s) {
     math::VEC2 size(s->mText.right - s->mText.left, s->mText.bottom - s->mText.top);
     NewsArticle* article = s->mArticle;
     Article_Set(article, GetCategory(s->mCategory)->mName, (BOOL)GetPictureTexture(article), &start,
-                &start, lbl_80356940, size, true, gTextScale, false);
+                &start, &sPictureScale, size, true, gTextScale, false);
     Article_Arrange(gTextScale);
     Article_Reset();
+}
+
+static inline s32 GetNumArticles(u32 category) {
+    return gNewsData->mCategories[category].mNumArticles;
 }
 
 static inline BOOL IsFirstArticle(SlideShow* s) {
@@ -416,9 +444,9 @@ static inline BOOL IsFirstArticle(SlideShow* s) {
 }
 
 static inline BOOL IsLastArticle(SlideShow* s) {
-    s32 cat = s->mCategory;
-    if ((u32)s->mArticleIdx >= (u32)(GetCategory(cat)->mNumArticles - 1)) {
+    if ((u32)s->mArticleIdx >= (u32)(GetNumArticles(s->mCategory) - 1)) {
         if (s->mLoop) {
+            s32 cat = s->mCategory;
             while (++cat < (u32)lbl_803575E0) {
                 if (GetCategory(cat)->mArticles != NULL) {
                     return FALSE;
@@ -438,9 +466,8 @@ void SlideShow::LoadArticle() {
         return;
     }
 
-    s32 start = list->mCategory;
     s32 count = lbl_803575E0;
-    mCategory = start;
+    s32 start = mCategory = list->mCategory;
     NewsArticle** articles = GetCategory(start)->mArticles;
     while (articles == NULL) {
         if (++mCategory >= count) {
@@ -512,6 +539,23 @@ void SlideShow::Stop() {
     Article_Reset();
 }
 
+static inline void UpdateGlobePos(const math::VEC2& from, const math::VEC2& to, const s32& angle) {
+    Globe* g = gGlobe;
+    if (g != NULL) {
+        GlobeCamera* camera = g->mCamera;
+        if (camera != NULL) {
+            f32 t = CosineEase(angle);
+            f32 dx = to.x - from.x;
+            f32 lon = from.x + dx * t;
+            camera->mLon = lon;
+            f32 dy = to.y - from.y;
+            camera->mLat = from.y + dy * t;
+            g->mLon = lon;
+            g->mLat = camera->mLat;
+        }
+    }
+}
+
 void SlideShow::Calc() {
     SetDPDAll(1);
     Globe_ResetFocus();
@@ -530,14 +574,12 @@ void SlideShow::Calc() {
     mDownPressed = false;
 
     if (lbl_80356970 <= 0) {
-        mZoomOutButton->mDisabled = true;
-        mZoomOutButton->Press();
+        DisableButton(mZoomOutButton);
     } else {
         mZoomOutButton->mDisabled = false;
     }
     if (lbl_80356970 >= 9) {
-        mZoomInButton->mDisabled = true;
-        mZoomInButton->Press();
+        DisableButton(mZoomInButton);
     } else {
         mZoomInButton->mDisabled = false;
     }
@@ -608,18 +650,7 @@ void SlideShow::Calc() {
         globe->mZoom = mGlobeZoom;
         globe->UpdateZoom(lbl_80192370);
 
-        Globe* g = gGlobe;
-        if (g != NULL) {
-            GlobeCamera* camera = g->mCamera;
-            if (camera != NULL) {
-                f32 s = CosineEase(mGlobeAngle);
-                f32 lon = mGlobeFrom.x + (mGlobeTo.x - mGlobeFrom.x) * s;
-                camera->mLon = lon;
-                camera->mLat = mGlobeFrom.y + (mGlobeTo.y - mGlobeFrom.y) * s;
-                g->mLon = lon;
-                g->mLat = camera->mLat;
-            }
-        }
+        UpdateGlobePos(mGlobeFrom, mGlobeTo, mGlobeAngle);
 
         globe->UpdateTilt(0, lbl_80192398);
         globe->UpdateSpin(0);
@@ -685,37 +716,64 @@ void SlideShow::Calc() {
     }
 }
 
+static const GXColor sFooterColor1 = {0, 192, 0, 0};
+
+// Not referenced, so the linker strips it. The original has such a function
+// here: the widescreen factor sits in the constant pool between the footer
+// colour and the constants of Draw.
+f32 SlideShow_GetAspect() {
+    return gWidescreen ? 1.3684211f : 1.0f;
+}
+
+static inline void DrawFooter(SlideShow* s) {
+    if (s->mFooterAlpha != 0 && s->mDrawFooter) {
+        Draw2D_SetupGX();
+        Draw2D_SetOrtho();
+        GXSetTevColor(GX_TEVREG0, (GXColor){sFooterRed, sFooterGreen, sFooterBlue, s->mFooterAlpha});
+        GXSetTevColor(GX_TEVREG1, sFooterColor1);
+        (s->*s->mDrawFooter)();
+    }
+}
+
+static inline void DrawTexAt(TPLPalette* tpl, u32 id, f32 x, f32 y, f32 scale) {
+    Vec pos;
+    pos.x = x;
+    pos.y = y;
+    pos.z = 0.0f;
+    Draw2D_Tex(tpl, id, &pos, scale, scale);
+}
+
+#pragma explicit_zero_data on
+static f32 sLineFromZ = 0.0f;
+static f32 sLineToZ = 0.0f;
+#pragma explicit_zero_data reset
+
 void SlideShow::Draw() {
     if (mAlpha != 0) {
         mSlideLayout->SetAlpha(mAlpha);
         mSlideLayout->Draw();
-        fn_80036328(mAlpha, mView.top);
-        if (mFooterAlpha != 0 && mDrawFooter) {
-            Draw2D_SetupGX();
-            Draw2D_SetOrtho();
-            static const GXColor sFooterColor = {255, 255, 255, 0};
-            GXColor c0 = sFooterColor;
-            c0.a = mFooterAlpha;
-            GXSetTevColor(GX_TEVREG0, c0);
-            GXColor c1 = {255, 255, 255, 255};
-            GXSetTevColor(GX_TEVREG1, c1);
-            (this->*mDrawFooter)();
-        }
+        DrawPointerEffect__FUcUs(mAlpha, mView.top);
+        DrawFooter(this);
     }
 
     static ut::Color sLineColor(0, 0, 0, 255);
     static ut::Color sLightColor(255, 255, 255, 255);
     static ut::Color sBackColor(222, 222, 222, 255);
 
-    math::VEC3 from(mView.left, mView.top, 0.0f);
-    math::VEC3 to(mView.right, mView.top, 0.0f);
+    math::VEC3 line[2];
+    line[0].x = mView.left;
+    line[0].y = mView.top;
+    line[0].z = sLineFromZ;
+    line[1].x = mView.right;
+    line[1].y = mView.top;
+    line[1].z = sLineToZ;
     Draw2D_SetupGX();
     Draw2D_SetOrtho();
     Draw2D_FillRect(&mView, &sBackColor);
-    Draw2D_Line(from, to, 12, sLineColor, ut::Color(0xFF));
-    from.y += 1.0f;
-    to.y += 1.0f;
-    Draw2D_Line(from, to, 12, sLightColor, ut::Color(0xFF));
+    Draw2D_Line(line[0], line[1], 12, sLineColor, ut::Color(0xFF));
+    line[0].y += 1.0f;
+    line[1].y += 1.0f;
+    Draw2D_Line(line[0], line[1], 12, sLightColor, ut::Color(0xFF));
 
     DrawPictures();
 
@@ -732,7 +790,7 @@ void SlideShow::Draw() {
         if (mHasTitle) {
             Draw2D_SetupGX();
             Draw2D_SetOrtho();
-            DrawTabRect(mTitleRect, alpha, 0.0f);
+            DrawTabRect__FRCQ34nw4r2ut4RectUcf(mTitleRect, alpha, 0.0f);
             ut::TextWriterBase<wchar_t> writer;
             writer.SetFont(*gSysFont);
             writer.SetDrawFlag(0x122);
@@ -748,19 +806,20 @@ void SlideShow::Draw() {
         }
 
         s32 rate = GetFrameRate();
+        TPLPalette* tpl;
+        s32 speed;
         s32 seconds = mTimer / rate;
-        s32 speed = mSpeed;
-        TPLPalette* tpl = gCursorTpl;
+        speed = mSpeed;
+        tpl = gCursorTpl;
         s32 frac = mTimer - seconds * rate;
         f32 x = (f32)GetContentRight() - 8.0f;
+        f32 y = 421.0f;
         f32 width = TPL_GetWidth(tpl, 0x60);
         f32 height = TPL_GetHeight(tpl, 0x60);
         f32 fade = (f32)(15 - mTimerFade) / 15.0f;
         Draw2D_SetupGX();
         Draw2D_SetOrtho();
-        GXColor shadow = {0, 0, 0, alpha / 2};
-        GXColor shadow2 = {0, 0, 0, alpha / 2};
-        GXSetTevColor(GX_TEVREG0, shadow2);
+        GXSetTevColor(GX_TEVREG0, ut::Color(0, 0, 0, alpha / 2));
 
         for (s32 i = 0; i < speed; i++) {
             static ut::Color sDotOn(64, 180, 32, 0);
@@ -779,7 +838,8 @@ void SlideShow::Draw() {
                     scale = 0.39999998f;
                 } else if (t2 >= 0.6f) {
                     color = sDotDiff;
-                    scale = 0.39999998f + 0.5f * ((0.14999998f - (t2 - 0.6f)) / 0.14999998f);
+                    f32 u = (0.14999998f - (t2 - 0.6f)) / 0.14999998f;
+                    scale = 0.39999998f + 0.5f * u;
                 } else {
                     color = 0;
                     scale = 0.0f;
@@ -788,35 +848,37 @@ void SlideShow::Draw() {
                 color = sDotDiff;
                 scale = 0.39999998f;
             }
+            color.r = sDotOff.r + (s32)(color.r * fade);
+            color.g = sDotOff.g + (s32)(color.g * fade);
+            color.b = sDotOff.b + (s32)(color.b * fade);
             scale = 0.3f + scale * fade;
-            GXColor c;
-            c.r = sDotOff.r + (s32)(color.r * fade);
-            c.g = sDotOff.g + (s32)(color.g * fade);
-            c.b = sDotOff.b + (s32)(color.b * fade);
-            c.a = color.a;
-            GXSetTevColor(GX_TEVREG1, c);
-            Vec pos;
-            pos.x = x - 0.28125f * (width * scale);
-            pos.y = 421.0f - 0.28125f * (height * scale);
-            pos.z = 0.0f;
-            Draw2D_Tex(tpl, 0x60, &pos, scale, scale);
+            GXSetTevColor(GX_TEVREG1, color);
+            DrawTexAt(tpl, 0x60, x - 0.28125f * (width * scale), y - 0.28125f * (height * scale),
+                      scale);
             x -= 18.0f;
         }
     }
 
-    if (IsState(&SlideShow::StateMessage)) {
+    if (IsMessageState()) {
         DrawSelection();
     }
 }
 
 void SlideShow::CalcArrows() {
-    f32 cx = mView.left + 0.5f * mViewWidth;
-    f32 upY = 2.0f + mView.top;
-    f32 downY = (mView.top + mViewHeight) - 2.0f;
-    f32 right = 20.0f + cx;
-    f32 left = cx - 20.0f;
-    f32 downBase = downY - 15.0f;
-    f32 upBase = 15.0f + upY;
+    f32 upBase;
+    f32 right;
+    f32 left;
+    f32 downBase;
+    f32 downY;
+    f32 cx;
+    f32 upY;
+    cx = mView.left + 0.5f * mViewWidth;
+    right = 20.0f + cx;
+    left = cx - 20.0f;
+    upY = 2.0f + mView.top;
+    downY = (mView.top + mViewHeight) - 2.0f;
+    downBase = downY - 15.0f;
+    upBase = 15.0f + upY;
     mUpArrow[0].x = cx;
     mUpArrow[0].y = downY;
     mUpArrow[1].x = right;
@@ -908,21 +970,11 @@ BOOL SlideShow::CheckInput() {
 
     if (!IsState(&SlideShow::StateMessage)) {
         UpdateLayoutButtons(mCurLayout, 0x23);
-        if (gHold[0] & 0x400) {
-            mDragging[0] = true;
-            dragging = true;
-        }
-        if (gHold[1] & 0x400) {
-            mDragging[1] = true;
-            dragging = true;
-        }
-        if (gHold[2] & 0x400) {
-            mDragging[2] = true;
-            dragging = true;
-        }
-        if (gHold[3] & 0x400) {
-            mDragging[3] = true;
-            dragging = true;
+        for (s32 i = 0; i < 4; i++) {
+            if (gHold[i] & 0x400) {
+                mDragging[i] = true;
+                dragging = true;
+            }
         }
 
         CheckPointer();
@@ -1001,8 +1053,8 @@ BOOL SlideShow::StateShow(const s32* arg) {
         mStateFrame++;
         ChangeSubState(&SlideShow::SubStateIdle);
         Pins_SetState(mCategory, mArticleIdx, 1);
-        mTimerFade = 0;
         mTimer = mSpeed * GetFrameRate();
+        mTimerFade = 0;
         break;
     default:
         if (gRepeatSlowAll & 1) {
@@ -1013,9 +1065,10 @@ BOOL SlideShow::StateShow(const s32* arg) {
         }
         Pins_SetState(mCategory, mArticleIdx, 1);
 
+        s32 dir;
         if (mPrevPressed) {
             if (!IsFirstArticle(this)) {
-                s32 dir = 0;
+                dir = 0;
                 PlaySE(0x39);
                 mPlaySound = false;
                 ChangeState(&SlideShow::StateMove, &dir);
@@ -1027,7 +1080,7 @@ BOOL SlideShow::StateShow(const s32* arg) {
                 ChangeState(&SlideShow::StateEnd);
                 return TRUE;
             }
-            s32 dir = 1;
+            dir = 1;
             PlaySE(0x38);
             mPlaySound = false;
             ChangeState(&SlideShow::StateMove, &dir);
@@ -1050,9 +1103,9 @@ BOOL SlideShow::StateShow(const s32* arg) {
             ChangeState(&SlideShow::StateEnd);
             return TRUE;
         }
-        s32 dir = 1;
+        s32 next = 1;
         mPlaySound = true;
-        ChangeState(&SlideShow::StateMove, &dir);
+        ChangeState(&SlideShow::StateMove, &next);
         return TRUE;
     }
     return TRUE;
@@ -1061,8 +1114,20 @@ BOOL SlideShow::StateShow(const s32* arg) {
 void SlideShow::StartZoomOut() {
     f32 volume = 1.0f;
     Bgm_SetSlideshowVolume(volume);
-    ChangeSubState(&SlideShow::SubStateIdle);
+    // ChangeSubState() written out: the original clears `tex` between leaving
+    // the old sub-state and entering the new one (one zero register serves
+    // both), and its object has an unreferenced pointer to SubStateWait in
+    // front of the one to SubStateIdle.
+    BOOL wait = FALSE;
+    SubStateFunc state = wait ? &SlideShow::SubStateWait : &SlideShow::SubStateIdle;
+    if (mSubState) {
+        mSubStateFrame = -1;
+        (this->*mSubState)();
+    }
     NewsTexture* tex = NULL;
+    mSubState = state;
+    mSubStateFrame = 0;
+    (this->*mSubState)();
     LayoutArticle();
     NewsArticle* article = mArticle;
     if (article->mLocation == NULL) {
@@ -1086,23 +1151,22 @@ BOOL SlideShow::StateZoom(const s32* arg) {
     case -1:
         mZoomed = false;
         mTextVisible = true;
-        gHideClock = gUpdateMsgType == 1;
+        SetHideClock(false);
         ChangeSubState(&SlideShow::SubStateIdle);
         mBounceTimer = 0;
         mQuickMove = false;
         break;
     case 0:
         mStateFrame++;
-        mUpButton->mDisabled = true;
-        mUpButton->Press();
+        DisableButton(mUpButton);
         f32 volume = 0.0f;
         Bgm_SetSlideshowVolume(volume);
         mZoomed = true;
         mTextVisible = false;
         mViewTarget[0] = 0.0f;
         mViewTarget[1] = 0.0f;
-        mTextTarget[1] = 83.0f;
         mTextTarget[0] = GetSideMargin();
+        mTextTarget[1] = 83.0f;
         mArticle->mFlags |= 1;
         if (mViewTarget[0] != mView.left || mViewTarget[1] != mView.top) {
             mZoomAngle = 0;
@@ -1135,8 +1199,12 @@ BOOL SlideShow::StateZoom(const s32* arg) {
             }
             break;
         case 2: {
+            s32 i;
             bool close = false;
-            f32 screenWidth = GetScreenWidth();
+            f32 left = 0.0f;
+            f32 top = 63.0f;
+            f32 right = GetScreenWidth();
+            f32 bottom = 393.0f;
             ut::Rect rect(0.0f, 0.0f, 0.0f, 0.0f);
             if (Article_GetPictureRect(&rect, mText.left, mTextOfs + (mText.top + mScroll), 1.0f)) {
                 bool hold = false;
@@ -1176,11 +1244,11 @@ BOOL SlideShow::StateZoom(const s32* arg) {
                 }
             }
 
-            for (s32 i = 0; i < 4; i++) {
+            for (i = 0; i < 4; i++) {
                 if (IsPointerValid(i)) {
                     f32 x = gPointerX[i];
                     f32 y = gPointerY[i];
-                    if (x > 0.0f && x < screenWidth && y > 63.0f && y < 393.0f && (gTrig[i] & 0x800)) {
+                    if (x > left && x < right && y > top && y < bottom && (gTrig[i] & 0x800)) {
                         close = true;
                         break;
                     }
@@ -1193,7 +1261,7 @@ BOOL SlideShow::StateZoom(const s32* arg) {
             if (mBackPressed || close) {
                 mStateFrame++;
                 PlaySE(0x21);
-                ChangeSubState(&SlideShow::SubStateWait);
+                StartWait();
                 mBeltVisible = true;
                 return TRUE;
             }
@@ -1201,7 +1269,7 @@ BOOL SlideShow::StateZoom(const s32* arg) {
             if (!IsLastArticle(this) && (gTrigAll & 2)) {
                 mStateFrame = 4;
                 mDirection = 1;
-                ChangeSubState(&SlideShow::SubStateWait);
+                StartWait();
                 PlaySE(0x38);
                 mBeltVisible = true;
                 mQuickMove = true;
@@ -1212,14 +1280,14 @@ BOOL SlideShow::StateZoom(const s32* arg) {
                 mStateFrame = 4;
                 mDirection = 0;
                 PlaySE(0x39);
-                ChangeSubState(&SlideShow::SubStateWait);
+                StartWait();
                 mBeltVisible = true;
                 mQuickMove = true;
                 return TRUE;
             }
 
             ut::Rect area(0.0f, 0.0f, GetScreenWidth(), 456.0f);
-            for (s32 i = 0; i < 4; i++) {
+            for (i = 0; i < 4; i++) {
                 lbl_801EDFD0[i] = 1;
                 switch (UpdateGrab(i, &area)) {
                 case 0:
@@ -1275,6 +1343,7 @@ BOOL SlideShow::StateZoom(const s32* arg) {
                 return TRUE;
             }
             break;
+        case 4:
         default:
             if (mZoomDone && mZoomAngle == 0x8000) {
                 SetViewToTarget(this);
@@ -1296,14 +1365,22 @@ BOOL SlideShow::StateMove(const s32* arg) {
     }
 
     switch (mStateFrame) {
-    case -1:
+    case -1: {
+        // Never taken. The original object has an unreferenced pointer to
+        // SubStateIdle here, in front of the one case 0 uses.
+        BOOL reset = FALSE;
+        if (reset) {
+            ChangeSubState(&SlideShow::SubStateIdle);
+        }
         break;
+    }
     case 0: {
         ChangeSubState(&SlideShow::SubStateIdle);
+        bool hadLocation;
         u16 prevWidth;
         u16 prevHeight;
         NewsLocationRec* location = mArticle->mLocation;
-        bool hadLocation = location != NULL;
+        hadLocation = location != NULL;
         if (location != NULL) {
             prevWidth = ((u16*)location)[2];
             prevHeight = ((u16*)location)[3];
@@ -1325,9 +1402,9 @@ BOOL SlideShow::StateMove(const s32* arg) {
             NextArticle();
         }
 
-        NewsArticle* prev = mArticle;
-        mSlideAngle = 0;
         mStateFrame++;
+        mSlideAngle = 0;
+        NewsArticle* prev = mArticle;
         if (prev != NULL) {
             mPrevPicture = GetPictureTexture(prev);
             mPrevCaption = GetPictureCaption(mArticle);
@@ -1382,12 +1459,15 @@ BOOL SlideShow::StateMove(const s32* arg) {
             mText.top = mZoomFrom[6] + mZoomFrom[7] * t;
             ApplyView(this);
         }
-        if (mStateFrame == 3) {
+        switch (mStateFrame) {
+        case 3:
             if (mArticle->mLocation == NULL) {
                 lbl_8035697C = 1;
             }
             ChangeState(&SlideShow::StateShow);
             return TRUE;
+        case 2:
+            break;
         }
         break;
     }
@@ -1413,11 +1493,7 @@ BOOL SlideShow::StateMessage(const s32* arg) {
         }
         if (gTrigAll & 0x800) {
             PlaySE(0x41);
-            bool flag = true;
-            if (gUpdateMsgType != 1) {
-                flag = mMessageFlag;
-            }
-            gHideClock = flag;
+            SetHideClock(mMessageFlag);
             mStateFrame = 2;
         }
         break;
@@ -1506,18 +1582,14 @@ void SlideShow::SubStateScroll() {
         }
 
         if (Article_IsAtTop()) {
-            PaneButton* button = mMainLayout->FindButton("up");
-            button->mDisabled = true;
-            button->Press();
+            DisableButton(mMainLayout->FindButton("up"));
         } else {
-            mMainLayout->FindButton("up")->mDisabled = false;
+            EnableButton(mMainLayout->FindButton("up"));
         }
         if (Article_IsAtBottom()) {
-            PaneButton* button = mMainLayout->FindButton("down");
-            button->mDisabled = true;
-            button->Press();
+            DisableButton(mMainLayout->FindButton("down"));
         } else {
-            mMainLayout->FindButton("down")->mDisabled = false;
+            EnableButton(mMainLayout->FindButton("down"));
         }
 
         if (mDownPressed && !Article_IsAtBottom()) {
@@ -1542,18 +1614,20 @@ void SlideShow::SubStateDrag() {
     bool dragging = false;
     switch (mSubStateFrame) {
     case -1:
-        lbl_803575BA = 0;
         lbl_801EDFD0[0] = 1;
         lbl_801EDFD0[1] = 1;
         lbl_801EDFD0[2] = 1;
         lbl_801EDFD0[3] = 1;
+        lbl_803575BA = 0;
         lbl_803575BB = 0;
         mScrollTarget = Article_ScrollTo(mScroll, mScrollSpeed);
         break;
     case 0:
         mSubStateFrame++;
         lbl_801EDFA0[1] = gWidescreen ? 19 : 34;
-        lbl_801EDFB8[1] = (456 - (gWidescreen ? 19 : 34)) - lbl_803575D0;
+        f32 y = 456 - (gWidescreen ? 19 : 34);
+        f32 d = lbl_803575D0;
+        lbl_801EDFB8[1] = y - d;
         lbl_80357600.a = 100;
         PlaySE(0x16);
         break;
@@ -1600,16 +1674,14 @@ void SlideShow::SubStateDrag() {
 
         if (mScroll >= 0.0f) {
             lbl_803575BA = 0;
-            mUpButton->mDisabled = true;
-            mUpButton->Press();
+            DisableButton(mUpButton);
         } else {
             lbl_803575BA = 1;
             mUpButton->mDisabled = false;
         }
         if (mScroll <= min) {
             lbl_803575BB = 0;
-            mDownButton->mDisabled = true;
-            mDownButton->Press();
+            DisableButton(mDownButton);
         } else {
             lbl_803575BB = 1;
             mDownButton->mDisabled = false;
@@ -1619,10 +1691,15 @@ void SlideShow::SubStateDrag() {
     }
 }
 
+#pragma explicit_zero_data on
+static f32 sPrevPicZ = 0.0f;
+static f32 sPicZ = 0.0f;
+#pragma explicit_zero_data reset
+
 void SlideShow::DrawPictures() {
     f32 fade;
     if (mBounceTimer > 0) {
-        fade = math::CosFIdx(FIdxRad(1.5707964f * mBounceTimer * 0.125f));
+        fade = math::CosFIdx(FIdxRad((1.5707964f * mBounceTimer) / 8.0f));
     } else {
         fade = 1.0f;
     }
@@ -1632,11 +1709,11 @@ void SlideShow::DrawPictures() {
     if (mQuickMove) {
         if (mZoomed) {
             Article_Draw(pos, 2, 1, fade,
-                        1.0f + 0.05f * math::SinFIdx(FIdxRad(1.5707964f * (mHoldTimer * 0.125f))));
+                        1.0f + 0.05f * math::SinFIdx(FIdxRad(1.5707964f * (mHoldTimer / 8.0f))));
         }
     } else if (mZoomed) {
         Article_Draw(pos, 2, 0, fade,
-                    1.0f + 0.05f * math::SinFIdx(FIdxRad(1.5707964f * (mHoldTimer * 0.125f))));
+                    1.0f + 0.05f * math::SinFIdx(FIdxRad(1.5707964f * (mHoldTimer / 8.0f))));
         Article_DrawHeadline(&pos, 0, 1.0f);
     } else {
         Article_DrawHeadline(&pos, 1, 1.0f);
@@ -1645,6 +1722,13 @@ void SlideShow::DrawPictures() {
 
     ut::Color shadow(0, 0, 0, 0);
     f32 slide = SinIdx(mSlideAngle);
+    f32 width;
+    f32 height;
+    f32 ofs;
+    f32 hh;
+    f32 y;
+    f32 x;
+    f32 border;
     Vec pos2;
     ut::Rect rect(0.0f, 0.0f, 0.0f, 0.0f);
 
@@ -1652,14 +1736,18 @@ void SlideShow::DrawPictures() {
     if (prev != NULL) {
         s32 alpha = mPrevPicAlpha * fade;
         if (alpha != 0) {
-            f32 width = mPrevPicScale * prev->width;
-            f32 height = mPrevPicScale * prev->height;
-            f32 border = 0.05f * height;
-            pos2.x = (mPrevPicCenter[0] + mSlideDist * slide) - 0.5f * width;
-            pos2.y = mPrevPicCenter[1] - 0.5f * height;
+            ofs = mSlideDist * slide;
+            width = mPrevPicScale * prev->width;
+            height = mPrevPicScale * prev->height;
+            hh = 0.5f * height;
+            y = mPrevPicCenter[1] - hh;
+            x = (mPrevPicCenter[0] + ofs) - 0.5f * width;
+            border = 0.05f * height;
+            pos2.x = x;
+            pos2.y = y;
             pos2.z = sPrevPicZ;
-            rect.left = 10.0f + pos2.x;
-            rect.top = 10.0f + pos2.y;
+            rect.left = 10.0f + x;
+            rect.top = 10.0f + y;
             rect.right = border + (rect.left + width);
             rect.bottom = border + (rect.top + height);
             Draw2D_SetupGX();
@@ -1668,8 +1756,7 @@ void SlideShow::DrawPictures() {
             GXSetTevColor(GX_TEVREG0, shadow);
             Draw2D_TexRect(gCommonTpl, 0x53, &rect, 0.0f, 0);
             Draw2D_SetupGX();
-            ut::Color white(255, 255, 255, alpha);
-            GXSetTevColor(GX_TEVREG0, white);
+            GXSetTevColor(GX_TEVREG0, ut::Color(255, 255, 255, alpha));
             Draw2D_Texture(mPrevPicture, (math::VEC3*)&pos2, mPrevPicScale);
             if (mPrevCaption != NULL) {
                 DrawCaption(mPrevCaption, alpha, pos2.x, pos2.y, width, height);
@@ -1677,18 +1764,21 @@ void SlideShow::DrawPictures() {
         }
     }
 
-    NewsPicture* picture = mArticle->mPicture;
-    if ((picture != NULL ? picture->texture : NULL) != NULL) {
+    if (GetPictureTexture(mArticle) != NULL) {
         s32 alpha = mPicAlpha * fade;
         if (alpha != 0) {
-            f32 width = mPicScale * (picture != NULL ? picture->texture : NULL)->width;
-            f32 height = mPicScale * (picture != NULL ? picture->texture : NULL)->height;
-            f32 border = 0.05f * height;
-            pos2.x = (mPicCenter[0] - mSlideDist * (1.0f - slide)) - 0.5f * width;
-            pos2.y = mPicCenter[1] - 0.5f * height;
+            ofs = mSlideDist * (1.0f - slide);
+            width = mPicScale * GetPictureTexture(mArticle)->width;
+            height = mPicScale * GetPictureTexture(mArticle)->height;
+            hh = 0.5f * height;
+            x = (mPicCenter[0] - ofs) - 0.5f * width;
+            y = mPicCenter[1] - hh;
+            pos2.x = x;
+            pos2.y = y;
             pos2.z = sPicZ;
-            rect.left = 10.0f + pos2.x;
-            rect.top = 10.0f + pos2.y;
+            border = 0.05f * height;
+            rect.left = 10.0f + x;
+            rect.top = 10.0f + y;
             rect.right = border + (rect.left + width);
             rect.bottom = border + (rect.top + height);
             Draw2D_SetupGX();
@@ -1697,8 +1787,7 @@ void SlideShow::DrawPictures() {
             GXSetTevColor(GX_TEVREG0, shadow);
             Draw2D_TexRect(gCommonTpl, 0x53, &rect, 0.0f, 0);
             Draw2D_SetupGX();
-            ut::Color white(255, 255, 255, alpha);
-            GXSetTevColor(GX_TEVREG0, white);
+            GXSetTevColor(GX_TEVREG0, ut::Color(255, 255, 255, alpha));
             Draw2D_Texture(GetPictureTexture(mArticle), (math::VEC3*)&pos2, mPicScale);
             if (GetPictureCaption(mArticle) != NULL) {
                 DrawCaption(GetPictureCaption(mArticle), alpha, pos2.x, pos2.y, width, height);
@@ -1713,11 +1802,15 @@ void SlideShow::DrawSelection() {
     ut::Rect text(0.0f, 0.0f, 0.0f, 0.0f);
     ut::Rect select(0.0f, 0.0f, 0.0f, 0.0f);
     if (Article_GetPictureRect(&text, mText.left, mTextOfs + (mText.top + mScroll),
-                    1.0f + 0.05f * math::SinFIdx(FIdxRad(1.5707964f * (mHoldTimer * 0.125f)))) &&
+                    1.0f + 0.05f * math::SinFIdx(FIdxRad(1.5707964f * (mHoldTimer / 8.0f)))) &&
         Article_GetZoomedPictureRect(&select)) {
         Article_DrawZoomedPicture(text, select, t);
     }
 }
+
+u8 sFooterRed = 255;
+u8 sFooterGreen = 255;
+u8 sFooterBlue = 255;
 
 void SlideShow::DrawFooterA() {
     f32 width = TPL_GetWidth(gCommonTpl, 0x41) + TPL_GetWidth(gCommonTpl, 0x42);
@@ -1737,7 +1830,7 @@ void SlideShow::DrawFooterB() {
     Draw2D_Tex(gCommonTpl, 0x42, &pos, 1.0f, 1.0f);
 }
 
-void SlideShow::DrawCaption(const wchar_t* text, u8 alpha, f32 x, f32 y, f32 width, f32 height) {
+void SlideShow::DrawCaption(const wchar_t* text, s32 alpha, f32 x, f32 y, f32 width, f32 height) {
     ut::TextWriterBase<wchar_t> writer;
     Draw2D_SetupGX();
     Draw2D_SetOrtho();
@@ -1809,19 +1902,41 @@ void SlideShow::PrevArticle() {
     }
 }
 
+static inline void SetPicCenter(SlideShow* s, f32 x, f32 y) {
+    s->mPicCenter[0] = x;
+    s->mPicCenter[1] = y;
+}
+
+// Not referenced, so the linker strips it. The original has a function here
+// that uses these two constants: they come before those of LayoutArticle in
+// the constant pool.
+void WrapGlobeAngles(math::VEC2& to, const math::VEC2& from) {
+    if (math::FAbs(to.x - from.x) > 180.0f) {
+        to.x -= 360.0f;
+    }
+    if (math::FAbs(to.y - from.y) > 180.0f) {
+        to.y -= 360.0f;
+    }
+}
+
+#pragma explicit_zero_data on
+static f32 sGlobeOfsX = 0.0f;
+static f32 sGlobeOfsY = 0.0f;
+#pragma explicit_zero_data reset
+
 void SlideShow::LayoutArticle() {
     f32 y = 273.6f;
     if (mArticle->mLocation != NULL) {
-        mViewTarget[1] = y;
         mViewTarget[0] = 0.0f;
-        mTextTarget[1] = y;
+        mViewTarget[1] = y;
         mTextTarget[0] = GetSideMargin();
+        mTextTarget[1] = y;
         if (GetPictureTexture(mArticle) != NULL) {
-            mPicArea.top = 73.0f;
             mPicArea.left = 0.5f * (u32)GetScreenWidth();
+            mPicArea.top = 73.0f;
+            mPicArea.right = (u32)GetContentRight();
             mPicArea.bottom = y - 20.0f;
             mGlobeZoomTo = 0.6f;
-            mPicArea.right = (u32)GetContentRight();
         } else {
             mGlobeZoomTo = 0.0f;
         }
@@ -1837,12 +1952,14 @@ void SlideShow::LayoutArticle() {
         if (gGlobe != NULL) {
             GlobeCamera* camera = gGlobe->mCamera;
             if (camera != NULL) {
-                mGlobeFrom.x = camera->mLon;
-                mGlobeFrom.y = camera->mLat;
-                if (__fabsf(mGlobeTo.x - mGlobeFrom.x) > 180.0f) {
+                f32 lat = camera->mLat;
+                f32 lon = camera->mLon;
+                mGlobeFrom.x = lon;
+                mGlobeFrom.y = lat;
+                if (math::FAbs(mGlobeTo.x - mGlobeFrom.x) > 180.0f) {
                     mGlobeTo.x -= 360.0f;
                 }
-                if (__fabsf(mGlobeTo.y - mGlobeFrom.y) > 180.0f) {
+                if (math::FAbs(mGlobeTo.y - mGlobeFrom.y) > 180.0f) {
                     mGlobeTo.y -= 360.0f;
                 }
             }
@@ -1858,31 +1975,46 @@ void SlideShow::LayoutArticle() {
         }
         mShowPicture = false;
     } else {
-        mViewTarget[1] = y;
         mViewTarget[0] = 0.0f;
-        mTextTarget[1] = y;
+        mViewTarget[1] = y;
         mTextTarget[0] = GetSideMargin();
-        mPicArea.top = 73.0f;
+        mTextTarget[1] = y;
         mPicArea.left = GetSideMargin();
-        mPicArea.bottom = y - 20.0f;
+        mPicArea.top = 73.0f;
         mPicArea.right = (u32)GetContentRight();
+        mPicArea.bottom = y - 20.0f;
     }
 
-    f32 w = mPicArea.right - mPicArea.left;
-    f32 h = mPicArea.bottom - mPicArea.top;
-    mPicCenter[0] = mPicArea.left + 0.5f * w;
-    mPicCenter[1] = mPicArea.top + 0.5f * h;
+    f32 w = mPicArea.GetWidth();
+    f32 h = mPicArea.GetHeight();
+    SetPicCenter(this, mPicArea.left + 0.5f * w, mPicArea.top + 0.5f * h);
     if (GetPictureTexture(mArticle) != NULL) {
         f32 texWidth = GetPictureTexture(mArticle)->width;
         f32 texHeight = GetPictureTexture(mArticle)->height;
-        mPicScale = texHeight / texWidth > h / w ? h / texHeight : w / texWidth;
+        f32 aspect = h / w;
+        f32 texAspect = texHeight / texWidth;
+        mPicScale = texAspect > aspect ? h / texHeight : w / texWidth;
     } else {
         mPicScale = 1.0f;
     }
 }
 
+static inline void UpdateLayoutAlpha(SlideShow* s) {
+    s32 alpha = 32;
+    f32 t = math::SinFIdx(FIdxRad((1.5708f * (15 - s->mFooterFade)) / 15.0f));
+    alpha += (s32)(255.0f - alpha) * t;
+    s->mCurLayout->SetBlend(alpha, s->mFooterFade, 15);
+}
+
 void SlideShow::CheckPointer() {
+    f32 minDist;
+    f32 x;
+    f32 y;
+    f32 left = -16.0f;
     f32 right = 16.0f + GetScreenWidth();
+    f32 minY = 63.0f;
+    f32 maxY = 393.0f;
+    minDist = 900.0f;
     bool moved = false;
     bool inside = false;
     bool used = false;
@@ -1890,27 +2022,24 @@ void SlideShow::CheckPointer() {
     bool outside = false;
     for (s32 i = 0; i < 4; i++) {
         if (IsPointerValid(i)) {
-            f32 x = gCursorX[i][0];
-            f32 y = gCursorY[i][0];
+            x = gCursorX[i][0];
+            y = gCursorY[i][0];
             f32 px, py;
             if (gPointerHistory.GetOldest(i, &px, &py)) {
-                if (x >= -16.0f && x < right && px >= -16.0f && px < right) {
-                    f32 dx = x - px;
-                    f32 dy = y - py;
-                    if (dx * dx + dy * dy > 900.0f) {
-                        moved = true;
-                    }
-                } else if (y <= 63.0f || y > 393.0f) {
+                if (x >= left && x < right && px >= left && px < right &&
+                    (x - px) * (x - px) + (y - py) * (y - py) > minDist) {
+                    moved = true;
+                } else if (y <= minY || y > maxY) {
                     moved = true;
                 }
             }
-            if (x >= -16.0f && x < right) {
+            if (x >= left && x < right) {
                 inside = true;
             }
             if (gHoverButtons[i] != 0) {
                 used = true;
             }
-            if (y < 63.0f || y > 393.0f) {
+            if (y < minY || y > maxY) {
                 outside = true;
             }
         }
@@ -1963,16 +2092,9 @@ void SlideShow::CheckPointer() {
         mFooterFade++;
     }
 
-    bool flag = true;
-    if (gUpdateMsgType != 1) {
-        flag = outside;
-    }
-    gHideClock = flag;
+    SetHideClock(outside);
 
-    s32 lo = 32;
-    SetBlend__6LayoutFlll(mCurLayout,
-                lo + (s32)(255.0f - lo) *
-                         math::SinFIdx(FIdxRad((1.5708f * (15 - mFooterFade)) / 15.0f)));
+    UpdateLayoutAlpha(this);
 }
 
 BOOL SlideShow::StartGrab(s32 chan, const ut::Rect* rect) {
@@ -2041,3 +2163,5 @@ void SlideShow::LayoutTitle() {
         mTitleRect.left = mTitleRight - width;
     }
 }
+
+f32 sPictureScale = 1.0f;

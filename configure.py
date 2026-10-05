@@ -591,7 +591,7 @@ config.libs = [
         "cflags": cflags_game,
         "progress_category": "game",
         "objects": [
-            Object(NonMatching, "news/SlideShow.cpp"),
+            Object(NonMatching, "news/SlideShow.cpp", extra_cflags=["-ipa file"]),
             Object(NonMatching, "news/ArticleText.cpp", extra_cflags=["-inline auto", "-ipa file"]),
         ],
     },
