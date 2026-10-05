@@ -249,8 +249,11 @@ void SystemInit() {
     gInitFlag = false;
     WC24Init();
     CNTInit();
-    for (u32 i = 4; i < 10; i++) {
-        contentInitHandleNAND(i + 2, &gContentHandles[i], &gContentAllocator);
+    // Contents 6..11 go to handles 4..9. The content index is a counter of its
+    // own: MWCC folds it into `i + 2`, but evaluates it before the handle.
+    s32 content = 6;
+    for (u32 i = 4; i < 10; i++, content++) {
+        contentInitHandleNAND(content, &gContentHandles[i], &gContentAllocator);
     }
     gArchive = 7;
     g3d::G3dInit(true);
