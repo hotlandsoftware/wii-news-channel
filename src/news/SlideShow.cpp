@@ -142,11 +142,7 @@ static inline void EnableButton(PaneButton* button) {
 
 // The clock stays hidden while the update message is shown.
 static inline void SetHideClock(bool hide) {
-    bool flag = true;
-    if (gUpdateMsgType != 1) {
-        flag = hide;
-    }
-    gHideClock = flag;
+    gHideClock = gUpdateMsgType == 1 ? true : hide;
 }
 
 static inline Category* GetCategory(s32 idx) {
@@ -1135,7 +1131,7 @@ BOOL SlideShow::StateZoom(const s32* arg) {
     case -1:
         mZoomed = false;
         mTextVisible = true;
-        gHideClock = gUpdateMsgType == 1;
+        SetHideClock(false);
         ChangeSubState(&SlideShow::SubStateIdle);
         mBounceTimer = 0;
         mQuickMove = false;
