@@ -743,7 +743,9 @@ bool ArticleText::LayoutPicture(const math::VEC2* pos, f32 scale) {
     if (mSub != NULL) {
         mSub->SetSize(&mPicSize);
         mSub->Layout(0.7f * scale);
-        mPicBottom = 10.0f + (mSubTarget.y + mSub->mLineHeight * mSub->mNumLines);
+        f32 lineHeight = mSub->mLineHeight;
+        f32 subHeight = lineHeight * mSub->mNumLines;
+        mPicBottom = 10.0f + (mSubTarget.y + subHeight);
     }
 
     f32 space = scale * gCharSpaceScale;
@@ -779,8 +781,9 @@ bool ArticleText::LayoutPicture(const math::VEC2* pos, f32 scale) {
         mCursor.x += wordWidth + space;
         if (NeedsLineBreak(last, &mCursor.x, right, scale)) {
             mCursor.x = mLeft;
+            f32 h = 1.25f * (last->mScaledHeight * scale);
             mNumLines++;
-            mCursor.y += 1.25f * (last->mScaledHeight * scale);
+            mCursor.y += h;
         }
         c = last + 1;
     }
