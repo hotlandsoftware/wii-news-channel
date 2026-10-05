@@ -25,6 +25,11 @@ void PCVIGetPictureRect(int* x, int* y, int* width, int* height);
 // the mouse, or the mouse is outside the picture.
 bool PCVIGetPointer(f32* x, f32* y);
 
+// WPAD_BUTTON_* bits held on the host devices: left mouse button = A, right =
+// B; Enter/Space/Z = A, X/Backspace = B, arrow keys = the +Control Pad,
+// =/- = PLUS/MINUS, 1/2, Escape/H = HOME. 0 without a window or focus.
+u32 PCVIGetButtons();
+
 // The render mode last given to VIConfigure(), or NULL before the first call.
 const _GXRenderModeObj* PCVIGetRenderMode();
 

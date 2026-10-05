@@ -137,6 +137,7 @@ void PCInputPoll(s32 chan, PCPadState* state) {
     }
     state->connected = true;
     state->pointerValid = PCVIGetPointer(&state->pointerX, &state->pointerY);
+    state->buttons = PCVIGetButtons();
     ApplyScript(state);
 }
 

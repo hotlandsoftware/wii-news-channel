@@ -4,9 +4,12 @@
 // One host "remote" is one PCPadState: the Wii Remote buttons that are down
 // and where the remote points on the screen.
 //
-// TODO(milestone 4): keyboard, mouse buttons and game controllers mapped to
-// buttons, more than one remote, rumble. Until then PCInputPoll() reports one
-// remote on channel 0 with no buttons pressed, pointing at the mouse.
+// PCInputPoll() reports one remote on channel 0, pointing at the mouse, with
+// the buttons of PCVIGetButtons() (left click = A, right click = B, and a
+// keyboard mapping; see src/pc/pc_video.h).
+//
+// TODO(milestone 4): game controllers, configurable mapping, more than one
+// remote, rumble, a visible pointer.
 
 #ifndef PC_INPUT_H
 #define PC_INPUT_H
