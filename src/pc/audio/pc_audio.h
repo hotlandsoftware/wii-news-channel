@@ -59,7 +59,8 @@ u64 PCAudioGetBlockCount();
 // The last block given to PCAudioOutWrite() (interleaved left, right).
 const s16* PCAudioGetLastBlock(u32* frames);
 
-// "sdl" (a device is open), "none" (frames run on the clock only) or "manual".
+// "sdl" (a device is open), "helper" (a player program of the host gets the
+// samples), "none" (frames run on the clock only) or "manual".
 const char* PCAudioGetOutputName();
 
 // --- the DSP's side (src/pc/sdk/dsp.cpp) ------------------------------------------

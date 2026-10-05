@@ -566,6 +566,57 @@ def cmd_render(args):
     return 1 if bad else 0
 
 
+def note_onsets(frames, first, last, bank):
+    """(audio frame, wave, ratio) of every note that starts in first..last, in order."""
+    onsets = []
+    active = {}
+    for number in range(first, last + 1):
+        present = {}
+        for v in frames.get(number, []):
+            wave, sample = bank.locate(v)
+            key = (wave["file"], wave["index"]) if wave is not None else None
+            previous = active.get(v["index"])
+            # A new note: the voice was idle, plays another wave, or went back
+            # to the start of its wave without a loop taking it there.
+            restarted = previous is not None and previous[0] == key and sample < previous[1] and not v["looped"]
+            if previous is None or previous[0] != key or restarted or previous[2]:
+                onsets.append((number, key, round(v["ratio"], 3)))
+            present[v["index"]] = (key, sample, v["ended"])
+        active = present
+    # Notes that start in the same audio frame come in the order of their AX
+    # voices, which says nothing: put them in a fixed order.
+    return sorted(onsets, key=lambda o: (o[0], o[1] or (-1, -1), o[2]))
+
+
+def timing_against(reference, onsets, length):
+    """Finds the notes of a reference run of the same sound among the notes of a segment, in order (the
+    segment may also hold notes of sounds that were started earlier and are still playing).
+    Returns (reference notes within `length` frames, notes not found (plus 1000 per note that is
+    missing in the middle), largest difference in audio frames between an onset and its reference,
+    both counted from the sound's first note)."""
+    if not reference:
+        return 0, 0, 0
+    expected = [r for r in reference if r[0] - reference[0][0] < length]
+    missing = 0
+    worst = 0
+    origin = None
+    j = 0
+    for r in expected:
+        k = j
+        while k < len(onsets) and onsets[k][1:] != r[1:]:
+            k += 1
+        if k == len(onsets):
+            missing += 1
+            continue
+        if missing:
+            missing += 1000  # a later note was found: the gap is not the end of the sound
+        if origin is None:
+            origin = onsets[k][0] - (r[0] - reference[0][0])
+        worst = max(worst, abs((onsets[k][0] - origin) - (r[0] - reference[0][0])))
+        j = k + 1
+    return len(expected), missing, worst
+
+
 def cmd_dump(args):
     global EFFECTS
     EFFECTS = True
@@ -594,10 +645,26 @@ def cmd_dump(args):
     c = whole[0]
     print("dump block = audio frame %+d; whole run: correlation %.3f, gain %.2f, lag %d samples" % (
         -c, whole[1][0], whole[1][1], whole[1][2]))
+    reference = {}
+    if args.render_dir:
+        # The same sounds played on the renderer's manual clock: what the
+        # sequence does when no thread can be late.
+        render_bank = Bank(args.render_waves or args.waves_dir)
+        render_frames, render_starts = read_log(os.path.join(args.render_dir, "ax.log"))
+        render_bank.find_base(render_frames)
+        for i, (frame, sound, label, result, _) in enumerate(render_starts):
+            end = render_starts[i + 1][0] - 1 if i + 1 < len(render_starts) else max(render_frames)
+            reference[sound] = note_onsets(render_frames, frame, end, render_bank)
     print(HEADER)
     bad = 0
+    timing = []
     for i, (frame, sound, label, result, retrace) in enumerate(starts):
         end = starts[i + 1][0] - 1 if i + 1 < len(starts) else last
+        if sound in reference:
+            onsets = note_onsets(frames, frame, max(end, frame), bank)
+            # Leave the last 30 ms out: a note there may start after the segment.
+            found = timing_against(reference[sound], onsets, max(end - frame - 10, 0))
+            timing.append((sound, label, frame) + found)
         # A sound's voices can outlive the next start; the segment still holds
         # whatever is playing, so the comparison stays valid.
         end = max(end, frame)
@@ -612,6 +679,20 @@ def cmd_dump(args):
             bad += 1
     print(LEGEND)
     print("(voices that started before a segment are rebuilt from where the log first shows them)")
+    if timing:
+        print()
+        print("note timing against the renderer's manual clock (same sound, same notes expected):")
+        print("%-30s %6s %8s  %s" % ("sound", "notes", "found", "largest onset difference"))
+        for sound, label, frame, count, missing, worst in timing:
+            print("%-30s %6d %8s  %d audio frames (%d ms)" % (
+                "%3d %s @%.2fs" % (sound, label[:16], frame * FRAME / rate), count,
+                "all" if missing == 0 else ("%d MISSING" % (missing % 1000) if missing >= 1000 else
+                                            "all but the last %d" % missing), worst, worst * 3))
+            if missing >= 1000 or worst > 2:
+                bad += 1
+        print("  notes: the renderer's notes of that sound (wave and pitch) that fall into the time the sound")
+        print("  had in the game before the next one was started; onsets are counted from the first note")
+        print("  'all but the last N': the sound ended early, which is what happens when the game stops it")
     return 1 if bad else 0
 
 
@@ -637,6 +718,8 @@ def main():
     p.add_argument("wav")
     p.add_argument("log")
     p.add_argument("waves_dir")
+    p.add_argument("--render-dir", help="a --render-sounds directory (with ax.log): also compare note timing")
+    p.add_argument("--render-waves", help="the --dump-waves directory of that run, if not WAVES_DIR")
     p.add_argument("-v", "--verbose", action="store_true")
     p.set_defaults(func=cmd_dump)
     args = parser.parse_args()

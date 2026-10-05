@@ -27,6 +27,15 @@
 // heard: the game's sound thread, sequence timing and fades depend on them.
 //
 // SDL converts 32 kHz stereo s16 to whatever the device wants.
+//
+// The program is a 32-bit process, and SDL reaches the sound server through
+// the server's 32-bit client library (libpipewire, libpulse). Where those are
+// not installed SDL finds no device although the machine plays sound. The
+// output then goes to a helper: a player program of the host (pacat, pw-cat),
+// started with a pipe as its standard input, which gets the same samples. The
+// pipe's fill level steers the block period the way the SDL stream's does.
+// NEWSCHANNEL_AUDIO_HELPER=0 switches the helper off; any other value is a
+// shell command that plays raw 32 kHz stereo s16 little-endian from stdin.
 
 #include <SDL3/SDL.h>
 
@@ -36,8 +45,15 @@
 #include <cstdlib>
 #include <cstring>
 
+#include <cerrno>
+
+#include <fcntl.h>
 #include <pthread.h>
+#include <signal.h>
+#include <sys/ioctl.h>
+#include <sys/wait.h>
 #include <time.h>
+#include <unistd.h>
 
 #include "pc_audio.h"
 #include "pc_config.h"
@@ -67,6 +83,14 @@ int sQueueTarget = kMinQueueTarget; // bytes of 32 kHz stereo s16
 bool sOverflowReported;
 FILE* sDump;
 u32 sDumpFrames;
+
+// The helper process (sOutMutex): its stdin, or -1.
+int sHelperFd = -1;
+pid_t sHelperPid;
+const char* sHelperName = "";
+bool sHelperDropped;
+// What is kept waiting in the pipe: 24 ms.
+const int kHelperTarget = static_cast<int>(kSampleRate * kBytesPerFrame * 24 / 1000);
 
 bool sStarted;
 volatile bool sStop;
@@ -142,6 +166,119 @@ void OpenDump() {
     WriteDumpHeader();
 }
 
+// --- helper process ----------------------------------------------------------------
+
+// Starts `argv` (or, if `shell` is not NULL, that command through /bin/sh)
+// with a pipe as its standard input. Returns the write end, or -1 if the
+// program could not be started or ended at once.
+int StartHelper(const char* const* argv, const char* shell, pid_t* pid) {
+    int fds[2];
+    if (pipe(fds) != 0) {
+        return -1;
+    }
+    pid_t child = fork();
+    if (child < 0) {
+        close(fds[0]);
+        close(fds[1]);
+        return -1;
+    }
+    if (child == 0) {
+        // Only async-signal-safe calls from here on.
+        if (shell == NULL && argv == NULL) {
+            _exit(127);
+        }
+        dup2(fds[0], 0);
+        close(fds[0]);
+        close(fds[1]);
+        int null = open("/dev/null", O_WRONLY);
+        if (null >= 0) {
+            dup2(null, 1);
+            dup2(null, 2);
+        }
+        if (shell != NULL) {
+            execl("/bin/sh", "sh", "-c", shell, static_cast<char*>(NULL));
+        } else {
+            execvp(argv[0], const_cast<char* const*>(argv));
+        }
+        _exit(127);
+    }
+    close(fds[0]);
+    // A program that is not installed, or that finds no server, is gone
+    // within a moment.
+    struct timespec pause = {0, 150 * 1000 * 1000};
+    nanosleep(&pause, NULL);
+    int status = 0;
+    if (waitpid(child, &status, WNOHANG) == child) {
+        close(fds[1]);
+        return -1;
+    }
+    fcntl(fds[1], F_SETFL, fcntl(fds[1], F_GETFL) | O_NONBLOCK);
+    fcntl(fds[1], F_SETFD, FD_CLOEXEC);
+    *pid = child;
+    return fds[1];
+}
+
+// SDL has no playback device: look for a player program. Returns its name.
+const char* OpenHelper() {
+    const char* env = std::getenv("NEWSCHANNEL_AUDIO_HELPER");
+    if (env != NULL && std::strcmp(env, "0") == 0) {
+        return NULL;
+    }
+    signal(SIGPIPE, SIG_IGN); // a helper that dies must not end the program
+    static const char* const kPacat[] = {"pacat",          "--playback",     "--raw",
+                                         "--format=s16le", "--rate=32000",   "--channels=2",
+                                         "--latency-msec=40", "--client-name=newschannel",
+                                         "--stream-name=News Channel", NULL};
+    static const char* const kPwCat[] = {"pw-cat", "--playback", "--raw", "--format=s16", "--rate=32000",
+                                         "--channels=2", "--latency=40ms", "-", NULL};
+    struct Candidate {
+        const char* name;
+        const char* const* argv;
+        const char* shell;
+    };
+    const Candidate candidates[] = {{"$NEWSCHANNEL_AUDIO_HELPER", NULL, env},
+                                    {"pacat", kPacat, NULL},
+                                    {"pw-cat", kPwCat, NULL}};
+    const bool custom = env != NULL && env[0] != '\0';
+    for (const Candidate& candidate : candidates) {
+        // The user's command, or the built-in players; never both.
+        if (custom ? candidate.argv != NULL : candidate.argv == NULL) {
+            continue;
+        }
+        pid_t pid = 0;
+        int fd = StartHelper(candidate.argv, candidate.shell, &pid);
+        if (fd < 0) {
+            continue;
+        }
+        // Start at the target, with silence.
+        void* silence = std::calloc(1, static_cast<size_t>(kHelperTarget));
+        if (silence != NULL) {
+            ssize_t ignored = write(fd, silence, static_cast<size_t>(kHelperTarget));
+            (void)ignored;
+            std::free(silence);
+        }
+        pthread_mutex_lock(&sOutMutex);
+        sHelperFd = fd;
+        sHelperPid = pid;
+        sHelperName = candidate.name;
+        pthread_mutex_unlock(&sOutMutex);
+        return candidate.name;
+    }
+    return NULL;
+}
+
+// (sOutMutex held.)
+void CloseHelper() {
+    if (sHelperFd >= 0) {
+        close(sHelperFd);
+        sHelperFd = -1;
+        // It plays what it still has and ends at the end of its input; do
+        // not wait for that.
+        kill(sHelperPid, SIGTERM);
+        waitpid(sHelperPid, NULL, WNOHANG);
+    }
+}
+
 // --- device --------------------------------------------------------------------
 
 void OpenDevice() {
@@ -200,6 +337,15 @@ void OpenDevice() {
             pthread_mutex_unlock(&sOutMutex);
         }
     }
+    if (why != NULL && (std::strcmp(why, "no audio driver") == 0 || std::strcmp(why, "no playback device") == 0)) {
+        const char* helper = OpenHelper();
+        if (helper != NULL) {
+            std::printf("audio:    through the player program '%s' (SDL has no playback device: the 32-bit\n"
+                        "          client library of the sound server is not installed, see docs/pc_port.md)\n",
+                        helper);
+            why = NULL;
+        }
+    }
     if (why != NULL) {
         std::printf("audio:    no device (%s); audio frames run on the clock\n", why);
     }
@@ -215,6 +361,7 @@ void Shutdown() {
     pthread_mutex_lock(&sOutMutex);
     SDL_AudioStream* stream = sStream;
     sStream = NULL;
+    CloseHelper();
     pthread_mutex_unlock(&sOutMutex);
     // (If SDL_Quit() has already run, the stream is gone with it.)
     if (stream != NULL && SDL_WasInit(SDL_INIT_AUDIO) != 0) {
@@ -242,6 +389,14 @@ f64 FillError() {
         }
         error = static_cast<f64>(queued - sQueueTarget) / sQueueTarget;
         error = error < -1.0 ? -1.0 : (error > 1.0 ? 1.0 : error);
+    } else if (sHelperFd >= 0) {
+        // The player takes from the pipe what its own buffer has room for, so
+        // what waits in the pipe is the difference between the two clocks.
+        int queued = 0;
+        if (ioctl(sHelperFd, FIONREAD, &queued) == 0) {
+            error = static_cast<f64>(queued - kHelperTarget) / kHelperTarget;
+            error = error < -1.0 ? -1.0 : (error > 1.0 ? 1.0 : error);
+        }
     }
     pthread_mutex_unlock(&sOutMutex);
     return error;
@@ -305,7 +460,7 @@ const char* PCAudioGetOutputName() {
     if (sManual) {
         return "manual";
     }
-    return sStream != NULL ? "sdl" : "none";
+    return sStream != NULL ? "sdl" : (sHelperFd >= 0 ? "helper" : "none");
 }
 
 void PCAudioOutStart() {
@@ -350,6 +505,21 @@ void PCAudioOutWrite(const s16* samples, u32 frames) {
     }
     if (sStream != NULL) {
         SDL_PutAudioStreamData(sStream, samples, static_cast<int>(frames * kBytesPerFrame));
+    }
+    if (sHelperFd >= 0) {
+        // Whole blocks only: a block that does not fit is dropped (the player
+        // has stopped reading), and a dead player ends the output.
+        int queued = 0;
+        const int bytes = static_cast<int>(frames * kBytesPerFrame);
+        if (ioctl(sHelperFd, FIONREAD, &queued) == 0 && queued > kHelperTarget * 8) {
+            if (!sHelperDropped) {
+                sHelperDropped = true;
+                std::fprintf(stderr, "audio: '%s' is not taking data fast enough; dropping audio\n", sHelperName);
+            }
+        } else if (write(sHelperFd, samples, static_cast<size_t>(bytes)) < 0 && errno == EPIPE) {
+            std::fprintf(stderr, "audio: '%s' has ended; no more audio output\n", sHelperName);
+            CloseHelper();
+        }
     }
     pthread_mutex_unlock(&sOutMutex);
 }
