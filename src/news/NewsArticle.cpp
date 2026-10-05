@@ -348,18 +348,20 @@ s32 NewsData::Init(NewsHeader** files, s32 current) {
     }
 
     // Move the articles whose picture failed to the end.
-    topic = mCategories;
-    for (i = 0; i < mNumCategories; i++, topic++) {
-        slot = topic->mArticles;
-        for (j = 0; j < topic->mRec->numEntries; j++, slot++) {
-            article = *slot;
-            if (article->mPictureError) {
-                next = slot + 1;
-                for (k = j + 1; k < topic->mRec->numEntries; k++, next++) {
-                    if (!(*next)->mPictureError) {
-                        *slot = *next;
-                        *next = article;
-                        break;
+    {
+        Category* cat = mCategories;
+        for (i = 0; i < mNumCategories; i++, cat++) {
+            NewsArticle** art = cat->mArticles;
+            for (j = 0; j < cat->mRec->numEntries; j++, art++) {
+                article = *art;
+                if (article->mPictureError) {
+                    NewsArticle** other = art + 1;
+                    for (u32 k = j + 1; k < cat->mRec->numEntries; k++, other++) {
+                        if (!(*other)->mPictureError) {
+                            *art = *other;
+                            *other = article;
+                            break;
+                        }
                     }
                 }
             }
