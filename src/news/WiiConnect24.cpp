@@ -49,7 +49,6 @@ public:
     s32 deleteDlTasks(BOOL first, BOOL second);
     s32 readLZ77FileEx(VFFile file, MEMHeapHandle heap, void** dst, u32* size);
 
-
     s32 mType;                           // at 0x000
     u16 mKind[2];                        // at 0x004 (2: the news download task)
     u32 mMask;                           // at 0x008
@@ -275,6 +274,18 @@ static inline s32 CloseLib(CWiiConnect24* task) {
     return 0;
 }
 
+// The caller's pointer to the file of an hour. The getter takes the request
+// through a pointer to const and both take an unsigned index: the original
+// keeps `hour * 4` as the induction variable and computes the address again
+// after the call to MEMFreeToExpHeap.
+static inline void* GetFile(const CWiiConnect24* task, u32 hour) {
+    return *task->mFiles[hour];
+}
+
+static inline void SetFile(CWiiConnect24* task, u32 hour, void* file) {
+    *task->mFiles[hour] = file;
+}
+
 static void* ThreadMain(void* arg) {
     bool quit;
     do {
@@ -319,9 +330,9 @@ static void* ThreadMain(void* arg) {
                     break;
                 }
                 for (s32 i = 0; i < WC24_NUM_FILES; i++) {
-                    if (*task->mFiles[i]) {
-                        MEMFreeToExpHeap(task->mHeap, *task->mFiles[i]);
-                        *task->mFiles[i] = NULL;
+                    if (GetFile(task, i)) {
+                        MEMFreeToExpHeap(task->mHeap, GetFile(task, i));
+                        SetFile(task, i, NULL);
                     }
                 }
                 task->mStatus = WC24_STATUS_DOWNLOAD;
