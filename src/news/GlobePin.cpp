@@ -373,7 +373,7 @@ void GlobePin::DrawLabel() {
 
     if (lbl_80357598 == 1 || lbl_803575A8 > 0) {
         f32 offset = 0.5f * TPL_GetHeight(gCommonTpl, 0x52);
-        writer.SetCursor(GetScreenPos().x, offset + GetScreenPos().y);
+        writer.SetCursor(GetPos().x, offset + GetPos().y);
     } else {
         writer.SetCursor(mLabelPos.x, mLabelPos.y);
     }
@@ -399,7 +399,7 @@ void GlobePin::DrawName() {
     writer.SetTextColor(ut::Color(255, 255, 255, 255));
     if (lbl_80357598 == 1 || lbl_803575A8 > 0) {
         f32 offset = 0.5f * TPL_GetHeight(gCommonTpl, 0x52);
-        writer.SetCursor(GetScreenPos().x, offset + GetScreenPos().y);
+        writer.SetCursor(GetPos().x, offset + GetPos().y);
     } else {
         writer.SetCursor(mLabelPos.x, mLabelPos.y);
     }

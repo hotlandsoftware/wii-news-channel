@@ -1497,7 +1497,7 @@ config.libs = [
             Object(Matching, "news/Bubbles.cpp"),
             Object(Matching, "news/GlobePoint.cpp"),
             Object(Matching, "news/TextChar.cpp"),
-            Object(NonMatching, "news/GlobePin.cpp"),
+            Object(Matching, "news/GlobePin.cpp"),
         ],
     },
     {
