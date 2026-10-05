@@ -422,7 +422,7 @@ static inline BOOL IsFirstArticle(SlideShow* s) {
 }
 
 static inline BOOL IsLastArticle(SlideShow* s) {
-    s32 cat = s->mCategory;
+    u32 cat = s->mCategory;
     if ((u32)s->mArticleIdx >= (u32)(GetCategory(cat)->mNumArticles - 1)) {
         if (s->mLoop) {
             while (++cat < (u32)lbl_803575E0) {
@@ -1024,8 +1024,8 @@ BOOL SlideShow::StateShow(const s32* arg) {
         mStateFrame++;
         ChangeSubState(&SlideShow::SubStateIdle);
         Pins_SetState(mCategory, mArticleIdx, 1);
-        mTimerFade = 0;
         mTimer = mSpeed * GetFrameRate();
+        mTimerFade = 0;
         break;
     default:
         if (gRepeatSlowAll & 1) {
@@ -1036,9 +1036,10 @@ BOOL SlideShow::StateShow(const s32* arg) {
         }
         Pins_SetState(mCategory, mArticleIdx, 1);
 
+        s32 dir;
         if (mPrevPressed) {
             if (!IsFirstArticle(this)) {
-                s32 dir = 0;
+                dir = 0;
                 PlaySE(0x39);
                 mPlaySound = false;
                 ChangeState(&SlideShow::StateMove, &dir);
@@ -1050,7 +1051,7 @@ BOOL SlideShow::StateShow(const s32* arg) {
                 ChangeState(&SlideShow::StateEnd);
                 return TRUE;
             }
-            s32 dir = 1;
+            dir = 1;
             PlaySE(0x38);
             mPlaySound = false;
             ChangeState(&SlideShow::StateMove, &dir);
@@ -1073,9 +1074,9 @@ BOOL SlideShow::StateShow(const s32* arg) {
             ChangeState(&SlideShow::StateEnd);
             return TRUE;
         }
-        s32 dir = 1;
+        s32 next = 1;
         mPlaySound = true;
-        ChangeState(&SlideShow::StateMove, &dir);
+        ChangeState(&SlideShow::StateMove, &next);
         return TRUE;
     }
     return TRUE;
