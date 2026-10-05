@@ -100,6 +100,22 @@ inline void GDSetChanCtrlLightOff(GXChannelID chan, u32 param, u32 lightMask) {
     LoadXFCmd(GX_XF_REG_COLOR0CNTRL + (chan & 3), param);
 }
 
+#ifdef TARGET_PC
+// The register holds 0xRRGGBBAA. The original reads the four bytes of the
+// GXColor as one word, which is that value only on a big-endian machine.
+inline u32 PCColorToReg(GXColor color) {
+    return static_cast<u32>(color.r) << 24 | static_cast<u32>(color.g) << 16 |
+           static_cast<u32>(color.b) << 8 | static_cast<u32>(color.a);
+}
+
+inline void GDSetChanAmbColor(GXChannelID chan, GXColor color) {
+    LoadXFCmd(GX_XF_REG_AMBIENT0 + chan, PCColorToReg(color));
+}
+
+inline void GDSetChanMatColor(GXChannelID chan, GXColor color) {
+    LoadXFCmd(GX_XF_REG_MATERIAL0 + chan, PCColorToReg(color));
+}
+#else
 inline void GDSetChanAmbColor(GXChannelID chan, GXColor color) {
     LoadXFCmd(GX_XF_REG_AMBIENT0 + chan, *reinterpret_cast<u32*>(&color));
 }
@@ -107,6 +123,7 @@ inline void GDSetChanAmbColor(GXChannelID chan, GXColor color) {
 inline void GDSetChanMatColor(GXChannelID chan, GXColor color) {
     LoadXFCmd(GX_XF_REG_MATERIAL0 + chan, *reinterpret_cast<u32*>(&color));
 }
+#endif
 
 } // namespace fifo
 } // namespace g3d

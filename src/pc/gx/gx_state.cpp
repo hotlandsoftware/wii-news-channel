@@ -7,6 +7,8 @@
 
 #include <revolution/os.h>
 
+#include <pc/os.h>
+
 PCGXState gPCGX;
 
 namespace {
@@ -162,15 +164,18 @@ const void* PCGXAddressToHost(u32 address) {
     }
     // The OS backend maps MEM1 and MEM2 at the console's addresses when the
     // host leaves them free (docs/pc_port.md, section 11). Only then does an
-    // address in a register mean anything.
+    // address in a register mean anything. The whole block counts, not the
+    // arena: the game takes the arenas for its heaps at start-up, which
+    // leaves OSGetMEM1ArenaHi() equal to the arena's start.
+    static const u32 kPhysicalBase[2] = {0x00000000, 0x10000000};
     u32 physical = address & 0x3FFFFFFF;
-    u32 mem1Hi = reinterpret_cast<u32>(OSGetMEM1ArenaHi());
-    u32 mem2Hi = reinterpret_cast<u32>(OSGetMEM2ArenaHi());
-    if (physical < 0x01800000 && (mem1Hi >> 28) == 0x8 && (physical | 0x80000000) < mem1Hi) {
-        return reinterpret_cast<const void*>(physical | 0x80000000);
-    }
-    if (physical >= 0x10000000 && physical < 0x14000000 && (mem2Hi >> 28) == 0x9 && (physical | 0x80000000) < mem2Hi) {
-        return reinterpret_cast<const void*>(physical | 0x80000000);
+    for (int i = 0; i < 2; i++) {
+        void* base;
+        u32 size;
+        if (PCOSGetMemBlock(i, &base, &size) && reinterpret_cast<u32>(base) == (kPhysicalBase[i] | 0x80000000) &&
+            physical >= kPhysicalBase[i] && physical - kPhysicalBase[i] < size) {
+            return reinterpret_cast<const void*>(physical | 0x80000000);
+        }
     }
     return nullptr;
 }
@@ -259,7 +264,15 @@ void PCGXLoadCP(u32 reg, u32 value) {
         s.vatC[index & 7] = value;
         break;
     case PC_CP_ARRAY_BASE:
-        s.arrays[index].base = static_cast<const u8*>(PCGXAddressToHost(value));
+        // The register is 32 bits wide here (on the console, 26), and what
+        // nw4r::g3d writes into it is OSCachedToPhysical(pointer) (ResShp::
+        // GXSetArray patches it into the shape's display list). The inverse
+        // gives the pointer back wherever the memory is, so this does not
+        // depend on PCGXAddressToHost()'s knowledge of MEM1 and MEM2.
+        s.arrays[index].base = value != 0 ? static_cast<const u8*>(OSPhysicalToCached(value)) : nullptr;
+        // Like GXSetArray(): host order. Model files have their vertex
+        // arrays converted when they are loaded (src/pc/endian/fmt_g3d.cpp).
+        s.arrays[index].bigEndian = false;
         break;
     case PC_CP_ARRAY_STRIDE:
         s.arrays[index].stride = value & 0xFF;

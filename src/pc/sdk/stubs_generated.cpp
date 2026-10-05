@@ -6,11 +6,6 @@
 
 #include <pc/stub.h>
 
-// ---- nw4r::g3d (3) ----
-PC_STUB(_ZNK4nw4r3g3d9ResAnmClr12GetAnmResultEPNS0_12ClrAnmResultEjf, "nw4r::g3d::ResAnmClr::GetAnmResult(nw4r::g3d::ClrAnmResult*, unsigned int, float) const")
-PC_STUB(_ZNK4nw4r3g3d12ResAnmTexSrt12GetAnmResultEPNS0_15TexSrtAnmResultEjf, "nw4r::g3d::ResAnmTexSrt::GetAnmResult(nw4r::g3d::TexSrtAnmResult*, unsigned int, float) const")
-PC_STUB(_ZNK4nw4r3g3d9ResAnmVis12GetAnmResultEjf, "nw4r::g3d::ResAnmVis::GetAnmResult(unsigned int, float) const")
-
 // ---- nw4r::ut (9) ----
 PC_STUB(_ZN4nw4r2ut14NandFileStream5CloseEv, "nw4r::ut::NandFileStream::Close()")
 PC_STUB(_ZN4nw4r2ut14NandFileStreamC2EPK12NANDFileInfojb, "nw4r::ut::NandFileStream::NandFileStream(NANDFileInfo const*, unsigned int, bool)")

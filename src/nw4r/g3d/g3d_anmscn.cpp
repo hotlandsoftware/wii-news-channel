@@ -27,7 +27,17 @@ void AnmScn::GetLightSetting(LightSetting* pSetting) {
 
         for (u32 i = 0; i < numLoadableAmb; i++) {
             AmbLightObj* pAmbObj = &pAmbObjArray[i];
+#ifdef TARGET_PC
+            // The colour is the value 0xRRGGBBAA; the original stores it over
+            // the four bytes r, g, b, a, which needs a big-endian machine.
+            const u32 color = GetAmbLightColor(i);
+            pAmbObj->r = static_cast<u8>(color >> 24);
+            pAmbObj->g = static_cast<u8>(color >> 16);
+            pAmbObj->b = static_cast<u8>(color >> 8);
+            pAmbObj->a = static_cast<u8>(color);
+#else
             *reinterpret_cast<u32*>(&pAmbObj->r) = GetAmbLightColor(i);
+#endif
         }
     }
 
