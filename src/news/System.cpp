@@ -921,6 +921,18 @@ void Draw2D_FillBox(const math::VEC3& p0, const math::VEC3& p1, const GXColor& c
     GXSetNumTevStages(1);
     GXSetNumIndStages(0);
     GXBegin(GX_QUADS, GX_VTXFMT0, 4);
+#ifdef TARGET_PC
+    // PC: the four bytes of a colour are not 0xRRGGBBAA as a u32 on a
+    // little-endian host (docs/pc_port.md, "Colours")
+    GXPosition3f32(p0.x, p0.y, p0.z);
+    GXColor4u8(color.r, color.g, color.b, color.a);
+    GXPosition3f32(p1.x, p0.y, p0.z);
+    GXColor4u8(color.r, color.g, color.b, color.a);
+    GXPosition3f32(p1.x, p1.y, p1.z);
+    GXColor4u8(color.r, color.g, color.b, color.a);
+    GXPosition3f32(p0.x, p1.y, p1.z);
+    GXColor4u8(color.r, color.g, color.b, color.a);
+#else
     GXPosition3f32(p0.x, p0.y, p0.z);
     GXColor1u32(*(u32*)&color);
     GXPosition3f32(p1.x, p0.y, p0.z);
@@ -929,6 +941,7 @@ void Draw2D_FillBox(const math::VEC3& p0, const math::VEC3& p1, const GXColor& c
     GXColor1u32(*(u32*)&color);
     GXPosition3f32(p0.x, p1.y, p1.z);
     GXColor1u32(*(u32*)&color);
+#endif
     GXEnd();
 }
 

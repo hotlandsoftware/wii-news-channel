@@ -16,6 +16,10 @@
 #include <cstdlib>
 #include <cstring>
 
+#define GL_GLEXT_PROTOTYPES 1
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_opengl.h>
+
 #include <revolution/gx.h>
 #include <revolution/vi.h>
 
@@ -995,6 +999,38 @@ void TestWithContext() {
         PC_CHECK(std::ftell(file) > 608 * 456 * 3);
         std::fclose(file);
         std::remove(path);
+    }
+    // Presenting: the XFB's picture scaled into a rectangle of the window,
+    // the right way up, black around it. (Read back from the window's back
+    // buffer, which a hidden window also has.)
+    SDL_Window* window = SDL_GL_GetCurrentWindow();
+    int windowWidth = 0, windowHeight = 0;
+    if (window != nullptr) {
+        SDL_GetWindowSizeInPixels(window, &windowWidth, &windowHeight);
+    }
+    if (windowWidth >= 400 && windowHeight >= 300) {
+        // the picture in the right half of the window, 304 x 228: half size
+        int px = windowWidth - 304, py = 10;
+        PCGXPresent(xfb, px, py, 304, 228, windowWidth, windowHeight);
+        auto windowPixel = [windowHeight](int x, int y) {
+            u8 p[4] = {0, 0, 0, 0};
+            glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+            glReadPixels(x, windowHeight - 1 - y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, p);
+            return (static_cast<u32>(p[0]) << 16) | (static_cast<u32>(p[1]) << 8) | p[2];
+        };
+        // (the picture is half size) XFB (120, 120) is the first square;
+        // XFB (40, 320) the blue square; XFB (100, 320) the green one.
+        PC_CHECK(windowPixel(px + 60, py + 60) == 0x0A141E);
+        PC_CHECK(windowPixel(px + 20, py + 160) == 0x0000FF);
+        PC_CHECK(windowPixel(px + 50, py + 160) == 0x00FF00);
+        PC_CHECK(windowPixel(px - 5, py + 60) == 0x000000 && windowPixel(px + 60, py + 235) == 0x000000);
+        // a blanked screen is black everywhere
+        PCGXPresent(nullptr, px, py, 304, 228, windowWidth, windowHeight);
+        PC_CHECK(windowPixel(px + 20, py + 160) == 0x000000);
+        // and drawing continues in the EFB afterwards
+        PC_CHECK(PixelNear(150, 100, 40, 50, 60, 0));
+    } else {
+        std::printf("self-test (OpenGL): no window back buffer to check PCGXPresent() with\n");
     }
     PC_CHECK(PCGXGetStats()->badCommands == 0);
 }

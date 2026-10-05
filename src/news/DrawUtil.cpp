@@ -148,7 +148,13 @@ void Draw2D_FillQuad(const math::VEC3* quad, const GXColor* color) {
     GXBegin(GX_QUADS, GX_VTXFMT0, 4);
     for (int i = 0; i < 4; i++) {
         GXPosition3f32(quad[i].x, quad[i].y, quad[i].z);
+#ifdef TARGET_PC
+        // PC: a colour's bytes are not 0xRRGGBBAA as a u32 on a little-endian
+        // host (docs/pc_port.md, "Colours")
+        GXColor4u8(color->r, color->g, color->b, color->a);
+#else
         GXColor1u32(*(const u32*)color);
+#endif
     }
     GXEnd();
 }
@@ -169,7 +175,11 @@ void Draw2D_FillQuadGradient(const math::VEC3* quad, const ut::Color* colors) {
     GXBegin(GX_QUADS, GX_VTXFMT0, 4);
     for (int i = 0; i < 4; i++) {
         GXPosition3f32(quad[i].x, quad[i].y, quad[i].z);
+#ifdef TARGET_PC
+        GXColor4u8(colors[i].r, colors[i].g, colors[i].b, colors[i].a);
+#else
         GXColor1u32(*(const u32*)&colors[i]);
+#endif
     }
     GXEnd();
 }

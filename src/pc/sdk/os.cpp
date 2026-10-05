@@ -64,6 +64,10 @@ void OSInit(void) {
     }
 
     PCOSInitArena();
+    // Map the locked cache now. Its address is fixed (nw4r::ut::LC::GetBase()
+    // returns 0xE0000000), and once VIInit() has loaded the OpenGL driver,
+    // the driver's libraries may be sitting there.
+    LCEnable();
     OSGetTime();
     OSGetCurrentThread();
 
