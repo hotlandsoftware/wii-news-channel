@@ -27,6 +27,7 @@ Contents:
 18. [Audio (AX, DSP, AI)](#18-audio-ax-dsp-ai)
 19. [Sound files](#19-sound-files)
 20. [Sound: what plays](#20-sound-what-plays)
+21. [How the channel gets its news](#21-how-the-channel-gets-its-news)
 
 ## 1. Decisions
 
@@ -80,6 +81,8 @@ src/pc/                     PC-only sources
   snd_tool.cpp              `--list-sounds`: every sound followed down to its samples (section 19)
   snd_render.cpp            `--render-sounds`, `--dump-waves`, `--snd-stress`: sounds played without the
                             game, reference waves, the thread stress test (section 20)
+  news/                     where the downloader gets the news files (a directory; HTTP later),
+                            `--list-news`, the news self-test (section 21)
   endian/fmt_<format>.cpp   byte order: one converter per asset format, and the registry (section 12)
   libc/wchar16.cpp          16-bit wcslen(), swprintf() and so on
   deadstripped/<library>.cpp  definitions the DOL's linker removed but gcc needs
@@ -158,6 +161,7 @@ build/pc/newschannel --boot --contents path/to/contents --nand-dir path/to/nand 
 `newschannel --audio-test` plays a two-second tone through AX and `nw4r::snd`'s voice (section 18).
 `newschannel --list-textures 9` and `newschannel --dump-texture 9:TPLCommon.tpl.LZ:0 build/scratch/t.png` list and decode the textures in the contents (section 17).
 `newschannel --list-sounds` lists the sounds of the channel's sound archive with the wave each one plays (section 19).
+`newschannel --list-news` lists the headlines of the news files in `orig/HAGE/news` (section 21).
 `newschannel --render-sounds build/scratch/render` writes every sound of that archive as a WAV file, played through `nw4r::snd` and AX without the game (section 20).
 
 `extract_wad.py --contents` writes `orig/HAGE/contents/NN.app` (NN = content index: 00, 02 to 11). The game's archive number `n` is content `n + 2`.
@@ -261,6 +265,7 @@ Run it whenever the set of files in the build or the backend changes. If two bra
 | `newschannel --dump-waves DIR [CONTENT:PATH]` | Decodes every wave of the archive's banks with the mixer's decoder into `DIR/wave_FF_NNN.wav`, and writes `DIR/waves.txt`: the reference that never went through `nw4r::snd` (section 20). |
 | `newschannel --snd-stress [CONTENT:PATH] [--seconds S]` | Starts, stops, pauses and mutes random sounds as fast as it can against the running sound thread and audio frames; no device (section 20). |
 | `pc/tools/snd_verify.py` | `waves`, `stats`, `render`, `dump`: the numeric checks of section 20. Needs numpy. |
+| `newschannel --list-news [FILE\|DIR]` | Lists the news files of the news directory (or another one, or one served file) and their headlines per category, read through the game's own check and parser (section 21). With `--news-dir`, `--date`. Exit status 1 if the files are damaged or there are none. |
 
 Adding a file to the build: fix it until `status.py -f <name>` passes, add it to `pc/ported/<library>.txt` (or run `status.py --update-ported`), run `gen_stubs.py`, build, run `newschannel`.
 
@@ -292,7 +297,7 @@ Stubs (`gen_stubs.py`): **12 functions, 0 data** (after milestone 1: 404 and 9).
 None of them is called during the boot of section 15: the boot log has no `unimplemented:` line.
 No CodeWarrior name is stubbed: the 44 names the game calls have thunks in `src/pc/thunks`.
 
-Stubs are not the whole picture: NWC24/SO/VF, KPAD/WPAD buttons and HBM are hand-written placeholders that are silent by design (section 14, "Placeholders are weak and silent"). They are the work of milestones 4 to 7. GX is implemented (section 16), and so are AX, the DSP and the AI (section 18).
+Stubs are not the whole picture: KPAD/WPAD buttons and HBM are hand-written placeholders that are silent by design (section 14, "Placeholders are weak and silent"). They are the work of milestones 4 to 7. GX is implemented (section 16), and so are AX, the DSP and the AI (section 18), and NWC24, VF, SO and NET as far as the game uses them (section 21).
 
 ## 8. Milestones
 
@@ -301,7 +306,7 @@ Stubs are not the whole picture: NWC24/SO/VF, KPAD/WPAD buttons and HBM are hand
 - [x] **2. It boots.** `--boot` runs the game's `main()` and its main loop in a window, and shuts down cleanly when the window is closed (section 15): OS (threads, mutexes, message queues, alarms, time, arenas), MEM heaps, MTX, CNT/ARC/NAND file access on `orig/HAGE/contents`, CX decompression, SC settings, a window, byte order of the formats the boot parses (archives, palettes, fonts, layouts, layout animations, the sound archive's tables). Formats of later milestones are not converted yet and their loaders are guarded (section 15, "Bypasses").
 - [x] **3. It draws.** GX to OpenGL layer (state, TEV, textures, the FIFO), VI frame pacing; layouts and fonts on screen (sections 16 and 17; what was looked at and what is still missing: section 16, "Integration: what the screens look like").
 - [ ] **4. Input.** KPAD/WPAD from mouse, keyboard and game controllers; the pointer and buttons work.
-- [ ] **5. News.** NWC24 download tasks, VF and NET replaced by libcurl and host files; a news file loads, articles and slide show work, JPEG pictures decode.
+- [ ] **5. News.** NWC24 download tasks, VF and NET replaced by libcurl and host files; a news file loads, articles and slide show work, JPEG pictures decode. Done so far (section 21): the whole path from disk. The game registers its download task, the downloader takes the served files from a directory (`--news-dir`), the game reads, decompresses, checks and parses them, and shows the section list and the headline lists with their photos. Not done: the HTTP source (libcurl), and the article view and slide show, which wait for the globe model (milestone 6).
 - [ ] **6. Globe, effects, sound.** `nw4r::g3d` globe, `nw4r::ef` pointer effects, AX/AI output through SDL audio, `nw4r::snd` playing the sound archive. Done so far: sound. The audio backend (section 18), the sound files (section 19), and the game's sounds playing, checked numerically (section 20). The globe and the pointer effects are not started.
 - [ ] **7. Polish.** HOME Menu, save data, settings and language selection, window scaling and aspect ratio, a decision on the Operations Guide (its viewer is PowerPC code), packaging, 64-bit.
 
@@ -317,6 +322,7 @@ Stubs are not the whole picture: NWC24/SO/VF, KPAD/WPAD buttons and HBM are hand
 - **`gErrorSystemArc`** (the error-screen archive embedded in the DOL) and the other `auto_*` data have no source; the PC build reads them from the user's DOL at run time (section 10).
 - **Integer division by zero.** The PowerPC's `divw` does not trap; x86 raises SIGFPE. The game divides by a fade length that is still 0 in a few places (section 15, "Game-code findings"). Each site found is guarded with `PCDivW()` (`<pc/compat.h>`), which gives the PowerPC's result. Expect more: a SIGFPE in game code is this until proven otherwise.
 - **Sized `operator delete`.** The game only replaces `operator delete(void*)`. gcc calls the sized form (C++14), which would reach libstdc++ and `free()` a pointer of the game's heap; `src/pc/libc/sized_delete.cpp` forwards the sized forms to the game's. A new replaced form (aligned `new`, `nothrow`) needs the same treatment and an entry in `pc/cmake/private_symbols.ver`.
+- **Uninitialised members of `NewsArticle`.** The constructor does not set `mPicture` or `mSourceLogo`; `LoadPicture()` and `LoadLogos()` only set them for an article that has a picture or a logo. Code that calls `GetTexture()` without testing `mText->pictureIdx` first reads whatever the heap held. Nothing has gone wrong because of it yet (section 21).
 - **Threads run in parallel** (section 11). Code that was only safe because of thread priorities can race on PC. The boot ran 24 times in a row without a failure, which proved little: `nw4r::snd` had exactly such a race, a crash when a sound was started while another was being stopped, found only by a stress test and fixed in the sound thread (section 20, "Threads"). `WiiConnect24.cpp` (download thread, priority 8, above the game's thread) has not been audited and is the next place to look when something is flaky; the cure used for the sound thread (hold the interrupt lock where the console's priorities gave exclusion) applies there too.
 
 ## 10. Data still taken from the DOL
@@ -461,7 +467,7 @@ Members of an archive are converted on first use and not when the archive is ope
 
 Code that gets a file in some other way has to call `PCEndianFixFile()` itself when the file is complete. Known cases, none on the boot path of the formats done so far:
 
-- the streaming decompressors `CXReadUncompLZ()`/`CXReadUncompHuffman()` (the globe model `earth.brres.LZ` in `d_scene.cpp`, the news file in `WiiConnect24.cpp`). They do not convert: their output is assembled in pieces. (`ut::ArchiveFont` uses the streaming Huffman reader for font sheets, which are texels and must not be converted.)
+- the streaming decompressors `CXReadUncompLZ()`/`CXReadUncompHuffman()` (the globe model `earth.brres.LZ` in `d_scene.cpp`, the news file in `WiiConnect24.cpp`). They do not convert: their output is assembled in pieces. (`ut::ArchiveFont` uses the streaming Huffman reader for font sheets, which are texels and must not be converted.) The news file is done: `CWiiConnect24::readLZ77FileEx()` calls `PCEndianSwapNewsFile()` when the last piece is in (section 21, "Byte order of the news file").
 - files read from NAND or VF.
 
 ### Idempotence
@@ -488,6 +494,7 @@ Inside one file, a structure that several places refer to (a TPL header shared b
 | `fmt_tpl.cpp` | TPL |
 | `fmt_snd.cpp` | `RSAR`: the archive's own tables |
 | `fmt_snd_files.cpp` | `RSEQ`, `RBNK`, `RWSD`, `RSTM`, wave information, `PCEndianFixSoundFile()` (section 19) |
+| `fmt_news.cpp` | the news file (section 21); not in the registry, it has no magic |
 | `src/pc/sdk/arc.cpp` | U8 (`PCEndianSwapU8Archive()`) |
 
 A converter is `BOOL Convert(void* data, u32 size)`. It uses the real structs of the library that reads the format (`nw4r::lyt::res::Pane`, `nw4r::ut::FontInformation`, `TPLHeader`), so a field is swapped by name and its size comes from its type:
@@ -554,6 +561,7 @@ Converted (each has a self-test on the real files, section 13):
 | Wave sounds | `RWSD` | `snd::detail::WsdFileReader`, `WaveFileReader` | header, sound, track and note tables, WAVE block (versions 1.0 to 1.2) |
 | Stream | `RSTM` | `snd::detail::StrmFileReader` | file header and HEAD block (stream, track and channel information, ADPCM parameters); not the ADPC and DATA blocks |
 | Wave data of a bank or of wave sounds | none (described by the file's WAVE block) | the AX mixer | PCM16 samples, swapped when their file is converted (`PCEndianFixSoundFile()`); ADPCM and PCM8 are bytes |
+| News file `news.bin.NN` (decompressed) | none: converted by an explicit call, once (`PCEndianSwapNewsFile()`, `fmt_news.cpp`) | the game: `NewsData.h` structs, `NewsHeader::At()` | header, the five tables, topic entries, every text the tables refer to; not the JPEG data, not the byte fields. The CRC is re-sealed (section 21) |
 
 Not converted yet. Until a format has a converter its file stays big-endian and **the code that parses it must not run**; two of these are loaded during start-up (section 15, "Bypasses", says how each is kept from running).
 The guard for such a loader is `PCEndianIsHostOrder(data, size)`, which is true only for a file that has been converted; it opens by itself when the converter is added:
@@ -568,7 +576,6 @@ The guard for such a loader is `PCEndianIsHostOrder(data, size)`, which is true 
 | --- | --- | --- | --- |
 | Effects `.breff`, `.breft` (`REFF`, `REFT`) | **start-up**: `PointerEffect::PointerEffect()` in `SystemInit()` | `ef::Resource::Add()`, `AddTexture()`, `RelocateCommand()` | The name tables are read bytewise (`(p[0] << 8) + p[1]`) and must NOT be swapped; `NameTable::numEntry`, the project header and `TextureData` are read as values. `RelocateCommand()` reads two `u8` fields as one `u16` (`*reinterpret_cast<u16*>(&header->curveFlag)`), which needs a `TARGET_PC` guard in `ef_resource.cpp`. The animation-curve key tables depend on the curve type (`ef_res_animcurve.h`). |
 | Model `.brres` (`bres`, with `MDL0`, `TEX0`...) | **start-up**, in the background: `LoadEarth()` in `d_scene.cpp` (streaming LZ, so call `PCEndianFixFile()` when the last piece is in) | `g3d::ResFile::Init()`/`Bind()` | offsets relative to each structure, string tables, display lists (GX command streams: leave big-endian), vertex arrays (big-endian for the FIFO interpreter, or convert per attribute format) |
-| News file `news.bin` | when a download finishes | `NewsData.h` structs, `NewsHeader::At()` | all `u32`/`u16`, 17 offset fields, 16-bit big-endian text; pictures are JPEG (bytes). No magic at offset 0 that is safe to key on: convert explicitly after the CRC check |
 | Save file `savedata.dat` | start-up, if it exists | `SaveData.cpp` | written from a struct. On PC it is simply little-endian and not interchangeable with a Wii save; convert on read and write if that is wanted |
 | Message tables, wide string literals | compiled in | - | host order already; nothing to do |
 | `gErrorSystemArc` and the other data of section 10 | from the DOL | `ErrorScreen.cpp` | done: the archive is converted by `ARCInitHandle()` like any other, the strings and floats by the loader (section 10) |
@@ -634,7 +641,7 @@ This part of milestone 2 gives the game a screen to wait on, the console's setti
 | `src/pc/sdk/kpad.cpp`, `wpad.cpp` | KPAD, WPAD | placeholder for milestone 4: one remote on channel 0, no buttons, pointing at the mouse |
 | `src/pc/gx/` | GX | real: section 16 |
 | `src/pc/sdk/ai.cpp`, `dsp.cpp`, `axfx.cpp`, `src/pc/audio/` | AI, DSP, AXFX hooks; AX is the SDK's source | real: section 18 |
-| `src/pc/sdk/nwc24_noop.cpp` | NWC24, SO, VF, NCD, `NETGetUniversalCalendar` | placeholder for milestone 5 |
+| `src/pc/sdk/nwc24.cpp`, `vf.cpp`, `so.cpp`, `net.cpp`, `src/pc/news/` | NWC24, VF, SO, NCD, `NETGetUniversalCalendar` | real, as far as the game uses them: section 21. News comes from a directory; there is no HTTP yet |
 | `src/pc/sdk/hbm.cpp` | HBM, vcmv | placeholder for milestone 7 |
 | `src/pc/sdk/misc.cpp` | `stricmp` | real, weak |
 | `pc/ported/sdk_*.txt` | TMCC JPEG, AXFX reverb, WENC, NET (`netcrc.c`, `neterror.c`) | the SDK's own C source, compiled natively |
@@ -653,7 +660,7 @@ What each placeholder promises:
 
 - **GX** is no longer a placeholder (section 16). Only the SDK's debug shapes (`GXDrawCube`, `GXDrawCylinder`, `GXDrawSphere`, `GXDrawTorus`, used by `nw4r::ef` emitter-form drawing) are still weak no-ops, in `src/pc/gx/gx_api.cpp`.
 - **AX, AI** are no longer placeholders (section 18).
-- **NWC24, SO, VF.** A console that has never been online. The library opens and passes `NWC24Check`; download tasks can be created, registered, read back and deleted, in memory only. `SOStartup` fails with `SO_ERR_LINK_UP_TIMEOUT`, which the SDK's `NETGetStartupErrorCode` (compiled natively) turns into error 51099. No VF drive mounts. The game therefore takes its own "could not connect" path.
+- **NWC24, SO, VF** are no longer placeholders (section 21). Without a news directory they still behave like a console that is not online: `SOStartup` fails with `SO_ERR_LINK_UP_TIMEOUT`, which the SDK's `NETGetStartupErrorCode` (compiled natively) turns into error 51099, and the game takes its own "could not connect" path.
 - **HBM, vcmv.** `HBMCalc` answers "HOME pressed again" at once, so a HOME Menu that is opened closes on the next frame. `VCMVLoadLibrary` fails, so the Operations Guide is skipped.
 
 ### SDK code compiled natively
@@ -661,7 +668,7 @@ What each placeholder promises:
 `pc/ported/sdk_<library>.txt` lists SDK source files that are compiled as they are, like the game's (`news_library(sdk_... DIR src/revolution/...)` in `pc/CMakeLists.txt`). Use this only for files with no hardware access.
 
 - C files that include `<revolution/os.h>` or `<revolution/gx.h>` must be compiled as C++ (`news_library(... CXX)`), because the PC versions of those headers contain C++ (the GX FIFO object). A file that defines a function without including the header that declares it then needs the header force-included, or the definition gets a C++ name (`sdk_net` does this for `<revolution/net.h>`).
-- TMCC JPEG is compiled as C. It writes each RGB565 texel as a `u16` in host byte order (the self-test decodes a 16x16 picture and checks this). On the Wii that is big-endian, which is what GX reads; the texture decoder of milestone 3 must treat TMCC output as host-order, unlike texels that come from `.tpl` files.
+- TMCC JPEG is compiled as C. It writes each RGB565 texel as a `u16` in host byte order (the self-test decodes a 16x16 picture and checks this). On the Wii that is big-endian, which is what GX reads; on PC `JPEGDecoder::Decode()` (`src/news/Resource.cpp`, under `TARGET_PC`) registers each buffer it fills with `PCGXSetTextureHostOrder()`, so the texture decoder reads it as host-order, unlike texels that come from `.tpl` files.
 - `AXFXHooks.c` is not compiled: its default allocator uses the OSAlloc heap, which this program never creates. `src/pc/sdk/axfx.cpp` defines the hooks with the host heap as the default.
 - AX (`pc/ported/sdk_ax.txt`) is compiled without `DSPCode.c`, the program it loads into the console's DSP. Section 18 says what stands in for the DSP and the AI.
 
@@ -707,6 +714,8 @@ For backend code the consequence remains: `new`, `std::string`, `std::vector` an
 | `--no-window` | no window; pacing and callbacks only |
 | `--contents DIR` (or `--contents-dir`), `--nand-dir DIR` | the two directories (section 13); they override `$NEWSCHANNEL_CONTENTS`/`$NEWSCHANNEL_NAND` and the settings file |
 | `--dol FILE` | the channel's `main.dol` (section 10) |
+| `--news-dir DIR` | where the news comes from: `DIR/v2/<language>/<country>/news.bin.NN`, the files as the server sends them (section 21). Default: `$NEWSCHANNEL_NEWS_DIR`, then `orig/HAGE/news` |
+| `--date YYYY-MM-DDTHH:MM[:SS][Z]` | start the game's clock at this time (local time, or universal time with `Z`) instead of now; default `$NEWSCHANNEL_DATE` (section 21, "The clock") |
 | `--input SCRIPT` | scripted remote for automated runs: `P0:0@1,A@300` points at the centre of the picture from retrace 1 and presses A at retrace 300 (`src/pc/pc_input.h`) |
 | `--screenshot N[,N...]` | save the picture shown at these retraces as `frame_NNNNNN.png` (section 16, "Looking at the result"); with `--no-window` the frames are drawn in a hidden window |
 | `--screenshot-dir DIR` | where the screenshots go (default: the current directory; keep them out of the repository, e.g. `build/shots`) |
@@ -718,7 +727,7 @@ For backend code the consequence remains: `new`, `std::string`, `std::vector` an
 
 ### Self-test
 
-`newschannel --selftest` now also runs `PCSelfTestBackend()`: SC and config parsing, VI (callbacks, `VIFlush` latching, 59.94 Hz timing, the quit event), WPAD/KPAD and the pointer calibration, the GX object functions, one buffer through the native AXFX reverb (AX and the AI have their own self-test, section 18), the NWC24 task sequence the game uses, the SO/NET error path, `NETCalcCRC32`, VF, HBM, vcmv, and a JPEG decoded by the native TMCC decoder.
+`newschannel --selftest` now also runs `PCSelfTestBackend()`: SC and config parsing, VI (callbacks, `VIFlush` latching, 59.94 Hz timing, the quit event), WPAD/KPAD and the pointer calibration, the GX object functions, one buffer through the native AXFX reverb (AX and the AI have their own self-test, section 18), the NET error table, `NETCalcCRC32`, HBM, vcmv, and a JPEG decoded by the native TMCC decoder. NWC24, SO and VF are tested by `PCSelfTestNews()` (section 21, "Self-test").
 
 ## 15. Milestone 2: the boot
 
@@ -734,10 +743,12 @@ What it draws is in section 16.
 | Frame loop | `SystemCalc()` / `SystemDraw()` / `VIWaitForRetrace()` | runs until the window is closed |
 | `NewsScene::StateStartup`, first run | no save file: the game shows its "save data" dialog (`SaveErrorDialog`, message 1) and waits for the A button | reached after the first fade; without input the game stays here, as a console would |
 | after A (`--input "P0:0@1,A@300"`) | the game creates `noerase/savedata.dat` in the NAND directory and opens the connection screen (`Connect`, `DrawIntro`) | complete; the save file loads on the next start (CRC and label accepted) and the dialog is skipped |
-| `Connect` | the download thread runs the game's request; `SOStartup()` fails (no network backend, section 14), the task ends with result -9 | the game shows its own connection error screen (`Connect::STATE_ERROR`, text 2) and waits for "next" |
+| `Connect` | the download thread runs the game's requests: register the task, download, read the archive (section 21) | with a news directory: the files are read, checked and parsed, and the screen fades to the news. Without one: `SOStartup()` fails, the task ends with result -9 and the game shows its own connection error screen (`Connect::STATE_ERROR`, text 2, error 051099) and waits for "next" |
+| `NewsScene::StateMain` | `InitNews()`, `MainScreen`: the section list ("Select a Section", "Updated hh:mm ago"), and after A on a section its headline list with the photos | complete; drawing defects are listed in section 21, "What the screens look like" |
+| A on a headline, or "Slide show" | `MainScreen::CheckSelect()` / `NewsScene::StateMain` wait for `gEarthModel` | the screen dims and stays: the globe model is never created (the bypass below). Needs milestone 6 |
 | Window closed (or SIGINT/SIGTERM) | `PowerCallback()` → `gShutdown` → `Scene::ReturnToMenu()` → `NewsScene::Exit()` (sound shut down, scene destroyed) → `OSShutdownSystem()` → `PCOSExit(0)` | exit status 0, from the dialog and from the connection screen |
 
-The news itself (download, `InitNews()`, the globe, the slide show) is behind the connection screen and needs milestone 5.
+The article view, the globe and the slide show are behind the globe model and need milestone 6.
 
 These screens have their sounds: the tick when the pointer enters a button, the decide sound on A, the pattern that repeats while the connection is tried and the error sound when it fails (section 20).
 
@@ -798,7 +809,7 @@ A third one, in `MemorySoundArchive::detail_GetFileAddress()`, is gone: the file
 | `PointerEffect::PointerEffect()` (`src/news/PointerEffect.cpp`) | `ef::Resource::Add()`, `AddTexture()` and `RelocateCommand()` for `nw4r_defcursor_all01.breff/.breft`. `mLoaded` is still set, so the game starts its news scene and not the fatal error screen; `EffectSystem::CreateEffect()` finds no emitter and the pointer has no particle trail | no byte-order converter for `REFF`/`REFT` | converters are registered: the guard is `PCEndianIsHostOrder()` and opens by itself. `RelocateCommand()` also needs its `u8` pair read as a `u16` guarded (section 12) |
 | `Scene::Execute()` (`src/news/d_scene.cpp`) | `new Model(sEarthData)` when the decompressed `earth.brres` is still big-endian. Not reached during the boot (the model is loaded by `InitNews()`, after a news download) | no converter for `bres` | a converter is registered. Check then what waits for `gEarthModel` |
 
-Not bypasses, but placeholders with the same effect on what the user sees: NWC24/SO have no network, the HOME Menu closes at once (section 14).
+Not a bypass, but a placeholder with the same effect on what the user sees: the HOME Menu closes at once (section 14). The news path has no bypass; what the PC backend does differently from the console (no signature check, its own archive format, no background downloads) is listed in section 21, "Deviations".
 
 ### Game-code findings
 
@@ -876,7 +887,7 @@ So the API, raw FIFO writes and display lists can be mixed freely, as on the con
 
 **Textures** are decoded once into OpenGL textures and found again by pointer, size, format, mipmap levels, byte order and palette checksum (`gx_texture.cpp`). Each entry keeps a checksum of its encoded data, compared the first time the entry is used after anything that may have changed texels: the end of a frame, `GXInvalidateTexAll()`, an EFB copy, `PCGXInvalidateTexture()`. So a buffer the game decodes into again (a JPEG, a font sheet, the fade copy) is uploaded again without a hook; `PCGXInvalidateTexture()` is only needed when the texels change between two uses within one frame. Palettes are copied by `GXLoadTlut()`, as the hardware copies them into texture memory. Filters, wrap modes and LOD settings are OpenGL sampler objects per texture map. Entries unused for 600 frames are freed.
 
-Texels from files are big-endian. Buffers whose 16-bit texels are in host order must be registered with `PCGXSetTextureHostOrder(pointer, true)`: destinations of `GXCopyTex()` are registered automatically; **the output buffers of the TMCC JPEG decoder are not** and need the call where the game decodes a picture (milestone 5).
+Texels from files are big-endian. Buffers whose 16-bit texels are in host order must be registered with `PCGXSetTextureHostOrder(pointer, true)`: destinations of `GXCopyTex()` are registered automatically; the output buffers of the TMCC JPEG decoder are registered by `JPEGDecoder::Decode()` (`src/news/Resource.cpp`, under `TARGET_PC`). The registry holds 1024 buffers and an entry stays when the game frees the picture, which is harmless as long as only JPEG output is ever allocated from the picture heap.
 
 **Frame output.** `GXCopyDisp(xfb, clear)` copies the display copy source of the EFB into a texture kept per XFB pointer (the XFB memory itself is not written) and ends the backend's frame. `Present()` in `vi.cpp` shows the texture of the XFB the game selected. `GXCopyTex()` reads the EFB back, halves it if asked, encodes it with `PCGXEncodeTexture()` into the game's buffer and marks the buffer host-order. A copy with `clear` fills the copy source with the copy clear colour and depth through the colour, alpha and depth update masks, as the hardware does. The EFB has an alpha plane only in the `GX_PF_RGBA6_Z24` pixel format; otherwise its alpha stays 1, which is what a destination-alpha blend factor reads. Destination alpha (`GXSetDstAlpha`) with blending uses dual-source blending.
 
@@ -914,7 +925,7 @@ Texels from files are big-endian. Buffers whose 16-bit texels are in host order 
 ### For the next tasks
 
 - **Texture codec.** The codec is `texdecode.cpp` (section 17); the temporary fallback is gone. The `--selftest-gl` checks call `PCGXEncodeTexture()` for `GX_TF_RGBA8` and `GX_TF_RGB565` and decode host-order RGB565 back, so they also test the real codec.
-- **JPEG pictures** (milestone 5): call `PCGXSetTextureHostOrder(buffer, true)` for the buffer the TMCC decoder writes.
+- **JPEG pictures**: done. `JPEGDecoder::Decode()` calls `PCGXSetTextureHostOrder(buffer, true)`; the photos in the headline lists have the right colours (section 21).
 - **The globe** (milestone 6): `nw4r::g3d` sends its state as raw register loads and display lists, which the decoder handles; what it needs is (a) the two colour-punning sites in `g3d_gpu.h` and `g3d_anmscn.cpp` (section 12), (b) a decision per vertex array on byte order (`PCGXSetArrayBigEndian()`, or convert the arrays on load), (c) host pointers for anything g3d puts into a register: check how `ResShp` patches array bases and texture addresses into its display lists; `PCGXAddressToHost()` only understands MEM1/MEM2 at the console's addresses, (d) fog and Z-compare location if the model uses them.
 - **The locked cache** is mapped by `OSInit()` now, before `VIInit()` loads the OpenGL driver: with a context the driver's libraries could otherwise occupy `0xE0000000`, which `nw4r::ut::LC::GetBase()` hands to g3d.
 - **Speed**: 600 frames of the connection screens take 0.7 s of CPU time; there is no batching and no need for it yet. Each `GXBegin()`/`GXEnd()` is one `glBufferData()` and one draw call.
@@ -944,7 +955,7 @@ Known gaps (none is a bypass in the backend; there are no `TODO(milestone N)` ha
 - **No pointer on screen.** The game draws the pointer (hand, trail) as an `nw4r::ef` effect: `Scene::UpdatePointers()` → `SetPointerState(chan, STATE_NORMAL)`, drawn by `PointerEffect::Draw()` → `ef::EffectSystem::Draw()`. Nothing comes out of it yet: the effect files (`.breff`, `.breft`) have no byte-order converter (section 12) and `nw4r::ef` has not been brought up. Hovering and pressing already work. This is milestone 6 by the plan, but milestone 4 (input) is hard to use without a pointer: either bring the pointer effect forward or show the host's mouse cursor until then.
 - **`--lang ja`, `de`, `it` and `nl` show the game's fatal error screen** (`SCENE_FATAL`, `gErrorScreen`: white centred text on black, "the News Channel's system files are damaged ... press the A Button to return to the Wii Menu", in that language, from the error archive embedded in the DOL) after the log line `d_scene.cpp[388]`; A ends the program through `OSReturnToMenu()`. The US contents have no HOME Menu archive for those languages (`HomeButton3/LZ77_homeBtn*.arc`), so `HomeMenu` does not initialise and the game gives up, as its code says. English, French and Spanish, the US channel's languages, run normally. The error screen itself is drawn correctly (looked at in German, Italian and Dutch), so this is a fourth screen that works, not a drawing problem.
 - **Two PNG writers**: `PCWritePNG()` (`gx/png.cpp`, screenshots) and `PCGXWritePNG()` (`gx/texdecode_tool.cpp`, texture dumps). Harmless; merge them when one is touched.
-- Not seen yet because nothing reaches them: news pictures (host-order JPEG output, milestone 5), mipmapped textures with `GX_LIN_MIP_LIN` (eight in the contents), `GX_REPEAT` textures, the HOME Menu, everything behind the connection screen (headline list, article text, slide show, weather-style fonts), the globe and effects (milestone 6). Expect layout and text defects there that these three screens could not show.
+- Not seen yet because nothing reaches them: mipmapped textures with `GX_LIN_MIP_LIN` (eight in the contents), `GX_REPEAT` textures, the HOME Menu, everything behind the connection screen (headline list, article text, slide show, weather-style fonts), the globe and effects (milestone 6). Expect layout and text defects there that these three screens could not show.
 
 What is left for the next milestones:
 
@@ -1531,3 +1542,184 @@ All under `TARGET_PC`; the Wii build is unchanged (`main.dol: OK`, no unit of `r
 - HOME Menu archive: a stereo wave on two voices; the PCM16 wave dying away (its level after one second is under a twentieth of its start), which it would not if its bytes were the wrong way round
 
 and in the audio self-test a voice at ratio 20 advances 1920 samples per frame. `--snd-stress` and `snd_verify.py` are run by hand (`pc/tools/snd_check.sh`); they need seconds, and the second needs numpy.
+
+## 21. How the channel gets its news
+
+First part of milestone 5: the news is loaded from disk, through the game's own download path.
+`newschannel --boot` with a news directory goes from the connection screen to the section list and the headline lists, with today's headlines and photos.
+The program does not use the network yet.
+
+```sh
+# the 24 hourly files of English (1), USA (049), as the server sends them
+mkdir -p orig/HAGE/news/v2/1/049
+for h in $(seq -w 0 23); do curl -o orig/HAGE/news/v2/1/049/news.bin.$h http://news.wiilink.ca/v2/1/049/news.bin.$h; done
+
+build/pc/newschannel --list-news              # the headlines, through the game's parser
+build/pc/newschannel --boot                   # the game; finds orig/HAGE/news by itself
+build/pc/newschannel --boot --news-dir DIR --date 2026-10-05T19:00Z   # other files, another day
+```
+
+Never commit news files (R12): `orig/HAGE/news` is ignored like the rest of `orig/HAGE`.
+
+### The sequence on the Wii
+
+The game never fetches anything itself. It registers a *download task* with WiiConnect24 (NWC24); the system's WiiConnect24 daemon downloads the task's files, in the background every `interval` minutes (also in standby) or at once when a title asks, and stores them in the task's archive, a file on the NAND. The game then reads the archive.
+
+| Step | Who | What |
+| --- | --- | --- |
+| 1 | `NewsScene::StateStartup` | `Connect::Reset(country, language)`: country is the top byte of `SCGetSimpleAddressID()` (or the region's default: 1, 49 or 78), language the news language of the save file. The URL is `http://news.wapp.wii.com/v2/<language>/<country as 3 digits>/news.bin` |
+| 2 | `Connect::Update`, `DL_START` | `WC24RequestDownload()`: a request for the worker thread (`WiiConnect24.cpp`: queue of 8, thread priority 8). Holding a button combination (`gHold & 0x1310`) asks for `WC24RequestUnregister()` instead, which deletes the task and the archive and leaves the channel |
+| 3 | worker, `WC24_REQ_DOWNLOAD` | `NWC24OpenLib`, `NWC24Check(2)`, `SCGetIdleMode` (WiiConnect24 must be on: else -3), then `readFiles()` |
+| 4 | `readFiles()` | `NWC24GetMyDlTask` (none: -1), `NWC24GetDlUrl` (not the URL of step 1: -1), `NWC24GetDlVfPath`, then the archive: `NANDOpen`, `NANDGetLength` (under 1024 bytes: -1), a block of that size from the picture heap, `VFCreateSystemFileRAM`, `VFMountDriveRAM("@24")`, `VFSyncDrive`, `NANDRead` of the whole file into the block, `NANDClose` |
+| 5 | `readFiles()` | for each of the 24 hours, starting at the current universal hour (`NETGetUniversalCalendar`) and going back: `NWC24GetDlFilename(hour)` gives `2.bin.<hh>`, `VFOpenFile`, `readLZ77FileEx()`: `VFReadFile` in 64 KiB pieces into `CXReadUncompLZ` (the first byte must say LZ77, type `0x10`), output in the 8 MiB heap of `Connect`. A file that is not in the archive: -1. A file that does not fit in the heap ends the loop without an error; the older hours stay empty |
+| 6 | worker, if step 4 or 5 gave -1 (once) | `setupDlTasks()`: `NWC24InitDlTask(OCTETSTREAM_V1)`, `NANDDelete` and `NWC24CreateDlVf(0x3A0000)`, URL, server interval 1440, `NWC24SetDlSubTask(TIME_HOUR, 0xFFFFFF, 0x103)` (24 sub-tasks, one per hour; the index is appended to the URL and to the file name as `.NN`), priority 100, option `0x40000000`, interval 30, margin 720, file name `2.bin`, count 240, `NWC24AddDlTask`. Then `NWC24CloseLib` and `execDownload()`: `SOInit`, `SOStartup` (the network; failure: -9 with `NETGetStartupErrorCode()`), `NWC24ExecDownloadTask(6, id, 0xFFFFFF)`: download all 24 now. Then steps 3 to 5 again |
+| 7 | `Connect::Update`, `DL_LIST` | `CheckNewsFiles()` (`SaveData.cpp`) on the 24 buffers: size and CRC-32 of each file, version, expiry, table bounds, text offsets, and that no hour is missing. 0: go on. -3 (version too new): error. -2 (some files missing or expired) or -1 (damaged): `WC24RequestUpdate(mask)`, which downloads the hours in `mask` (all of them unless the result was -2) with `NWC24ExecDownloadTask` and reads everything again; a second -2 is accepted, anything else is an error |
+| 8 | `DL_CONFIG` | `WC24RequestRegister(url, ..., file->unk2F, file->unk5C)`: the newest file says how often to download (30 minutes) and how many times (480); the task is updated |
+| 9 | `STATE_WAIT` | a message from the server in the newest file (`messageOfs`), a file in another language, or no language list: error screen. Otherwise fade out and `NewsData::Init(files, newest)`: categories, articles, logos and pictures (JPEG, decoded at once into the 12 MiB picture heap), then the news scene |
+
+What the downloader does with a file is not in the game. The server sends a wrapper of `0x140` bytes in front of the data: `0x40` bytes of header (all zero for a file that is signed but not encrypted, which is what the news is) and a `0x100`-byte RSA-2048 signature. The daemon checks the signature and stores what follows, so the game finds LZ77 data at the start of each file in the archive.
+
+### The files
+
+| File | What |
+| --- | --- |
+| `http://news.wapp.wii.com/v2/<language>/<country>/news.bin.<hh>` | the original server; WiiLink serves the same paths at `http://news.wiilink.ca`. `<hh>` is the universal hour the file was made for, 00 to 23. Language: the SC code (1 English). Country: the Wii's code (049 USA) |
+| `/title/00010002/48414745/data/wc24dl.vff` | the task's archive (NAND), `0x3A0000` bytes; inside it `2.bin.00` to `2.bin.23`, each the LZ77 data of one hour |
+| `/shared2/wc24/nwc24dl.bin` | the daemon's task list (NAND) |
+
+The decompressed news file (all big-endian; `include/news/NewsData.h`):
+
+| Offset | Field | |
+| --- | --- | --- |
+| `0x00` | version | `0x200`; the game refuses anything with a bit above 16 |
+| `0x04` | file size | |
+| `0x08` | CRC-32 of everything after this field | `NETCalcCRC32` |
+| `0x0C` | id | the files seen have their time here too |
+| `0x10` | expiry time | minutes since 2000-01-01 UTC; the files seen expire 25 hours after their time |
+| `0x14` | four bytes | the first is the country (0x31); not read by the game |
+| `0x18` | time of the file | minutes since 2000-01-01 UTC; the newest file is the one whose topics are shown |
+| `0x1C` | languages | 16 bytes, SC codes, `0xFF` ends the list |
+| `0x2C` | language, two flags, download interval | bytes |
+| `0x30` | offset of a message from the server | 0: none |
+| `0x34` | topics, articles, sources, locations, pictures | count and offset of each table |
+| `0x5C` | download count | `u16` |
+| `0x60` | count and offset of a table of (size, offset) of more text | not read by the game; presumably the headlines for the channel's icon in the Wii Menu |
+
+A topic lists (file id, article id) pairs, so the newest file's topics name articles in all 24 files; that is why the game needs the whole day. Text is UTF-16, NUL-terminated; pictures and source logos are JPEG.
+
+### Error codes
+
+`Connect` shows a text chosen by the request's result and, below it, "Error Code:" with the code of `NWC24GetErrorCode()`/`NETGetStartupErrorCode()` if there is one, else `NEWS` and a number.
+
+| Result of the request | Meaning | Screen |
+| --- | --- | --- |
+| -9 | `SOInit`/`SOStartup` failed | text 2, "Unable to connect to the Internet", code from NET: **051099** when there is no link |
+| -4 | `NWC24_ERR_NETWORK` (-31) | text 2 |
+| -5 | `NWC24_ERR_SERVER` (-32), error code -109106, or archive data that is not LZ77 | text 3, "The WiiConnect24 service is temporarily unavailable" |
+| -3 | WiiConnect24 is off (`SCGetIdleMode`), `NWC24_ERR_DISABLED` | text 1 |
+| -11 | `NWC24_ERR_FILE_*`, `FILE_EXISTS`, `INTERNAL_VF`, `NAND_CORRUPT`, `FILE_BROKEN` | text 0 |
+| -12 | `NWC24_ERR_OLD_SYSTEM` | text 6 |
+| -2 | `NWC24_ERR_FATAL`, `NOMEM`, `INTERNAL_IPC` | text 7 |
+| -8 | NAND error (detail -4: text 4) | `NEWS000001` |
+| -6 | any other NWC24 error | `NEWS000002` |
+| -7 | VF error | `NEWS000003` |
+| -1 | no task, another URL, no archive, a missing file (after the one retry) | `NEWS000005` |
+| 0, but `CheckNewsFiles()` failed | damaged files, or a clock more than a day behind the files | `NEWS000006`, "Unable to download the latest information" (-3: text 8) |
+| other (-10: out of memory) | | `NEWS000099` |
+
+### On PC
+
+```
+game (unchanged)            NWC24 / VF / SO / NET backend            news source
+----------------            -----------------------------            -----------
+WiiConnect24.cpp   ---->    src/pc/sdk/nwc24.cpp  ----- get(url) -->  src/pc/news/news_source.cpp
+  task registration           the task list (one task)                 a directory (--news-dir)
+  NWC24ExecDownloadTask       the downloader: unwrap, store            later: HTTP (libcurl)
+  readFiles()        ---->    src/pc/sdk/vf.cpp: the archive
+  NANDOpen/NANDRead  ---->    src/pc/sdk/nand.cpp: wc24dl.vff
+  SOStartup          ---->    src/pc/sdk/so.cpp: "is the source there?"
+  NETGetUniversalCalendar ->  src/pc/sdk/net.cpp, os_time.cpp
+```
+
+- **`nwc24.cpp`** is the library and the daemon. The task is the SDK's own `NWC24iDlTask`, with the SDK's checks and defaults (`src/revolution/NWC24/NWC24Download.c`). The task list is kept in `/shared2/wc24/nwc24dl.bin` of the NAND directory, so the second start finds the task and the archive and downloads nothing unless the game asks (step 7).
+- **`NWC24ExecDownloadTask(flags, id, mask)`** is the downloader. For each sub-task in `mask` it asks the news source for `<url>.<NN>`, removes the wrapper (`PCNewsUnwrap()`), and writes the payload as `<file name>.<NN>` into the archive, which it mounts from NAND with the VF API as `@dl`. It records the time per sub-task (`NWC24GetDlSubTaskLastUpdate`) and the next time (`NWC24GetDlNextTime`). It runs on the game's worker thread and returns when it is done, as on the console; `NWC24iRequestShutdownSync()` makes it stop after the current file.
+- **The news source** (`src/pc/news/pc_news.h`) is three functions: `describe()`, `available()` and `get(url, &data, &size)`, which answers with an HTTP status. The one implementation maps the URL's path below a directory: `<dir>/v2/1/049/news.bin.07`. The directory is `--news-dir`, else `$NEWSCHANNEL_NEWS_DIR`, else `orig/HAGE/news` (in the current directory or next to the build tree). A file that is missing is a 404. If the directory has no folder at all for the country the game asks for, the first country it has for that language is used and one line says so.
+- **`vf.cpp`** holds an archive as a small directory and file extents (its own format, see "Deviations"). A drive is only a pointer to its image, because the game mounts the block first and fills it from NAND afterwards. `VFMountDriveNANDFlash()` reads the NAND file and writes it back on unmount if it changed. Files are written whole (`"w"`, `VFWriteFile`, `VFCloseFile`).
+- **`so.cpp`**: `SOStartup()` succeeds when the news source is available. Without a news directory the game gets `SO_ERR_LINK_UP_TIMEOUT` and shows 051099, as before.
+- **`net.cpp`**: `NETGetUniversalCalendar()` is the game's clock as universal time.
+
+To add the HTTP source: implement the three functions with libcurl (GET of the same path from a configurable host, default `news.wiilink.ca`; `available()` true; the HTTP status as the result) and select it in `PCNewsGetSource()`. Nothing else changes: the downloader already works with a status code and a block of bytes.
+
+Error codes of the PC downloader: no source, `NWC24_ERR_NETWORK` with 051099; a status other than 200, `NWC24_ERR_SERVER` with `117000 + status` (a missing file shows "Error Code: 117404"; 117xxx is believed to be the console's code for an HTTP status, it has not been checked against one); a file without a usable wrapper, `NWC24_ERR_VERIFY_SIGNATURE` with 117900 (a PC number).
+
+### Byte order of the news file
+
+`src/pc/endian/fmt_news.cpp` converts a decompressed file in place: the header, the five tables, the entries of every topic and every text a record refers to (which makes the text host-order `wchar_t`). JPEG data and byte fields are left alone, and so is the unused table at `0x60`.
+The format has no magic number, so the converter is not in the registry and is not idempotent. The game calls it itself, exactly once per file, at the end of `CWiiConnect24::readLZ77FileEx()` (under `TARGET_PC`): the one place where a file has just become complete.
+
+**The CRC.** `CheckNewsFiles()` compares `NewsHeader::crc` with the CRC-32 of the rest of the file, and the server computed it over the big-endian bytes. Converting after that check would need three guarded blocks in `CheckNewsFiles()`, which reads header fields before and during it. Instead the converter does the comparison itself while the file is intact, converts, and then stores a CRC that makes the game's unchanged check repeat the verdict: the CRC of the converted bytes if the original was right, its complement if not. A file damaged anywhere is still rejected by the game's own code, with the game's own result (-1, download again).
+
+**Text at offset 0.** Records use offset 0 for "no text" (the first topic has no name, the source has no name), and the game reads the text anyway: `(wchar_t*)file->At(0)`. On the Wii that is the first two bytes of the file, the upper half of `version`, which is zero in every file the game accepts, so the text is empty. In host order those two bytes are `00 02`. `NewsHeader::TextAt()` (`TARGET_PC` only) returns offset 2 for offset 0, the upper half of `version` on a little-endian host; `NewsArticle::NewsArticle()` and `NewsData::Init()` use it at the five places that read text without testing the offset. Without it every headline would end in a stray character (U+0200): the list shows the headline, a space and the source name.
+
+`gPunctuationTable` (`PunctuationTable.cpp`) is the game's own table of characters that may not start a line. Its values are byte-swapped in the original (`0x2e00` for `.`), so on the Wii it never matches anything; it is compiled as it is and does the same on PC.
+
+### The clock
+
+News files carry times, and the game compares them with the current universal time: a file whose expiry time has passed is downloaded again, and a file more than a day in the future is "damaged" (`NEWS000006`). "Updated hh:mm ago" is the difference to the newest file.
+
+`--date YYYY-MM-DDTHH:MM[:SS]` (local time; universal time with a trailing `Z`) or `$NEWSCHANNEL_DATE` starts the game's clock at that instant instead of now. It is implemented in the OS backend (`PCOSSetClock()`, `os_time.cpp`): `OSGetTime()`, the calendar functions, `NETGetUniversalCalendar()` and NWC24 all follow, and the clock keeps running. Use it to get the same screens from the same files on another day:
+
+| Clock relative to the files | What the game does |
+| --- | --- |
+| within the files' day | accepts them (`CheckNewsFiles()` = 0) |
+| later (files expired) | downloads all 24 again, gets the same files, and shows them: "Updated 66:00 ago" |
+| more than a day earlier than the newest file | `NEWS000006` |
+
+### Tools
+
+`newschannel --list-news [FILE|DIR]` lists the news of the news directory (or of another one, or of one served file): a line per hourly file (size, id, times, table sizes), the result of the game's `CheckNewsFiles()`, and then every category with its headlines as `NewsData::Init()` built them (location, the hour of the file an article comes from, picture size, length of the text). It runs the steps of the pipeline that do not need the game's threads: source, unwrap, `CXReadUncompLZ`, converter, check, parser, JPEG decoder. `--news-dir`, `--date`, `--lang` and the country setting apply.
+
+### Self-test
+
+`PCSelfTestNews()` (`src/pc/news/selftest_news.cpp`), without assets:
+
+- the clock: `PCOSParseDate()`, and after `PCOSSetClock()` the universal calendar, the game's `GetCurrentMinutes()` and the console's local time agree
+- the converter on a synthetic file built big-endian: every field, the text, the byte fields; the game's CRC test accepts it and rejects a copy damaged in the header, a table, a text or the last byte; a text shared by two records is swapped once; tables and text that point outside the file change nothing outside it
+- the same file as the server would send it (wrapper, LZ77), through `CheckNewsFiles()` and `NewsData::Init()`: two categories, the headline with the empty source name, location
+- VF: create, mount, write, read, seek, replace, find with a pattern, the game's "mount, then fill" order, a file that does not fit, a block that is not an archive
+- the game's whole task sequence in a temporary NAND directory with a temporary news directory of 24 synthetic files: `setupDlTasks()`, `execDownload()`, a restart (the task list is read back from NAND), `readFiles()` (24 entries, each the payload of its served file, update times), mounting the archive from NAND, a missing hour (117404), a file without wrapper, another country, a path that tries to leave the directory, `deleteDlTasks()`; and no directory at all (051099)
+
+With the news files (skipped with a message when there are none): all files of the configured language and country through the converter, then, with the clock set half an hour after the newest file, `CheckNewsFiles()` (0 for a complete day) and `NewsData::Init()`; every category name, headline, body, copyright line and location must be printable text, article times must lie within three days before the newest file, every picture must have decoded to a plausible size. For the files of 2026-10-05: 24 files, newest hour 18, 8 categories, 111 articles, 102 pictures, 69 with a location, 447,265 characters.
+
+### What the screens look like
+
+`--boot --no-window --input "P0:0@1,A@300,P0:0.2@400,A@450" --screenshot 500,780` with a fresh `--nand-dir`:
+
+- **Connection screen**: the section list is up within 200 frames of the A press that leaves the save dialog (24 local files; the rest is fades); the log has `NWC24: 24 file(s) from directory ... (signatures not verified)`. On a second start with the same NAND directory nothing is downloaded.
+- **Section list**: "Updated 01:15 ago", "News Channel", "Select a Section", the seven named sections, the buttons "Wii Menu" and "Slide show". The first topic of the file, which has no name and no entries, is not listed.
+- **Headline list** (A on "National News"): title, "Text Zoom" buttons, three rows with headline and photo; the photos have the right colours. **Defect for the integration**: the read/unread icon at the left of each row is drawn over the first letter of the headline instead of beside it.
+- **Article and slide show**: not reachable. A on a headline (`MainScreen::CheckSelect()`, `gEarthModel == 0` so `ModeWait`) and "Slide show" (`NewsScene::StateMain`, step 3) both wait for the earth model, which the bypass in `Scene::Execute()` never creates (section 15). The screen dims to the wait colour and stays there; the game is not hung, the frame loop runs. This is the first thing milestone 6 has to remove.
+- **Error screens**: 051099 without a news directory, 117404 for a language the directory does not have (`--lang fr`), `NEWS000006` with `--date` a few days before the files.
+- `--lang de` leaves through `OSReturnToMenu()` before the connection screen. That is not news: it happens before any NWC24 call and was not looked into.
+
+**The picture heap is too small for a WiiLink day.** The game decodes every picture at start (step 9) into a 12 MiB heap. Today's files have about 156 pictures of 300 x 200 (121,600 bytes each as RGB565); about 100 fit. For the rest the decoder reports "イメージメモリ確保失敗" (the game's own message, 54 times in the log), and the game moves those articles to the end of their category and drops them: 111 of 168 articles are shown, the oldest ones are missing. This is the game's behaviour with this data, the same on a console; it is not changed.
+
+### Deviations
+
+| What | On the Wii | On PC | Why |
+| --- | --- | --- | --- |
+| Signature | RSA-2048 over the payload, checked by the daemon | not checked | no key handling yet; the CRC of each file is still checked by the game |
+| Encrypted WiiConnect24 files | decrypted by the daemon | refused (`NWC24_ERR_VERIFY_SIGNATURE`) | the news is not encrypted |
+| `wc24dl.vff` | a FAT file system (PrFILE2) with a VFF header | a PC format (`vf.cpp`), host byte order | the game never looks inside; not interchangeable with a console's file |
+| `nwc24dl.bin` | the daemon's table of all titles' tasks | one task, PC format | only this title exists |
+| Background downloads | every `interval` minutes, also in standby | none: only when the game asks | no daemon. The game asks whenever the archive is missing, incomplete or expired, so a start always ends with current files if the source has them |
+| Download count, priority, margin, server interval, option `0x40000000`, the 6 of `NWC24ExecDownloadTask` | used by the daemon's scheduler | stored, not interpreted | as above |
+| `SOStartup()` | brings the network interface up | asks the news source | the source is the only "network" there is |
+| Time | the console's clock plus the difference learnt from the server | the host's clock and time zone, or `--date` | |
+
+### For the next task
+
+- **HTTP**: a libcurl news source (above). Decide then whether the directory stays as a cache or an override.
+- **The globe model** (milestone 6) opens the article view and the slide show; expect the first text layout and picture defects there (`ArticleText`, `SlideShow`), and the first use of the location records (`latitude`, `longitude`, the zoom byte) and of `NewsArticle::unk40`/`mShortHeadline`.
+- **Threads**: the worker thread and the game's thread now really run the news path in parallel. No failure was seen in the dozen starts of this work, which proves little (section 9). The fields the two threads share are `mStatus`, `mResult` and the file pointers of a request; the worker writes `mResult` before it sets `mStatus` to idle and the game reads them in the other order.
+- `--lang` only gets news for languages the news directory has (117404 otherwise).
