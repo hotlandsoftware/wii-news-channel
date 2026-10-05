@@ -135,7 +135,7 @@ void Fader::SetClear() {
     SetAlpha(0);
 }
 
-void Fader::SetColors(const ut::Color* colors, u8 alpha) {
+void Fader::SetColors(const ut::Color* colors) {
     for (s32 i = 0; i < 4; i++) {
         mColors[i].r = colors[i].r;
         mColors[i].g = colors[i].g;

@@ -1377,7 +1377,7 @@ BOOL NewsScene::StateMain() {
                 mTimer = 40;
                 mLogoTargetAlpha = 255;
                 gFader2->mColor.Set(0, 0, 0, 255);
-                gFader2->SetColors((const ut::Color*)sFadeParam, 255);
+                gFader2->SetColors((const ut::Color*)sFadeParam);
                 gFader2->FadeOut(20);
                 fn_8000C89C(sPointerEffect, 0.6f * GetScreenWidth(), 228.0f);
                 return TRUE;
@@ -2654,10 +2654,11 @@ void Article_PageUp(s32 size, const f32& offset) {
     s32 line = Article_GetLineAt(offset);
     line -= sLinesPerPage[size];
     if (line >= sScrollLine) {
-        line = sScrollLine - sLinesPerPage[size];
+        sScrollLine -= sLinesPerPage[size];
+    } else {
+        sScrollLine = line;
     }
-    sScrollLine = line;
-    if (line < 0) {
+    if (sScrollLine < 0) {
         sScrollLine = 0;
     }
 }
