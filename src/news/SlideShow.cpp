@@ -1685,12 +1685,14 @@ void SlideShow::DrawPictures() {
             f32 ofs = mSlideDist * slide;
             f32 width = mPrevPicScale * prev->width;
             f32 height = mPrevPicScale * prev->height;
-            f32 x = (mPrevPicCenter[0] + ofs) - 0.5f * width;
-            f32 y = mPrevPicCenter[1] - 0.5f * height;
+            f32 hw = 0.5f * width;
+            f32 hh = 0.5f * height;
+            f32 x = (mPrevPicCenter[0] + ofs) - hw;
+            f32 y = mPrevPicCenter[1] - hh;
+            f32 border = 0.05f * height;
             pos2.x = x;
             pos2.y = y;
             pos2.z = sPrevPicZ;
-            f32 border = 0.05f * height;
             rect.left = 10.0f + x;
             rect.top = 10.0f + y;
             rect.right = border + (rect.left + width);
