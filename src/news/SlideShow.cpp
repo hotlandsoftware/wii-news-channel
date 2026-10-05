@@ -852,13 +852,13 @@ void SlideShow::Draw() {
 }
 
 void SlideShow::CalcArrows() {
-    f32 upY;
+    f32 upBase;
+    f32 right;
     f32 left;
     f32 downBase;
     f32 downY;
     f32 cx;
-    f32 upBase;
-    f32 right;
+    f32 upY;
     cx = mView.left + 0.5f * mViewWidth;
     right = 20.0f + cx;
     left = cx - 20.0f;
