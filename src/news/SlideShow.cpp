@@ -1708,6 +1708,12 @@ void SlideShow::DrawPictures() {
     f32 slide = SinIdx(mSlideAngle);
     f32 width;
     f32 height;
+    f32 hh;
+    f32 hw;
+    f32 ofs;
+    f32 border;
+    f32 y;
+    f32 x;
     Vec pos2;
     ut::Rect rect(0.0f, 0.0f, 0.0f, 0.0f);
 
@@ -1715,14 +1721,14 @@ void SlideShow::DrawPictures() {
     if (prev != NULL) {
         s32 alpha = mPrevPicAlpha * fade;
         if (alpha != 0) {
-            f32 ofs = mSlideDist * slide;
+            x = mSlideDist * slide;
             width = mPrevPicScale * prev->width;
             height = mPrevPicScale * prev->height;
-            f32 hw = 0.5f * width;
-            f32 hh = 0.5f * height;
-            f32 x = (mPrevPicCenter[0] + ofs) - hw;
-            f32 y = mPrevPicCenter[1] - hh;
-            f32 border = 0.05f * height;
+            hw = 0.5f * width;
+            hh = 0.5f * height;
+            x = (mPrevPicCenter[0] + x) - hw;
+            y = mPrevPicCenter[1] - hh;
+            border = 0.05f * height;
             pos2.x = x;
             pos2.y = y;
             pos2.z = sPrevPicZ;
@@ -1747,16 +1753,17 @@ void SlideShow::DrawPictures() {
     if (GetPictureTexture(mArticle) != NULL) {
         s32 alpha = mPicAlpha * fade;
         if (alpha != 0) {
-            f32 ofs = mSlideDist * (1.0f - slide);
+            ofs = mSlideDist * (1.0f - slide);
             width = mPicScale * GetPictureTexture(mArticle)->width;
             height = mPicScale * GetPictureTexture(mArticle)->height;
-            f32 hw = 0.5f * width;
-            f32 x = (mPicCenter[0] - ofs) - hw;
-            f32 y = mPicCenter[1] - 0.5f * height;
+            hw = 0.5f * width;
+            hh = 0.5f * height;
+            x = (mPicCenter[0] - ofs) - hw;
+            y = mPicCenter[1] - hh;
             pos2.x = x;
             pos2.y = y;
             pos2.z = sPicZ;
-            f32 border = 0.05f * height;
+            border = 0.05f * height;
             rect.left = 10.0f + x;
             rect.top = 10.0f + y;
             rect.right = border + (rect.left + width);
