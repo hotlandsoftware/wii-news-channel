@@ -91,14 +91,14 @@ So each file ends with a `__sinit` that constructs it, and the `.ctors` table (`
 
 - `d_s_news.cpp` (99.24%): 9 functions left, see "d_s_news.cpp (NewsScene) findings" and "Wave 7" below.
 - `ArticleText.cpp` (99.46%): `Set` (97.7%), `Draw` (98.8%) and `Select` (99.6%) are left; see "Wave 8 (ArticleText, sound_manager)".
-- `SlideShow.cpp` (95.89%): constructor, `Draw`, `StateZoom`, `CheckInput` (scheduling and register allocation), `LoadArticle` (99.4%, zero constant r6 vs. r5 and the `SetViewToTarget` float numbering).
+- `SlideShow.cpp` (99.99%, 36 of 37 functions): only `CalcArrows` (99.3%, volatile FPR numbering) is left; `.data`, `.sdata` and `.sdata2` are identical. See "SlideShow findings (wave 8)".
 - `Model.cpp`, `PaneLayout.cpp` and `PointerScroll.cpp` are Matching since wave 7 (see "Wave 7" below).
 
 - `GlobePin.cpp` and `Globe.cpp` are Matching since wave 8 (see "Wave 8 (Globe, GlobePin)").
 - `SaveData.cpp` (98.90%): only `CheckNewsFiles` (97.8%), register allocation (see below). The first loop's `file`/`p` pair is r12/r23 in the original and r23/r12 in ours, whatever the declaration placement or local types.
 - `d_s_news.cpp` (98.97%): see "d_s_news.cpp (NewsScene) findings".
 - `ArticleText.cpp` (99.46%, 17/20 functions; all data sections match): `Set` (97.7%), `Draw` (98.8%), `Select` (99.6%). What was fixed in wave 8, what is left and what was tried is in "Wave 8 (ArticleText, sound_manager)".
-- `SlideShow.cpp` (95.89%): constructor, `Draw`, `StateZoom`, `CheckInput` (scheduling and register allocation), `LoadArticle` (99.4%, zero constant r6 vs. r5 and the `SetViewToTarget` float numbering). `StartZoomOut` (98.4%): the original keeps one zero in `r30` for both `mSubStateFrame = 0` (inside `ChangeSubState`) and `tex = NULL`; ours loads two. Moving the `tex` declaration, `0` vs `NULL` and writing `ChangeSubState` out by hand do not merge them. The data sections are far off as well (`.data` 0%, `.sdata` 65%, `.sdata2` 86%), so this file needs its statics sorted out before it can link.
+- `SlideShow.cpp` (99.99%, 36 of 37 functions): only `CalcArrows` (99.3%, volatile FPR numbering) is left; `.data`, `.sdata` and `.sdata2` are identical. See "SlideShow findings (wave 8)".
 - `Model.cpp` (94.23%): in `CalcMtx`, the original loads `rotate.y` after the prologue's register copies, right before the multiply. Ours hoists it to the top.
   `math::MTX34RotXYZDeg(&gWorkMtx, 0.0f, rotate.y, 0.0f)` gets the registers right (constant in f0, `rotate.y` in f2) but not the schedule. Also tried: helper inlines taking the angle, the vector or the matrix; pointer and array access to `rotate.y`; locals for the constants; all compiler versions from 2.7 to 3.0a5.2; `-ipa file`, `-inline auto`.
 
@@ -641,4 +641,59 @@ Found by running the PC port (`pc-port` branch) and fixed here. All were in func
 
 Still reported by the tool: seven `SlideShow` functions that load the same float values in a different order, the pointer count in `SlideShow`'s `.data` (41 original, 39 source), and `sound_manager`'s `.data` pointers (4 original, 8 source). No other unit differs (617 compared).
 
+Wave 8: the `SlideShow` differences are resolved (see "SlideShow findings (wave 8)": the float orders were statement orders, the two pointers are unreferenced constants of dead code). The tool cannot see constants that are read byte by byte: the footer's second TEV colour in `SlideShow::Draw` was white in the source and is `{0, 192, 0, 0}` in the original.
+
 `gErrorSystemArc` (`0x801B3620`) is `0x1759C` bytes, not `0x680`: `lbl_801B3CA0` and `lbl_801B5080` were inside the archive and are removed from `symbols.txt`.
+
+## SlideShow findings (wave 8)
+
+`SlideShow.cpp` went from 95.89% (19 of 37 functions matching) to 99.99% (36 of 37). `.data`, `.sdata` and `.sdata2` are byte-identical now, and `wii_const_diff.py` reports nothing for the unit. One function keeps the file NonMatching; see "Still open" at the end of this section.
+
+**Real differences that were fixed** (objdiff could not see the first four):
+
+| Where | Source had | Original has |
+| --- | --- | --- |
+| `Draw()`, footer | second TEV colour `{255, 255, 255, 255}` | `{0, 192, 0, 0}` (a `const GXColor` in `.sdata2`, read byte by byte) |
+| `Draw()`, footer | first TEV colour from a constant template | red, green and blue from three tweakable bytes in `.sdata` (`sFooterRed/Green/Blue`, all 255) |
+| `CheckPointer()` | pointer moved less than 30 pixels: nothing | falls through to the `y <= 63 \|\| y > 393` test (one `if`/`else if`, as in `MainScreen::Hook1E758`) |
+| `CheckPointer()` | `SetBlend(alpha)` through an `extern "C"` declaration | the real `Layout::SetBlend(alpha, mFooterFade, 15)` |
+| `.data` | 39 pointers | 41: an untaken `SubStateWait` alternative in `StartZoomOut` and an unreachable `ChangeSubState(&SubStateIdle)` after the `break` of `StateMove`'s exit case |
+| `StateZoom()` | inner `switch` with `default:` | `case 4: default:` (compare tree rooted at 3) |
+| `StateMove()` | `if (mStateFrame == 3)` | `switch (mStateFrame) { case 3: ...; case 2: break; }` (`beq`/`bge`/`b`) |
+
+**Data layout.**
+- **Tweakable statics sit where they are defined.** `.sdata` interleaves the file's small strings with single floats and bytes: `45.0f` before the constructor's strings, two zeros between the constructor and `CheckInput`, and so on. They are file-scope statics (`#pragma explicit_zero_data on` for the zeros) defined right above the function that uses them. Two of them are emitted after their first use (the footer colour bytes, used in `Draw` but placed after `DrawPictures`' statics; the picture scale `1.0f`, placed last), so those are declared `extern` at the top and defined further down.
+- **Stripped functions claim pool slots.** `1.3684211f` sits in `.sdata2` between the footer colour and `Draw`'s constants although only `DrawCaption` uses it, and `180`/`360` come before `273.6`/`73` although `LayoutArticle` uses them later. Both come from functions the linker strips (`SlideShow_GetAspect`, `WrapGlobeAngles`); a dead local with the ternary leaves an `lbz`/`cmpwi` pair behind and does not work. A file-scope `static const GXColor` is pooled at its definition, a function-local one when its function is compiled.
+- **Pool order inside an expression.** `scale = 0.4f + 0.5f * ((0.15f - (t - 0.6f)) / 0.15f)` pools `0.5` before `0.15`; with the quotient in a local (`f32 u = ...; scale = 0.4f + 0.5f * u;`) `0.15` comes first.
+- **Unreferenced pointer-to-member constants.** Code after a `break` (or in a branch on a local that is always false) is not emitted, but its `&SlideShow::State` constants are. `if (FALSE) { ... }` and an unused by-value parameter give the same.
+
+**Statement order and scheduling.**
+- **A quick store overtakes a slow one.** MWCC emits a store when its value is ready. `mView.left = 0.3f * GetScreenWidth(); mView.top = 0.0f;` comes out as the `top` store first, then `left`. Read backwards: when the stores are out of member order, the source usually is in member order (`left`, `top`, `right`, `bottom`; `[0]` before `[1]`) and the slow statement came first. This fixed the constructor, `LayoutArticle` (83.5% to 96.7% in one step), `StateZoom` step 0 and `StateShow` (`mTimer = mSpeed * rate; mTimerFade = 0;`).
+- **One zero register per basic block.** Constants are value-numbered inside a basic block, across calls. `mSubStateFrame = 0; ...call...; mTimerFade = 0;` share a saved register; a ternary in between (`GetFrameRate()`) starts a new block and ends the sharing. In `StartZoomOut` the original stores `mSubStateFrame = 0` from the register that holds `tex = NULL`, so `tex` is cleared between leaving the old sub-state and entering the new one; this only comes out with `ChangeSubState` written out by hand.
+- **`Rect::GetWidth()`/`GetHeight()` reload.** `f32 w = mPicArea.GetWidth();` followed by `mPicArea.left + 0.5f * w` loads `left` twice, as the original does; `mPicArea.right - mPicArea.left` written out is CSE'd. `ApplyView` (used by the constructor and three state functions) uses the getters too.
+- **Chained assignment for a register pair.** `s32 start = mCategory = list->mCategory;` gives the original `r5`/`r6` in `LoadArticle`.
+- **A loop instead of four `if`s.** `for (i = 0; i < 4; i++) { if (gHold[i] & 0x400) { mDragging[i] = true; dragging = true; } }` is unrolled with one base register and one hoisted `1`; four written-out tests reload the address each time.
+- **Statement order picks hoisted constant registers.** In the speed-dot loop `scale = 0.3f + scale * fade;` after the three colour statements swaps `f29`/`f30` into place.
+
+**Inline helpers.**
+- **Stack slots are sorted by size, then by creation.** Larger objects get higher addresses (`TextWriter`, the 24-byte `VEC3 line[2]`, then every 12-byte object, then the 4-byte colours); inside one size class the function's own locals come first, then locals of inlined functions by depth and order. In `Draw` the last `IsState` temporary sits below the dot position, so that test is one level deeper (`IsMessageState()`), and the position is a local of an inline (`DrawTexAt`). The three `ChangeSubState(&SubStateWait)` temporaries of `StateZoom` sit below the later `ChangeState` ones: they go through `StartWait()`. The footer colours are the lowest slots of `Draw`: the footer is an inline (`DrawFooter`).
+- **A helper that takes the value.** `SetHideClock(bool hide) { gHideClock = gUpdateMsgType == 1 ? true : hide; }` loads `mMessageFlag` before the compare (the argument is evaluated first). `DisableButton(PaneButton*)` avoids the reload of `mZoomOutButton` between the store and `Press()`, `EnableButton(FindButton("up"))` avoids the early `li` of `button->mDisabled = false`.
+- **Declaring a second pointer through an inline.** `UpdateGlobePos(from, to, angle)` (the camera update in `Calc`, which reads `gGlobe` again) gives `g`/`camera` the original `r27`/`r30`; written in place they swap. `f32 dx = to.x - from.x; lon = from.x + dx * t;` puts the difference on the left of `fmuls`.
+- **Signed and unsigned index.** `IsLastArticle` reads the article count through an accessor with a `u32` index and walks the categories with an `s32` counter declared inside the `if`. With one index type MWCC shares `category * 16` with the following `IsFirstArticle`.
+- **`math::FAbs`** (not `__fabsf`) for the longitude wrap: the difference keeps its own register.
+
+**Locals.**
+- **Function-scope locals shared by two blocks.** `DrawPictures` draws the previous and the current picture with the same code. With `f32 width; f32 height;` declared once at function scope each block's live range is coloured on its own, and the second block reuses `f31`/`f30` of the by then dead `slide`/`fade`. Block-scoped `f32 width = ...` in each block gets `f28`/`f29` again. The function matched with every float local declared up front (`width`, `height`, `ofs`, `hh`, `y`, `x`, `border`), half the width as an expression and half the height as a local; the two blocks differ in the order of `x`/`y` and in whether `border` is computed before or after the position stores.
+- **Declaration order moves volatile registers as well.** Locals declared uninitialised at the top and assigned below take their volatile registers by declaration order; with initialised declarations only the statement order counts. That is the last open point of `CalcArrows`.
+- **A difference in a named local, clamped in a second statement.** `operator-(Color, Color)` matched as `s32 al = a.a - b.a; al = ClampZero(al); s32 bl = ClampZero(a.b - b.b); ...`: only the alpha difference is a named variable, which moves it from `r10` to `r11`.
+- **Searching outside the tree.** `DrawPictures` was found by a hill climb over declaration order, statement order and "local or expression" choices. Each candidate is written to a scratch directory, compiled with the unit's own command line and scored by comparing the function's instruction words with the original object (relocated fields masked), so nothing in the work tree changes and two candidates can be compiled at a time (about four per second). The word-by-word score is only a guide when instructions move: a candidate with fewer differing words can score lower in objdiff.
+- **A counter declared up front.** `StateZoom` step 2 declares `s32 i;` before its loops; the grab loop then gets `r26` instead of the last free register.
+- **One `dir` for two branches.** `StateShow` has `s32 dir;` shared by the previous/next branches (one stack slot) and a separate local for the timer branch.
+- **Colours.** `GXSetTevColor(reg, ut::Color(r, g, b, a))` gives the temporary below its copy (bytes stored twice); `(GXColor){sFooterRed, sFooterGreen, sFooterBlue, mFooterAlpha}` loads the three bytes before the member and copies the temporary as a word. The speed dots modify `color` in place and pass it on.
+- **`x / 8.0f`** again: `(1.5707964f * mBounceTimer) / 8.0f` keeps the product on the left.
+
+**Signatures.** `DrawCaption` takes an `s32` alpha (the callers pass it without `clrlwi`; the symbol is now `DrawCaption__9SlideShowFPCwlffff`). `DrawPointerEffect` and `DrawTabRect` are still called through `extern "C"` declarations of their mangled names with a wider argument (`u32` height, `s32` alpha), for the same reason; the old `fn_80036328` name would not have linked.
+
+**Still open (the file stays NonMatching).**
+- `CalcArrows` (99.3%): the instructions and their order match; five volatile FPRs differ. The original keeps `mView.top` in `f1` and turns it into the upper y (`fadds f1, f3, f1`), gives the right x `f4` (the register of the dead `top + height` sum) and loads `mViewWidth`, `mView.left` and `20.0f` into `f2`; ours has `f2`/`f7`, `f1` and `f1`/`f4`/`f4`. Tried: every one of the 5040 declaration orders of the seven locals with the x values first (best 99.3%) and with the y values first, initialised declarations in 230 statement orders (best 98.9%), two-step forms (`cx = mView.left; cx += ...`, `upY = mView.top; upY = 2.0f + upY`, `left = cx; left -= 20.0f`), the four derived values as expressions in the stores, an inline helper per arrow, a `VEC2`, half-width and bottom locals, and hill climbs over all of these together.
+
