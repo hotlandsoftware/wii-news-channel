@@ -255,6 +255,14 @@ void Globe::CalcCameraMtx(math::MTX34* mtx) {
     *mtx = gWorkMtx;
 }
 
+// The south pole direction goes through a second local (one inline level
+// down: it sits below the operator- temporaries on the stack).
+static inline void SetDifference(math::VEC3& out, const math::VEC3& a, const math::VEC3& b) {
+    math::VEC3 d;
+    d = a - b;
+    out = d;
+}
+
 void Globe::CalcPoles() {
     if (gEarthModel != NULL) {
         gEarthModel->Calc();
@@ -274,9 +282,7 @@ void Globe::CalcPoles() {
     mNorthAhead = math::VEC3Dot(&dir, &toPole) < 0.0f;
 
     pole = mSouthPole;
-    math::VEC3 south;
-    south = mSouthPole - camera->mPos;
-    toPole = south;
+    SetDifference(toPole, mSouthPole, camera->mPos);
     PSVECNormalize(pole, pole);
     PSVECNormalize(toPole, toPole);
     mSouthFacing = math::VEC3Dot(&pole, &dir) < 0.0f;
