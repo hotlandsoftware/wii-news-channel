@@ -2916,7 +2916,7 @@ void Draw2D_Icon(u32 index, math::VEC3* pos, f32 scaleX, f32 scaleY, u32 flags) 
         p.y += 5.0f * scaleY;
     }
     Draw2D_TexPos(gCommonTpl, index, &p, scaleX, scaleY, 0);
-    pos->x += 4.0f * scaleX;
+    pos->x += 30.0f * scaleX;
 }
 
 BOOL Article_GetPictureRect(ut::Rect* rect, f32 x, f32 y, f32 scale) {
@@ -3007,7 +3007,7 @@ void Article_DrawZoomedPicture(const ut::Rect& from, const ut::Rect& to, f32 t) 
             writer.SetFont(*gSysFont);
             writer.SetupGX();
             writer.SetTextColor(ut::Color(192, 192, 192, 255.0f * t));
-            writer.SetCursor(x - 4.0f * (1.0f - t), to.bottom);
+            writer.SetCursor(x - 30.0f * (1.0f - t), to.bottom);
             writer.SetDrawFlag(0x22);
             writer.SetScale(0.5f);
             f32 width = writer.CalcStringWidth(caption);

@@ -36,7 +36,7 @@ struct ScriptEvent {
     f32 x, y;
 };
 
-const int kMaxScriptEvents = 64;
+const int kMaxScriptEvents = 1024;
 ScriptEvent sScript[kMaxScriptEvents];
 int sScriptCount;
 
