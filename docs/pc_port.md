@@ -27,6 +27,7 @@ Contents:
 18. [Audio (AX, DSP, AI)](#18-audio-ax-dsp-ai)
 19. [Sound files](#19-sound-files)
 20. [Sound: what plays](#20-sound-what-plays)
+21. [The globe (nw4r::g3d)](#21-the-globe-nw4rg3d)
 
 ## 1. Decisions
 
@@ -80,6 +81,8 @@ src/pc/                     PC-only sources
   snd_tool.cpp              `--list-sounds`: every sound followed down to its samples (section 19)
   snd_render.cpp            `--render-sounds`, `--dump-waves`, `--snd-stress`: sounds played without the
                             game, reference waves, the thread stress test (section 20)
+  g3d_tool.cpp              `--view-model`: the globe drawn by the game's own code, without the news
+                            (section 21)
   endian/fmt_<format>.cpp   byte order: one converter per asset format, and the registry (section 12)
   libc/wchar16.cpp          16-bit wcslen(), swprintf() and so on
   deadstripped/<library>.cpp  definitions the DOL's linker removed but gcc needs
@@ -159,6 +162,7 @@ build/pc/newschannel --boot --contents path/to/contents --nand-dir path/to/nand 
 `newschannel --list-textures 9` and `newschannel --dump-texture 9:TPLCommon.tpl.LZ:0 build/scratch/t.png` list and decode the textures in the contents (section 17).
 `newschannel --list-sounds` lists the sounds of the channel's sound archive with the wave each one plays (section 19).
 `newschannel --render-sounds build/scratch/render` writes every sound of that archive as a WAV file, played through `nw4r::snd` and AX without the game (section 20).
+`newschannel --view-model 8:earth.brres.LZ` shows the globe, drawn by the game's own globe code, without the news (section 21).
 
 `extract_wad.py --contents` writes `orig/HAGE/contents/NN.app` (NN = content index: 00, 02 to 11). The game's archive number `n` is content `n + 2`.
 The program looks for them in `--contents` (or `--contents-dir`, or `contents =` in the settings file), `$NEWSCHANNEL_CONTENTS`, `./orig/HAGE/contents` and next to the build tree; save data goes to `--nand-dir`, `$NEWSCHANNEL_NAND` or `~/.local/share/newschannel/nand` (section 13).
@@ -256,6 +260,7 @@ Run it whenever the set of files in the build or the backend changes. If two bra
 | `tools/extract_wad.py --contents` | Section 3. |
 | `newschannel --list-textures CONTENT[:PATH[:INDEX]]` | Lists the textures of a content, or of a file or directory in it: size, format, palette, wrap, filter, mipmap levels (section 17). |
 | `newschannel --dump-texture CONTENT:PATH[:INDEX] OUT.png` | Decodes one texture to a PNG. Never commit the output (R12). |
+| `newschannel --view-model CONTENT:PATH [--view-rot LAT,LON] [--view-zoom 0..9] [--view-tilt 0..10] [--view-spin DEG]` | Runs the game's start-up, loads a model file as the game loads the globe and draws it with the game's `Globe`, `Model`, `Camera` and `GlobeDots` (section 21). With `--no-window --frames N --screenshot K --screenshot-dir DIR` it writes a picture; without `--frames` it runs until the window is closed. Exit status 1 if the GX command stream lost step. Never commit the pictures (R12). |
 | `newschannel --list-sounds [CONTENT:PATH]` | Lists the sounds of a sound archive (default `9:rev_news.brsar`; the HOME Menu's is `6:HomeButton3/Huf8_HomeButtonSe.brsar`): type, file, notes, and format, sample rate, length, loop and data offset of the wave each one plays, and the sound's volume, player and priority (section 19). Exit status 1 if a sound does not resolve. |
 | `newschannel --render-sounds DIR [CONTENT:PATH] [--sound ID] [--seconds S]` | Plays every sound of a sound archive (or one) through the real playback path, on a manual clock, into `DIR/NNN_LABEL.wav` (section 20). With `NEWSCHANNEL_AX_LOG=DIR/ax.log` the run can be checked by `snd_verify.py render`. Never commit the output (R12). |
 | `newschannel --dump-waves DIR [CONTENT:PATH]` | Decodes every wave of the archive's banks with the mixer's decoder into `DIR/wave_FF_NNN.wav`, and writes `DIR/waves.txt`: the reference that never went through `nw4r::snd` (section 20). |
@@ -282,12 +287,11 @@ Adding a file to the build: fix it until `status.py -f <name>` passes, add it to
 | `sdk_ax` | 10 | 10 | AX, compiled as it is (section 18); 9 of the files are in the build (not the DSP's program, `DSPCode.c`) |
 | **Total** | **250** | **250** | |
 
-Stubs (`gen_stubs.py`): **12 functions, 0 data** (after milestone 1: 404 and 9). What is left:
+Stubs (`gen_stubs.py`): **9 functions, 0 data** (after milestone 1: 404 and 9). What is left:
 
 | Stub | Why | When |
 | --- | --- | --- |
 | `nw4r::ut::NandFileStream` (9 functions) | `ut_NandFileStream.cpp` is not in the build | when something opens a NAND stream through NW4R (`snd::NandSoundArchive`; the game uses memory archives) |
-| `nw4r::g3d::ResAnmClr::GetAnmResult`, `ResAnmTexSrt::GetAnmResult`, `ResAnmVis::GetAnmResult` | not decompiled | milestone 6 (globe), if the model has such animations |
 
 None of them is called during the boot of section 15: the boot log has no `unimplemented:` line.
 No CodeWarrior name is stubbed: the 44 names the game calls have thunks in `src/pc/thunks`.
@@ -302,14 +306,14 @@ Stubs are not the whole picture: NWC24/SO/VF, KPAD/WPAD buttons and HBM are hand
 - [x] **3. It draws.** GX to OpenGL layer (state, TEV, textures, the FIFO), VI frame pacing; layouts and fonts on screen (sections 16 and 17; what was looked at and what is still missing: section 16, "Integration: what the screens look like").
 - [ ] **4. Input.** KPAD/WPAD from mouse, keyboard and game controllers; the pointer and buttons work.
 - [ ] **5. News.** NWC24 download tasks, VF and NET replaced by libcurl and host files; a news file loads, articles and slide show work, JPEG pictures decode.
-- [ ] **6. Globe, effects, sound.** `nw4r::g3d` globe, `nw4r::ef` pointer effects, AX/AI output through SDL audio, `nw4r::snd` playing the sound archive. Done so far: sound. The audio backend (section 18), the sound files (section 19), and the game's sounds playing, checked numerically (section 20). The globe and the pointer effects are not started.
+- [ ] **6. Globe, effects, sound.** `nw4r::g3d` globe, `nw4r::ef` pointer effects, AX/AI output through SDL audio, `nw4r::snd` playing the sound archive. Done so far: sound and the globe. The audio backend (section 18), the sound files (section 19), and the game's sounds playing, checked numerically (section 20). The globe model loads and is drawn by `nw4r::g3d` (section 21); in the game it appears once a news file loads (milestone 5). The pointer effects are not started.
 - [ ] **7. Polish.** HOME Menu, save data, settings and language selection, window scaling and aspect ratio, a decision on the Operations Guide (its viewer is PowerPC code), packaging, 64-bit.
 
 ## 9. Known hazards for later milestones
 
-- **Byte order.** Every file the game reads is big-endian and is overlaid with structs (`pc_port_readiness.md`, section 5.2). Section 12 has the strategy (swap on load) and the list of formats that are converted (archives, palettes, fonts, layouts, layout animations, the sound archive and the files in it) and that are not yet (effects, models, the news file, save data). Wide string literals and the message tables are compiled in host order, while text inside `news.bin` is big-endian.
+- **Byte order.** Every file the game reads is big-endian and is overlaid with structs (`pc_port_readiness.md`, section 5.2). Section 12 has the strategy (swap on load) and the list of formats that are converted (archives, palettes, fonts, layouts, layout animations, the sound archive and the files in it, models) and that are not yet (effects, model animations, the news file, save data). Wide string literals and the message tables are compiled in host order, while text inside `news.bin` is big-endian.
 - **Bitfields.** CodeWarrior fills bitfields from the most significant bit, gcc on x86 from the least significant. No bitfield in the game or NW4R headers is overlaid on file data (section 12, "Bitfields"); hardware-register bitfields are only in SDK sources, which are not compiled.
-- **Type punning that byte order breaks.** Code that reads memory as a different type than it was written is wrong on a little-endian host even with converted files: a colour's four bytes read as a `u32` (five sites, section 12, "Colours"), two `u8` fields read as one `u16` (`ef::Resource::RelocateCommand()`). Each needs a `TARGET_PC` guard when its subsystem is brought up.
+- **Type punning that byte order breaks.** Code that reads memory as a different type than it was written is wrong on a little-endian host even with converted files: a colour's four bytes read as a `u32` (six sites, all guarded now: section 12, "Colours"), a table of bytes read as `u16` (`GlobeDots.cpp`, guarded: section 21), two `u8` fields read as one `u16` (`ef::Resource::RelocateCommand()`, still open). Each needs a `TARGET_PC` guard when its subsystem is brought up.
 - **The global `operator new` is the game's.** `src/news` replaces it with the game's heaps, for the backend too. Backend code must not use `new` or standard containers before the heaps exist (or at all, if the memory should not come from a game heap); use `malloc()`.
 - **`char` signedness.** x86 gcc treats `char` as signed. The Wii flags do not pass `-char`; check CodeWarrior's default before relying on comparisons of `char` values above 0x7F.
 - **Code not compiled here.** The HOME Menu (`src/revolution/HBM`, C++ on NW4R) and the TMCC JPEG decoder are portable code inside the SDK tree; whether to compile them natively or replace them is undecided. The Operations Guide viewer (`vcmv` plus a PowerPC RSO module) cannot run natively.
@@ -441,7 +445,8 @@ What "every multi-byte field" means is decided per field by how the code reads i
 | CX-compressed data (`.LZ`, `Huf8_*`, the sheets of a `.brfna`) | **no** | the CX formats are little-endian by definition and read bytewise; see `src/pc/sdk/cx.cpp` |
 | PCM16 samples of a sound archive | **yes**, together with the file that describes them | the mixer reads host-order `s16` (section 19) |
 | DSP-ADPCM and PCM8 samples, sequence data | no | bytes; the MML parser builds its 16- and 24-bit values from bytes itself |
-| GX display lists inside models | no (later milestone) | a command stream; the FIFO interpreter reads it big-endian |
+| GX display lists inside models, the model's byte code | no | command streams; `nw4r::g3d` edits them bytewise and the FIFO interpreter reads them big-endian |
+| Vertex arrays inside models | **yes**, per component | `GXSetArray()` data is host order in this port (section 21) |
 
 ### Where files are converted
 
@@ -461,7 +466,7 @@ Members of an archive are converted on first use and not when the archive is ope
 
 Code that gets a file in some other way has to call `PCEndianFixFile()` itself when the file is complete. Known cases, none on the boot path of the formats done so far:
 
-- the streaming decompressors `CXReadUncompLZ()`/`CXReadUncompHuffman()` (the globe model `earth.brres.LZ` in `d_scene.cpp`, the news file in `WiiConnect24.cpp`). They do not convert: their output is assembled in pieces. (`ut::ArchiveFont` uses the streaming Huffman reader for font sheets, which are texels and must not be converted.)
+- the streaming decompressors `CXReadUncompLZ()`/`CXReadUncompHuffman()` (the globe model `earth.brres.LZ` in `d_scene.cpp`, the news file in `WiiConnect24.cpp`). They do not convert: their output is assembled in pieces. For the model, `Scene::Execute()` calls `PCEndianFixFile()` under `TARGET_PC` when the load thread has finished (section 21). (`ut::ArchiveFont` uses the streaming Huffman reader for font sheets, which are texels and must not be converted.)
 - files read from NAND or VF.
 
 ### Idempotence
@@ -488,6 +493,7 @@ Inside one file, a structure that several places refer to (a TPL header shared b
 | `fmt_tpl.cpp` | TPL |
 | `fmt_snd.cpp` | `RSAR`: the archive's own tables |
 | `fmt_snd_files.cpp` | `RSEQ`, `RBNK`, `RWSD`, `RSTM`, wave information, `PCEndianFixSoundFile()` (section 19) |
+| `fmt_g3d.cpp` | `bres`: `MDL0`, `TEX0`, `PLT0` (section 21) |
 | `src/pc/sdk/arc.cpp` | U8 (`PCEndianSwapU8Archive()`) |
 
 A converter is `BOOL Convert(void* data, u32 size)`. It uses the real structs of the library that reads the format (`nw4r::lyt::res::Pane`, `nw4r::ut::FontInformation`, `TPLHeader`), so a field is swapped by name and its size comes from its type:
@@ -518,7 +524,7 @@ All C bitfields in the game and NW4R headers were checked (`grep` for `: <width>
 | `lyt::TextBox::mBits` (`allocFont`) | `lyt_textBox.h` | no: run-time state |
 
 The packed values that do come from files are plain integers that the code takes apart with shifts and masks, which works the same on any host once the integer is swapped: `lyt::MaterialResourceNum` (`detail::GetBits()`), `lyt::TevStage`, `TevSwapMode`, `AlphaCompare`, the top byte of a U8 node, `FONT_SHEET_FORMAT_COMPRESSED_FLAG`.
-`nw4r::g3d`, `nw4r::ef` and `nw4r::snd` declare no C bitfields in their headers either.
+`nw4r::g3d`, `nw4r::ef` and `nw4r::snd` declare no C bitfields in their headers either (checked again for every `include/nw4r/g3d/res` structure when the model converter was written: flags are plain `u32` words tested with masks).
 
 If a later format does overlay a bitfield, convert it explicitly in its converter: swap the storage unit, then call `PCEndianRepackBitfield(value, unitBits, widths, count)`, which moves each field from where CodeWarrior put it to where gcc expects it (the self-test checks it against `BitGXNums`).
 
@@ -531,10 +537,10 @@ With that, integer constants, colours from converted files (`mVtxColors[i] = pRe
 
 What this cannot fix is code that reinterprets a colour's memory itself.
 Guarded (they send the four bytes with `GXColor4u8()` on PC): `Draw2D_FillBox()` in `src/news/System.cpp` and `Draw2D_FillQuad()`, `Draw2D_FillQuadGradient()` in `src/news/DrawUtil.cpp`, which wrote `GXColor1u32(*(u32*)&color)`.
-Still to guard, with the globe (milestone 6):
+Guarded with the globe (section 21):
 
-- `include/nw4r/g3d/platform/g3d_gpu.h:104`, `:108`: `LoadXFCmd(..., *reinterpret_cast<u32*>(&color))`
-- `src/nw4r/g3d/g3d_anmscn.cpp:30`: `*reinterpret_cast<u32*>(&pAmbObj->r) = GetAmbLightColor(i)`
+- `include/nw4r/g3d/platform/g3d_gpu.h`, `GDSetChanAmbColor()` and `GDSetChanMatColor()`: `LoadXFCmd(..., *reinterpret_cast<u32*>(&color))`. On PC the register value is composed from the four members (`fifo::PCColorToReg()`).
+- `src/nw4r/g3d/g3d_anmscn.cpp`, `AnmScn::GetLightSetting()`: `*reinterpret_cast<u32*>(&pAmbObj->r) = GetAmbLightColor(i)`. On PC the four bytes are stored one by one.
 
 ### Formats
 
@@ -554,8 +560,9 @@ Converted (each has a self-test on the real files, section 13):
 | Wave sounds | `RWSD` | `snd::detail::WsdFileReader`, `WaveFileReader` | header, sound, track and note tables, WAVE block (versions 1.0 to 1.2) |
 | Stream | `RSTM` | `snd::detail::StrmFileReader` | file header and HEAD block (stream, track and channel information, ADPCM parameters); not the ADPC and DATA blocks |
 | Wave data of a bank or of wave sounds | none (described by the file's WAVE block) | the AX mixer | PCM16 samples, swapped when their file is converted (`PCEndianFixSoundFile()`); ADPCM and PCM8 are bytes |
+| Resource file `.brres` | `bres` | `g3d::ResFile` and the `Res*` classes | header, `root` block, every dictionary and name length, `MDL0` (info, nodes, vertex array headers **and data**, materials, shaders' three words, shapes, texture link tables), `TEX0` and `PLT0` headers; **not** display lists, byte code, texels, palette entries, animations or user data (section 21) |
 
-Not converted yet. Until a format has a converter its file stays big-endian and **the code that parses it must not run**; two of these are loaded during start-up (section 15, "Bypasses", says how each is kept from running).
+Not converted yet. Until a format has a converter its file stays big-endian and **the code that parses it must not run**; one of these is loaded during start-up (section 15, "Bypasses", says how it is kept from running).
 The guard for such a loader is `PCEndianIsHostOrder(data, size)`, which is true only for a file that has been converted; it opens by itself when the converter is added:
 
 ```cpp
@@ -567,7 +574,7 @@ The guard for such a loader is `PCEndianIsHostOrder(data, size)`, which is true 
 | Format | Loaded | Reader | What to know |
 | --- | --- | --- | --- |
 | Effects `.breff`, `.breft` (`REFF`, `REFT`) | **start-up**: `PointerEffect::PointerEffect()` in `SystemInit()` | `ef::Resource::Add()`, `AddTexture()`, `RelocateCommand()` | The name tables are read bytewise (`(p[0] << 8) + p[1]`) and must NOT be swapped; `NameTable::numEntry`, the project header and `TextureData` are read as values. `RelocateCommand()` reads two `u8` fields as one `u16` (`*reinterpret_cast<u16*>(&header->curveFlag)`), which needs a `TARGET_PC` guard in `ef_resource.cpp`. The animation-curve key tables depend on the curve type (`ef_res_animcurve.h`). |
-| Model `.brres` (`bres`, with `MDL0`, `TEX0`...) | **start-up**, in the background: `LoadEarth()` in `d_scene.cpp` (streaming LZ, so call `PCEndianFixFile()` when the last piece is in) | `g3d::ResFile::Init()`/`Bind()` | offsets relative to each structure, string tables, display lists (GX command streams: leave big-endian), vertex arrays (big-endian for the FIFO interpreter, or convert per attribute format) |
+| Model animations inside a `.brres` (`CHR0`, `CLR0`, `SRT0`, `PAT0`, `VIS0`, `SHP0`, `SCN0`), user data | never: `earth.brres` has none and the game creates no `AnmObj` | `g3d::ResAnm*` | The converter swaps the group's dictionary and warns ("has no converter"); the entries stay big-endian. Key-frame tables, colour and bit arrays; the sampling code is in `src/pc/deadstripped/nw4r_g3d_resanm.cpp` and expects host order (section 21) |
 | News file `news.bin` | when a download finishes | `NewsData.h` structs, `NewsHeader::At()` | all `u32`/`u16`, 17 offset fields, 16-bit big-endian text; pictures are JPEG (bytes). No magic at offset 0 that is safe to key on: convert explicitly after the CRC check |
 | Save file `savedata.dat` | start-up, if it exists | `SaveData.cpp` | written from a struct. On PC it is simply little-endian and not interchangeable with a Wii save; convert on read and write if that is wanted |
 | Message tables, wide string literals | compiled in | - | host order already; nothing to do |
@@ -772,7 +779,7 @@ The AX line is the SDK registering its version, as on the console. The `audio:` 
 
 When the window is closed instead, the last line is `OSShutdownSystem: the program ends here on PC`.
 The game prints nothing of its own on a good start: its `OSReport()` calls are all on error paths.
-There is no `unimplemented:` line: none of the 12 remaining stubs is called.
+There is no `unimplemented:` line: none of the 9 remaining stubs is called.
 
 The one diagnostic, "content 11 is not an archive", is the game initialising a handle for content 11 (`gContentHandles[9]`), which is not a U8 archive in this WAD (section 13). Nothing opens a file through that handle during the boot.
 
@@ -790,13 +797,12 @@ The one diagnostic, "content 11 is not an archive", is the game initialising a h
 
 ### Bypasses
 
-Each of these skips something the Wii does. All are marked `TODO(milestone 6)` in the source.
-A third one, in `MemorySoundArchive::detail_GetFileAddress()`, is gone: the files inside a sound archive have converters (section 19), sounds start, and they are heard (section 20).
+One bypass is left. It skips something the Wii does and is marked `TODO(milestone 6)` in the source.
+Two are gone: the one in `MemorySoundArchive::detail_GetFileAddress()` (the files inside a sound archive have converters, section 19; sounds start and are heard, section 20) and the one in `Scene::Execute()` that left the globe model out (`.brres` has a converter and the model is created as on the Wii, section 21; what remains there under `TARGET_PC` is the `PCEndianFixFile()` call, which is not a bypass).
 
 | Where | What is skipped | Why | Remove when |
 | --- | --- | --- | --- |
 | `PointerEffect::PointerEffect()` (`src/news/PointerEffect.cpp`) | `ef::Resource::Add()`, `AddTexture()` and `RelocateCommand()` for `nw4r_defcursor_all01.breff/.breft`. `mLoaded` is still set, so the game starts its news scene and not the fatal error screen; `EffectSystem::CreateEffect()` finds no emitter and the pointer has no particle trail | no byte-order converter for `REFF`/`REFT` | converters are registered: the guard is `PCEndianIsHostOrder()` and opens by itself. `RelocateCommand()` also needs its `u8` pair read as a `u16` guarded (section 12) |
-| `Scene::Execute()` (`src/news/d_scene.cpp`) | `new Model(sEarthData)` when the decompressed `earth.brres` is still big-endian. Not reached during the boot (the model is loaded by `InitNews()`, after a news download) | no converter for `bres` | a converter is registered. Check then what waits for `gEarthModel` |
 
 Not bypasses, but placeholders with the same effect on what the user sees: NWC24/SO have no network, the HOME Menu closes at once (section 14).
 
@@ -862,7 +868,7 @@ build/pc/newschannel --boot --no-window --nand-dir build/nand --frames 900 \
 
 So the API, raw FIFO writes and display lists can be mixed freely, as on the console, and the renderer reads one state. The SDK defers part of the state to the next `GXBegin()`; here everything is loaded at once, which is equivalent because nothing is drawn in between. The exception is the texture coordinate scale (`__GXSetSUTexRegs`: BP `0x30`-`0x3F`), which depends on the TEV orders and the loaded textures together and is sent by `GXBegin()` and `GXCallDisplayList()`.
 
-**Pointers do not fit in registers.** The hardware has 24 or 26 address bits. Texture images, vertex arrays and palettes therefore keep a host pointer beside the register state (`PCGXTexUnit`, `PCGXArray`, `PCGXTlutSlot`), which the API fills in directly: `GXLoadTexObj()`, `GXSetArray()`, `GXLoadTlut()`, `GXCopyTex()` and `GXCopyDisp()` do not go through registers. An address that does arrive in a register (a display list that sets an array base, a texture image or a copy destination) is translated by `PCGXAddressToHost()`, which only works for MEM1/MEM2 mapped at the console's addresses (section 11) and gives NULL otherwise. The pointer of `GXFastCallDisplayList()` is written to the FIFO as 32 bits and used as it is (pointers are 32 bits in this build).
+**Pointers do not fit in registers.** The hardware has 24 or 26 address bits. Texture images, vertex arrays and palettes therefore keep a host pointer beside the register state (`PCGXTexUnit`, `PCGXArray`, `PCGXTlutSlot`), which the API fills in directly: `GXLoadTexObj()`, `GXSetArray()`, `GXLoadTlut()`, `GXCopyTex()` and `GXCopyDisp()` do not go through registers. An address that does arrive in a register (a texture image, a palette or a copy destination set by a display list) is translated by `PCGXAddressToHost()`, which only works for MEM1/MEM2 mapped at the console's addresses (section 11) and gives NULL otherwise; it accepts the whole of both blocks, not just the arenas, which the game empties into its heaps at start-up. An **array base** in a CP register is different: the register is 32 bits wide here and what `nw4r::g3d` patches into a shape's display list is `OSCachedToPhysical(pointer)`, so the backend applies the inverse (`OSPhysicalToCached()`) and gets the pointer back wherever the memory is (section 21). The pointer of `GXFastCallDisplayList()` is written to the FIFO as 32 bits and used as it is (pointers are 32 bits in this build).
 
 **The FIFO is big-endian bytes.** `sdk/gx_fifo.cpp` serialises each write as the hardware would see it; `gx_command.cpp` decodes a command when its last byte arrives (a draw command needs the vertex size, which comes from the current vertex descriptor). Display lists from files are read by the same code without conversion. Vertex data in the stream is therefore always big-endian; **arrays** given to `GXSetArray()` are read in host order (the game and NW4R fill them at run time) unless `PCGXSetArrayBigEndian(attr, true)` is called after `GXSetArray()` (vertex arrays inside a model file, milestone 6).
 
@@ -915,7 +921,7 @@ Texels from files are big-endian. Buffers whose 16-bit texels are in host order 
 
 - **Texture codec.** The codec is `texdecode.cpp` (section 17); the temporary fallback is gone. The `--selftest-gl` checks call `PCGXEncodeTexture()` for `GX_TF_RGBA8` and `GX_TF_RGB565` and decode host-order RGB565 back, so they also test the real codec.
 - **JPEG pictures** (milestone 5): call `PCGXSetTextureHostOrder(buffer, true)` for the buffer the TMCC decoder writes.
-- **The globe** (milestone 6): `nw4r::g3d` sends its state as raw register loads and display lists, which the decoder handles; what it needs is (a) the two colour-punning sites in `g3d_gpu.h` and `g3d_anmscn.cpp` (section 12), (b) a decision per vertex array on byte order (`PCGXSetArrayBigEndian()`, or convert the arrays on load), (c) host pointers for anything g3d puts into a register: check how `ResShp` patches array bases and texture addresses into its display lists; `PCGXAddressToHost()` only understands MEM1/MEM2 at the console's addresses, (d) fog and Z-compare location if the model uses them.
+- **The globe** (milestone 6): done, section 21. (a) The colour sites are guarded; (b) vertex arrays are converted to host order on load, `PCGXSetArrayBigEndian()` is not used; (c) array bases come through CP registers and are inverted exactly (above), textures through `GXLoadTexObj()`; (d) the model uses no fog and no alpha test, so neither fog nor the Z-compare location matters for it.
 - **The locked cache** is mapped by `OSInit()` now, before `VIInit()` loads the OpenGL driver: with a context the driver's libraries could otherwise occupy `0xE0000000`, which `nw4r::ut::LC::GetBase()` hands to g3d.
 - **Speed**: 600 frames of the connection screens take 0.7 s of CPU time; there is no batching and no need for it yet. Each `GXBegin()`/`GXEnd()` is one `glBufferData()` and one draw call.
 ### Integration: what the screens look like
@@ -949,7 +955,7 @@ Known gaps (none is a bypass in the backend; there are no `TODO(milestone N)` ha
 What is left for the next milestones:
 
 - **Milestone 4 (input):** mouse to pointer and buttons (the picture rectangle is `PCVIGetPictureRect()`), keyboard and controllers, more than one remote; the pointer picture (above). The HOME button opens HBM, which is still a placeholder.
-- **Milestone 6 (globe, effects, sound):** the g3d colour sites (`g3d_gpu.h:104/108`, `g3d_anmscn.cpp:30`), byte order of model vertex arrays and of `.brres`/`.breff`/`.breft`, register pointers from g3d display lists (`PCGXAddressToHost()`), fog, `GXSetZCompLoc(GX_TRUE)`, `GXDrawCube` and friends for `nw4r::ef`, textures inside `earth.brres.LZ` and `.breft`.
+- **Milestone 6 (effects):** byte order of `.breff`/`.breft` and the `u8`-pair read in `ef::Resource::RelocateCommand()`, fog and `GXSetZCompLoc(GX_TRUE)` for `ef` draw settings, `GXDrawCube` and friends for emitter shapes, the textures inside `.breft`. The globe is done (section 21).
 
 ## 17. Texture formats and the texture codec
 
@@ -1100,7 +1106,7 @@ What this means for the GX backend:
 - **Wrap modes:** clamp almost everywhere; `GX_REPEAT` on three textures of content 9 (one of them in S only) and on the HOME Menu's backgrounds; no `GX_MIRROR`.
 - **Filters:** `GX_LINEAR` for both everywhere, except the eight textures with mipmaps, which ask for `GX_LIN_MIP_LIN` and store 7 levels.
 - **A texture's pixels can change under the same pointer:** `gFadeTex` is written by every `GXCopyTex()`, and the buffers of news pictures are allocated and freed as articles change. A cache of decoded textures keyed by the image pointer needs an invalidation rule for these (`GXInvalidateTexAll()` is one signal; the copy itself is another).
-- **Not in this survey:** the textures inside `earth.brres.LZ` (content 8, `TEX0`) and in the effect files (`.breft`). Their containers have no byte-order converter yet (section 12), so the walk does not open them; both belong to milestone 6.
+- **Content 8** (the globe, section 21): `earth.brres.LZ` has 59 `TEX0` textures, listed by `--list-textures 8`: 28 CMPR 1024x1024 (the map in pieces), 28 IA8 of 256x256 or 128x128 (their relief), one I8 and one IA8 of 64x64 (edge mask and lighting), one RGBA8 64x8 (the glow): the first RGBA8 texture in the contents. No mipmaps, no palettes. **Not in this survey:** the textures in the effect files (`.breft`), whose container has no byte-order converter yet (section 12).
 
 ## 18. Audio (AX, DSP, AI)
 
@@ -1531,3 +1537,141 @@ All under `TARGET_PC`; the Wii build is unchanged (`main.dol: OK`, no unit of `r
 - HOME Menu archive: a stereo wave on two voices; the PCM16 wave dying away (its level after one second is under a twentieth of its start), which it would not if its bytes were the wrong way round
 
 and in the audio self-test a voice at ratio 20 advances 1920 samples per frame. `--snd-stress` and `snd_verify.py` are run by hand (`pc/tools/snd_check.sh`); they need seconds, and the second needs numpy.
+
+## 21. The globe (nw4r::g3d)
+
+Part of milestone 6. The globe model, `earth.brres.LZ` in content 8, is converted to host byte order when it is loaded, and the game's own code (`Model`, `Globe`, `Camera`, `GlobeDots`) draws it through `nw4r::g3d` and the GX backend.
+In the game the globe appears when a news file has loaded (`InitNews()` calls `LoadEarth()`), which is milestone 5. Until then `--view-model` shows it:
+
+```sh
+build/pc/newschannel --view-model 8:earth.brres.LZ                       # a window; --view-spin 0.5 turns it
+build/pc/newschannel --view-model 8:earth.brres.LZ --no-window --frames 20 \
+    --screenshot 17 --screenshot-dir build/shots --nand-dir build/nand   # one picture
+build/pc/newschannel --view-model 8:earth.brres.LZ --view-rot 38,-97 --view-zoom 3 --view-tilt 8
+build/pc/newschannel --list-textures 8
+build/pc/newschannel --dump-texture 8:earth.brres.LZ:0 build/scratch/earth_a1.png
+```
+
+### What is in the file
+
+`earth.brres` is 17,289,344 bytes (10.3 MB compressed), 17.1 MB of it texels. One model and 59 textures; no palettes, no animations, no user data.
+
+| Resource | Contents |
+| --- | --- |
+| `MDL0` "earth", revision 8 | 3 nodes (`nw4r_root`, `earth`, `luminous`: a billboard), 29 position arrays (28 of x, y, z as `f32`; one of x, y for the glow), 28 normal arrays (`f32`), 29 texture coordinate arrays (`f32`), no colours; 29 materials that share one 6-stage TEV shader with an indirect stage, 29 shapes; 6470 vertices and 4648 triangles; byte code `NodeTree`, `DrawOpa`, `DrawXlu` |
+| Materials `earth_mat_*`, `eu_mat_*`, `usa_mat_*`, `japan_mat`, `southpole_mat` (28) | four textures each: a piece of the map, its relief (emboss), `emboss_lighting`, `emboss_edge_mask`. Not lit (channel control `0x700`: the colour is the material colour), no fog, alpha test "always", `zCompLoc` set, opaque |
+| Material `luminous_mat` | the glow around the globe: one RGBA8 texture, blended, no depth |
+| `TEX0` (59, revision 1) | section 17 |
+
+Revision 8 of `MDL0` has a shorter info block than `ResMdlInfoData` declares: it ends after `toMtxIDToNodeID` (size `0x28`), without the bounding volume. The converter goes by the stored size.
+
+### The converter (`src/pc/endian/fmt_g3d.cpp`)
+
+`PCEndianSwapResFile()`, registered for the magic `bres`, uses the structures of `include/nw4r/g3d/res` as the definition of every layout. A resource file is a tree of dictionaries in which each structure refers to others by offsets **relative to itself**, so the converter walks the tree from the top-level dictionary; structures that several places refer to (the one `ResTev` all materials share, the length in front of a name) are swapped once (`PCEndianFile::Visit()`).
+
+| Structure | Converted | Left as it is |
+| --- | --- | --- |
+| File header, `root` block | signature and block kind as `u32` (they are declared as numbers), sizes, counts | - |
+| `ResDicData` (every dictionary) | size, count, and per node `ref`, `flag`, `idxLeft`, `idxRight`, `ofsString`, `ofsData` | - |
+| Names | the `u32` length in front of each (`ResName`: the dictionaries compare names through it) | the characters |
+| `ResMdlData`, `ResMdlInfoData` | everything; the bounding volume only if the info block is long enough; the matrix-to-node table | `header.kind` (`char[4]`) |
+| `ResNodeData` | all of it (words and floats) | - |
+| `ResVtxPosData`, `ResVtxNrmData`, `ResVtxClrData`, `ResVtxTexCoordData` | the headers, **and the arrays**: each component by its type (`u16`/`s16`/`f32`; a colour only in the two 16-bit formats, RGB565 and RGBA4) | 8-bit components; RGB8, RGBX8, RGBA6, RGBA8 colours |
+| `ResMatData` | the words, `genMode.cullMode`, the valid flags of the texture and palette objects, the texture SRT block (flags, mode, 8 x 5 floats, 8 effect matrices), the channels (`flag`, the two control words), every `ResTexPlttInfoData` | the counts and `misc` (bytes), `GXColor` members, the `GXTexObj`/`GXTlutObj` work space (empty in the file, filled by `Bind()` in this build's own layout), `ResMatDLData` (four display lists) |
+| `ResTevData` | `size`, `toResMdlData`, `id` | stage count and the coordinate-to-map table (bytes), `ResTevDL` (display lists) |
+| `ResShpData` | the words, the two display list tags, the twelve array ids (`s16`), the matrix set | `cache` (twelve bytes that are only compared with another shape's), both display lists |
+| `ResTexPlttInfoOffsetData` | count and offset pairs | - |
+| `ResTexData`, `ResPlttData` | the headers | texels and palette entries: GX formats, big-endian for the texture decoder (section 17) |
+| Byte code | its dictionary | the code (read bytewise; a weight is assembled from four bytes) |
+
+**Vertex arrays are host order.** The alternative, leaving them big-endian and calling `PCGXSetArrayBigEndian()` where an array is bound, does not work for `nw4r::g3d`: it never calls `GXSetArray()` for a shape. `ResShp::Init()` writes each array's address into the shape's display list as a CP command, and that list is called before the primitives; a flag would have to follow the pointer through a register. Converting the data once keeps every use right (the CP command, `ResVtx*::SetArray()`, `CopyTo()`) with no shared-source change. The indices in the primitive lists are part of the command stream and stay big-endian.
+
+**Display lists stay big-endian.** `nw4r::g3d` reads and patches them bytewise (`detail::ResRead_u32`, `ResWrite_u32`: `Globe::UpdateCamera()` rewrites a konst colour and the indirect matrix of 28 materials every frame this way), and the FIFO decoder reads them big-endian (section 16).
+
+**Where it is called.** The model comes through the streaming LZ reader, which cannot convert (section 12). `Scene::Execute()` calls `PCEndianFixFile(sEarthData, sEarthSize)` under `TARGET_PC` when the load thread has finished, then creates the `Model` as on the Wii. A file that is decompressed in one call (`CXUncompressLZ()`, as the texture tool does) is converted there like any other.
+
+**Not converted: animations and user data.** A group other than models, textures and palettes gets its dictionary converted, so the counts are right, and a warning; `CheckRevision()` fails for its entries, which are still big-endian. `earth.brres` has none and the game creates no `AnmObj`. A node, material or texture with user data is reported once.
+
+### Functions that are not in the DOL (`src/pc/deadstripped/nw4r_g3d_resanm.cpp`)
+
+`ResAnmClr::GetAnmResult()`, `ResAnmTexSrt::GetAnmResult()`, `ResAnmVis::GetAnmResult()` and the two helpers they need, `detail::GetResKeyFrameAnmResult()` and `detail::GetResColorAnmResult()`, were link stubs.
+They are not "not decompiled": **they are not in the DOL**. `config/HAGE/symbols.txt` has none of them, so there is no disassembly to work from. The channel plays no g3d animation, and CodeWarrior's linker removed these functions together with the virtual functions that call them (`AnmObjMatClrRes::GetResult()` and so on); gcc keeps every virtual function and so needs definitions (R9).
+They are written against this repository's headers, with the decompilation of a later revision of the library (ogws) as the reference for the algorithm: Hermite interpolation between key frames found from an estimate, per-channel linear interpolation of colours in 1.15 fixed point, one visibility bit per frame from the top of each word, clipping to the frame count. The Wii build does not compile the file.
+Colours go through `ut::Color` by value (section 12), so `0xRRGGBBAA` words in host order give the right channels.
+If the main branch gets `g3d_resanm*.cpp` as decompiled sources, delete this file and list them in `pc/ported/nw4r_g3d.txt`.
+
+### Shared-source changes (all under `TARGET_PC`; the Wii build is byte-identical)
+
+| Where | What | Why |
+| --- | --- | --- |
+| `include/nw4r/g3d/platform/g3d_gpu.h`, `GDSetChanAmbColor()`, `GDSetChanMatColor()` | the register value is composed from `r`, `g`, `b`, `a` (`fifo::PCColorToReg()`) | the original reads the four bytes of a `GXColor` as one word (section 12, "Colours") |
+| `src/nw4r/g3d/g3d_anmscn.cpp`, `AnmScn::GetLightSetting()` | the ambient colour is stored byte by byte | the original stores a `u32` over four `u8` members |
+| `src/news/GlobeDots.cpp`, constructor | the two angles of a dot are assembled from bytes | `gGlobeDotAngles` is the DOL's bytes (`GlobeDotAngles.inc`), big-endian `u16` pairs read through a union. On a little-endian host every star was in the wrong place |
+| `src/news/d_scene.cpp`, `Scene::Execute()` | `PCEndianFixFile()` before `new Model(sEarthData)`; the bypass is gone | above |
+
+### GX: what the globe needed
+
+Two changes, both in `src/pc/gx/gx_state.cpp`:
+
+- **A CP array base is `OSPhysicalToCached(value)`.** It went through `PCGXAddressToHost()`, which returned NULL: every vertex of the globe was drawn at the origin.
+- **`PCGXAddressToHost()` accepts the whole MEM1 and MEM2 blocks** (`PCOSGetMemBlock()`). It compared with `OSGetMEM1ArenaHi()`/`OSGetMEM2ArenaHi()`, but the game allocates both arenas completely for its heaps in `SystemInit()`, after which the arena is empty and no address passed. This affected every address in a BP register too (texture images, palettes and copy destinations set by display lists); nothing had used one yet.
+
+Nothing else was missing. What the globe uses: display lists called with `GXFastCallDisplayList()` (about 175 per frame), raw BP/CP/XF loads from `g3d_gpu.h`, indexed vertices with 8- and 16-bit indices from host-order arrays, per-vertex normals, four texture coordinate generators with post-transform matrices (the camera-based mapping `g3d` computes for the lighting texture among them), six TEV stages with an indirect stage (the relief), CMPR, IA8, I8 and RGBA8 textures, konst colours, alpha blending for the glow. 870 primitives and about 34,000 vertices per frame with the star field; the FIFO decoder reports no stray byte.
+
+What the backend still does not implement (section 16, "Not implemented") and whether the globe code needs it:
+
+| Feature | Globe | Others |
+| --- | --- | --- |
+| Fog | no: `Globe` sets none, the materials' fog index selects a fog of type `GX_FOG_NONE` | `nw4r::ef` draw settings can ask for it |
+| `GXSetZCompLoc(GX_TRUE)` | set by the materials (`zCompLoc`), but their alpha test always passes, so the result is the same | `nw4r::ef` |
+| Lighting | not used: the channels are unlit. The game still sets up one light (`Globe::Reset()`), which only costs time | - |
+| `GXDrawCube` and friends | no | `nw4r::ef` debug shapes |
+| `GXSetZScaleOffset()` | implemented; `GlobePin` uses it for the article cards | - |
+
+`GlobePin` (the article pins and cards on the globe) draws with immediate-mode GX like the 2D code and needs news articles; it has not run yet.
+
+### `--view-model` (`src/pc/g3d_tool.cpp`)
+
+It has as little code of its own as possible, so that what it shows is what the game will show:
+
+1. the game's `SystemInit()`: heaps, VI, GX, `g3d::G3dInit()`, and the news scene with its `Globe` (a `g3d::ScnRoot`), `Camera` and `GlobeDots`;
+2. the file is read as `EarthLoadThread()` reads it (CNT, 64 KiB pieces through `CXReadUncompLZ()`, memory from the scene's heap), converted, and given to the game's `Model` (`ResFile::Init()`, `Bind()`, `ScnMdlSimple::Construct()`), as `Scene::Execute()` does;
+3. `Globe::Init()`, `Reset()`, `SetTiltNow()`, as the news scene does before it shows the globe;
+4. per frame `g3d::G3dReset()`, then MainScreen's sequence `Globe::Calc()`, `CalcPoles()`, `ApplyCamera()`, `UpdateLights()`, `CalcScene()`, then the frame of `SystemDraw()` with the globe part of `NewsScene::Draw()` in it: `GlobeDots::Draw()` and `Globe::Draw()` (`ScnRoot::DrawOpa()`, `DrawXlu()`).
+
+The tool's own code is the file read, the frame loop, and three assignments (`gEarthModel`, `sEarthFadeAlpha = 0` because `Scene::Execute()` is not there to fade the globe in, and the camera's longitude for `--view-spin`). It needs what `--boot` needs (contents, the DOL, a NAND directory) and starts the game's threads, so it leaves through `PCOSExit()`.
+`--view-rot LAT,LON` is the point the camera looks at, `--view-zoom` the game's zoom level (0 nearest, 9 farthest; default 8), `--view-tilt` its tilt level (5 is level).
+
+### What was looked at
+
+Pictures from `--view-model ... --screenshot` (never committed):
+
+| View | Result |
+| --- | --- |
+| default (0, 0), zoom 8 | the globe fills most of the picture: Africa, Europe, the Arabian peninsula, South America at the left edge, the right continents in the right places and not mirrored; desert, forest and ice colours; a soft highlight on the ocean from the lighting texture; a blue glow around the limb; stars behind |
+| 38, -97, zoom 9 / 3 / 0 | North America with Greenland; the Great Plains with the Rocky Mountains in relief at the left and Lake Michigan at the top right (the detailed `usa_*` pieces); at zoom 0 the texture at its limit, blurred but continuous: no seams between pieces |
+| 36, 138, zoom 6, tilt 8, `--wide` | the horizon as an arc, Japan and the coast of Asia, the glow as a haze above the limb |
+| textures 0 and 1 of the file (`--dump-texture`) | a piece of the map (Alaska, Hawaii, the Mexican coast) and its relief |
+
+### Self-tests (`src/pc/selftest_g3d_res.cpp`, in `newschannel --selftest`)
+
+Without assets: `fifo::PCColorToReg()`; the three `GetAnmResult()` functions on resources built in host order (colours at, between and beyond frames, constant colours and masks, a material without animation; visibility bits across a word boundary, flooring, clipping, constants; texture SRT with key frames, flat and sloped tangents, uniform scale, constants, an indirect matrix, the result flags).
+
+With content 8 (skipped with a message otherwise): `earth.brres.LZ` read through the streaming reader as the game reads it; converted once, a second call does nothing; then through the real classes:
+
+- `ResFile`: 1 model, 59 textures, nothing else; `Init()`; `Bind()` succeeds
+- model: revision 8, 6470 vertices and 4648 triangles (the sums over the shapes agree), the matrix-to-node table
+- nodes: names found through the dictionaries, identity transforms, the glow's billboard mode
+- every position inside its array's bounds **and on the sphere of radius 3**, every normal of unit length, every texture coordinate inside its bounds: this is what proves the array conversion
+- materials: found by name, TEV stage counts agree with the shader, every texture link bound to the `TEX0` of that name and its `GXTexObj` filled with the right size and pointer, material and ambient colours, the display lists still command streams, the values `Globe::UpdateCamera()` reads
+- shapes: the vertex descriptor read back out of the display list (indices only), the array addresses `ResShp::Init()` patched in, every primitive list parsed: vertex counts agree and no index leaves its array
+- textures: sizes, formats (28 CMPR, 29 IA8, 1 I8, 1 RGBA8), every one decodes; `earth_a1` is more than half sea-blue with a share of land-green
+
+Drawing is checked by `--view-model`, not by `--selftest-gl`: it needs the game's start-up, which takes over both arenas.
+
+### Not done
+
+- **In the game**: the globe is behind the news download. The first run of `LoadEarth()` on its own thread, `GlobePin`, the layouts drawn over the globe and the fade-in are untested.
+- **Animations and user data** of resource files: no converter (above).
+- **The pointer effect** (`nw4r::ef`, `.breff`/`.breft`): not started; the bypass in `PointerEffect::PointerEffect()` stays (section 15). The formats need the emitter and particle descriptors of `ef_res_emitter.h`, the key tables of `ef_res_animcurve.h` per curve type, and the guard in `RelocateCommand()` (section 12).
+- **Speed**: the transform unit runs on the CPU (section 16). A globe frame takes about 34,000 vertices through it, which is no problem at 60 Hz on a desktop; if it ever is, the globe's shapes are the first candidates for a vertex shader.
