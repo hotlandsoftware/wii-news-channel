@@ -704,20 +704,12 @@ static inline void DrawFooter(SlideShow* s) {
     }
 }
 
-static inline void DrawDot(TPLPalette* tpl, f32 x, f32 y, f32 width, f32 height, f32 scale) {
-    Vec pos;
-    pos.x = x - 0.28125f * (width * scale);
-    pos.y = y - 0.28125f * (height * scale);
-    pos.z = 0.0f;
-    Draw2D_Tex(tpl, 0x60, &pos, scale, scale);
-}
-
-static inline void DrawDot2(TPLPalette* tpl, f32 x, f32 y, f32 scale) {
+static inline void DrawTexAt(TPLPalette* tpl, u32 id, f32 x, f32 y, f32 scale) {
     Vec pos;
     pos.x = x;
     pos.y = y;
     pos.z = 0.0f;
-    Draw2D_Tex(tpl, 0x60, &pos, scale, scale);
+    Draw2D_Tex(tpl, id, &pos, scale, scale);
 }
 
 #pragma explicit_zero_data on
@@ -829,12 +821,13 @@ void SlideShow::Draw() {
             color.b = sDotOff.b + (s32)(color.b * fade);
             scale = 0.3f + scale * fade;
             GXSetTevColor(GX_TEVREG1, color);
-            DrawDot2(tpl, x - 0.28125f * (width * scale), y - 0.28125f * (height * scale), scale);
+            DrawTexAt(tpl, 0x60, x - 0.28125f * (width * scale), y - 0.28125f * (height * scale),
+                      scale);
             x -= 18.0f;
         }
     }
 
-    if (IsState(&SlideShow::StateMessage)) {
+    if (IsMessageState()) {
         DrawSelection();
     }
 }

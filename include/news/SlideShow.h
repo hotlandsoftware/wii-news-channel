@@ -64,6 +64,10 @@ public:
         return mState == state;
     }
 
+    bool IsMessageState() {
+        return IsState(&SlideShow::StateMessage);
+    }
+
     void ChangeState(StateFunc state, const s32* arg = NULL) {
         if (mState) {
             mStateFrame = -1;
