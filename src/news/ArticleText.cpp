@@ -615,12 +615,12 @@ void ArticleText::Update(const math::VEC2* pos, bool clip, f32 scroll) {
     Ease(&mPicScale, mPicTargetScale, 0.2f, 1.0f, 0.005f);
     Ease(&mSubPos, &mSubTarget, 0.2f, 100.0f, 0.01f);
 
+    mFirstVisible = mCount;
     mLastVisible = 0;
-    s32 i = 0;
+    s32 i;
     bool overflow = false;
     mLastFull = 0;
-    mFirstVisible = mCount;
-    for (; c->mChar != 0; c++) {
+    for (i = 0; c->mChar != 0; c++) {
         c->Update(pos, &mRevealRate);
         f32 top = pos->y + c->mPos.y;
         f32 lineBottom = top + mLineHeight;
@@ -636,12 +636,11 @@ void ArticleText::Update(const math::VEC2* pos, bool clip, f32 scroll) {
             overflow = true;
         }
         i++;
-        f32 x = pos->x + c->mPos.x;
-        c->mLeft = x;
-        f32 y = pos->y + c->mPos.y;
-        c->mTop = y;
+        f32 x = c->mLeft = pos->x + c->mPos.x;
+        f32 y = c->mTop = pos->y + c->mPos.y;
         c->mRight = x + mScale * (c->mWidth * (c->mScale * c->mScaleX));
-        c->mBottom = c->mScaledHeight * mScale + y;
+        f32 h = c->mScaledHeight * mScale;
+        c->mBottom = h + y;
     }
 
     if (clip) {
