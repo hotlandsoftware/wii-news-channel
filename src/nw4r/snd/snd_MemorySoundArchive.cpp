@@ -106,13 +106,17 @@ const void* MemorySoundArchive::detail_GetFileAddress(u32 id) const {
 
 #ifdef TARGET_PC
     // The files inside the archive are converted to host byte order when they
-    // are first asked for (the archive's own tables were converted on load).
-    // TODO(milestone 6): RSEQ, RBNK, RWSD and RWAR have no converter yet
-    // (src/pc/endian); such a file is refused here, so the sound that needs it
-    // does not start, instead of being parsed in the wrong byte order.
+    // are first asked for (the archive's own tables were converted on load),
+    // each together with its wave data: PCM16 samples are host-order from
+    // then on (src/pc/endian/fmt_snd_files.cpp). A file that is not a
+    // host-order sound file after that (damaged, or not a format nw4r::snd
+    // reads) is not handed out.
     void* pFile = const_cast<void*>(
         ut::AddOffsetToPtr(mData, groupInfo.offset + itemInfo.offset));
-    switch (PCEndianFixFile(pFile, itemInfo.size)) {
+    void* pWaveData = const_cast<void*>(ut::AddOffsetToPtr(
+        mData, groupInfo.waveDataOffset + itemInfo.waveDataOffset));
+    switch (PCEndianFixSoundFile(pFile, itemInfo.size, pWaveData,
+                                 itemInfo.waveDataSize)) {
     case PC_ENDIAN_SWAPPED:
     case PC_ENDIAN_ALREADY:
         return pFile;
@@ -143,6 +147,18 @@ const void* MemorySoundArchive::detail_GetWaveDataFileAddress(u32 id) const {
     if (groupInfo.extFilePath != NULL) {
         return NULL;
     }
+
+#ifdef TARGET_PC
+    // The samples are converted with the file they belong to (see
+    // detail_GetFileAddress()), also if somebody asks for them first.
+    PCEndianFixSoundFile(
+        const_cast<void*>(
+            ut::AddOffsetToPtr(mData, groupInfo.offset + itemInfo.offset)),
+        itemInfo.size,
+        const_cast<void*>(ut::AddOffsetToPtr(
+            mData, groupInfo.waveDataOffset + itemInfo.waveDataOffset)),
+        itemInfo.waveDataSize);
+#endif
 
     return ut::AddOffsetToPtr(mData, groupInfo.waveDataOffset +
                                          itemInfo.waveDataOffset);

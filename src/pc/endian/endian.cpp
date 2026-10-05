@@ -32,6 +32,11 @@ const Format sBuiltin[] = {
     {0x55AA382D, "U8", PCEndianSwapU8Archive},
     {0x0020AF30, "TPL", PCEndianSwapTPL},
     {PC_FOURCC('R', 'S', 'A', 'R'), "RSAR", PCEndianSwapSoundArchive},
+    // The files inside a sound archive (fmt_snd_files.cpp).
+    {PC_FOURCC('R', 'S', 'E', 'Q'), "RSEQ", PCEndianSwapSeqFile},
+    {PC_FOURCC('R', 'B', 'N', 'K'), "RBNK", PCEndianSwapBankFile},
+    {PC_FOURCC('R', 'W', 'S', 'D'), "RWSD", PCEndianSwapWsdFile},
+    {PC_FOURCC('R', 'S', 'T', 'M'), "RSTM", PCEndianSwapStrmFile},
     {PC_FOURCC('R', 'F', 'N', 'T'), "RFNT", PCEndianSwapFont},
     {PC_FOURCC('R', 'F', 'N', 'A'), "RFNA", PCEndianSwapFont},
     {PC_FOURCC('R', 'L', 'Y', 'T'), "RLYT", PCEndianSwapLayout},

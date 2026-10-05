@@ -301,14 +301,17 @@ struct Accelerator {
             break;
         }
         case AX_SAMPLE_FORMAT_PCM_S16: {
-            // Sample data is big-endian, as in the files (section 12).
-            const u8* hi = AccelByte(current * 2, false);
-            const u8* lo = AccelByte(current * 2 + 1, false);
-            if (hi == NULL || lo == NULL) {
+            // Samples are host-order s16: a sound file's PCM16 data is
+            // swapped when the file is loaded (PCEndianFixSoundFile(),
+            // docs/pc_port.md "Sound files"), and code that fills a PCM
+            // buffer itself writes s16 values.
+            const u8* first = AccelByte(current * 2, false);
+            const u8* second = AccelByte(current * 2 + 1, false);
+            if (first == NULL || second == NULL) {
                 Fail();
                 return 0;
             }
-            sample = static_cast<s16>((*hi << 8) | *lo);
+            sample = static_cast<s16>(*first | (*second << 8));
             yn2 = yn1;
             yn1 = sample;
             break;

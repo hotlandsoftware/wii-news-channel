@@ -1,6 +1,10 @@
 #include <nw4r/snd.h>
 #include <nw4r/ut.h>
 
+#ifdef TARGET_PC
+#include <pc/endian.h>
+#endif
+
 namespace nw4r {
 namespace snd {
 namespace detail {
@@ -179,6 +183,12 @@ void* SoundArchiveLoader::LoadFile(u32 id,
     if (ReadFile(id, pBuffer, size, 0) != size) {
         return NULL;
     }
+
+#ifdef TARGET_PC
+    // A file read on demand (a sequence loaded into a player heap) is a fresh
+    // big-endian copy: convert it where it landed.
+    PCEndianFixSoundFile(pBuffer, size, NULL, 0);
+#endif
 
     DCStoreRange(pBuffer, size);
     return pBuffer;

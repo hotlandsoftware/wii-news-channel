@@ -1,6 +1,10 @@
 #include <nw4r/snd/snd_StrmFile.h>
 #include <nw4r/snd/snd_WaveFile.h>
 
+#ifdef TARGET_PC
+#include <pc/endian.h>
+#endif
+
 namespace nw4r {
 namespace snd {
 namespace detail {
@@ -104,6 +108,12 @@ bool StrmFileLoader::LoadFileHeader(void* pStrmBin, u32 size) {
     StrmFile::Header* pHeader =
         static_cast<StrmFile::Header*>(ut::RoundUp(headerArea, 32));
 
+#ifdef TARGET_PC
+    // Only the file header is here: the converter does that much
+    // (src/pc/endian/fmt_snd_files.cpp).
+    PCEndianFixFile(pHeader, HEADER_ALIGNED_SIZE);
+#endif
+
     StrmFileReader reader;
     if (!reader.IsValidFileHeader(pHeader)) {
         return false;
@@ -120,6 +130,11 @@ bool StrmFileLoader::LoadFileHeader(void* pStrmBin, u32 size) {
     if (bytesRead != loadSize) {
         return false;
     }
+
+#ifdef TARGET_PC
+    // The file header again, now with the HEAD block behind it.
+    PCEndianFixFile(pStrmBin, loadSize);
+#endif
 
     mReader.Setup(pStrmBin);
     return true;

@@ -25,6 +25,7 @@ Contents:
 16. [GX backend (milestone 3)](#16-gx-backend-milestone-3)
 17. [Texture formats and the texture codec](#17-texture-formats-and-the-texture-codec)
 18. [Audio (AX, DSP, AI)](#18-audio-ax-dsp-ai)
+19. [Sound files](#19-sound-files)
 
 ## 1. Decisions
 
@@ -74,6 +75,7 @@ src/pc/                     PC-only sources
   gx/texdecode_tool.cpp     PNG writer, `--list-textures`, `--dump-texture`
   audio/                    the AX program of the DSP, the audio output and its clock (section 18);
                             pc_audio.h is what other PC code may call
+  snd_tool.cpp              `--list-sounds`: every sound followed down to its samples (section 18)
   endian/fmt_<format>.cpp   byte order: one converter per asset format, and the registry (section 12)
   libc/wchar16.cpp          16-bit wcslen(), swprintf() and so on
   deadstripped/<library>.cpp  definitions the DOL's linker removed but gcc needs
@@ -151,6 +153,7 @@ build/pc/newschannel --boot --contents path/to/contents --nand-dir path/to/nand 
 `newschannel --window-test` opens the window and runs empty frames without the game.
 `newschannel --audio-test` plays a two-second tone through AX and `nw4r::snd`'s voice (section 18).
 `newschannel --list-textures 9` and `newschannel --dump-texture 9:TPLCommon.tpl.LZ:0 build/scratch/t.png` list and decode the textures in the contents (section 17).
+`newschannel --list-sounds` lists the sounds of the channel's sound archive with the wave each one plays (section 18).
 
 `extract_wad.py --contents` writes `orig/HAGE/contents/NN.app` (NN = content index: 00, 02 to 11). The game's archive number `n` is content `n + 2`.
 The program looks for them in `--contents` (or `--contents-dir`, or `contents =` in the settings file), `$NEWSCHANNEL_CONTENTS`, `./orig/HAGE/contents` and next to the build tree; save data goes to `--nand-dir`, `$NEWSCHANNEL_NAND` or `~/.local/share/newschannel/nand` (section 13).
@@ -248,6 +251,7 @@ Run it whenever the set of files in the build or the backend changes. If two bra
 | `tools/extract_wad.py --contents` | Section 3. |
 | `newschannel --list-textures CONTENT[:PATH[:INDEX]]` | Lists the textures of a content, or of a file or directory in it: size, format, palette, wrap, filter, mipmap levels (section 17). |
 | `newschannel --dump-texture CONTENT:PATH[:INDEX] OUT.png` | Decodes one texture to a PNG. Never commit the output (R12). |
+| `newschannel --list-sounds [CONTENT:PATH]` | Lists the sounds of a sound archive (default `9:rev_news.brsar`; the HOME Menu's is `6:HomeButton3/Huf8_HomeButtonSe.brsar`): type, file, notes, and format, sample rate, length, loop and data offset of the wave each one plays (section 18). Exit status 1 if a sound does not resolve. |
 
 Adding a file to the build: fix it until `status.py -f <name>` passes, add it to `pc/ported/<library>.txt` (or run `status.py --update-ported`), run `gen_stubs.py`, build, run `newschannel`.
 
@@ -294,7 +298,7 @@ Stubs are not the whole picture: NWC24/SO/VF, KPAD/WPAD buttons and HBM are hand
 
 ## 9. Known hazards for later milestones
 
-- **Byte order.** Every file the game reads is big-endian and is overlaid with structs (`pc_port_readiness.md`, section 5.2). Section 12 has the strategy (swap on load) and the list of formats that are converted (archives, palettes, fonts, layouts, layout animations) and that are not yet (effects, sound, models, the news file, save data). Wide string literals and the message tables are compiled in host order, while text inside `news.bin` is big-endian.
+- **Byte order.** Every file the game reads is big-endian and is overlaid with structs (`pc_port_readiness.md`, section 5.2). Section 12 has the strategy (swap on load) and the list of formats that are converted (archives, palettes, fonts, layouts, layout animations, the sound archive and the files in it) and that are not yet (effects, models, the news file, save data). Wide string literals and the message tables are compiled in host order, while text inside `news.bin` is big-endian.
 - **Bitfields.** CodeWarrior fills bitfields from the most significant bit, gcc on x86 from the least significant. No bitfield in the game or NW4R headers is overlaid on file data (section 12, "Bitfields"); hardware-register bitfields are only in SDK sources, which are not compiled.
 - **Type punning that byte order breaks.** Code that reads memory as a different type than it was written is wrong on a little-endian host even with converted files: a colour's four bytes read as a `u32` (five sites, section 12, "Colours"), two `u8` fields read as one `u16` (`ef::Resource::RelocateCommand()`). Each needs a `TARGET_PC` guard when its subsystem is brought up.
 - **The global `operator new` is the game's.** `src/news` replaces it with the game's heaps, for the backend too. Backend code must not use `new` or standard containers before the heaps exist (or at all, if the memory should not come from a game heap); use `malloc()`.
@@ -426,6 +430,8 @@ What "every multi-byte field" means is decided per field by how the code reads i
 | Fields that the code assembles from bytes itself (`(p[0] << 8) + p[1]`) | **no** | such code is already independent of the host; swapping would break it. `nw4r::ef`'s name tables are read this way |
 | Texel and palette data of textures (TPL images, font sheets) | **no** | GX texture formats are big-endian by definition (RGB565, RGB5A3, IA8, CMPR...). The GX texture decoder (milestone 3) reads them with `PCReadBE16()`/`PCReadBE32()` |
 | CX-compressed data (`.LZ`, `Huf8_*`, the sheets of a `.brfna`) | **no** | the CX formats are little-endian by definition and read bytewise; see `src/pc/sdk/cx.cpp` |
+| PCM16 samples of a sound archive | **yes**, together with the file that describes them | the mixer reads host-order `s16` (section 18) |
+| DSP-ADPCM and PCM8 samples, sequence data | no | bytes; the MML parser builds its 16- and 24-bit values from bytes itself |
 | GX display lists inside models | no (later milestone) | a command stream; the FIFO interpreter reads it big-endian |
 
 ### Where files are converted
@@ -440,6 +446,7 @@ It is called at the places where a complete file first exists in memory, all ins
 | `ARCInitHandle()` (`arc.cpp`) | the header and node table of a U8 archive, however it got into memory (also the content archives that CNT opens) |
 | `ARCGetStartAddrInMem()` (`arc.cpp`) | each member of an archive, the first time it is used. This is where `lyt::ArcResourceAccessor` gets layouts, animations, textures and fonts |
 | `TPLBind()` (`tpl.cpp`) | a palette that reached memory some other way |
+| `nw4r::snd`, four places under `TARGET_PC` (section 18) | the files inside a sound archive, each with its wave data: these are not files of their own anywhere in the backend, only `nw4r::snd` knows where one starts |
 
 Members of an archive are converted on first use and not when the archive is opened, because a handle may cover only the node table (CNT reads just that much of a content file).
 
@@ -470,6 +477,8 @@ Inside one file, a structure that several places refer to (a TPL header shared b
 | `fmt_font.cpp` | `RFNT`, `RFNA` |
 | `fmt_lyt.cpp` | `RLYT`, `RLAN` |
 | `fmt_tpl.cpp` | TPL |
+| `fmt_snd.cpp` | `RSAR`: the archive's own tables |
+| `fmt_snd_files.cpp` | `RSEQ`, `RBNK`, `RWSD`, `RSTM`, wave information, `PCEndianFixSoundFile()` (section 18) |
 | `src/pc/sdk/arc.cpp` | U8 (`PCEndianSwapU8Archive()`) |
 
 A converter is `BOOL Convert(void* data, u32 size)`. It uses the real structs of the library that reads the format (`nw4r::lyt::res::Pane`, `nw4r::ut::FontInformation`, `TPLHeader`), so a field is swapped by name and its size comes from its type:
@@ -530,9 +539,14 @@ Converted (each has a self-test on the real files, section 13):
 | Archive font `.brfna` | `RFNA` | `ut::ArchiveFont` | the same plus GLGR and the size in front of each compressed sheet |
 | Layout `.brlyt` | `RLYT` | `nw4r::lyt` | lyt1, txl1, fnl1, mat1, pan1, bnd1, pic1, txt1, wnd1, grp1 (pas1/pae1/grs1/gre1 have no body) |
 | Layout animation `.brlan` | `RLAN` (and `RLPA`, `RLVI`, `RLVC`, `RLMC`, `RLTS`, `RLTP`) | `nw4r::lyt` | pai1 with all contents, infos, targets and keys |
-| Sound archive `.brsar` | `RSAR` | `snd::detail::SoundArchiveFileReader` | header, SYMB (string table, four label trees), INFO (sounds, banks, players, files, groups); **not** the FILE block: the files inside are converted one by one when `MemorySoundArchive::detail_GetFileAddress()` hands them out, and none of their formats has a converter yet (`fmt_snd.cpp`) |
+| Sound archive `.brsar` | `RSAR` | `snd::detail::SoundArchiveFileReader` | header, SYMB (string table, four label trees), INFO (sounds, banks, players, files, groups); **not** the FILE block: the files inside are converted one by one when `nw4r::snd` first has them (`fmt_snd.cpp`; section 18) |
+| Sequence | `RSEQ` | `snd::detail::SeqFileReader`, `MmlParser` | header, DATA block header and base offset, LABL; not the sequence data (a byte stream) |
+| Bank | `RBNK` | `snd::detail::BankFileReader`, `WaveFileReader` | header, instrument table with its key and velocity splits, instruments, WAVE block: wave information, channel information, ADPCM parameters |
+| Wave sounds | `RWSD` | `snd::detail::WsdFileReader`, `WaveFileReader` | header, sound, track and note tables, WAVE block (versions 1.0 to 1.2) |
+| Stream | `RSTM` | `snd::detail::StrmFileReader` | file header and HEAD block (stream, track and channel information, ADPCM parameters); not the ADPC and DATA blocks |
+| Wave data of a bank or of wave sounds | none (described by the file's WAVE block) | the AX mixer | PCM16 samples, swapped when their file is converted (`PCEndianFixSoundFile()`); ADPCM and PCM8 are bytes |
 
-Not converted yet. Until a format has a converter its file stays big-endian and **the code that parses it must not run**; three of these are loaded during start-up (section 15, "Bypasses", says how each is kept from running).
+Not converted yet. Until a format has a converter its file stays big-endian and **the code that parses it must not run**; two of these are loaded during start-up (section 15, "Bypasses", says how each is kept from running).
 The guard for such a loader is `PCEndianIsHostOrder(data, size)`, which is true only for a file that has been converted; it opens by itself when the converter is added:
 
 ```cpp
@@ -544,7 +558,6 @@ The guard for such a loader is `PCEndianIsHostOrder(data, size)`, which is true 
 | Format | Loaded | Reader | What to know |
 | --- | --- | --- | --- |
 | Effects `.breff`, `.breft` (`REFF`, `REFT`) | **start-up**: `PointerEffect::PointerEffect()` in `SystemInit()` | `ef::Resource::Add()`, `AddTexture()`, `RelocateCommand()` | The name tables are read bytewise (`(p[0] << 8) + p[1]`) and must NOT be swapped; `NameTable::numEntry`, the project header and `TextureData` are read as values. `RelocateCommand()` reads two `u8` fields as one `u16` (`*reinterpret_cast<u16*>(&header->curveFlag)`), which needs a `TARGET_PC` guard in `ef_resource.cpp`. The animation-curve key tables depend on the curve type (`ef_res_animcurve.h`). |
-| The files inside a sound archive (`RWSD`, `RBNK`, `RSEQ`, `RWAR`, `RWAV`, `RSTM`) | when a sound starts | `nw4r::snd` (`SeqFileReader`, `BankFileReader`, `WsdFileReader`, `WaveFileReader`) | Register a converter per magic and `detail_GetFileAddress()` starts handing the files out. `Util::DataRef`/`Table` offsets throughout; `SeqFileReader` already goes through `Util::ReadBigEndian()` for some fields (do not define `NW4R_LITLE_ENDIAN`: the converted tables would be swapped back); sample data is big-endian PCM16/ADPCM and must not be converted: the mixer reads it as such (section 18); sequence data is a byte stream |
 | Model `.brres` (`bres`, with `MDL0`, `TEX0`...) | **start-up**, in the background: `LoadEarth()` in `d_scene.cpp` (streaming LZ, so call `PCEndianFixFile()` when the last piece is in) | `g3d::ResFile::Init()`/`Bind()` | offsets relative to each structure, string tables, display lists (GX command streams: leave big-endian), vertex arrays (big-endian for the FIFO interpreter, or convert per attribute format) |
 | News file `news.bin` | when a download finishes | `NewsData.h` structs, `NewsHeader::At()` | all `u32`/`u16`, 17 offset fields, 16-bit big-endian text; pictures are JPEG (bytes). No magic at offset 0 that is safe to key on: convert explicitly after the CRC check |
 | Save file `savedata.dat` | start-up, if it exists | `SaveData.cpp` | written from a struct. On PC it is simply little-endian and not interchangeable with a Wii save; convert on read and write if that is wanted |
@@ -757,7 +770,7 @@ The one diagnostic, "content 11 is not an archive", is the game initialising a h
 | File | What |
 | --- | --- |
 | `src/pc/dol_data.cpp`, `dol_data.h` | the five variables of section 10, read from the user's DOL at run time; `--dol` |
-| `src/pc/endian/fmt_snd.cpp` | byte order of the sound archive's header, SYMB and INFO blocks (section 12) |
+| `src/pc/endian/fmt_snd.cpp` | byte order of the sound archive's header, SYMB and INFO blocks (section 12); the files inside came later (section 18) |
 | `src/pc/libc/sized_delete.cpp` | `operator delete(void*, size_t)` forwarding to the game's `operator delete` (section 9) |
 | `include/pc/compat.h` | `PCDivW()`: signed division with the PowerPC's result for a zero divisor |
 | `src/pc/sdk/wpad.cpp`, `pc_input.h` | scripted input for automated runs (`--input`) |
@@ -767,14 +780,14 @@ The one diagnostic, "content 11 is not an archive", is the game initialising a h
 ### Bypasses
 
 Each of these skips something the Wii does. All are marked `TODO(milestone 6)` in the source.
+A third one, in `MemorySoundArchive::detail_GetFileAddress()`, is gone: the files inside a sound archive have converters (section 18) and sounds start.
 
 | Where | What is skipped | Why | Remove when |
 | --- | --- | --- | --- |
 | `PointerEffect::PointerEffect()` (`src/news/PointerEffect.cpp`) | `ef::Resource::Add()`, `AddTexture()` and `RelocateCommand()` for `nw4r_defcursor_all01.breff/.breft`. `mLoaded` is still set, so the game starts its news scene and not the fatal error screen; `EffectSystem::CreateEffect()` finds no emitter and the pointer has no particle trail | no byte-order converter for `REFF`/`REFT` | converters are registered: the guard is `PCEndianIsHostOrder()` and opens by itself. `RelocateCommand()` also needs its `u8` pair read as a `u16` guarded (section 12) |
-| `MemorySoundArchive::detail_GetFileAddress()` (`src/nw4r/snd/snd_MemorySoundArchive.cpp`) | returns NULL for a sound file that could not be converted, so `StartSound()` fails for that sound instead of parsing big-endian data. The archive's tables are converted and `SoundArchivePlayer` is set up for real. This is the only reason the game is still silent: the audio backend is complete (section 18) | no converters for `RSEQ`, `RBNK`, `RWSD`, `RWAR` | converters are registered (the function already calls `PCEndianFixFile()` on each file). Section 18, "For the sound-file converters", says what the mixer expects of them |
 | `Scene::Execute()` (`src/news/d_scene.cpp`) | `new Model(sEarthData)` when the decompressed `earth.brres` is still big-endian. Not reached during the boot (the model is loaded by `InitNews()`, after a news download) | no converter for `bres` | a converter is registered. Check then what waits for `gEarthModel` |
 
-Not bypasses, but placeholders with the same effect on what the user sees: NWC24/SO have no network, the HOME Menu closes at once (section 14). (When this list was written GX also drew nothing and AX played nothing; sections 16 and 18 replaced those two.)
+Not bypasses, but placeholders with the same effect on what the user sees: NWC24/SO have no network, the HOME Menu closes at once (section 14).
 
 ### Game-code findings
 
@@ -1223,3 +1236,114 @@ What the mixer and AX expect of the data that `nw4r::snd` hands over, for whoeve
 - `AXSetVoiceSrcType(AX_SRC_TYPE_4TAP_AUTO)` is not an SDK value (`nw4r::snd` resolves it before the call).
 - A second DSP task, the AI's 48 kHz mode and its stream (`AIS*`) functions: nothing uses them.
 - 64-bit: the command list, the block chain and `AIInitDMA()` carry pointers in 32 bits.
+
+## 19. Sound files
+
+The files inside a sound archive are converted to host byte order on load, like every other format (section 12), and `nw4r::snd` starts sounds for real.
+Audio output is not part of this: AX is still the placeholder of section 14.
+
+### What the archives hold
+
+`newschannel --list-sounds` prints this from the user's contents.
+
+| Archive | Loaded by | Sounds | Files (all in group 0) | Wave data |
+| --- | --- | --- | --- | --- |
+| `rev_news.brsar` (content 9, not compressed) | `SoundResource` → `InitSoundFromMemory()` | 88, all sequences; 16 players | 7 `RSEQ` 1.0, 1 `RBNK` 1.1 with 82 waves | 1,271,104 bytes: DSP-ADPCM, mono, 20480 to 44100 Hz |
+| `HomeButton3/Huf8_HomeButtonSe.brsar` (content 6, Huffman) | `main.cpp` (`LoadArcFile()`) → `SoundResource` → `HbmSound::Init()` | 28, all sequences; 3 players | 1 `RSEQ` 1.0, 1 `RBNK` 1.1 with 13 waves | 410,624 bytes: 12 DSP-ADPCM waves (mono and stereo) and one PCM16 wave, 32000 Hz |
+
+Neither archive has wave sounds (`RWSD`) or streams (`RSTM`), and the game's own code reads no sound file from outside the two archives (`main.cpp` also loads `Huf8_SpeakerSe.arc` from content 6, but only hands it to the HOME Menu library, which is not compiled: section 14).
+This revision of `nw4r::snd` has no wave archive: there is no reader for `RWAR` or `RWAV` and no such file. A bank or a wave sound file carries its wave information in its own WAVE block, and the samples are the group's wave data, outside the file.
+Both archives are memory archives (`snd::MemorySoundArchive`); nothing is loaded into a sound heap by the game.
+
+### The converters (`src/pc/endian/fmt_snd_files.cpp`)
+
+The structures in `snd_SeqFile.h`, `snd_BankFile.h`, `snd_WsdFile.h`, `snd_StrmFile.h`, `snd_WaveFile.h`, `snd_Types.h` (`AdpcmInfo`) and `snd_Util.h` (`DataRef`, `Table`) are the layout; fields are swapped by name.
+
+- **`Util::DataRef`** is two bytes (`refType`, `dataType`), a reserved `u16` and a `u32` value; it is not a bitfield or a union in this revision. Only the value is swapped. Every reference in the files is an offset (`refType` 1); what it is relative to differs per block and is taken from the reader (`&instTable`, `&waveInfoTable`, `&wsdCount`, the WAVE block of an `RWSD`, the `WaveInfo` itself, `&refDataHeader`).
+- **`RSEQ`.** The sequence is a byte stream. `MmlParser` reads it through `ReadByte()` and builds 16-bit, 24-bit and variable-length values itself (`Read16`, `Read24`, `ReadVar`, `ReadArg`); no read assumes host order, so nothing in the stream is swapped and nothing in the parser is guarded. `SeqFileReader` reads its header through `Util::ReadBigEndian()`, which is the identity as long as `NW4R_LITLE_ENDIAN` is not defined. **Do not define it**: the converted header would be swapped back.
+- **`RBNK`.** The instrument table is walked the way `BankFileReader::GetReferenceToSubRegion()` does: an instrument (`InstParam`), a `RangeTable` (keys are bytes, the regions follow 4-aligned) or an `IndexTable`, nested for key and velocity splits. `InstParam::tune` is swapped for version 1.1, the only one the reader takes it from.
+- **`RWSD`.** `WsdInfo` and the later members of `NoteInfo` are swapped from version 1.1 on, as the reader reads them; a 1.0 file gets `waveIndex` only. The WAVE block of a 1.0 file has no count (`WaveBlockOld`). Track contents and the LFO, envelope and randomizer tables have no structure in the headers and no reader: their references are swapped, their targets are not.
+- **Wave information** (`WaveInfo`, the channel offset table, `WaveChannelInfo`, `AdpcmInfo`: 16 coefficients, gain, predictor/scale, two history samples and the loop context, all `u16`).
+- **`RSTM`.** A stream is never in memory as a whole: `StrmFileLoader::LoadFileHeader()` reads the file header into a temporary buffer and then the header with the HEAD block into the caller's. The converter accepts a buffer that ends before the file does and converts the HEAD block only if it is there. The ADPC block (ADPCM history per block) and the DATA block are not converted: nothing in this revision reads the first, and see "Not done" for the second.
+- A structure that two references share is swapped once (`PCEndianFile::Visit()`); every offset is checked against the file, and a damaged file is refused (`PC_ENDIAN_INVALID`).
+
+### Samples: PCM16 is host order after load
+
+`PCEndianFixSoundFile(file, fileSize, waveData, waveDataSize)` (`<pc/endian.h>`) converts a file like `PCEndianFixFile()` and, **if that call is the one that converted it**, swaps the samples of every PCM16 wave the file describes, in the wave data.
+From then on:
+
+| Format | In memory |
+| --- | --- |
+| PCM16 (`WaveFile::FORMAT_PCM16`, `AX_PB_FORMAT_PCM16`) | host-order `s16`. **The AX mixer must read PCM16 as native `s16`, not as big-endian.** |
+| DSP-ADPCM | unchanged bytes (a header byte and seven bytes of nibbles per frame); its parameters in `AdpcmInfo` are host-order `u16` |
+| PCM8 | unchanged bytes |
+
+The file's magic records the state of the file and of its samples together, so a file with wave data must always be converted through `PCEndianFixSoundFile()`, never through `PCEndianFixFile()` alone (the samples would stay big-endian for good). The function holds one lock from the test of the magic to the last sample, because the game's thread and the sound thread both ask for files.
+The length of a PCM16 wave is `loopEnd + 1` samples per channel (`loopEnd` is the DSP address of the last sample, as `WaveFileReader::ReadWaveParam()` reads it).
+The self-test checks this on the one PCM16 wave of the HOME Menu archive: read in host order it is a smooth signal, read swapped it is noise.
+
+### Where `nw4r::snd` converts (all under `TARGET_PC`)
+
+A file is converted exactly once, in the buffer where `nw4r::snd` first has it.
+
+| Place | What |
+| --- | --- |
+| `MemorySoundArchive::detail_GetFileAddress()` | a file of a memory archive, in place, with its wave data (the group's wave data plus the item's offset), the first time it is asked for. A file that is not a host-order sound file afterwards is not handed out (NULL). This is the path both archives of the game take |
+| `MemorySoundArchive::detail_GetWaveDataFileAddress()` | the same call, so that samples are never handed out ahead of their file |
+| `SoundArchivePlayer::LoadGroup()` | every file of a group that was read into a sound heap, with the group's wave buffer, before the group table can hand it out through `detail_GetFileAddress()`. A copy made from a memory archive whose file was already converted is recognised by its magic and left alone, samples included |
+| `SoundArchiveLoader::LoadFile()` | a file read on demand (`SeqLoadTask`: a sequence loaded into a player heap) |
+| `StrmFileLoader::LoadFileHeader()` | a stream's header, in both of its buffers |
+
+`SoundArchivePlayer::detail_GetFileAddress()` itself needs nothing: its three sources are the archive, a file manager (this revision has no way to set one; `mFileManager` is always NULL) and the group table.
+
+### Tools and self-tests
+
+`newschannel --list-sounds [CONTENT:PATH]` (`src/pc/snd_tool.cpp`) follows every sound to its samples through the real classes: `MemorySoundArchive`, `SeqFileReader`, a `SeqPlayer` with the MML parser and track allocator, `BankFileReader`, `WsdFileReader`, `StrmFileLoader`, `WaveFileReader`.
+A sequence is played without sound for `PC_SND_SEQ_FRAMES` (4000) sound frames with a note-on callback that only looks the note up in the bank, as `SoundArchivePlayer`'s callback and `Bank::NoteOn()` do; the table shows the first wave each sound plays.
+
+```
+  id  label                        type file      waves in  notes waves  format  rate  samples loop ch   offset
+  28  NEW_BGM_NEWS                 SEQ  5 RSEQ    file 6      210    10  ADPCM  44100    13061  yes  1  1042080
+  33  NEW_SE_KETTEI                SEQ  7 RSEQ    file 6       12     1  ADPCM  44100     7015  yes  1        0
+```
+
+A wave is accepted if its format, channel count (1 or 2), sample rate (8000 to 48000 Hz), loop points and data range are plausible and, for DSP-ADPCM, if the initial predictor/scale in its parameters equals the first byte of its samples (which ties a swapped `u16` to untouched sample data).
+
+`newschannel --selftest` (`src/pc/selftest_snd.cpp`), no audio device needed:
+
+| Test | Checked |
+| --- | --- |
+| Without assets: a big-endian `RSEQ`, `RBNK`, `RWSD` (1.0, 1.1, 1.2) and `RSTM` built in the test | read back through `SeqFileReader`, `BankFileReader` (direct, key range, key index, nested velocity range, shared and invalid instruments), `WsdFileReader`, `StrmFileLoader` on a stream; sequence bytes untouched; ADPCM bytes untouched and PCM16 samples in host order; a second conversion changes nothing; a damaged bank is refused |
+| `rev_news.brsar` | 88 sounds, all resolved: 1633 notes in the first 4000 frames, 20480 to 44100 Hz; 8 files converted exactly once; all 82 waves of the bank plausible |
+| `HomeButtonSe.brsar` | 28 sounds, 45 notes, 13 waves, one of them PCM16 and smooth in host order |
+| Both, from a second untouched copy | `SoundArchivePlayer::LoadGroup()` into a `SoundHeap` and `SoundArchiveLoader::LoadFile()`: the copies are converted, byte for byte what the archive's own files and wave data are after their conversion, and the archive they were read from is not touched |
+
+### Sounds start in a real boot
+
+With the placeholder AX nothing can be observed (no audio frame, so no sequence advances). For this check only, a tracing AX was linked in locally (not committed): voices from a pool, the AX frame callback every 5 ms from a host thread in interrupt context, every parameter block logged.
+`--boot --no-window --frames 900 --input "P0:0@1,A@300"` then acquired 15 voices, all set up and started, none refused:
+
+```
+AX[   172] AXAcquireVoice(prio 16) -> voice 0 (1 so far)
+AX[   172]   voice 0 addr: format 0 loop 0 cur 244639C2 loop AD262482 end 24464198
+AX[   172]   voice 0 adpcm: coef 08BE F910 0C19 F87D.. gain 0 pred_scale 0029 yn1 0000 yn2 0000
+AX[   172]   voice 0 src: ratio 0002.99FF
+AX[   172]   voice 0 state: RUN (1 started so far)
+```
+
+Without the trace the scripted boot is unchanged: the screenshots at retraces 200, 500 and 880 are identical to those of the build before the converters.
+
+### For the AX backend
+
+- **PCM16 is host order**, ADPCM and PCM8 are bytes (above).
+- **Sequences advance only on the AX frame callback** (`AXRegisterCallback()`): `SoundThread::AxCallbackFunc()` posts a message and the sound thread runs `SeqPlayer::UpdateAllPlayers()`, the channels and the voices. Call it in interrupt context (section 11).
+- **DSP addresses are computed from host pointers and can wrap.** `AxVoice::GetDspAddressBySample()` takes `OSCachedToPhysical(p)` (`p - 0x80000000`), and for ADPCM multiplies it by 2 (nibbles) in 32 bits. For data in MEM1 or MEM2 mapped at the Wii's addresses (the usual case, section 11) that is exact: `cur 244639C2` above is nibble 2 of the byte at physical `0x12231CE0`, MEM2 `0x92231CE0`. For a pointer outside those ranges the top bit is lost: `loop AD262482` is the address of `AxManager`'s zero buffer, a static of the executable, and cannot be turned back into one pointer. The backend has to resolve an address against the buffers it knows (or keep the pointer when `AXSetVoiceAddr()` is called), and must not assume the arenas are at the Wii's addresses.
+- `AXPBADDR::format` is 0 for ADPCM, 10 for PCM16, 25 for PCM8 (`AxVoice::Format`); the loop address of a wave that does not loop points at that zero buffer.
+- The game's own effect (`FxVoice` in `sound_manager.cpp`, AUX B) and the reverb (AUX C) work on the `s32` buffers the AUX callbacks get; they read no file data.
+
+### Not done
+
+- **PCM16 samples of a stream** would have to be swapped as each block is read into its stream buffer (`SoundArchivePlayer::StrmDataLoadTask::Execute()`), which does not know the format. Neither archive has a stream, so nothing reaches that code; the header conversion is tested on a file built in the self-test. The ADPC block of a stream is not converted either (no reader).
+- **`DvdSoundArchive` and `NandSoundArchive`** read the archive's header, INFO block and SYMB block as separate pieces (`LoadHeader()`, `LoadLabelStringData()`), which the whole-file `RSAR` converter does not cover. Neither can run: there is no disc (section 13) and `ut::NandFileStream` is a stub (section 7). The game uses memory archives.
+- **`HBMPlaySound` and the HOME Menu library's own sound code** are not compiled (section 14); the HOME Menu's archive is converted and played through the game's `HbmSound` player like the channel's.
+- **`RWAR`/`RWAV`**: no reader in this revision of `nw4r::snd`, no such file; nothing to convert.

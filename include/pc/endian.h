@@ -104,9 +104,29 @@ u32 PCEndianRepackBitfield(u32 value, u32 unitBits, const u8* widths, u32 count)
 BOOL PCEndianSwapU8Archive(void* data, u32 size); /* header and node table only */
 BOOL PCEndianSwapTPL(void* data, u32 size);
 BOOL PCEndianSwapSoundArchive(void* data, u32 size); /* RSAR (.brsar): header, SYMB, INFO */
+BOOL PCEndianSwapSeqFile(void* data, u32 size);      /* RSEQ: a sequence in a sound archive */
+BOOL PCEndianSwapBankFile(void* data, u32 size);     /* RBNK: a bank, with its wave information */
+BOOL PCEndianSwapWsdFile(void* data, u32 size);      /* RWSD: wave sounds, with their wave information */
+BOOL PCEndianSwapStrmFile(void* data, u32 size);     /* RSTM: file header and HEAD block of a stream */
 BOOL PCEndianSwapFont(void* data, u32 size);        /* RFNT (.brfnt) and RFNA (.brfna) */
 BOOL PCEndianSwapLayout(void* data, u32 size);      /* RLYT (.brlyt) */
 BOOL PCEndianSwapLayoutAnim(void* data, u32 size);  /* RLAN (.brlan) */
+
+/**
+ * A file of a sound archive together with its wave data (the samples of a
+ * bank or of wave sounds, which the archive keeps outside the file).
+ *
+ * Converts `file` like PCEndianFixFile(). If that call is the one that
+ * converted it, the PCM16 waves in `waveData` are swapped to host order too,
+ * so a PCM16 wave is an array of host-order s16 from then on. DSP-ADPCM and
+ * PCM8 samples are bytes and stay as they are. The file's own magic records
+ * the state of both, so a file and its wave data must always be converted
+ * through this function, never the file alone.
+ *
+ * `waveData` may be NULL (sequences, or a file without waves). `fileSize` may
+ * be 0xFFFFFFFF if unknown.
+ */
+PCEndianResult PCEndianFixSoundFile(void* file, u32 fileSize, void* waveData, u32 waveDataSize);
 
 /** Number of files converted so far (for the self-test and logs). */
 u32 PCEndianGetSwapCount(void);

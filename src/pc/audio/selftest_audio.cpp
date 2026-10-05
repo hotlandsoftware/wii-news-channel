@@ -174,9 +174,9 @@ AXVPB* StartVoice(const VoiceSetup& setup, u32 priority = 15) {
     return vpb;
 }
 
-void PutBE16(u8* p, s16 value) {
-    p[0] = static_cast<u8>(static_cast<u16>(value) >> 8);
-    p[1] = static_cast<u8>(value);
+// PCM16 samples are host-order s16 in memory (ax_dsp.cpp).
+void PutS16(u8* p, s16 value) {
+    __builtin_memcpy(p, &value, 2);
 }
 
 bool Equal(const s16* got, const s32* want, u32 count, const char* what) {
@@ -392,7 +392,7 @@ void TestPcm() {
     s32 want[300];
     for (int i = 0; i < 300; i++) {
         s16 value = static_cast<s16>((i * 211) % 20001 - 10000);
-        PutBE16(pcm16 + i * 2, value);
+        PutS16(pcm16 + i * 2, value);
         pcm8[i] = static_cast<u8>(static_cast<s8>(i - 128));
         want[i] = value;
     }
@@ -473,7 +473,7 @@ void TestPcm() {
 void TestSrc() {
     static u8 pcm[2 * 480];
     for (int i = 0; i < 480; i++) {
-        PutBE16(pcm + i * 2, 1000);
+        PutS16(pcm + i * 2, 1000);
     }
 
     // Ratio 2.0: two input samples per output sample. 480 samples last 240
@@ -529,7 +529,7 @@ void TestSrc() {
 
     static u8 ramp[2 * 200];
     for (int i = 0; i < 200; i++) {
-        PutBE16(ramp + i * 2, static_cast<s16>(i * 100));
+        PutS16(ramp + i * 2, static_cast<s16>(i * 100));
     }
     setup = DefaultSetup(ramp, AxVoice::FORMAT_PCM16, 200);
     setup.srcType = AX_SRC_TYPE_LINEAR;
@@ -557,7 +557,7 @@ void TestLoop() {
     // PCM16: samples 0..9, then 4..9 again and again.
     static u8 pcm[2 * 16];
     for (int i = 0; i < 16; i++) {
-        PutBE16(pcm + i * 2, static_cast<s16>(i * 10));
+        PutS16(pcm + i * 2, static_cast<s16>(i * 10));
     }
     VoiceSetup setup = DefaultSetup(pcm, AxVoice::FORMAT_PCM16, 10);
     setup.loop = true;
@@ -629,7 +629,7 @@ void TestLoop() {
 void TestVolume() {
     static u8 pcm[2 * 2000];
     for (int i = 0; i < 2000; i++) {
-        PutBE16(pcm + i * 2, 16384);
+        PutS16(pcm + i * 2, 16384);
     }
 
     // Volume envelope: from 0 by 100 per sample.
@@ -745,7 +745,7 @@ void TestVolume() {
 void TestBuses() {
     static u8 pcm[2 * 4000];
     for (int i = 0; i < 4000; i++) {
-        PutBE16(pcm + i * 2, 20000);
+        PutS16(pcm + i * 2, 20000);
     }
 
     // A voice that only feeds aux A. The effect halves the bus; what comes
@@ -891,7 +891,7 @@ void TestNw4rVoice() {
 
     static u8 pcm[2 * 500];
     for (int i = 0; i < 500; i++) {
-        PutBE16(pcm + i * 2, static_cast<s16>(8000 + i));
+        PutS16(pcm + i * 2, static_cast<s16>(8000 + i));
     }
     // 32 kHz data at pitch 1.0: ratio 1.0, the 16 kHz coefficient set.
     AxVoice* voice = StartNw4rVoice(pcm, AxVoice::FORMAT_PCM16, 500, 32000, 1.0f, 0.0f, NULL);
@@ -1060,7 +1060,7 @@ int PCAudioTestMain() {
         } else if (i > samples - 3200) {
             envelope = (samples - i) / 3200.0;
         }
-        PutBE16(pcm + i * 2, static_cast<s16>(std::lround(12000.0 * envelope * std::sin(2.0 * 3.14159265358979 * 440.0 * t))));
+        PutS16(pcm + i * 2, static_cast<s16>(std::lround(12000.0 * envelope * std::sin(2.0 * 3.14159265358979 * 440.0 * t))));
     }
 
     AIInit(NULL);

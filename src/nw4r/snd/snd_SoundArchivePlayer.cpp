@@ -19,6 +19,10 @@
 
 #include <cstring>
 
+#ifdef TARGET_PC
+#include <pc/endian.h>
+#endif
+
 // revolution/mem/heapCommon.h (via snd_TaskManager.h) defines these as macros
 #undef RoundUp
 #undef RoundDown
@@ -730,6 +734,33 @@ bool SoundArchivePlayer::LoadGroup(u32 id, SoundMemoryAllocatable* pAllocatable,
     if (pGroup == NULL) {
         return false;
     }
+
+#ifdef TARGET_PC
+    // A group that was read into a heap is a fresh copy of its files: convert
+    // each one, with its wave data, before anything can find it through the
+    // group table (detail_GetFileAddress()). A copy made from a memory archive
+    // whose file was already converted is recognised and left alone, together
+    // with its samples.
+    {
+        SoundArchive::GroupInfo groupInfo;
+        if (mSoundArchive->detail_ReadGroupInfo(id, &groupInfo)) {
+            for (u32 i = 0; i < groupInfo.itemCount; i++) {
+                SoundArchive::GroupItemInfo item;
+                if (!mSoundArchive->detail_ReadGroupItemInfo(id, i, &item)) {
+                    continue;
+                }
+                PCEndianFixSoundFile(
+                    const_cast<u8*>(static_cast<const u8*>(pGroup)) +
+                        item.offset,
+                    item.size,
+                    pWaveBuffer != NULL
+                        ? static_cast<u8*>(pWaveBuffer) + item.waveDataOffset
+                        : NULL,
+                    item.waveDataSize);
+            }
+        }
+    }
+#endif
 
     SetGroupAddress(id, pGroup);
     SetGroupWaveDataAddress(id, pWaveBuffer);

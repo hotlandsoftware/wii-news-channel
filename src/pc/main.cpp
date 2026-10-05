@@ -36,6 +36,7 @@
 #include "pc_input.h"
 #include "audio/pc_audio.h"
 #include "pc_selftest.h"
+#include "pc_snd_tool.h"
 #include "pc_video.h"
 
 // The game's main() (src/news/main.cpp), renamed by pc/CMakeLists.txt.
@@ -80,6 +81,10 @@ void PrintHelp(const char* program) {
     std::printf("  --dump-texture CONTENT:PATH[:INDEX] OUT.png\n");
     std::printf("                   decode one texture to a PNG file (write it outside the repository's\n");
     std::printf("                   tracked files, e.g. below build/)\n");
+    std::printf("  --list-sounds [CONTENT:PATH]\n");
+    std::printf("                   list the sounds of a sound archive (default 9:rev_news.brsar; the\n");
+    std::printf("                   HOME Menu's is 6:HomeButton3/Huf8_HomeButtonSe.brsar) with the wave\n");
+    std::printf("                   each one plays: format, sample rate, length\n");
     std::printf("  --version        print build information\n");
     std::printf("  --help           this text\n\n");
     std::printf("Options for --boot:\n");
@@ -134,6 +139,7 @@ void PCSelfTestOS();      // selftest_os.cpp
 void PCSelfTestFiles();   // selftest_files.cpp
 void PCSelfTestBackend(); // selftest_backend.cpp
 void PCSelfTestBoot();    // selftest_boot.cpp
+void PCSelfTestSnd();     // selftest_snd.cpp
 // PCSelfTestGX() and PCSelfTestGXWithContext() (selftest_gx.cpp): gx/pc_gx.h
 void PCSelfTestTexDecode(); // gx/texdecode_selftest.cpp
 static void PCSelfTestDolData();
@@ -259,6 +265,7 @@ static int RunSelfTest() {
     PCSelfTestGX();
     PCSelfTestDolData();
     PCSelfTestBoot();
+    PCSelfTestSnd();
     PCSelfTestTexDecode();
     PCSelfTestAudio();
 
@@ -305,6 +312,7 @@ int main(int argc, char** argv) {
     const char* list_textures = nullptr;
     const char* dump_texture = nullptr;
     const char* dump_texture_out = nullptr;
+    const char* list_sounds = nullptr;
     PCConfig* config = PCGetConfig();
 
     // --config first: the other options override the file.
@@ -382,6 +390,9 @@ int main(int argc, char** argv) {
             SetOption(argv[0], arg, "aspect", "16:9");
         } else if (std::strcmp(arg, "--list-textures") == 0) {
             list_textures = OptionValue(argc, argv, &i);
+        } else if (std::strcmp(arg, "--list-sounds") == 0) {
+            // The archive is optional: "" means the channel's own.
+            list_sounds = i + 1 < argc && argv[i + 1][0] != '-' ? argv[++i] : "";
         } else if (std::strcmp(arg, "--dump-texture") == 0) {
             dump_texture = OptionValue(argc, argv, &i);
             dump_texture_out = OptionValue(argc, argv, &i);
@@ -407,6 +418,11 @@ int main(int argc, char** argv) {
     }
     if (dump_texture != nullptr) {
         return PCGXDumpTextureMain(dump_texture, dump_texture_out);
+    }
+
+    // Development tool of the sound converters (snd_tool.cpp).
+    if (list_sounds != nullptr) {
+        return PCSndListSoundsMain(list_sounds);
     }
 
     if (selftest_only) {
