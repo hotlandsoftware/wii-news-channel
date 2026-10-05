@@ -691,15 +691,21 @@ void SlideShow::Calc() {
     }
 }
 
+static const GXColor sFooterColor1 = {0, 192, 0, 0};
+
+// Not referenced, so the linker strips it. The original has such a function
+// here: the widescreen factor sits in the constant pool between the footer
+// colour and the constants of Draw.
+f32 SlideShow_GetAspect() {
+    return gWidescreen ? 1.3684211f : 1.0f;
+}
+
 static inline void DrawFooter(SlideShow* s) {
     if (s->mFooterAlpha != 0 && s->mDrawFooter) {
         Draw2D_SetupGX();
         Draw2D_SetOrtho();
-//FOOTER-BEGIN
-        static const GXColor sFooterColor1 = {0, 192, 0, 0};
         GXSetTevColor(GX_TEVREG0, (GXColor){sFooterRed, sFooterGreen, sFooterBlue, s->mFooterAlpha});
         GXSetTevColor(GX_TEVREG1, sFooterColor1);
-//FOOTER-END
         (s->*s->mDrawFooter)();
     }
 }
@@ -807,7 +813,8 @@ void SlideShow::Draw() {
                     scale = 0.39999998f;
                 } else if (t2 >= 0.6f) {
                     color = sDotDiff;
-                    scale = 0.39999998f + 0.5f * ((0.14999998f - (t2 - 0.6f)) / 0.14999998f);
+                    f32 u = (0.14999998f - (t2 - 0.6f)) / 0.14999998f;
+                    scale = 0.39999998f + 0.5f * u;
                 } else {
                     color = 0;
                     scale = 0.0f;
