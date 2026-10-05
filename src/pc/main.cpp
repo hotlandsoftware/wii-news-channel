@@ -172,6 +172,7 @@ void PCSelfTestFiles();   // selftest_files.cpp
 void PCSelfTestBackend(); // selftest_backend.cpp
 void PCSelfTestBoot();    // selftest_boot.cpp
 void PCSelfTestSnd();     // selftest_snd.cpp
+void PCSelfTestLayout();  // selftest_layout.cpp
 void PCSelfTestSndRender(); // selftest_snd.cpp; after PCSelfTestAudio()
 // PCSelfTestGX() and PCSelfTestGXWithContext() (selftest_gx.cpp): gx/pc_gx.h
 void PCSelfTestTexDecode(); // gx/texdecode_selftest.cpp
@@ -289,6 +290,7 @@ static int RunSelfTest() {
     PC_CHECK(swprintf(buffer, 32, L"%ls %02d:%02d %s", L"Time", 9, 5, "ok") == 13);
     PC_CHECK(wcscmp(buffer, L"Time 09:05 ok") == 0);
 
+    PCSelfTestLayout();
     PCSelfTestMtx();
     PCSelfTestG3d();
     PCSelfTestG3dRes();
