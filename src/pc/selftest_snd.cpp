@@ -707,7 +707,7 @@ void ResolveAll(const SoundArchive& archive, ArchiveTotals* totals) {
 }
 
 // Every wave of a bank or wave sound file, not only those a sound reaches.
-u32 CheckAllWaves(const SoundArchive& archive, u32 fileId, u32* pcm16) {
+u32 CheckAllWaves(const SoundArchive& archive, u32 fileId, u32* adpcm, u32* pcm16) {
     SoundArchive::FileInfo info;
     const void* file = archive.detail_GetFileAddress(fileId);
     const void* waveData = archive.detail_GetWaveDataFileAddress(fileId);
@@ -758,6 +758,9 @@ u32 CheckAllWaves(const SoundArchive& archive, u32 fileId, u32* pcm16) {
             if (pcm16 != nullptr) {
                 (*pcm16)++;
             }
+        }
+        if (data.sampleFormat == 2 && adpcm != nullptr) {
+            (*adpcm)++;
         }
         count++;
     }
@@ -863,7 +866,7 @@ void TestArchive(const char* spec, const char* name, bool own) {
 
     // Every file of every group: converted, exactly once, and every wave of
     // every bank and wave sound file is plausible.
-    u32 files = 0, waves = 0, pcm16 = 0;
+    u32 files = 0, waves = 0, adpcm = 0, pcm16 = 0;
     for (u32 g = 0; g < archive.GetGroupCount(); g++) {
         SoundArchive::GroupInfo group;
         if (!archive.detail_ReadGroupInfo(g, &group) || group.extFilePath != nullptr) {
@@ -875,7 +878,7 @@ void TestArchive(const char* spec, const char* name, bool own) {
             const void* file = archive.detail_GetFileAddress(item.fileId);
             PC_CHECK(file != nullptr && PCEndianIsHostOrder(file, item.size));
             PC_CHECK(file == nullptr || static_cast<const ut::BinaryFileHeader*>(file)->fileSize <= item.size);
-            waves += CheckAllWaves(archive, item.fileId, &pcm16);
+            waves += CheckAllWaves(archive, item.fileId, &adpcm, &pcm16);
             files++;
         }
     }
@@ -895,9 +898,9 @@ void TestArchive(const char* spec, const char* name, bool own) {
     }
 
     std::printf("self-test: %s: %u sounds (%u SEQ, %u WAVE, %u STRM) resolved to their waves: %u notes, "
-                "%u-%u Hz; %u files (%u by the sounds), %u waves (%u PCM16)\n",
+                "%u-%u Hz; %u files (%u by the sounds), %u waves (%u ADPCM, %u PCM16)\n",
                 name, totals.sounds, totals.seq, totals.wave, totals.strm, totals.notes, totals.minRate,
-                totals.maxRate, files, converted, waves, pcm16);
+                totals.maxRate, files, converted, waves, adpcm, pcm16);
     archive.Shutdown();
     std::free(fresh);
     std::free(data);

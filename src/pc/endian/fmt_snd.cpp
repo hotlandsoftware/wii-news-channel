@@ -10,10 +10,10 @@
 // SoundArchive/SoundArchivePlayer read to set themselves up.
 //
 // NOT converted here: the FILE block. Each file in it is a file of its own
-// format with its own magic and is converted when it is first asked for
-// (MemorySoundArchive::detail_GetFileAddress(), through PCEndianFixFile()).
-// TODO(milestone 6): converters for RSEQ, RBNK, RWSD, RWAR/RWAV and RSTM;
-// until they are registered those files are refused and no sound starts.
+// format with its own magic (RSEQ, RBNK, RWSD, RSTM: fmt_snd_files.cpp) and is
+// converted, with its wave data, when nw4r::snd first has it
+// (MemorySoundArchive::detail_GetFileAddress(), through
+// PCEndianFixSoundFile(); docs/pc_port.md, "Sound files").
 //
 // INFO is a graph of Util::DataRef (refType, dataType, reserved, value). Only
 // `value` is wider than a byte. All references in the files are offsets
