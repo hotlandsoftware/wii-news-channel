@@ -737,7 +737,8 @@ void MainScreen::DrawRelated() {
     mWriter->SetDrawFlag(0x100);
     mWriter->SetFont(*gSysFont);
     mWriter->SetupGX();
-    mWriter->SetCharSpace(gCharSpaceScale);
+    f32 space = gCharSpaceScale;
+    mWriter->SetCharSpace(space);
     mWriter->SetScale(0.8f * scale);
     Draw2D_SetScissor(pos.x, clipTop, 5.0f + mRelated->mLocationScroller.mViewWidth, clipBottom);
 
