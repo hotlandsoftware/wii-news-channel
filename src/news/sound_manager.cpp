@@ -555,6 +555,12 @@ static inline f32 CosIdx(u16 idx) {
     return math::CosFIdx(0.00390625f * U16ToF32(&idx));
 }
 
+// One tap of a band-pass FIR filter. The two sines are arguments (evaluated
+// right to left), which gives their u16 temporaries the original stack slots.
+static inline s32 BandPassTap(s32 lo, s32 hi, s32 n) {
+    return ((hi - lo) << 12) / (0x3243 * n);
+}
+
 FxVoice::FxVoice() {
     mEnabled = mPitchUp = false;
     mMode = MODE_NONE;
@@ -574,33 +580,30 @@ FxVoice::FxVoice() {
     mTicks = 0;
 
     s32* f = mFilterA;
+    s32* up = f + 6;
     f[5] = 0xE00 - 0x100;
     for (s32 i = 1; i <= 5; i++) {
-        s32 a = 4096.0f * SinIdx((0xE00 * i) << 3);
-        s32 b = 4096.0f * SinIdx((0x100 * i) << 3);
-        s32 v = ((a - b) << 12) / (0x3243 * i);
+        s32 v = BandPassTap((s32)(4096.0f * SinIdx((0x100 * i) << 3)), (s32)(4096.0f * SinIdx((0xE00 * i) << 3)), i);
         f[5 - i] = v;
-        f[i + 5] = v;
+        *up++ = v;
     }
 
     f = mFilterB;
+    up = f + 11;
     f[10] = 0x366 - 0x100;
     for (s32 i = 1; i <= 10; i++) {
-        s32 a = 4096.0f * SinIdx((0x366 * i) << 3);
-        s32 b = 4096.0f * SinIdx((0x100 * i) << 3);
-        s32 v = ((a - b) << 12) / (0x3243 * i);
+        s32 v = BandPassTap((s32)(4096.0f * SinIdx((0x100 * i) << 3)), (s32)(4096.0f * SinIdx((0x366 * i) << 3)), i);
         f[10 - i] = v;
-        f[i + 10] = v;
+        *up++ = v;
     }
 
     f = mFilterC;
+    up = f + 6;
     f[5] = 0x900 - 0;
     for (s32 i = 1; i <= 5; i++) {
-        s32 a = 4096.0f * SinIdx((0x900 * i) << 3);
-        s32 b = 4096.0f * SinIdx((0 * i) << 3);
-        s32 v = ((a - b) << 12) / (0x3243 * i);
+        s32 v = BandPassTap((s32)(4096.0f * SinIdx((0 * i) << 3)), (s32)(4096.0f * SinIdx((0x900 * i) << 3)), i);
         f[5 - i] = v;
-        f[i + 5] = v;
+        *up++ = v;
     }
 
     for (s32 i = 0; i < FX_LFO_SIZE; i++) {
