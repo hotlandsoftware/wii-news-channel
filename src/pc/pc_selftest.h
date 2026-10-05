@@ -5,6 +5,9 @@
 
 void PCSelfTestCheck(bool ok, const char* expression, const char* file, int line);
 
+// Number of failed checks so far.
+int PCSelfTestFailures();
+
 #define PC_CHECK(expr) PCSelfTestCheck((expr), #expr, __FILE__, __LINE__)
 
 #endif

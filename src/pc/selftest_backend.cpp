@@ -275,6 +275,8 @@ void TestGX() {
     GXLoadPosMtxImm(identity, GX_PNMTX0);
     GXSetTevColor(GX_TEVREG0, white);
     GXLoadTexObj(&tex, GX_TEXMAP0);
+    GXClearVtxDesc();
+    GXSetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_F32, 0);
     GXBegin(GX_QUADS, GX_VTXFMT0, 4);
     for (int i = 0; i < 4; i++) {
         GXPosition3f32(0.0f, 0.0f, 0.0f);

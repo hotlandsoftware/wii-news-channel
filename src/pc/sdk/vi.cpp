@@ -18,9 +18,10 @@
 //
 // Closing the window is the power button: see PCVISetCloseHandler().
 //
-// TODO(milestone 3): the picture. GXCopyDisp() will leave the frame in a
-// texture and the retrace presents the one selected by
-// VISetNextFrameBuffer(); until then the window is cleared to black.
+// The picture: GXCopyDisp() leaves each frame in a texture of the GX backend
+// (src/pc/gx), keyed by the XFB pointer, and the retrace presents the one
+// the application selected with VISetNextFrameBuffer(), unless the screen is
+// blanked (VISetBlack).
 
 #include <revolution/vi.h>
 
@@ -36,6 +37,7 @@
 
 #include <pc/os.h>
 
+#include "gx/pc_gx.h"
 #include "pc_config.h"
 #include "pc_video.h"
 
@@ -55,6 +57,7 @@ struct State {
 
     SDL_Window* window;
     SDL_GLContext context;
+    bool hidden; // --no-window with screenshots: a context, nothing on screen
 
     Registers shadow;
     Registers current;
@@ -95,7 +98,10 @@ void OpenWindow() {
     const PCConfig* config = PCGetConfig();
     // Events come first: SIGINT/SIGTERM arrive as a quit event even without a window.
     SDL_InitSubSystem(SDL_INIT_EVENTS);
-    if (config->noWindow) {
+    // --no-window with --screenshot: the frames still have to be drawn, so
+    // there is a window, but it is never shown.
+    bool hidden = config->noWindow && PCGXWantsContext();
+    if (config->noWindow && !hidden) {
         return;
     }
     if (!SDL_InitSubSystem(SDL_INIT_VIDEO)) {
@@ -115,10 +121,15 @@ void OpenWindow() {
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
-    s.window = SDL_CreateWindow("News Channel", width, height, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+    SDL_WindowFlags flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE;
+    if (hidden) {
+        flags |= SDL_WINDOW_HIDDEN;
+    }
+    s.hidden = hidden;
+    s.window = SDL_CreateWindow("News Channel", width, height, flags);
     if (s.window == nullptr) {
         SDL_GL_ResetAttributes();
-        s.window = SDL_CreateWindow("News Channel", width, height, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+        s.window = SDL_CreateWindow("News Channel", width, height, flags);
     }
     if (s.window != nullptr) {
         s.context = SDL_GL_CreateContext(s.window);
@@ -130,24 +141,36 @@ void OpenWindow() {
         }
     } else {
         // No OpenGL at all (for example the "dummy" video driver).
-        s.window = SDL_CreateWindow("News Channel", width, height, SDL_WINDOW_RESIZABLE);
+        s.window = hidden ? nullptr : SDL_CreateWindow("News Channel", width, height, SDL_WINDOW_RESIZABLE);
         if (s.window == nullptr) {
             std::fprintf(stderr, "VIInit: cannot open a window (%s); running without one\n", SDL_GetError());
         }
     }
 }
 
+// Shows the frame the application selected: the picture of the current XFB,
+// scaled into the picture rectangle of the window, or black while the
+// screen is blanked. Also the moment a requested screenshot is saved.
 void Present() {
-    if (s.window == nullptr || s.context == nullptr) {
+    const void* frame = s.current.black ? nullptr : s.current.frameBuffer;
+    PCGXRetrace(s.retraceCount, frame);
+    if (s.window == nullptr || s.context == nullptr || s.hidden) {
         return;
     }
     int width, height;
     SDL_GetWindowSizeInPixels(s.window, &width, &height);
-    glViewport(0, 0, width, height);
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
-    // TODO(milestone 3): unless s.current.black, draw the frame that
-    // s.current.frameBuffer names into PCVIGetPictureRect().
+    int x, y, w, h;
+    PCVIGetPictureRect(&x, &y, &w, &h);
+    // PCVIGetPictureRect() is in window coordinates; OpenGL wants pixels.
+    int pointsW = 0, pointsH = 0;
+    SDL_GetWindowSize(s.window, &pointsW, &pointsH);
+    if (pointsW > 0 && pointsH > 0 && (pointsW != width || pointsH != height)) {
+        x = x * width / pointsW;
+        w = w * width / pointsW;
+        y = y * height / pointsH;
+        h = h * height / pointsH;
+    }
+    PCGXPresent(frame, x, y, w, h, width, height);
     SDL_GL_SwapWindow(s.window);
 }
 
@@ -190,7 +213,7 @@ void SleepUntil(Uint64 deadline) {
 // --- PC interface (pc_video.h) -----------------------------------------------
 
 SDL_Window* PCVIGetWindow() {
-    return s.window;
+    return s.hidden ? nullptr : s.window;
 }
 
 void* PCVIGetGLContext() {

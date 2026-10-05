@@ -30,6 +30,7 @@
 #include <pc/os.h>
 
 #include "dol_data.h"
+#include "gx/pc_gx.h"
 #include "pc_config.h"
 #include "pc_input.h"
 #include "pc_selftest.h"
@@ -65,6 +66,8 @@ void PrintHelp(const char* program) {
     std::printf("Usage: %s [options]\n\n", program);
     std::printf("  (no option)      print build information, initialise SDL, run the self-test\n");
     std::printf("  --selftest       run only the self-test\n");
+    std::printf("  --selftest-gl    the GX self-test that needs OpenGL (hidden window; skipped\n");
+    std::printf("                   without a display)\n");
     std::printf("  --boot           run the game\n");
     std::printf("  --window-test    open the window and run empty frames (with --frames N; default 120)\n");
     std::printf("  --version        print build information\n");
@@ -72,6 +75,9 @@ void PrintHelp(const char* program) {
     std::printf("Options for --boot:\n");
     std::printf("  --frames N       exit after N frames (for automated runs)\n");
     std::printf("  --no-window      do not open a window\n");
+    std::printf("  --screenshot N[,N...]  save the picture shown at these retraces as PNG files\n");
+    std::printf("                   (frame_NNNNNN.png); works with --no-window too\n");
+    std::printf("  --screenshot-dir DIR   where to save them (default: the current directory)\n");
     std::printf("  --input SCRIPT   scripted remote for automated runs, e.g. \"P0:0@1,A@300\":\n");
     std::printf("                   point at the centre from frame 1, press A at frame 300\n");
     std::printf("  --contents DIR   the channel's WAD contents, NN.app (default orig/HAGE/contents)\n");
@@ -113,6 +119,7 @@ void PCSelfTestOS();      // selftest_os.cpp
 void PCSelfTestFiles();   // selftest_files.cpp
 void PCSelfTestBackend(); // selftest_backend.cpp
 void PCSelfTestBoot();    // selftest_boot.cpp
+// PCSelfTestGX() and PCSelfTestGXWithContext() (selftest_gx.cpp): gx/pc_gx.h
 static void PCSelfTestDolData();
 
 static int sFailures;
@@ -122,6 +129,10 @@ void PCSelfTestCheck(bool ok, const char* expression, const char* file, int line
         sFailures++;
         std::fprintf(stderr, "self-test FAILED: %s (%s:%d)\n", expression, file, line);
     }
+}
+
+int PCSelfTestFailures() {
+    return sFailures;
 }
 
 static bool Near(f32 a, f32 b, f32 eps = 1e-4f) {
@@ -226,6 +237,7 @@ static int RunSelfTest() {
     PCSelfTestOS();
     PCSelfTestFiles();
     PCSelfTestBackend();
+    PCSelfTestGX();
     PCSelfTestDolData();
     PCSelfTestBoot();
 
@@ -267,6 +279,7 @@ int main(int argc, char** argv) {
     bool selftest_only = false;
     bool boot = false;
     bool window_test = false;
+    bool selftest_gl = false;
     PCConfig* config = PCGetConfig();
 
     // --config first: the other options override the file.
@@ -315,6 +328,17 @@ int main(int argc, char** argv) {
                 std::fprintf(stderr, "%s: bad value '%s' for --input (see src/pc/pc_input.h)\n", argv[0], script);
                 return 2;
             }
+        } else if (std::strcmp(arg, "--screenshot") == 0) {
+            const char* frames = OptionValue(argc, argv, &i);
+            if (!PCGXRequestScreenshots(frames)) {
+                std::fprintf(stderr, "%s: bad value '%s' for --screenshot (retrace numbers, e.g. 120,600)\n", argv[0],
+                             frames);
+                return 2;
+            }
+        } else if (std::strcmp(arg, "--screenshot-dir") == 0) {
+            PCGXSetScreenshotDir(OptionValue(argc, argv, &i));
+        } else if (std::strcmp(arg, "--selftest-gl") == 0) {
+            selftest_gl = true;
         } else if (std::strcmp(arg, "--dol") == 0) {
             PCDolDataSetPath(OptionValue(argc, argv, &i));
         } else if (std::strcmp(arg, "--nand-dir") == 0) {
@@ -341,6 +365,14 @@ int main(int argc, char** argv) {
 
     if (selftest_only) {
         return RunSelfTest();
+    }
+    if (selftest_gl) {
+        // The part of the GX self-test that needs an OpenGL context: a hidden
+        // window. Skips (status 0) where there is no display.
+        bool ok = PCSelfTestGXWithContext();
+        std::printf("self-test (OpenGL): %s\n", ok ? "all checks passed" : "FAILED");
+        std::fflush(stdout);
+        PCExit(ok ? 0 : 1);
     }
 
     PrintVersion();
