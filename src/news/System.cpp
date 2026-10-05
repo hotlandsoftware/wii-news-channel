@@ -860,8 +860,8 @@ void* LoadArcFile(u32 archive, const char* name, s32 align, u32* size, MEMHeapHa
                 CXUncompressHuffman(comp, buf);
                 break;
             default:
-#line 2247
                 // The original format has a %d but passes no argument.
+#line 2247
                 OSPanic(__FILE__, __LINE__, "CXCompressionType %d unsupported.");
                 break;
             }
