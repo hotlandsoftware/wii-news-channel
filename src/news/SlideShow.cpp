@@ -1098,8 +1098,20 @@ BOOL SlideShow::StateShow(const s32* arg) {
 void SlideShow::StartZoomOut() {
     f32 volume = 1.0f;
     Bgm_SetSlideshowVolume(volume);
-    ChangeSubState(&SlideShow::SubStateIdle);
+    // ChangeSubState() written out: the original clears `tex` between leaving
+    // the old sub-state and entering the new one (one zero register serves
+    // both), and its object has an unreferenced pointer to SubStateWait in
+    // front of the one to SubStateIdle.
+    BOOL wait = FALSE;
+    SubStateFunc state = wait ? &SlideShow::SubStateWait : &SlideShow::SubStateIdle;
+    if (mSubState) {
+        mSubStateFrame = -1;
+        (this->*mSubState)();
+    }
     NewsTexture* tex = NULL;
+    mSubState = state;
+    mSubStateFrame = 0;
+    (this->*mSubState)();
     LayoutArticle();
     NewsArticle* article = mArticle;
     if (article->mLocation == NULL) {
@@ -1339,6 +1351,9 @@ BOOL SlideShow::StateMove(const s32* arg) {
     switch (mStateFrame) {
     case -1:
         break;
+        // Never reached. The original object has an unreferenced pointer to
+        // SubStateIdle here, in front of the one case 0 uses.
+        ChangeSubState(&SlideShow::SubStateIdle);
     case 0: {
         ChangeSubState(&SlideShow::SubStateIdle);
         bool hadLocation;
