@@ -702,9 +702,15 @@ void Globe::UpdateCamera() {
     Mtx_RotateZDeg(&gWorkMtx, mCamera->mTargetRot.z);
     Mtx_RotateYDeg(&gWorkMtx, mCamera->mTargetRot.y);
     PSMTXCopy(gWorkMtx, mtx);
-    math::VEC3 target(mtx._03, mtx._13, mtx._23);
+    math::VEC3 target;
+    target.x = mtx._03;
+    target.y = mtx._13;
+    target.z = mtx._23;
+    f32 pz = posOfs.z;
+    f32 py = posOfs.y;
+    f32 px = posOfs.x;
 
-    PSMTXTrans(gWorkMtx, posOfs.x, posOfs.y, posOfs.z);
+    PSMTXTrans(gWorkMtx, px, py, pz);
     Mtx_RotateXDeg(&gWorkMtx, mCamera->mRot.x);
     Mtx_RotateZDeg(&gWorkMtx, mCamera->mRot.z);
     Mtx_RotateYDeg(&gWorkMtx, mCamera->mRot.y);
