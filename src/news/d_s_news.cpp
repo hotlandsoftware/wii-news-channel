@@ -457,6 +457,11 @@ static inline bool IsArticleShort() {
     return (s32)(sCreditView->mHeight + 60.0f) <= (s32)sArticleSize.y;
 }
 
+// The picture of the article body.
+static inline NewsTexture* GetBodyPicture() {
+    return sBodyView->mPicture;
+}
+
 static inline s32 GetMaxScrollLine() {
     s32 max = (lbl_80357568->mNumLines + sBodyView->mNumLines + 1 + sCreditView->mNumLines) -
               sLinesPerPage[lbl_80356970];
@@ -2935,7 +2940,7 @@ BOOL Article_GetPictureRect(ut::Rect* rect, f32 x, f32 y, f32 scale) {
 }
 
 BOOL Article_GetZoomedPictureRect(ut::Rect* rect) {
-    NewsTexture* tex = sBodyView->mPicture;
+    NewsTexture* tex = GetBodyPicture();
     if (tex == NULL) {
         return FALSE;
     }
@@ -2968,14 +2973,12 @@ BOOL Article_GetZoomedPictureRect(ut::Rect* rect) {
     } else {
         s = availH / h;
     }
-    f32 hw = 0.5f * (w * s);
-    f32 hh = 0.5f * (h * s);
-    rect->left = cx - hw;
-    rect->right = cx + hw;
-    rect->top = cy - hh;
-    rect->bottom = cy + hh;
-    f32 bottom = rect->bottom;
+    rect->left = cx - 0.5f * (w * s);
+    rect->right = cx + 0.5f * (w * s);
+    rect->top = cy - 0.5f * (h * s);
+    rect->bottom = cy + 0.5f * (h * s);
     f32 limit = (456 - (gWidescreen ? 19 : 34)) - captionH;
+    f32 bottom = rect->bottom;
     if (bottom > limit) {
         f32 d = bottom - limit;
         rect->top -= d;
@@ -2987,11 +2990,10 @@ BOOL Article_GetZoomedPictureRect(ut::Rect* rect) {
 void Article_DrawZoomedPicture(const ut::Rect& from, const ut::Rect& to, f32 t) {
     NewsTexture* tex = sBodyView->mPicture;
     if (tex) {
-        f32 left = from.left;
-        f32 top = from.top;
-        f32 right = from.right;
-        math::VEC3 pos(left + t * (to.left - left), top + t * (to.top - top), 0.0f);
-        f32 scale = ((right + t * (to.right - right)) - pos.x) / tex->width;
+        f32 px = from.left + t * (to.left - from.left);
+        f32 py = from.top + t * (to.top - from.top);
+        math::VEC3 pos(px, py, 0.0f);
+        f32 scale = ((from.right + t * (to.right - from.right)) - pos.x) / tex->width;
         Draw2D_SetupGX();
         Draw2D_SetOrtho();
         GXSetZMode(GX_FALSE, GX_NEVER, GX_FALSE);
@@ -2999,8 +3001,9 @@ void Article_DrawZoomedPicture(const ut::Rect& from, const ut::Rect& to, f32 t) 
         const wchar_t* caption = sBodyView->mPicLabel;
         if (caption) {
             ut::TextWriterBase<wchar_t> writer;
+            f32 maxX = GetScreenWidth() - GetSideMargin();
             f32 x = to.right;
-            if (x > GetScreenWidth() - GetSideMargin()) {
+            if (x > maxX) {
                 x = GetScreenWidth() - GetSideMargin();
             }
             Draw2D_SetupGX();
