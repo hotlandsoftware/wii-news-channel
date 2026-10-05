@@ -618,13 +618,12 @@ s32 CheckNewsFiles(NewsHeader** files, u32* sizes, s32* current, u32* mask) {
 
     NewsHeader* header = headers[newest];
     NewsTopicRec* topic = (NewsTopicRec*)((u8*)files[newest] + header->topicsOfs);
-    for (s32 t = 0; t < header->numTopics; t++, topic++) {
-        u32 entriesOfs = topic->entriesOfs;
-        if (entriesOfs & 3) {
+    for (s32 t = 0; t < header->numTopics; topic++, t++) {
+        if (topic->entriesOfs & 3) {
             result = -1;
             break;
         }
-        NewsEntryRec* entries = (NewsEntryRec*)((u8*)files[newest] + entriesOfs);
+        NewsEntryRec* entries = (NewsEntryRec*)((u8*)files[newest] + topic->entriesOfs);
         if (t > 0 && topic->nameOfs == 0) {
             result = -1;
             break;
@@ -637,23 +636,22 @@ s32 CheckNewsFiles(NewsHeader** files, u32* sizes, s32* current, u32* mask) {
             result = -1;
             break;
         }
-        if (entriesOfs + topic->numEntries * sizeof(NewsEntryRec) > header->fileSize) {
+        if (topic->entriesOfs + topic->numEntries * sizeof(NewsEntryRec) > header->fileSize) {
             result = -1;
         }
         for (u32 e = 0; e < topic->numEntries; e++) {
-            NewsEntryRec* entry = &entries[e];
             s32 fileIdx = -1;
             s32 articleIdx = -1;
             BOOL remove = FALSE;
             for (s32 k = 0; k < NEWS_FILE_MAX; k++) {
-                if (headers[k] != NULL && entry->fileId == headers[k]->id) {
+                if (headers[k] != NULL && entries[e].fileId == headers[k]->id) {
                     fileIdx = k;
                     break;
                 }
             }
             if (fileIdx >= 0) {
                 for (u32 a = 0; a < headers[fileIdx]->numArticles; a++) {
-                    if (entry->articleId == articles[fileIdx][a].id) {
+                    if (entries[e].articleId == articles[fileIdx][a].id) {
                         articleIdx = a;
                         break;
                     }
@@ -661,18 +659,16 @@ s32 CheckNewsFiles(NewsHeader** files, u32* sizes, s32* current, u32* mask) {
             }
             if (fileIdx >= 0 && articleIdx >= 0) {
                 NewsTextBuffer* text = &articles[fileIdx][articleIdx];
-                NewsHeader* file = headers[fileIdx];
-                if (text->sourceIdx >= file->numSources && text->sourceIdx != 0xFFFFFFFF) {
+                if (text->sourceIdx >= headers[fileIdx]->numSources && text->sourceIdx != 0xFFFFFFFF) {
                     result = -1;
                 }
-                if (text->locationIdx >= file->numLocations && text->locationIdx != 0xFFFFFFFF) {
+                if (text->locationIdx >= headers[fileIdx]->numLocations && text->locationIdx != 0xFFFFFFFF) {
                     result = -1;
                 }
-                u32 picFile = text->pictureFileId;
-                if (picFile != 0) {
+                if (text->pictureFileId != 0) {
                     s32 picIdx = -1;
                     for (s32 k = 0; k < NEWS_FILE_MAX; k++) {
-                        if (headers[k] != NULL && picFile == headers[k]->id) {
+                        if (headers[k] != NULL && text->pictureFileId == headers[k]->id) {
                             picIdx = k;
                             break;
                         }
@@ -684,7 +680,7 @@ s32 CheckNewsFiles(NewsHeader** files, u32* sizes, s32* current, u32* mask) {
                 }
                 u32 textSize = text->size;
                 u32 textOfs = text->headlineOfs;
-                u32 fileSize = file->fileSize;
+                u32 fileSize = headers[fileIdx]->fileSize;
                 if (textOfs + textSize > fileSize) {
                     result = -1;
                 }
@@ -694,8 +690,8 @@ s32 CheckNewsFiles(NewsHeader** files, u32* sizes, s32* current, u32* mask) {
                 if (textSize == 0 && textOfs != 0) {
                     result = -1;
                 }
-                textOfs = text->bodyOfs;
                 textSize = text->unk24;
+                textOfs = text->bodyOfs;
                 if (textOfs + textSize > fileSize) {
                     result = -1;
                 }
@@ -728,8 +724,7 @@ s32 CheckNewsFiles(NewsHeader** files, u32* sizes, s32* current, u32* mask) {
         if (files[i] == NULL) {
             continue;
         }
-        NewsHeader* file = headers[i];
-        for (u32 s = 0; s < file->numSources; s++) {
+        for (u32 s = 0; s < headers[i]->numSources; s++) {
             NewsSourceRec* rec = &sources[i][s];
             u8 logo = rec->noLogo;
             if (logo >= 7) {
@@ -746,12 +741,12 @@ s32 CheckNewsFiles(NewsHeader** files, u32* sizes, s32* current, u32* mask) {
             if ((logoOfs != 0 && logo != 0) || (logoOfs == 0 && logo == 0)) {
                 result = -1;
             }
-            if (logoOfs + logoSize > file->fileSize) {
+            if (logoOfs + logoSize > headers[i]->fileSize) {
                 result = -1;
             }
             u32 strSize = rec->nameSize;
             u32 strOfs = rec->nameOfs;
-            if (strOfs + strSize > file->fileSize) {
+            if (strOfs + strSize > headers[i]->fileSize) {
                 result = -1;
             }
             if (strOfs & 1) {
@@ -762,7 +757,7 @@ s32 CheckNewsFiles(NewsHeader** files, u32* sizes, s32* current, u32* mask) {
             }
             strSize = rec->unk14;
             strOfs = rec->copyrightOfs;
-            if (strOfs + strSize > file->fileSize) {
+            if (strOfs + strSize > headers[i]->fileSize) {
                 result = -1;
             }
             if (strOfs & 1) {
@@ -772,24 +767,24 @@ s32 CheckNewsFiles(NewsHeader** files, u32* sizes, s32* current, u32* mask) {
                 result = -1;
             }
         }
-        for (u32 l = 0; l < file->numLocations; l++) {
+        for (u32 l = 0; l < headers[i]->numLocations; l++) {
             NewsLocationRec* loc = &locations[i][l];
             u32 ofs = loc->nameOfs;
             if (ofs == 0) {
                 result = -1;
             }
-            if (ofs >= file->fileSize) {
+            if (ofs >= headers[i]->fileSize) {
                 result = -1;
             }
             if (ofs & 1) {
                 result = -1;
             }
         }
-        for (u32 n = 0; n < file->numPictures; n++) {
+        for (u32 n = 0; n < headers[i]->numPictures; n++) {
             NewsPictureRec* pic = &pictures[i][n];
             u32 strSize = pic->unk0;
             u32 strOfs = pic->captionOfs;
-            if (strOfs + strSize > file->fileSize) {
+            if (strOfs + strSize > headers[i]->fileSize) {
                 result = -1;
             }
             if (strOfs & 1) {
@@ -800,7 +795,7 @@ s32 CheckNewsFiles(NewsHeader** files, u32* sizes, s32* current, u32* mask) {
             }
             strSize = pic->unk8;
             strOfs = pic->creditOfs;
-            if (strOfs + strSize > file->fileSize) {
+            if (strOfs + strSize > headers[i]->fileSize) {
                 result = -1;
             }
             if (strOfs & 1) {
@@ -817,7 +812,7 @@ s32 CheckNewsFiles(NewsHeader** files, u32* sizes, s32* current, u32* mask) {
             if (dataOfs == 0) {
                 result = -1;
             }
-            if (dataOfs + dataSize > file->fileSize) {
+            if (dataOfs + dataSize > headers[i]->fileSize) {
                 result = -1;
             }
         }
