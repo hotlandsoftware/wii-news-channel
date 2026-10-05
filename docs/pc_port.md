@@ -22,6 +22,7 @@ Contents:
 13. [File loading (CNT, ARC, NAND, DVD, CX, TPL)](#13-file-loading-cnt-arc-nand-dvd-cx-tpl)
 14. [Window, settings, input, placeholders](#14-window-settings-input-placeholders)
 15. [Milestone 2: the boot](#15-milestone-2-the-boot)
+16. [GX backend (milestone 3)](#16-gx-backend-milestone-3)
 
 ## 1. Decisions
 
@@ -29,7 +30,7 @@ Contents:
 | --- | --- |
 | Target | 32-bit x86 Linux (`gcc -m32`). Pointers stay 4 bytes, so the struct layouts the game overlays on files stay valid. 64-bit comes much later. |
 | `wchar_t` | 16 bits (`-fshort-wchar`), as on the Wii. |
-| Libraries | SDL3 (window, input, audio), OpenGL (through a small GX layer, not started), libcurl (HTTP). |
+| Libraries | SDL3 (window, input, audio), OpenGL 3.3 core (through the GX backend, section 16), libcurl (HTTP). |
 | Recompiled natively | The game (`src/news`) and NW4R (`src/nw4r`). |
 | Not compiled | The Wii SDK (`src/revolution`), MSL (`src/MSL_C`), the runtime (`src/Runtime.PPCEABI.H`), MetroTRK and `src/vcmv`. |
 | SDK | Replaced by a PC backend (`src/pc`) that provides the same API. The SDK headers in `include/revolution` are shared; they declare what the backend defines. |
@@ -64,6 +65,8 @@ src/pc/                     PC-only sources
   pc_noop.h                 PC_NOOP: weak, silent placeholder functions
   pc_gx_objects.h           PC layout of GXTexObj, GXTlutObj, GXLightObj
   sdk/<library>.cpp         SDK replacement, one file per SDK library (gx_fifo.cpp, lowmem.cpp, ...)
+  gx/                       GX on OpenGL: registers, FIFO decoder, transform, TEV shaders,
+                            textures, EFB (section 16); pc_gx.h is what other PC code may call
   sdk/stubs_generated.cpp   generated; never edit
   endian/fmt_<format>.cpp   byte order: one converter per asset format, and the registry (section 12)
   libc/wchar16.cpp          16-bit wcslen(), swprintf() and so on
@@ -132,12 +135,13 @@ ninja -C build/pc
 build/pc/newschannel            # build information, SDL start-up, self-test
 build/pc/newschannel --help
 build/pc/newschannel --selftest
+build/pc/newschannel --selftest-gl   # the GX checks that need OpenGL (hidden window)
 build/pc/newschannel --boot     # the game; close the window to quit
 build/pc/newschannel --boot --contents path/to/contents --nand-dir path/to/nand --dol path/to/main.dol
 ```
 
 `newschannel` without options prints its build information, initialises SDL, runs the self-test and exits with status 0.
-`newschannel --boot` calls the game's own `main()` (renamed to `NewsMain` by the build). The game starts, loads its assets, creates its news scene and runs its frame loop in a window that stays black (drawing is milestone 3); closing the window shuts it down through the game's own power-button path. Section 15 describes how far it gets and section 14 lists the options (`--frames N`, `--contents DIR`, `--nand-dir DIR`, `--dol FILE`, `--lang`, `--wide`, `--no-window`, `--input SCRIPT`).
+`newschannel --boot` calls the game's own `main()` (renamed to `NewsMain` by the build). The game starts, loads its assets, creates its news scene, runs its frame loop and draws its 2D screens in the window (section 16); closing the window shuts it down through the game's own power-button path. Section 15 describes how far it gets and section 14 lists the options (`--frames N`, `--contents DIR`, `--nand-dir DIR`, `--dol FILE`, `--lang`, `--wide`, `--no-window`, `--input SCRIPT`, `--screenshot N[,N...]`, `--screenshot-dir DIR`).
 `newschannel --window-test` opens the window and runs empty frames without the game.
 
 `extract_wad.py --contents` writes `orig/HAGE/contents/NN.app` (NN = content index: 00, 02 to 11). The game's archive number `n` is content `n + 2`.
@@ -264,7 +268,7 @@ Stubs (`gen_stubs.py`): **12 functions, 0 data** (after milestone 1: 404 and 9).
 None of them is called during the boot of section 15: the boot log has no `unimplemented:` line.
 No CodeWarrior name is stubbed: the 44 names the game calls have thunks in `src/pc/thunks`.
 
-Stubs are not the whole picture: GX, AX/AI, NWC24/SO/VF, KPAD/WPAD buttons and HBM are hand-written placeholders that are silent by design (section 14, "Placeholders are weak and silent"). They are the work of milestones 3 to 7.
+Stubs are not the whole picture: AX/AI, NWC24/SO/VF, KPAD/WPAD buttons and HBM are hand-written placeholders that are silent by design (section 14, "Placeholders are weak and silent"). They are the work of milestones 4 to 7. GX is implemented (section 16).
 
 ## 8. Milestones
 
@@ -496,9 +500,10 @@ On PC the same conversions are done **by value** (`include/nw4r/ut/ut_Color.h`, 
 With that, integer constants, colours from converted files (`mVtxColors[i] = pRes->vtxCols[i]`) and values sent to GX (`GXColor1u32(color)`) all agree, and a `u32` colour in a file is swapped like any other `u32`.
 `Color::ToU32ref()` does not exist on PC.
 
-What this cannot fix is code that reinterprets a colour's memory itself. These sites still have to be guarded when drawing is implemented (milestone 3):
+What this cannot fix is code that reinterprets a colour's memory itself.
+Guarded (they send the four bytes with `GXColor4u8()` on PC): `Draw2D_FillBox()` in `src/news/System.cpp` and `Draw2D_FillQuad()`, `Draw2D_FillQuadGradient()` in `src/news/DrawUtil.cpp`, which wrote `GXColor1u32(*(u32*)&color)`.
+Still to guard, with the globe (milestone 6):
 
-- `src/news/DrawUtil.cpp:172`, `src/news/System.cpp:925` to `931`: `GXColor1u32(*(u32*)&color)`
 - `include/nw4r/g3d/platform/g3d_gpu.h:104`, `:108`: `LoadXFCmd(..., *reinterpret_cast<u32*>(&color))`
 - `src/nw4r/g3d/g3d_anmscn.cpp:30`: `*reinterpret_cast<u32*>(&pAmbObj->r) = GetAmbLightColor(i)`
 
@@ -594,7 +599,7 @@ This part of milestone 2 gives the game a screen to wait on, the console's setti
 | `src/pc/sdk/sc.cpp` | SC | real: values from `PCConfig` |
 | `src/pc/pc_config.cpp` | (PC) | settings: defaults, `newschannel.ini`, `NEWSCHANNEL_*` variables, command line |
 | `src/pc/sdk/kpad.cpp`, `wpad.cpp` | KPAD, WPAD | placeholder for milestone 4: one remote on channel 0, no buttons, pointing at the mouse |
-| `src/pc/sdk/gx_noop.cpp` | GX | placeholder for milestone 3 |
+| `src/pc/gx/` | GX | real: section 16 |
 | `src/pc/sdk/ax_noop.cpp` | AX, AI, AXFX hooks | placeholder for milestone 6 |
 | `src/pc/sdk/nwc24_noop.cpp` | NWC24, SO, VF, NCD, `NETGetUniversalCalendar` | placeholder for milestone 5 |
 | `src/pc/sdk/hbm.cpp` | HBM, vcmv | placeholder for milestone 7 |
@@ -613,8 +618,7 @@ Each placeholder file starts with a `TODO(milestone N)` that names the milestone
 
 What each placeholder promises:
 
-- **GX.** Functions that only touch the application's own objects work as in the SDK, because the game and NW4R read the results back while they build a frame: `GXInitTexObj*`/`GXGetTexObj*`, `GXInitTlutObj`, `GXInitLight*`/`GXGetLight*`, `GXInitFogAdjTable`, `GXGetYScaleFactor`, `GXSetDispCopyYScale` (returns the XFB line count), `GXSetVtxDesc`/`GXGetVtxDesc`, `GXSetVtxAttrFmt`/`GXGetVtxAttrFmt`. `GXInit` returns a FIFO object. The four default render modes (`GXNtsc480IntDf`...) are defined. Everything that would reach the graphics processor does nothing.
-  The PC layout of `GXTexObj`, `GXTlutObj` and `GXLightObj` is in `src/pc/pc_gx_objects.h` (plain values instead of register images, same sizes); milestone 3 should keep using it.
+- **GX** is no longer a placeholder (section 16). Only the SDK's debug shapes (`GXDrawCube`, `GXDrawCylinder`, `GXDrawSphere`, `GXDrawTorus`, used by `nw4r::ef` emitter-form drawing) are still weak no-ops, in `src/pc/gx/gx_api.cpp`.
 - **AX, AI.** Initialisation succeeds and registered callbacks can be read back, but no callback is ever called: there is no audio frame. `AXAcquireVoice` returns `NULL` ("no voice free"), so `nw4r::snd` fails to start each sound and carries on.
 - **NWC24, SO, VF.** A console that has never been online. The library opens and passes `NWC24Check`; download tasks can be created, registered, read back and deleted, in memory only. `SOStartup` fails with `SO_ERR_LINK_UP_TIMEOUT`, which the SDK's `NETGetStartupErrorCode` (compiled natively) turns into error 51099. No VF drive mounts. The game therefore takes its own "could not connect" path.
 - **HBM, vcmv.** `HBMCalc` answers "HOME pressed again" at once, so a HOME Menu that is opened closes on the next frame. `VCMVLoadLibrary` fails, so the Operations Guide is skipped.
@@ -632,7 +636,8 @@ What each placeholder promises:
 - `VIInit()` opens the window: 640x456, or 810x456 with `aspect = 16:9`, resizable. It first asks for an OpenGL 3.3 core context and falls back to whatever the driver has. Without a display, with `--no-window`, or with `SDL_VIDEODRIVER=dummy`, everything still runs, without a window or without a context.
 - `VIWaitForRetrace()` is the retrace. It sleeps until the next retrace time (59.94 Hz; 50 Hz if the configured TV mode is PAL), increments the count, calls the pre-retrace callback, latches the registers if `VIFlush()` was called, calls the post-retrace callback, pumps SDL events and presents. There is no interrupt, so a retrace only happens while the application waits for one. The swap interval is 0: pacing is ours, not the driver's.
 - Only the thread that called `VIInit()` runs retraces. Another thread that calls `VIWaitForRetrace()` waits for the count to change.
-- The picture is not drawn yet (milestone 3): the window is cleared to black. `PCVIGetWindow()`, `PCVIGetGLContext()`, `PCVIGetPictureRect()` (the window letterboxed to 4:3 or 16:9) and `PCVIGetRenderMode()` in `src/pc/pc_video.h` are what the GX layer needs.
+- The picture: at each retrace `Present()` gives the current XFB pointer (or NULL while `VISetBlack(TRUE)` is latched) to `PCGXRetrace()`, which saves a requested screenshot, and to `PCGXPresent()`, which scales that XFB's frame into `PCVIGetPictureRect()` (the window letterboxed to 4:3 or 16:9) on black (section 16).
+- With `--no-window` and `--screenshot` the window is created hidden (`SDL_WINDOW_HIDDEN`): there is an OpenGL context to draw with and nothing on the screen. `PCVIGetWindow()` is NULL then, as without a window.
 - `VIGetDTVStatus()` is 1 (a monitor is "component cable") and `progressive` defaults to on, so the game selects its progressive mode and skips the 98-frame black wait of a mode switch.
 - **Shutdown.** Closing the window, SIGINT and SIGTERM arrive as an SDL quit event. The retrace then calls the close handler, which the boot driver sets to a function that presses the console's power button (`PCOSPressPowerButton()`, section 11): the game's `PowerCallback()` runs in interrupt context, and the game's own shutdown path ends in `OSShutdownSystem()`. If the game has not ended the process 300 retraces later, or the user closes the window a second time, `PCExit(0)` ends it.
 - There is one way out of the process: `PCOSExit()` (section 11). VI registers the window's teardown with `PCOSAtExit()`, so `OSShutdownSystem()`, `OSReturnToMenu()`, `OSRestart()` and `PCExit()` (which is `PCOSExit()` for code that has no game running) all close the window and shut SDL down. Global destructors are not run: other OS threads may still be in game code.
@@ -669,6 +674,8 @@ For backend code the consequence remains: `new`, `std::string`, `std::vector` an
 | `--contents DIR` (or `--contents-dir`), `--nand-dir DIR` | the two directories (section 13); they override `$NEWSCHANNEL_CONTENTS`/`$NEWSCHANNEL_NAND` and the settings file |
 | `--dol FILE` | the channel's `main.dol` (section 10) |
 | `--input SCRIPT` | scripted remote for automated runs: `P0:0@1,A@300` points at the centre of the picture from retrace 1 and presses A at retrace 300 (`src/pc/pc_input.h`) |
+| `--screenshot N[,N...]` | save the picture shown at these retraces as `frame_NNNNNN.png` (section 16, "Looking at the result"); with `--no-window` the frames are drawn in a hidden window |
+| `--screenshot-dir DIR` | where the screenshots go (default: the current directory; keep them out of the repository, e.g. `build/shots`) |
 | `--lang LANG`, `--wide` | language (`en ja de fr es it nl`), 16:9 |
 | `--config FILE` | settings file (default `./newschannel.ini` if it exists) |
 | `--window-test` | the video path without the game: open the window, run `--frames` empty frames (default 120), print the rate |
@@ -680,7 +687,7 @@ For backend code the consequence remains: `new`, `std::string`, `std::vector` an
 ## 15. Milestone 2: the boot
 
 Milestone 2 is met. `newschannel --boot` runs the game's `SystemInit()`, creates the news scene and runs the game's own frame loop at 59.94 Hz in an SDL window until the window is closed; closing it runs the game's shutdown and the process exits with status 0.
-The window is black: every GX call is a placeholder (milestone 3).
+What it draws is in section 16.
 
 ### How far the game gets
 
@@ -763,7 +770,9 @@ Things in the shared source that are wrong, or only right on a PowerPC. The PC b
 
 No logic bug was found in a NonMatching file during the boot.
 
-### What milestone 3 (drawing) needs first
+### What milestone 3 (drawing) needed first
+
+This list was written before the GX backend existed; section 16 says what became of each point (1, 3, 5 and 6 are done, 4 for the game's 2D code; 2 is `src/pc/gx/texdecode.cpp`).
 
 1. **A GX backend in place of `src/pc/sdk/gx_noop.cpp`.** The first things the game draws are 2D: `SystemDraw()` → the scene's `mDraw` (`DrawStartup`, `DrawDialog`, `DrawIntro`) → `lyt::Layout::Draw()`, `ut::TextWriter`, and the game's own quads (`Draw2D.cpp`, `DrawUtil.cpp`, the fader). That needs: the FIFO (`gPCGXFifo`, `<pc/gx_fifo.h>`) collecting vertices between `GXBegin`/`GXEnd`; vertex descriptors and formats; projection and position/texture matrices; TEV stages, colour and alpha combiners, konst and register colours; blend, alpha compare, Z mode, scissor, cull; `GXLoadTexObj` and `GXInitTexObj*`. The object functions that NW4R reads back already work (section 14).
 2. **Texture decoding from big-endian GX formats.** `.tpl` texels, font sheets and palettes were deliberately left big-endian (section 12): decode with `PCReadBE16/32`. The fonts are I4 sheets; layouts can name any GX texture format, so plan for all of them (I4, I8, IA4, IA8, RGB565, RGB5A3, RGBA8, CMPR, and C4/C8/C14X2 with palettes). The TMCC JPEG decoder's RGB565 output is host order (section 14).
@@ -771,3 +780,99 @@ No logic bug was found in a NonMatching file during the boot.
 4. **The colour punning sites** listed in section 12 ("Colours"): `DrawUtil.cpp:172`, `System.cpp:925-931`, `g3d_gpu.h:104/108`, `g3d_anmscn.cpp:30`. They are wrong on a little-endian host as soon as their output is drawn.
 5. **A way to look at the result.** `--input` drives the game past the save dialog (`P0:0@1,A@300`); add a `--screenshot FRAME` to the boot driver early, so that automated runs can compare pictures.
 6. **First pictures to expect**, in order: the "save data" dialog on a black background (first run), then the connection screen with the mascot and, after the download fails, the connection error text.
+
+## 16. GX backend (milestone 3)
+
+`src/pc/gx` replaces the GX placeholder: the game's 2D screens are drawn with OpenGL 3.3 core.
+With the first-run input script the game shows, in this order, its date and time question, the connection screen (mascot, "One moment, please...", the progress icons, the "News Channel" label fading in) and the connection error screen with error code 051099; all three are drawn completely, text included.
+
+```sh
+build/pc/newschannel --boot --no-window --nand-dir build/nand --frames 900 \
+    --input "P0:0@1,A@300" --screenshot 250,330,500 --screenshot-dir build/shots
+```
+
+### Files
+
+| File | Contents |
+| --- | --- |
+| `gx/pc_gx.h` | what other PC code may call: `PCGXPresent()`, `PCGXRetrace()`, screenshots, `PCGXInvalidateTexture()`, `PCGXSetTextureHostOrder()`, `PCGXSetArrayBigEndian()`, `PCGXExecuteList()`, statistics, the self-tests |
+| `gx/gx_internal.h` | the state (`PCGXState gPCGX`), register numbers, the interfaces between the files below |
+| `gx/gx_state.cpp` | BP, CP and XF registers: `PCGXLoadBP/CP/XF()`, the BP mask, decoding of the registers that feed non-register state (TEV colours, texture units, palettes, copies) |
+| `gx/gx_api.cpp` | the SDK API: every function composes the SDK's register values and loads them; `GXInit()` sets the SDK's default state |
+| `gx/gx_objects.cpp` | `GXInitTexObj*`, `GXInitLight*`, `GXInitTlutObj` and their getters (objects in the layout of `pc_gx_objects.h`) |
+| `gx/gx_command.cpp` | the FIFO and display lists: one decoder for the command stream |
+| `gx/gx_vertex.cpp` | the transform unit on the CPU: vertex decoding, matrices, lighting, texture coordinate generation, projection, viewport, triangulation |
+| `gx/gx_tev.cpp` | `PCGXShaderKey` and the GLSL generator for TEV |
+| `gx/gx_texture.cpp` | the texture cache |
+| `gx/gx_render.cpp` | OpenGL: programs, fixed-function state, the EFB, `GXCopyDisp`/`GXCopyTex`, presenting, screenshots |
+| `gx/gx_log.cpp` | `NEWSCHANNEL_GX_LOG`, `PCGXWarnOnce()` |
+| `gx/png.cpp` | PNG writer (stored deflate blocks, no library) |
+| `gx/texdecode.h` | the texture codec's interface (`PCGXDecodeTexture`, `PCGXTextureDataSize`, `PCGXEncodeTexture`); `texdecode.cpp` implements it |
+| `gx/texdecode_fallback.cpp` | **temporary**: weak definitions of the codec so that the backend builds alone. Delete it when `texdecode.cpp` is in the build |
+| `sdk/gx_fifo.cpp` | the write-gather pipe: values become big-endian bytes for `PCGXFifoWrite()` |
+| `selftest_gx.cpp` | self-tests (below) |
+
+### Design decisions
+
+**The state is the hardware's registers.** `gPCGX` holds the BP registers (`bp[256]`), XF memory (`xf[]`: matrices, lights, registers) and the CP's vertex descriptor and attribute tables, in the hardware's formats. There are two ways in and both end in `PCGXLoadBP()`, `PCGXLoadCP()`, `PCGXLoadXF()`:
+
+- the SDK API, which composes the same register values as the SDK (`src/revolution/GX` was the reference);
+- the FIFO: `nw4r::g3d` writes BP, CP and XF commands to the pipe itself (`g3d_gpu.h`, `GXFastCallDisplayList()`), and display lists are the same stream in memory.
+
+So the API, raw FIFO writes and display lists can be mixed freely, as on the console, and the renderer reads one state. The SDK defers part of the state to the next `GXBegin()`; here everything is loaded at once, which is equivalent because nothing is drawn in between. The exception is the texture coordinate scale (`__GXSetSUTexRegs`: BP `0x30`-`0x3F`), which depends on the TEV orders and the loaded textures together and is sent by `GXBegin()` and `GXCallDisplayList()`.
+
+**Pointers do not fit in registers.** The hardware has 24 or 26 address bits. Texture images, vertex arrays and palettes therefore keep a host pointer beside the register state (`PCGXTexUnit`, `PCGXArray`, `PCGXTlutSlot`), which the API fills in directly: `GXLoadTexObj()`, `GXSetArray()`, `GXLoadTlut()`, `GXCopyTex()` and `GXCopyDisp()` do not go through registers. An address that does arrive in a register (a display list that sets an array base, a texture image or a copy destination) is translated by `PCGXAddressToHost()`, which only works for MEM1/MEM2 mapped at the console's addresses (section 11) and gives NULL otherwise. The pointer of `GXFastCallDisplayList()` is written to the FIFO as 32 bits and used as it is (pointers are 32 bits in this build).
+
+**The FIFO is big-endian bytes.** `sdk/gx_fifo.cpp` serialises each write as the hardware would see it; `gx_command.cpp` decodes a command when its last byte arrives (a draw command needs the vertex size, which comes from the current vertex descriptor). Display lists from files are read by the same code without conversion. Vertex data in the stream is therefore always big-endian; **arrays** given to `GXSetArray()` are read in host order (the game and NW4R fill them at run time) unless `PCGXSetArrayBigEndian(attr, true)` is called after `GXSetArray()` (vertex arrays inside a model file, milestone 6).
+
+**The transform unit runs on the CPU** (`gx_vertex.cpp`): position and normal matrices, the two lighting channels with real lights (diffuse and attenuation functions, specular lights), texture coordinate generation (2x4 and 3x4 matrices, per-vertex matrix indices, normalisation and post-transform matrices, colour and emboss coordinates), projection and viewport. Vertex counts are small (a few hundred per frame in 2D, some thousands for the globe), the GLSL side stays TEV only, and all of it is checked by `--selftest` without a graphics context.
+
+**Coordinates.** The EFB is a framebuffer object of 640 x 528 (the hardware's size; the render mode only selects how much is used). OpenGL's viewport is always the whole EFB: the GX viewport and the scissor box offset are folded into the clip coordinates on the CPU, so geometry outside the GX viewport is scissored and not clipped (as on the hardware) and fractional viewports are exact. The top row of the GX picture is the top row of the OpenGL image; nothing is mirrored, so GX's clockwise front faces are `glFrontFace(GL_CW)`. GX clip space has z in [-w, 0]; the vertex's z becomes `2z + w` and the viewport's depth range is `glDepthRange(near, far)`.
+
+**TEV is generated GLSL, in integers.** `PCGXBuildShaderKey()` collects what the fragment shader depends on (stages, inputs, operations, orders, konst selections, swap tables, alpha compare functions, indirect stages); one program per distinct key is compiled and kept. The values that change all the time are uniforms: the four register colours (signed 11 bits) and four konst colours, the alpha references, the destination alpha, the coordinate scales, the indirect matrices. The shader computes like the hardware: `(d + bias) +- ((a * (256 - c') + b * c') >> 8)` with `c' = c + (c >> 7)`, scale, clamp to 0..255 or -1024..1023; the compare operations on 8, 16 and 24 bits; the last stage's result is the pixel whatever register it names. The three screens of the boot need 6 programs.
+
+**Indirect textures** are implemented in the shader (coordinates in 1/128 texel fixed point as on the hardware: formats, bias, the three matrices and their scale, S and T dynamic matrices, wrapping, add-previous, bump alpha). The self-test checks a known shift numerically; nothing in the 2D screens uses them, so the globe (milestone 6) is their first real user.
+
+**Textures** are decoded once into OpenGL textures and found again by pointer, size, format, mipmap levels, byte order and palette checksum (`gx_texture.cpp`). Each entry keeps a checksum of its encoded data, compared the first time the entry is used after anything that may have changed texels: the end of a frame, `GXInvalidateTexAll()`, an EFB copy, `PCGXInvalidateTexture()`. So a buffer the game decodes into again (a JPEG, a font sheet, the fade copy) is uploaded again without a hook; `PCGXInvalidateTexture()` is only needed when the texels change between two uses within one frame. Palettes are copied by `GXLoadTlut()`, as the hardware copies them into texture memory. Filters, wrap modes and LOD settings are OpenGL sampler objects per texture map. Entries unused for 600 frames are freed.
+
+Texels from files are big-endian. Buffers whose 16-bit texels are in host order must be registered with `PCGXSetTextureHostOrder(pointer, true)`: destinations of `GXCopyTex()` are registered automatically; **the output buffers of the TMCC JPEG decoder are not** and need the call where the game decodes a picture (milestone 5).
+
+**Frame output.** `GXCopyDisp(xfb, clear)` copies the display copy source of the EFB into a texture kept per XFB pointer (the XFB memory itself is not written) and ends the backend's frame. `Present()` in `vi.cpp` shows the texture of the XFB the game selected. `GXCopyTex()` reads the EFB back, halves it if asked, encodes it with `PCGXEncodeTexture()` into the game's buffer and marks the buffer host-order. A copy with `clear` fills the copy source with the copy clear colour and depth through the colour, alpha and depth update masks, as the hardware does. The EFB has an alpha plane only in the `GX_PF_RGBA6_Z24` pixel format; otherwise its alpha stays 1, which is what a destination-alpha blend factor reads. Destination alpha (`GXSetDstAlpha`) with blending uses dual-source blending.
+
+**No OpenGL, no problem.** Without a context (`--no-window` without `--screenshot`, no display, `SDL_VIDEODRIVER=dummy`) all state tracking, FIFO decoding and vertex processing still run; only the drawing is skipped. Drawing from a thread other than the one that called `VIInit()` is not possible (the context is current there) and is reported once.
+
+### Looking at the result
+
+- `--screenshot N[,N...] --screenshot-dir DIR` writes `frame_NNNNNN.png` for retrace N: the frame the window shows at that retrace, or black while the screen is blanked. The picture is the XFB as copied (640 x 456 for the game's mode), not stretched to the display's aspect ratio: on a 4:3 television it is about 5 % narrower, and in 16:9 mode it is anamorphic. Works with `--no-window` (hidden window) and with `SDL_VIDEODRIVER=offscreen`. **Never commit screenshots**: they show the game's assets.
+- `NEWSCHANNEL_GX_LOG=N[,N...]` (or `all`) dumps every primitive of those frames: vertex format, the first four vertices after the transform (in EFB pixels), matrices, viewport and scissor, lighting channels, each TEV stage, register and konst colours, the textures (pointer, size, format, wrap, filter), coordinate scales, blend, depth, alpha compare and cull state, and the EFB copies. `NEWSCHANNEL_GX_LOG_FILE=path` writes to a file instead of stderr. The frame number is the retrace that shows the frame, so the log of frame N describes screenshot N as long as the game draws one frame per retrace.
+- `PCGXGetStats()` counts primitives, vertices, register loads, display lists, copies, programs, textures and FIFO bytes that were not a command (`badCommands`: if this is not 0 the command stream lost step, which means a vertex descriptor and the data written for it disagree).
+- Problems are printed once each (`PCGXWarnOnce()`): an undecodable texture format (drawn magenta), an unknown FIFO command, an indexed attribute without an array, a copy format that is not implemented.
+
+### Self-tests
+
+`newschannel --selftest` (`PCSelfTestGX()`, no display needed): register values behind the API (general mode, TEV orders, colours, operations, konst and swap tables, alpha compare, blend), scissor and viewport read back from the registers, vertex layouts, FIFO parsing of mixed vertex formats (float quads; s16 positions with a fraction, RGB565 colours and u8 coordinates; indexed attributes from host-order and big-endian arrays; matrix indices), orthographic and perspective projection values, lighting (a diffuse light, ambient and material sources), texture coordinate generation (texture matrix, projective, colour), display lists (a big-endian stream with BP mask, XF and CP loads and a draw; through `GXFastCallDisplayList()`; recording with `GXBeginDisplayList()`; overflow; indexed matrix loads), the shader generator's source text, palettes, the coordinate scale, the PNG writer.
+
+`newschannel --selftest-gl` (`PCSelfTestGXWithContext()`): opens a hidden window; prints "skipped" and succeeds if there is no OpenGL 3.3 context. It draws into the EFB and reads pixels back: flat colour and the rasteriser's edges, scissor, blend, subtract and logic operations, alpha compare, a textured quad with the TEV arithmetic checked to the bit, re-upload after the texels changed, swap tables, a two-stage combiner with konst, bias and scale, depth, culling by winding, wide lines and points, 40 combinations of operations, compare modes, scales and alpha compares plus a sixteen-stage and a four-stage indirect configuration compiling, an indirect lookup with a known shift, destination alpha, `GXCopyTex` (full and half size), `GXCopyDisp` with clear, a screenshot file, and `PCGXPresent()` into the window's back buffer.
+
+### Not implemented
+
+| What | Effect | Where it goes |
+| --- | --- | --- |
+| Fog (`GXSetFog`, range adjustment) | the registers are stored (type, colour); nothing is fogged | `gx_tev.cpp` (needs the fog parameters as uniforms and the key's fog type) |
+| Z textures (`GXSetZTexture`) | registers stored, ignored | `gx_tev.cpp` (`gl_FragDepth`) |
+| `GXSetZCompLoc(GX_TRUE)` (depth test before texturing) | depth is always written after the alpha test: a pixel the alpha test rejects does not write depth | `layout(early_fragment_tests)` needs GL 4.2 |
+| Copy filter, gamma, dithering, field modes, Y scale of the display copy | the XFB is the EFB's pixels | `PCGXRenderCopyDisp()` |
+| Depth copies (`GXCopyTex` to a Z format), the copy-only formats (`GX_CTF_*`) | reported once; the destination is not written | `PCGXRenderCopyTex()` and the encoder |
+| `GXPoke*`, `GXSetTexRegionCallback` and the other texture-memory functions, `GXGetCPUFifo` and friends, `GXProject` | not defined: nothing links against them | `gx_api.cpp` |
+| `GXDrawCube/Cylinder/Sphere/Torus` | weak no-ops (`nw4r::ef` debug drawing of emitter shapes) | compile `src/revolution/GX/GXDraw.c` natively: it only calls the API, but it redefines `cosf`/`sinf`/`M_PI` and needs guards first |
+| Lines and points: texture offsets (`GXTexOffset`) | lines and points are quads of their width without the coordinate offset | `gx_vertex.cpp`, `EmitThick()` |
+| Display lists recorded with `GXBeginDisplayList()` cannot contain `GXLoadTexObj()`, `GXLoadTlut()`, `GXSetArray()` or copies | those act at once instead (pointers, above). Nothing in the game or NW4R records lists | - |
+| Clipping disabled (`GXSetClipMode(GX_CLIP_DISABLE)`), co-planar offset, emboss details | ignored | - |
+
+### For the next tasks
+
+- **Texture codec.** `texdecode_fallback.cpp` is weak and must be deleted once `texdecode.cpp` exists. The `--selftest-gl` checks call `PCGXEncodeTexture()` for `GX_TF_RGBA8` and `GX_TF_RGB565` and decode host-order RGB565 back, so they also test the real codec.
+- **JPEG pictures** (milestone 5): call `PCGXSetTextureHostOrder(buffer, true)` for the buffer the TMCC decoder writes.
+- **The globe** (milestone 6): `nw4r::g3d` sends its state as raw register loads and display lists, which the decoder handles; what it needs is (a) the two colour-punning sites in `g3d_gpu.h` and `g3d_anmscn.cpp` (section 12), (b) a decision per vertex array on byte order (`PCGXSetArrayBigEndian()`, or convert the arrays on load), (c) host pointers for anything g3d puts into a register: check how `ResShp` patches array bases and texture addresses into its display lists; `PCGXAddressToHost()` only understands MEM1/MEM2 at the console's addresses, (d) fog and Z-compare location if the model uses them.
+- **The locked cache** is mapped by `OSInit()` now, before `VIInit()` loads the OpenGL driver: with a context the driver's libraries could otherwise occupy `0xE0000000`, which `nw4r::ut::LC::GetBase()` hands to g3d.
+- **Speed**: 600 frames of the connection screens take 0.7 s of CPU time; there is no batching and no need for it yet. Each `GXBegin()`/`GXEnd()` is one `glBufferData()` and one draw call.

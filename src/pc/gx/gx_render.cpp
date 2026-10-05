@@ -629,7 +629,8 @@ void PCGXRenderTriangles(const PCGXOutVertex* vertices, u32 count) {
 void PCGXRenderCopyDisp(const void* xfb, bool clear) {
     gPCGX.stats.dispCopies++;
     if (PCGXLogActive()) {
-        PCGXLog("GXCopyDisp(%p, clear=%d): frame ends\n", xfb, clear);
+        PCGXLog("GXCopyDisp(%p, clear=%d): frame ends; so far %u primitives, %u textures decoded, %u TEV programs\n", xfb,
+                clear, gPCGX.stats.draws, gPCGX.stats.textures, gPCGX.stats.programs);
     }
     if (EnsureGL()) {
         int x, y, width, height;
