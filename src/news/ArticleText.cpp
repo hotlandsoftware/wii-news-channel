@@ -698,19 +698,15 @@ bool ArticleText::LayoutPicture(const math::VEC2* pos, f32 scale) {
         return false;
     }
 
-    math::VEC2 size;
     f32 texHeight;
     f32 texWidth;
     f32 aspect;
     f32 maxAspect;
-    f32 maxHeight;
     f32 labelHeight;
-    maxHeight = lbl_80192348[lbl_80356970];
-    size.x = mSmallPicture ? lbl_80192320[lbl_80356970] : lbl_801922F8[lbl_80356970];
-    maxAspect = maxHeight / size.x;
+    math::VEC2 size(mSmallPicture ? lbl_80192320[lbl_80356970] : lbl_801922F8[lbl_80356970], lbl_80192348[lbl_80356970]);
+    maxAspect = size.y / size.x;
     texWidth = mPicture->width;
     texHeight = mPicture->height;
-    size.y = maxHeight;
     aspect = texHeight / texWidth;
 
     if (mPicLabel != NULL) {
@@ -731,13 +727,12 @@ bool ArticleText::LayoutPicture(const math::VEC2* pos, f32 scale) {
     texWidth *= mPicTargetScale;
 
     mPicSize = size;
-    f32 left = mRight - size.x;
-    mSubTarget.x = left;
+    mSubTarget.x = mRight - size.x;
     mPicTarget.y = mCursor.y;
-    mWrapRight = pos->x + left - mIndent;
+    mWrapRight = pos->x + mSubTarget.x - mIndent;
     size.y = size.y + labelHeight;
     mPicBottom = mCursor.y + size.y;
-    mPicTarget.x = left + 0.5f * (size.x - texWidth);
+    mPicTarget.x = mSubTarget.x + 0.5f * (size.x - texWidth);
     mSubTarget.y = mPicBottom;
 
     if (mSub != NULL) {
