@@ -54,6 +54,16 @@ s64 PCOSTicksToNanoseconds(OSTime ticks);
  * VIWaitForRetrace without a retrace thread.) */
 BOOL PCOSSleepThreadUntil(OSThreadQueue* queue, OSTime time);
 
+/* The clock. PCOSSetClock() makes the game's clock (OSGetTime(), and with it
+ * the universal time of NETGetUniversalCalendar() and NWC24) start at the given
+ * instant instead of the host's current time (`--date`, $NEWSCHANNEL_DATE);
+ * call it before the game starts. PCOSParseDate() reads
+ * "YYYY-MM-DDTHH:MM[:SS]" as local time, or as universal time with a trailing
+ * Z. PCOSGetUnixTime() is the game's clock in seconds since 1970-01-01 UTC. */
+void PCOSSetClock(s64 unixSeconds);
+BOOL PCOSParseDate(const char* text, s64* unixSeconds);
+s64 PCOSGetUnixTime(u32* microseconds);
+
 /* The emulated memory blocks: index 0 is MEM1, 1 is MEM2. They are at the
  * console's addresses (0x80000000, 0x90000000) when the host left those free.
  * (The audio backend maps the DSP's sample addresses back to host pointers.) */

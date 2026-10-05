@@ -113,6 +113,19 @@ BOOL PCEndianSwapLayout(void* data, u32 size);      /* RLYT (.brlyt) */
 BOOL PCEndianSwapLayoutAnim(void* data, u32 size);  /* RLAN (.brlan) */
 
 /**
+ * A news file (news.bin.NN, decompressed): include/news/NewsData.h.
+ *
+ * The format has no magic number, so PCEndianFixFile() does not know it and
+ * this function is NOT idempotent: call it exactly once per file, when the
+ * file is complete and nothing has read it yet. `size` is the size of the
+ * buffer. The CRC in the header is replaced by one that makes the game's own
+ * CRC test give the answer it would have given on the big-endian bytes
+ * (src/pc/endian/fmt_news.cpp). Returns FALSE (nothing changed) if the buffer
+ * is too small to be a news file.
+ */
+BOOL PCEndianSwapNewsFile(void* data, u32 size);
+
+/**
  * A file of a sound archive together with its wave data (the samples of a
  * bank or of wave sounds, which the archive keeps outside the file).
  *

@@ -62,6 +62,15 @@ struct NewsHeader {
     u16 unk5C;          // at 0x5C
 
     void* At(u32 ofs) { return (u8*)this + ofs; }
+
+#ifdef TARGET_PC
+    // Text at `ofs`. The game reads text without testing the offset, and files have
+    // records with offset 0 for "no text" (a source without a name, the first topic).
+    // On the Wii that reads the first two bytes of the file as a string: the upper
+    // half of `version`, which is 0 in every file the game accepts, so the string is
+    // empty. In host byte order that half is at offset 2.
+    wchar_t* TextAt(u32 ofs) { return (wchar_t*)At(ofs != 0 ? ofs : 2); }
+#endif
 };
 
 // Entry of a topic: refers to an article of any loaded file.

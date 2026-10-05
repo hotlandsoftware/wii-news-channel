@@ -6,9 +6,19 @@
 // has no time zone). Here the value is the host's local time when the clock is
 // first read, plus the monotonic time elapsed since then, so it never jumps.
 //
+// PCOSSetClock() (`--date`, $NEWSCHANNEL_DATE) replaces the wall clock with a
+// given instant for reproducible runs: the game's clock starts there and keeps
+// running. PCOSGetUnixTime() is the same clock as universal time, for the
+// backends that need UTC (NETGetUniversalCalendar, NWC24).
+//
 // The calendar functions are the SDK's (src/revolution/OS/OSTime.c).
 
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <ctime>
+
+#include <pc/os.h>
 
 #include "os_internal.h"
 
@@ -21,6 +31,10 @@ const s64 kUnixToOSEpoch = 946684800LL;
 pthread_once_t sOnce = PTHREAD_ONCE_INIT;
 struct timespec sAnchor; // CLOCK_MONOTONIC at the first read
 s64 sBaseTicks;          // OS time at the first read
+s64 sUtcOffset;          // seconds: local time minus universal time, at the first read
+bool sInitialized;
+bool sClockSet;          // PCOSSetClock() was called, or $NEWSCHANNEL_DATE is set
+s64 sClockUnix;          // its value: seconds since 1970-01-01 UTC
 
 s64 TimerClock() {
     return static_cast<s64>(OS_TIMER_CLOCK);
@@ -36,15 +50,99 @@ void InitTime() {
     clock_gettime(CLOCK_REALTIME, &wall);
     clock_gettime(CLOCK_MONOTONIC, &sAnchor);
 
+    s64 unixSeconds = static_cast<s64>(wall.tv_sec);
+    if (!sClockSet) {
+        const char* env = std::getenv("NEWSCHANNEL_DATE");
+        if (env != nullptr && env[0] != '\0') {
+            if (PCOSParseDate(env, &sClockUnix)) {
+                sClockSet = true;
+            } else {
+                std::fprintf(stderr, "NEWSCHANNEL_DATE: cannot read '%s' (YYYY-MM-DDTHH:MM[:SS][Z])\n", env);
+            }
+        }
+    }
+    if (sClockSet) {
+        unixSeconds = sClockUnix;
+        wall.tv_nsec = 0;
+    }
+
     struct tm local;
-    time_t seconds = wall.tv_sec;
+    time_t seconds = static_cast<time_t>(unixSeconds);
     localtime_r(&seconds, &local);
 
-    s64 localSeconds = static_cast<s64>(wall.tv_sec) + local.tm_gmtoff - kUnixToOSEpoch;
+    sUtcOffset = local.tm_gmtoff;
+    s64 localSeconds = unixSeconds + sUtcOffset - kUnixToOSEpoch;
     sBaseTicks = localSeconds * TimerClock() + NanosecondsToTicks(wall.tv_nsec);
+    sInitialized = true;
 }
 
 } // namespace
+
+// "YYYY-MM-DDTHH:MM[:SS]" (a space instead of the T is accepted): local time,
+// or universal time with a trailing Z.
+BOOL PCOSParseDate(const char* text, s64* unixSeconds) {
+    int year, month, day, hour, minute, second = 0;
+    char sep = 0;
+    int used = 0;
+    if (text == nullptr ||
+        std::sscanf(text, "%d-%d-%d%c%d:%d%n", &year, &month, &day, &sep, &hour, &minute, &used) != 6 ||
+        (sep != 'T' && sep != 't' && sep != ' ')) {
+        return FALSE;
+    }
+    const char* rest = text + used;
+    if (*rest == ':') {
+        int n = 0;
+        if (std::sscanf(rest, ":%d%n", &second, &n) != 1) {
+            return FALSE;
+        }
+        rest += n;
+    }
+    bool utc = false;
+    if (*rest == 'Z' || *rest == 'z') {
+        utc = true;
+        rest++;
+    }
+    // The upper limit is the 32-bit time_t of this build.
+    if (*rest != '\0' || year < 2000 || year > 2037 || month < 1 || month > 12 || day < 1 || day > 31 || hour < 0 ||
+        hour > 23 || minute < 0 || minute > 59 || second < 0 || second > 59) {
+        return FALSE;
+    }
+    struct tm when;
+    std::memset(&when, 0, sizeof(when));
+    when.tm_year = year - 1900;
+    when.tm_mon = month - 1;
+    when.tm_mday = day;
+    when.tm_hour = hour;
+    when.tm_min = minute;
+    when.tm_sec = second;
+    when.tm_isdst = -1;
+    time_t result = utc ? timegm(&when) : mktime(&when);
+    if (result == static_cast<time_t>(-1)) {
+        return FALSE;
+    }
+    *unixSeconds = static_cast<s64>(result);
+    return TRUE;
+}
+
+// Sets the clock. Meant to be called before the game starts: alarms and sleeps
+// that are already waiting are not adjusted.
+void PCOSSetClock(s64 unixSeconds) {
+    pthread_once(&sOnce, InitTime);
+    sClockSet = true;
+    sClockUnix = unixSeconds;
+    InitTime(); // start again from the new instant
+}
+
+// The game's clock as universal time: seconds since 1970-01-01 UTC, and the
+// microseconds of the current second.
+s64 PCOSGetUnixTime(u32* microseconds) {
+    s64 clock = TimerClock();
+    s64 ticks = OSGetTime();
+    if (microseconds != nullptr) {
+        *microseconds = static_cast<u32>((ticks % clock) * 1000000 / clock);
+    }
+    return ticks / clock + kUnixToOSEpoch - sUtcOffset;
+}
 
 s64 PCOSTicksToNanoseconds(OSTime ticks) {
     s64 clock = TimerClock();

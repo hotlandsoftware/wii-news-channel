@@ -39,7 +39,7 @@ struct Entry {
     u32 checkedGeneration;
 };
 
-enum { kMaxEntries = 1024, kMaxHostOrder = 64, kUnusedFrames = 600 };
+enum { kMaxEntries = 1024, kMaxHostOrder = 1024, kUnusedFrames = 600 };
 
 Entry* sEntries;
 u32 sNumEntries;

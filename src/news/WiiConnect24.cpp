@@ -16,6 +16,9 @@
 #include <revolution/so.h>
 #include <revolution/vf.h>
 #include <stdio.h>
+#ifdef TARGET_PC
+#include <pc/endian.h>
+#endif
 
 struct NewsHeader;
 
@@ -1076,6 +1079,13 @@ s32 CWiiConnect24::readLZ77FileEx(VFFile file, MEMHeapHandle heap, void** dst, u
         return -10;
     }
     *size = outSize;
+#ifdef TARGET_PC
+    // Byte order: the file is complete and still big-endian. Convert it here, once,
+    // before anything reads it. The CRC that CheckNewsFiles() tests later was computed
+    // over the big-endian bytes; the converter checks it now and leaves a CRC in the
+    // header that makes that test give the same answer (src/pc/endian/fmt_news.cpp).
+    PCEndianSwapNewsFile(*dst, outSize);
+#endif
     return 0;
 }
 

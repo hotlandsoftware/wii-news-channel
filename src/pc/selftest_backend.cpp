@@ -318,53 +318,14 @@ void TestAudio() {
     PC_CHECK(AXFXReverbHiShutdown(&reverb) == TRUE);
 }
 
-// --- NWC24 / SO / NET / VF ----------------------------------------------------------------
+// --- NET ----------------------------------------------------------------------------------
+// (NWC24, SO and VF: src/pc/news/selftest_news.cpp, which gives them a NAND
+// directory and a news source of their own.)
 
 void TestNetwork() {
-    static u8 work[0x4000];
-    NWC24DlTask task;
-    char text[256];
-    u16 id = 0;
-    u16 interval = 0;
-
-    PC_CHECK(NWC24GetMyDlTask(&task) == NWC24_ERR_LIB_NOT_OPENED);
-    PC_CHECK(NWC24OpenLib(work) == NWC24_OK);
-    PC_CHECK(NWC24OpenLib(work) == NWC24_ERR_LIB_OPENED);
-    PC_CHECK(NWC24Check(2) == NWC24_OK && NWC24GetErrorCode() == 0);
-
-    // The game's sequence (CWiiConnect24::setupDlTasks): nothing registered,
-    // create the task, register it, read it back.
-    PC_CHECK(NWC24GetMyDlTask(&task) == NWC24_ERR_NOT_FOUND);
-    PC_CHECK(NWC24InitDlTask(&task, NWC24_DLTYPE_OCTETSTREAM_V1) == NWC24_OK);
-    PC_CHECK(NWC24GetDlVfPath(&task, text, sizeof(text)) == NWC24_OK && std::strstr(text, "wc24dl.vff") != NULL);
-    PC_CHECK(NWC24CreateDlVf(&task, 0x100000) == NWC24_OK);
-    PC_CHECK(NWC24SetDlUrl(&task, "http://example.invalid/news.bin") == NWC24_OK);
-    PC_CHECK(NWC24SetDlSubTask(&task, NWC24_DL_STTYPE_TIME_HOUR, 0xFFFFFF, 0x103) == NWC24_OK);
-    PC_CHECK(NWC24SetDlInterval(&task, 30) == NWC24_OK);
-    PC_CHECK(NWC24SetDlFilename(&task, "news.bin") == NWC24_OK);
-    PC_CHECK(NWC24SetDlCount(&task, 240) == NWC24_OK);
-    PC_CHECK(NWC24GetDlTaskId(&task, &id) == NWC24_OK && id == 0xFFFF);
-    PC_CHECK(NWC24AddDlTask(&task) == NWC24_OK);
-
-    std::memset(&task, 0, sizeof(task));
-    PC_CHECK(NWC24GetMyDlTask(&task) == NWC24_OK);
-    PC_CHECK(NWC24GetDlTaskId(&task, &id) == NWC24_OK && id != 0xFFFF && id != 2);
-    PC_CHECK(NWC24GetDlUrl(&task, text, 0xFF) == NWC24_OK &&
-             std::strcmp(text, "http://example.invalid/news.bin") == 0);
-    PC_CHECK(NWC24GetDlInterval(&task, &interval) == NWC24_OK && interval == 30);
-    PC_CHECK(NWC24GetDlFilename(&task, text, sizeof(text), 5) == NWC24_OK && std::strcmp(text, "news.bin.05") == 0);
-    PC_CHECK(NWC24DeleteDlTask(&task) == NWC24_OK);
-    PC_CHECK(NWC24GetMyDlTask(&task) == NWC24_ERR_NOT_FOUND);
-    PC_CHECK(NWC24CloseLib() == NWC24_OK);
-    PC_CHECK(NWC24CloseLib() == NWC24_ERR_LIB_NOT_OPENED);
-
-    // No network: SOStartup() fails and the SDK's table turns the failure into
-    // the error code the game shows.
-    PC_CHECK(SOInit(NULL) == SO_SUCCESS);
-    int result = SOStartup();
-    PC_CHECK(result < 0);
-    PC_CHECK(NETGetStartupErrorCode(result) == -51099);
-    PC_CHECK(NWC24ExecDownloadTask(6, 0, 0xFFFFFF) == NWC24_ERR_NETWORK && NWC24GetErrorCode() == -51099);
+    // The SDK's own table (compiled natively) turns "no link" into the error
+    // code the game shows.
+    PC_CHECK(NETGetStartupErrorCode(SO_ERR_LINK_UP_TIMEOUT) == -51099);
 
     PC_CHECK(NETCalcCRC32("123456789", 9) == 0xCBF43926u);
 
@@ -372,13 +333,6 @@ void TestNetwork() {
     PC_CHECK(NETGetUniversalCalendar(&calendar) == TRUE);
     PC_CHECK(calendar.year >= 2024 && calendar.mon >= 0 && calendar.mon < 12 && calendar.mday >= 1 &&
              calendar.hour < 24);
-
-    // VF: nothing mounts, nothing is found.
-    u8 dta[0x448];
-    VFInit();
-    PC_CHECK(VFMountDriveRAM("@24", work) != 0);
-    PC_CHECK(VFFindFirst(dta, "@24:/*", 0x7F) != 0);
-    PC_CHECK(VFOpenFile("news.bin.00", "r", 0) == NULL);
 }
 
 // --- HBM / vcmv / misc ---------------------------------------------------------------------

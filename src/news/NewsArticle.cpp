@@ -76,6 +76,17 @@ NewsArticle::NewsArticle(NewsHeader* file, NewsEntryRec* entry, u32 topic, u32 i
     return;
 
 found:
+#ifdef TARGET_PC
+    // Byte order: text at offset 0 (NewsHeader::TextAt).
+    mHeadlineText = mFile->TextAt(mText->headlineOfs);
+    mBody = mFile->TextAt(mText->bodyOfs);
+
+    if (mText->sourceIdx < mFile->numSources && mFile->sourcesOfs != 0) {
+        mSource = (NewsSourceRec*)mFile->At(mFile->sourcesOfs) + mText->sourceIdx;
+        mSourceName = mFile->TextAt(mSource->nameOfs);
+        mCopyright = mFile->TextAt(mSource->copyrightOfs);
+    }
+#else
     mHeadlineText = (wchar_t*)mFile->At(mText->headlineOfs);
     mBody = (wchar_t*)mFile->At(mText->bodyOfs);
 
@@ -84,6 +95,7 @@ found:
         mSourceName = (wchar_t*)mFile->At(mSource->nameOfs);
         mCopyright = (wchar_t*)mFile->At(mSource->copyrightOfs);
     }
+#endif
 
     u32 loc = mText->locationIdx;
     if (loc < mFile->numLocations && mFile->locationsOfs != 0) {
@@ -297,7 +309,11 @@ s32 NewsData::Init(NewsHeader** files, s32 current) {
     topicRec = (NewsTopicRec*)file->At(file->topicsOfs);
     for (i = 0; i < mNumCategories; topicRec++, topic++, i++) {
         topic->mRec = topicRec;
+#ifdef TARGET_PC
+        topic->mName = file->TextAt(topicRec->nameOfs); // byte order: text at offset 0
+#else
         topic->mName = (wchar_t*)file->At(topicRec->nameOfs);
+#endif
         if (topicRec->numEntries == 0) {
             continue;
         }

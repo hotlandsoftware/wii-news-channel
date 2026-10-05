@@ -35,6 +35,7 @@
 #include "pc_config.h"
 #include "pc_input.h"
 #include "audio/pc_audio.h"
+#include "news/pc_news.h"
 #include "pc_selftest.h"
 #include "pc_snd_tool.h"
 #include "pc_video.h"
@@ -95,6 +96,9 @@ void PrintHelp(const char* program) {
     std::printf("  --snd-stress [CONTENT:PATH] [--seconds S]\n");
     std::printf("                   start, stop, pause and mute random sounds as fast as possible for S\n");
     std::printf("                   seconds (default 10) against the running sound thread; no device\n");
+    std::printf("  --list-news [FILE|DIR]\n");
+    std::printf("                   list the headlines of the news files (the news directory, another\n");
+    std::printf("                   one, or one served file), read through the game's own parser\n");
     std::printf("  --version        print build information\n");
     std::printf("  --help           this text\n\n");
     std::printf("Options for --boot:\n");
@@ -113,6 +117,13 @@ void PrintHelp(const char* program) {
     std::printf("  --contents DIR   the channel's WAD contents, NN.app (default orig/HAGE/contents)\n");
     std::printf("  --nand-dir DIR   directory used as the Wii's NAND (default $NEWSCHANNEL_NAND,\n");
     std::printf("                   ~/.local/share/newschannel/nand)\n");
+    std::printf("  --news-dir DIR   where the news comes from: DIR/v2/<language>/<country>/news.bin.NN,\n");
+    std::printf("                   the files as the server sends them (default $NEWSCHANNEL_NEWS_DIR,\n");
+    std::printf("                   then orig/HAGE/news). Also for --list-news\n");
+    std::printf("  --date YYYY-MM-DDTHH:MM[:SS][Z]\n");
+    std::printf("                   start the game's clock at this time (local, or universal with Z)\n");
+    std::printf("                   instead of now, e.g. to read news files of an earlier day\n");
+    std::printf("                   (default $NEWSCHANNEL_DATE). Also for --list-news\n");
     std::printf("  --dol FILE       the channel's main.dol, for data tables without source\n");
     std::printf("                   (default $NEWSCHANNEL_DOL, orig/HAGE/sys/main.dol)\n");
     std::printf("  --lang LANG      en, ja, de, fr, es, it or nl (default en)\n");
@@ -273,6 +284,7 @@ static int RunSelfTest() {
     PCSelfTestOS();
     PCSelfTestFiles();
     PCSelfTestBackend();
+    PCSelfTestNews(); // news/selftest_news.cpp
     PCSelfTestGX();
     PCSelfTestDolData();
     PCSelfTestBoot();
@@ -327,6 +339,7 @@ int main(int argc, char** argv) {
     const char* dump_texture = nullptr;
     const char* dump_texture_out = nullptr;
     const char* list_sounds = nullptr;
+    const char* list_news = nullptr;
     const char* render_sounds = nullptr;
     const char* dump_waves = nullptr;
     bool snd_stress = false;
@@ -402,6 +415,20 @@ int main(int argc, char** argv) {
             selftest_gl = true;
         } else if (std::strcmp(arg, "--dol") == 0) {
             PCDolDataSetPath(OptionValue(argc, argv, &i));
+        } else if (std::strcmp(arg, "--news-dir") == 0) {
+            PCNewsSetDir(OptionValue(argc, argv, &i));
+        } else if (std::strcmp(arg, "--date") == 0) {
+            const char* value = OptionValue(argc, argv, &i);
+            s64 when = 0;
+            if (!PCOSParseDate(value, &when)) {
+                std::fprintf(stderr, "%s: bad value '%s' for --date (YYYY-MM-DDTHH:MM[:SS][Z], 2000 to 2037)\n",
+                             argv[0], value);
+                return 2;
+            }
+            PCOSSetClock(when);
+        } else if (std::strcmp(arg, "--list-news") == 0) {
+            // The file or directory is optional.
+            list_news = i + 1 < argc && argv[i + 1][0] != '-' ? argv[++i] : "";
         } else if (std::strcmp(arg, "--nand-dir") == 0) {
             SetOption(argv[0], arg, "nand", OptionValue(argc, argv, &i));
         } else if (std::strcmp(arg, "--lang") == 0) {
@@ -459,6 +486,11 @@ int main(int argc, char** argv) {
         return PCSndListSoundsMain(list_sounds);
     }
 
+    // Development tool of the news pipeline (news/news_tool.cpp).
+    if (list_news != nullptr) {
+        PCExit(PCNewsListMain(list_news));
+    }
+
     if (dump_waves != nullptr) {
         return PCSndDumpWavesMain(snd_archive, dump_waves);
     }
@@ -508,6 +540,7 @@ int main(int argc, char** argv) {
     }
 
     std::printf("contents: %s\nnand:     %s\n", PCGetContentsDir(), PCGetNandDir());
+    std::printf("news:     %s\n", PCNewsGetSource()->describe());
     if (!PCDolDataLoad()) {
         return 1;
     }

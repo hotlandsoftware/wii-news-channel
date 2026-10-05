@@ -8,6 +8,10 @@
 #include <revolution/sc.h>
 #include <string.h>
 
+#ifdef TARGET_PC
+void PCGXSetTextureHostOrder(const void* image, bool hostOrder); // src/pc/gx/pc_gx.h
+#endif
+
 extern "C" {
 s32 TMCCJPEGDecInit(TMCCJPEGDecHandle* handle, TMCCJPEGDecParam* param);
 s32 TMCCJPEGDecodeRGB565(TMCCJPEGDecHandle* handle, s32 count, void* out);
@@ -98,6 +102,11 @@ NewsTexture* JPEGDecoder::Decode(const void* data, u32 size, MEMAllocator* alloc
     }
 
     DCFlushRange(tex->data, w * h * 2);
+#ifdef TARGET_PC
+    // The decoder wrote each RGB565 texel as a u16 in host byte order; texels from
+    // files are big-endian. Tell the GX backend which kind this buffer holds.
+    PCGXSetTextureHostOrder(tex->data, true);
+#endif
     return tex;
 }
 
