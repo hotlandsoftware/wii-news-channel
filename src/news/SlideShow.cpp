@@ -1091,7 +1091,7 @@ BOOL SlideShow::StateZoom(const s32* arg) {
         mZoomed = false;
         mTextVisible = true;
         gHideClock = gUpdateMsgType == 1;
-        ChangeSubState(&SlideShow::SubStateWait);
+        ChangeSubState(&SlideShow::SubStateIdle);
         mBounceTimer = 0;
         mQuickMove = false;
         break;
@@ -1410,7 +1410,7 @@ BOOL SlideShow::StateMessage(const s32* arg) {
         mMessageFade = 0;
         mZoomed = true;
         mTextVisible = false;
-        ChangeSubState(&SlideShow::SubStateIdle);
+        ChangeSubState(&SlideShow::SubStateScroll);
         mStateFrame = 1;
         break;
     case 1:

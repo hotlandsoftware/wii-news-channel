@@ -29,6 +29,7 @@ Contents:
 20. [Sound: what plays](#20-sound-what-plays)
 21. [How the channel gets its news](#21-how-the-channel-gets-its-news)
 22. [The globe (nw4r::g3d)](#22-the-globe-nw4rg3d)
+23. [The channel with today's news](#23-the-channel-with-todays-news)
 
 ## 1. Decisions
 
@@ -261,6 +262,9 @@ Run it whenever the set of files in the build or the backend changes. If two bra
 | `pc/tools/status.py` | Compiles every file of `src/news` and `src/nw4r` with `-fsyntax-only`, using the exact command of the build, and prints a table per library. `-v` lists the first error per failing file, `--categories` groups them, `-f TEXT` shows the full output for matching files, `--update-ported` adds every compiling file to `pc/ported/*.txt`. |
 | `pc/tools/gen_stubs.py` | Section 5. `--check` fails if the stubs file is stale. |
 | `pc/tools/wii_report_diff.py` | Compares two `report.json` files of the Wii build (rule R1). |
+| `pc/tools/wii_const_diff.py [UNIT...]` | Finds decompilation errors that the match percentage cannot see: compares, between the original and the compiled object of each unit, the value behind every `lfs`/`lfd` (float literals are anonymous pool symbols) and, for the game's units, the symbols that initialised data points to (pointers to member functions). Section 23. |
+| `pc/tools/layout_check.py` | Turns every `// at 0xNN` comment of `include/news` into an `offsetof()` check, compiled with the PC flags: the game's classes must have their Wii layout (section 23, "Class layouts"). |
+| `pc/tools/soak_input.py FRAMES [SEED]` | Prints an `--input` script that walks through every screen again and again with random pointer movement in between (section 23, "Soak"). |
 | `tools/extract_wad.py --contents` | Section 3. |
 | `newschannel --list-textures CONTENT[:PATH[:INDEX]]` | Lists the textures of a content, or of a file or directory in it: size, format, palette, wrap, filter, mipmap levels (section 17). |
 | `newschannel --dump-texture CONTENT:PATH[:INDEX] OUT.png` | Decodes one texture to a PNG. Never commit the output (R12). |
@@ -310,8 +314,8 @@ Stubs are not the whole picture: KPAD/WPAD buttons and HBM are hand-written plac
 - [x] **2. It boots.** `--boot` runs the game's `main()` and its main loop in a window, and shuts down cleanly when the window is closed (section 15): OS (threads, mutexes, message queues, alarms, time, arenas), MEM heaps, MTX, CNT/ARC/NAND file access on `orig/HAGE/contents`, CX decompression, SC settings, a window, byte order of the formats the boot parses (archives, palettes, fonts, layouts, layout animations, the sound archive's tables). Formats of later milestones are not converted yet and their loaders are guarded (section 15, "Bypasses").
 - [x] **3. It draws.** GX to OpenGL layer (state, TEV, textures, the FIFO), VI frame pacing; layouts and fonts on screen (sections 16 and 17; what was looked at and what is still missing: section 16, "Integration: what the screens look like").
 - [ ] **4. Input.** KPAD/WPAD from mouse, keyboard and game controllers; the pointer and buttons work.
-- [ ] **5. News.** NWC24 download tasks, VF and NET replaced by libcurl and host files; a news file loads, articles and slide show work, JPEG pictures decode. Done so far (section 21): the whole path from disk. The game registers its download task, the downloader takes the served files from a directory (`--news-dir`), the game reads, decompresses, checks and parses them, and shows the section list and the headline lists with their photos. Not done: the HTTP source (libcurl), and the article view and slide show, which wait for the globe model (milestone 6).
-- [ ] **6. Globe, effects, sound.** `nw4r::g3d` globe, `nw4r::ef` pointer effects, AX/AI output through SDL audio, `nw4r::snd` playing the sound archive. Done so far: sound and the globe. The audio backend (section 18), the sound files (section 19), and the game's sounds playing, checked numerically (section 20). The globe model loads and is drawn by `nw4r::g3d` (section 22); in the game it appears once a news file loads (milestone 5). The pointer effects are not started.
+- [x] **5. News.** NWC24 download tasks, VF and NET replaced by host files; a news file loads, articles and slide show work, JPEG pictures decode. The whole path runs from disk (section 21): the game registers its download task, the downloader takes the served files from a directory (`--news-dir`), the game reads, decompresses, checks and parses them. Every screen behind the download was driven with a day's real files and looked at (section 23): section list, headline lists, articles with text, picture, caption and source logo, text zoom, the globe beside the article, the globe view with its pins, cards and regional lists, the slide show. Still open under this heading: the HTTP source (libcurl), which replaces the directory behind the same three functions.
+- [ ] **6. Globe, effects, sound.** `nw4r::g3d` globe, `nw4r::ef` pointer effects, AX/AI output through SDL audio, `nw4r::snd` playing the sound archive. Done: sound (sections 18 to 20) and the globe (section 22), which runs inside the game now: beside an article, in the globe view and behind the slide show (section 23). Not started: the pointer effects.
 - [ ] **7. Polish.** HOME Menu, save data, settings and language selection, window scaling and aspect ratio, a decision on the Operations Guide (its viewer is PowerPC code), packaging, 64-bit.
 
 ## 9. Known hazards for later milestones
@@ -320,13 +324,15 @@ Stubs are not the whole picture: KPAD/WPAD buttons and HBM are hand-written plac
 - **Bitfields.** CodeWarrior fills bitfields from the most significant bit, gcc on x86 from the least significant. No bitfield in the game or NW4R headers is overlaid on file data (section 12, "Bitfields"); hardware-register bitfields are only in SDK sources, which are not compiled.
 - **Type punning that byte order breaks.** Code that reads memory as a different type than it was written is wrong on a little-endian host even with converted files: a colour's four bytes read as a `u32` (six sites, all guarded now: section 12, "Colours"), a table of bytes read as `u16` (`GlobeDots.cpp`, guarded: section 22), two `u8` fields read as one `u16` (`ef::Resource::RelocateCommand()`, still open). Each needs a `TARGET_PC` guard when its subsystem is brought up.
 - **The global `operator new` is the game's.** `src/news` replaces it with the game's heaps, for the backend too. Backend code must not use `new` or standard containers before the heaps exist (or at all, if the memory should not come from a game heap); use `malloc()`.
-- **`char` signedness.** x86 gcc treats `char` as signed. The Wii flags do not pass `-char`; check CodeWarrior's default before relying on comparisons of `char` values above 0x7F.
+- **`char` signedness.** No hazard: plain `char` is signed in both builds. The Wii flags do not pass `-char`, and this CodeWarrior's default is signed (checked by compiling `int f(char c) { return c; }` with `mwcceppc -proc gekko`: it sign-extends with `extsb`), as is gcc's on x86.
 - **Code not compiled here.** The HOME Menu (`src/revolution/HBM`, C++ on NW4R) and the TMCC JPEG decoder are portable code inside the SDK tree; whether to compile them natively or replace them is undecided. The Operations Guide viewer (`vcmv` plus a PowerPC RSO module) cannot run natively.
 - **Static initialisers.** NW4R and the game have global constructors that call the SDK (`OSInitMutex` at start-up is the first line `newschannel` prints). The backend must work before `main()` runs.
 - **`gErrorSystemArc`** (the error-screen archive embedded in the DOL) and the other `auto_*` data have no source; the PC build reads them from the user's DOL at run time (section 10).
 - **Integer division by zero.** The PowerPC's `divw` does not trap; x86 raises SIGFPE. The game divides by a fade length that is still 0 in a few places (section 15, "Game-code findings"). Each site found is guarded with `PCDivW()` (`<pc/compat.h>`), which gives the PowerPC's result. Expect more: a SIGFPE in game code is this until proven otherwise.
 - **Sized `operator delete`.** The game only replaces `operator delete(void*)`. gcc calls the sized form (C++14), which would reach libstdc++ and `free()` a pointer of the game's heap; `src/pc/libc/sized_delete.cpp` forwards the sized forms to the game's. A new replaced form (aligned `new`, `nothrow`) needs the same treatment and an entry in `pc/cmake/private_symbols.ver`.
-- **Uninitialised members of `NewsArticle`.** The constructor does not set `mPicture` or `mSourceLogo`; `LoadPicture()` and `LoadLogos()` only set them for an article that has a picture or a logo. Code that calls `GetTexture()` without testing `mText->pictureIdx` first reads whatever the heap held. Nothing has gone wrong because of it yet (section 21).
+- **Uninitialised members of `NewsArticle`.** The constructor does not set `mPicture` or `mSourceLogo` (the original does not either: its constructor stores to every word of the object except `0x44` and `0x48`), and `Ticker`, `GlobePin` and `MainScreen` call `GetTexture()` without testing `mText->pictureIdx`. It works because the articles come from a heap inside a block of the main heap, which is created with the clear-on-allocate option (`MEMCreateExpHeapEx(..., 3)` in `System.cpp`): the block is zero when `InitNews()` gets it, on the Wii and on PC (the MEM library is the SDK's own code). Code outside the game (`--list-news`, the self-test) must still test `pictureIdx` first.
+- **Class layouts and private views of a class.** Several game files declare their own view of a class with the Wii's offsets instead of including its header. gcc must therefore lay the game's classes out as CodeWarrior did; the one difference found is the size of a pointer to member function, handled by `PC_PMF_PAD` (section 23, "Class layouts"). A new class with such a pointer needs the pad, and `pc/tools/layout_check.py` says so.
+- **What the match percentage does not see.** A function can be reported as 100% and still differ in a float literal or in which state function it compares with; both are anonymous data. Six such errors were found (section 23), four by running the game. `pc/tools/wii_const_diff.py` finds this kind without running anything.
 - **Threads run in parallel** (section 11). Code that was only safe because of thread priorities can race on PC. The boot ran 24 times in a row without a failure, which proved little: `nw4r::snd` had exactly such a race, a crash when a sound was started while another was being stopped, found only by a stress test and fixed in the sound thread (section 20, "Threads"). `WiiConnect24.cpp` (download thread, priority 8, above the game's thread) has not been audited and is the next place to look when something is flaky; the cure used for the sound thread (hold the interrupt lock where the console's priorities gave exclusion) applies there too.
 
 ## 10. Data still taken from the DOL
@@ -752,10 +758,10 @@ What it draws is in section 16.
 | after A (`--input "P0:0@1,A@300"`) | the game creates `noerase/savedata.dat` in the NAND directory and opens the connection screen (`Connect`, `DrawIntro`) | complete; the save file loads on the next start (CRC and label accepted) and the dialog is skipped |
 | `Connect` | the download thread runs the game's requests: register the task, download, read the archive (section 21) | with a news directory: the files are read, checked and parsed, and the screen fades to the news. Without one: `SOStartup()` fails, the task ends with result -9 and the game shows its own connection error screen (`Connect::STATE_ERROR`, text 2, error 051099) and waits for "next" |
 | `NewsScene::StateMain` | `InitNews()`, `MainScreen`: the section list ("Select a Section", "Updated hh:mm ago"), and after A on a section its headline list with the photos | complete; drawing defects are listed in section 21, "What the screens look like" |
-| A on a headline, or "Slide show" | `MainScreen::CheckSelect()` / `NewsScene::StateMain` wait for `gEarthModel` | the screen dims and stays: the globe model is never created (the bypass below). Needs milestone 6 |
+| A on a headline, "Globe", "Slide show" | `MainScreen` (article, globe view, regional list), `SlideShow`; `LoadEarth()` on its own thread and `new Model` | complete: section 23 has the screens, the input scripts and what had to be fixed |
 | Window closed (or SIGINT/SIGTERM) | `PowerCallback()` → `gShutdown` → `Scene::ReturnToMenu()` → `NewsScene::Exit()` (sound shut down, scene destroyed) → `OSShutdownSystem()` → `PCOSExit(0)` | exit status 0, from the dialog and from the connection screen |
 
-The article view, the globe and the slide show are behind the globe model and need milestone 6.
+Every screen of the channel has been reached except the language selection (not offered with one news language) and the HOME Menu (a placeholder, section 14).
 
 These screens have their sounds: the tick when the pointer enters a button, the decide sound on A, the pattern that repeats while the connection is tried and the error sound when it fails (section 20).
 
@@ -827,7 +833,7 @@ Things in the shared source that are wrong, or only right on a PowerPC. The PC b
 | `Layout::Calc()`, `SlideIn()`, `SlideOut()`, `FadeIn()` (`PaneLayout.cpp`): `... / mFadeLength`, `... / mSlideLength` | the same, four sites | the same | the same |
 | `config/HAGE/symbols.txt`: `gErrorSystemArc ... size:0x680`, followed by `lbl_801B3CA0 ... size:0x13E0` and more | the archive is `0x1759C` bytes (its node table says so); the labels after `0x801B3CA0` are inside the archive's second file | - | **to fix on main**: one object of `0x1759C` bytes (rounded as the linker did), which is also what a future `ErrorScreen` data split needs |
 
-No logic bug was found in a NonMatching file during the boot.
+No logic bug was found in a NonMatching file during the boot. Six were found behind the download, in `d_s_news.cpp` and `SlideShow.cpp`: section 23, "Decompilation errors".
 
 ### What milestone 3 (drawing) needed first
 
@@ -961,7 +967,7 @@ Known gaps (none is a bypass in the backend; there are no `TODO(milestone N)` ha
 - **No pointer on screen.** The game draws the pointer (hand, trail) as an `nw4r::ef` effect: `Scene::UpdatePointers()` → `SetPointerState(chan, STATE_NORMAL)`, drawn by `PointerEffect::Draw()` → `ef::EffectSystem::Draw()`. Nothing comes out of it yet: the effect files (`.breff`, `.breft`) have no byte-order converter (section 12) and `nw4r::ef` has not been brought up. Hovering and pressing already work. This is milestone 6 by the plan, but milestone 4 (input) is hard to use without a pointer: either bring the pointer effect forward or show the host's mouse cursor until then.
 - **`--lang ja`, `de`, `it` and `nl` show the game's fatal error screen** (`SCENE_FATAL`, `gErrorScreen`: white centred text on black, "the News Channel's system files are damaged ... press the A Button to return to the Wii Menu", in that language, from the error archive embedded in the DOL) after the log line `d_scene.cpp[388]`; A ends the program through `OSReturnToMenu()`. The US contents have no HOME Menu archive for those languages (`HomeButton3/LZ77_homeBtn*.arc`), so `HomeMenu` does not initialise and the game gives up, as its code says. English, French and Spanish, the US channel's languages, run normally. The error screen itself is drawn correctly (looked at in German, Italian and Dutch), so this is a fourth screen that works, not a drawing problem.
 - **Two PNG writers**: `PCWritePNG()` (`gx/png.cpp`, screenshots) and `PCGXWritePNG()` (`gx/texdecode_tool.cpp`, texture dumps). Harmless; merge them when one is touched.
-- Not seen yet because nothing reaches them: mipmapped textures with `GX_LIN_MIP_LIN` (eight in the contents), `GX_REPEAT` textures, the HOME Menu, everything behind the connection screen (headline list, article text, slide show, weather-style fonts), the globe and effects (milestone 6). Expect layout and text defects there that these three screens could not show.
+- Not seen yet because nothing reaches them: mipmapped textures with `GX_LIN_MIP_LIN` (eight in the contents), `GX_REPEAT` textures, the HOME Menu, the language selection (the screens behind the connection screen have been seen: section 23), the globe and effects (milestone 6). Expect layout and text defects there that these three screens could not show.
 
 What is left for the next milestones:
 
@@ -1703,8 +1709,8 @@ With the news files (skipped with a message when there are none): all files of t
 
 - **Connection screen**: the section list is up within 200 frames of the A press that leaves the save dialog (24 local files; the rest is fades); the log has `NWC24: 24 file(s) from directory ... (signatures not verified)`. On a second start with the same NAND directory nothing is downloaded.
 - **Section list**: "Updated 01:15 ago", "News Channel", "Select a Section", the seven named sections, the buttons "Wii Menu" and "Slide show". The first topic of the file, which has no name and no entries, is not listed.
-- **Headline list** (A on "National News"): title, "Text Zoom" buttons, three rows with headline and photo; the photos have the right colours. **Defect for the integration**: the read/unread icon at the left of each row is drawn over the first letter of the headline instead of beside it.
-- **Article and slide show**: not reachable. A on a headline (`MainScreen::CheckSelect()`, `gEarthModel == 0` so `ModeWait`) and "Slide show" (`NewsScene::StateMain`, step 3) both wait for the earth model, which the bypass in `Scene::Execute()` never creates (section 15). The screen dims to the wait colour and stays there; the game is not hung, the frame loop runs. This is the first thing milestone 6 has to remove.
+- **Headline list** (A on "National News"): title, "Text Zoom" buttons, three rows with icon, headline and photo; the photos have the right colours. (The icon used to be drawn over the first letter: a wrong constant in `Draw2D_Icon()`, section 23.)
+- **Article, globe, slide show**: section 23.
 - **Error screens**: 051099 without a news directory, 117404 for a language the directory does not have (`--lang fr`), `NEWS000006` with `--date` a few days before the files.
 - `--lang de` leaves through `OSReturnToMenu()` before the connection screen. That is not news: it happens before any NWC24 call and was not looked into.
 
@@ -1726,7 +1732,7 @@ With the news files (skipped with a message when there are none): all files of t
 ### For the next task
 
 - **HTTP**: a libcurl news source (above). Decide then whether the directory stays as a cache or an override.
-- **The globe model** (milestone 6) opens the article view and the slide show; expect the first text layout and picture defects there (`ArticleText`, `SlideShow`), and the first use of the location records (`latitude`, `longitude`, the zoom byte) and of `NewsArticle::unk40`/`mShortHeadline`.
+- **The screens behind the download** have been driven and looked at: section 23.
 - **Threads**: the worker thread and the game's thread now really run the news path in parallel. No failure was seen in the dozen starts of this work, which proves little (section 9). The fields the two threads share are `mStatus`, `mResult` and the file pointers of a request; the worker writes `mResult` before it sets `mStatus` to idle and the game reads them in the other order.
 - `--lang` only gets news for languages the news directory has (117404 otherwise).
 ## 22. The globe (nw4r::g3d)
@@ -1862,7 +1868,142 @@ Drawing is checked by `--view-model`, not by `--selftest-gl`: it needs the game'
 
 ### Not done
 
-- **In the game**: the globe is behind the news download. The first run of `LoadEarth()` on its own thread, `GlobePin`, the layouts drawn over the globe and the fade-in are untested.
+- **In the game** the globe runs now (section 23): `LoadEarth()` on its own thread, the fade-in, `GlobePin` with ripples, cards and labels, the layouts drawn over it, zoom, the rotate buttons and dragging.
 - **Animations and user data** of resource files: no converter (above).
 - **The pointer effect** (`nw4r::ef`, `.breff`/`.breft`): not started; the bypass in `PointerEffect::PointerEffect()` stays (section 15). The formats need the emitter and particle descriptors of `ef_res_emitter.h`, the key tables of `ef_res_animcurve.h` per curve type, and the guard in `RelocateCommand()` (section 12). The files are small: `nw4r_defcursor_all01.breff` (17,740 bytes) has one project with 33 emitters (`def_cursor_open_0p`, `..._hold_1p` and so on), `.breft` (55,040 bytes) 11 textures. The owner does not need a visible pointer on PC (the host's mouse cursor is there), so this is the lowest priority of milestone 6.
 - **Speed**: the transform unit runs on the CPU (section 16). A globe frame takes about 34,000 vertices through it, which is no problem at 60 Hz on a desktop; if it ever is, the globe's shapes are the first candidates for a vertex shader.
+
+## 23. The channel with today's news
+
+The integration of milestone 5: the news path (section 21) and the globe (section 22) merged, and the real channel driven screen by screen with one day's files from WiiLink (24 files of 2026-10-05, English, USA).
+Every screen was captured with `--screenshot` and looked at; the headlines were compared with `--list-news`.
+
+To see it:
+
+```sh
+build/pc/newschannel --boot --news-dir orig/HAGE/news
+```
+
+(`--news-dir orig/HAGE/news` is the default and can be left out; `--nand-dir DIR` keeps the save file and the downloaded archive somewhere else than `~/.local/share/newschannel/nand`; `--date 2026-10-05T19:30Z` reads these files on a later day, otherwise the game finds them too old after about two days and shows `NEWS000006`.)
+Left click is A; the pointer is the mouse. The first start asks to create save data: click once.
+There is no pointer picture (the pointer effect is the one bypass left), so the host's mouse arrow stays visible.
+
+### Screen by screen
+
+| Screen | How to get there | What is drawn | State |
+| --- | --- | --- | --- |
+| Save dialog, connection screen | start | as before (section 15); with a news directory the download takes about three seconds | correct |
+| Section list | after the download | paper background, "Updated hh:mm ago", "News Channel", "Select a Section", seven sections (National News, International News, Sports, Arts/Entertainment, Business, Science/Health, Technology), "Wii Menu", scroll arrows, "Slide show"; the row under the pointer turns blue | correct |
+| Headline list | A on a section | section title, "Text Zoom" − and +, rows with icon (page: no location; globe: has one; grey when read), headline cut with "…", photo; the row under the pointer is highlighted and its headline scrolls; "Back", scroll arrows, "Slide show" | correct after the `Draw2D_Icon()` fix |
+| Article without a location | A on a headline with the page icon | full-width paper: "Updated hh:mm ago", rule, headline, source logo (AP), body text around the photo, caption under it; the bars slide away after 90 frames without pointer movement and come back when the pointer moves (`MainScreen::Hook1E758()`) | correct |
+| Article with a location | A on a headline with the globe icon | the same on the left two thirds; on the right the globe at the article's place with one rippling ring, the place name and "Image owned by NASA"; "Globe" button | correct after the layout fix (before it every pin's name was drawn, with a count of 0) |
+| Text zoom, scrolling | "Text Zoom" +/−, the arrow buttons | four sizes, text reflowed around the photo; the page scrolls while the arrow is held | correct |
+| Globe view | "Globe" in an article | the paper slides out; globe with a photo card per place, labels "Place" or "Place Area [n]" for stacks, "Zoom" − and +, two rotate buttons, "Back"; a card grows and its label turns orange under the pointer; holding A on the globe drags it | correct |
+| Regional news | A on a card | "Regional News": one row per article of the stack with place, icon, headline, photo; scroll arrows; A on a row opens the article on a translucent grey sheet over the globe (`MainScreen::Draw()`: a `0xDEDEDE` rectangle with `mUnk324` as alpha in these states) | correct as far as the code says; not compared with a console |
+| Slide show | "Slide show" on the section list or a headline list | title card "Slide show / News Channel", then per article: section name, photo, the headline typed out, the green "News Channel" belt; for an article with a location the globe with its ring behind the photo; advances by itself, LEFT/RIGHT step | correct |
+| Slide show, article | A during a slide | the article on a grey sheet with "Text Zoom", "End", scroll arrows, "Continue" | correct after the `SlideShow` fix (before it: no buttons, no input, for ever) |
+| Leaving | "Back" through every level, "End", "Wii Menu" | "Wii Menu" ends the program (`OSReturnToMenu`) | correct |
+| 16:9 | `--wide` | the same screens in the wide layout | correct (section list, headline list, article, globe view looked at) |
+| Second start | the same `--nand-dir` | no dialog, no download, straight to the section list | correct |
+| Language selection | - | not reached: the game offers it when there is more than one news language | not seen |
+| HOME Menu | Esc | closes at once (placeholder, section 14) | not done |
+
+Sound: the log of `NEWSCHANNEL_AX_LOG` has `NEW_BGM_NEWS` and `NEW_BGM_READ` starting when the section list appears, and the effects of each step (`NEW_SE_GENRE_SEL`, `NEW_SE_KIJI`, `NEW_SE_KETTEI`, `NEW_SE_SCROLL`, `NEW_SE_NEWS_NEW`/`_OLD`/`_CLOSE`, `NEW_SE_FX_SET_ZOOM7`, `NEW_SE_CANCEL`), none refused.
+
+### Input scripts
+
+Pointer coordinates are -1..1 over the 4:3 picture.
+Where things are once a screen has settled:
+
+| Target | Pointer |
+| --- | --- |
+| Bottom bar: left ("Wii Menu", "Back", "End"), middle (scroll down), right ("Slide show", "Globe", "Continue") | `-0.7:0.8`, `0:0.8`, `0.7:0.8` |
+| Top bar: left ("Text Zoom −", "Zoom −"), middle (scroll up, when shown), right ("Text Zoom +", "Zoom +") | `-0.67:-0.8`, `0:-0.8`, `0.66:-0.8` |
+| Section list rows 1 and 2 (National, International) | `0:0.19`, `0:0.45` |
+| Headline list rows 1, 2, 3 | `0:-0.26`, `0:0.2`, `0:0.61` |
+| Globe view: rotate buttons | `-0.23:0.8`, `0.2:0.8` |
+
+A bar that has slid away needs pointer movement first, so the scripts move the pointer a little before each press.
+All of these start with `--boot --no-window --nand-dir <fresh directory> --news-dir orig/HAGE/news`:
+
+| Reaches | `--input` |
+| --- | --- |
+| Headline list of National News | `P0:0@1,A@300,P0:0.2@400,A@450` (frame 500 on) |
+| Article with a location (the second headline) | the above, then `A@800` (850 on) |
+| Scrolling and text zoom in it | `...,P0:0.8@1000,A@1060,A@1120,P0.66:-0.8@1200,A@1260,A@1320,P-0.67:-0.8@1400,A@1460` |
+| Globe view, then dragging | `...,P0.7:0.8@1550,A@1600,P0.3:0@1800,A@1900+120,P-0.3:0.2@1930,P-0.5:0.3@1960` |
+| Card under the pointer, regional list, article from it | `P0:0@1,A@300,P0:0.2@400,A@450,A@800,P0.7:0.8@1000,P0.7:0.82@1020,A@1060,P0.08:-0.03@1260,P0.08:-0.04@1330,A@1400,P0.2:-0.3@1620,A@1700` |
+| Section list scrolled, Science/Health, an article without a location, back twice, "Wii Menu" | `P0:0@1,A@300,P0:0.8@400,A@460,A@520,A@580,P0:-0.1@700,A@760,P0:0.45@900,A@1000,...` |
+| Slide show; its article; "End" | `P0:0@1,A@300,P0.7:0.8@400,A@450,P0:0@700` then `A@1560` (any A zooms into the article), `P-0.7:0.8@1950,P-0.7:0.82@1970,A@2000` |
+| Slide show: continue, next, previous | `...,A@1300,P0.7:0.8@1500,P0.7:0.82@1510,A@1560,P0.3:0.3@1700,RIGHT@2900,LEFT@3300` |
+
+The script holds up to 1024 events now (it was 64).
+
+### What was wrong, and where it was fixed
+
+| Seen | Cause | Fix |
+| --- | --- | --- |
+| The headline's icon was drawn over its first letter (headline list, regional list) | `Draw2D_Icon()` in `d_s_news.cpp` advanced the position by `4.0f * scaleX`; the original adds 30 (the icon's width) | decompilation error 1 below |
+| Beside an article the globe showed the names of many places, each with "[0]", and no ring | **Class layout.** `d_s_news.cpp` has its own `GlobePin` with the Wii's offsets (`mStackCount` at `0xF0`, `mState` at `0xF8`...). In `GlobePin.h` a pointer to member function sits before them, 12 bytes for CodeWarrior and 8 for gcc, so `GlobePin.cpp` had every later member 4 bytes earlier than `d_s_news.cpp` wrote it | `PC_PMF_PAD`, below |
+| The slide show's article view had no buttons and ignored every input | `SlideShow::CheckInput()` and `Draw()` tested the wrong states | decompilation errors 3 and 4 below (5 and 6 were found by the tool, not on screen) |
+| The build of the merged branches failed on a clean tree | `GlobeDots.cpp` includes `news/GlobeDotAngles.inc`, which the Wii build generates into `build/HAGE/include` | nothing to fix: the Wii build has to run once before the PC build (section 3 says so for the other generated headers) |
+
+Nothing else was wrong on these screens: text in host order, 16-bit strings, glyph lookups, the JPEG pictures and their captions, the globe's pieces, the pins' projection, the dates ("Updated hh:mm ago" agrees with the files' time stamps and the clock).
+No crash, no SIGFPE and no assert was seen.
+
+### Class layouts (`PC_PMF_PAD`)
+
+`pc/tools/layout_check.py` compiles an `offsetof()` check for each of the 1011 members of `include/news` that have an offset comment.
+Before the fix 361 of them were somewhere else on PC than on the Wii, all of them behind a pointer to member function: `GlobePin`, `Ticker`, `Scroller`, `Fader`, `TextChar`, `Scene`, `LanguageSelect`, `MainScreen` (nine such pointers, 36 bytes at the end) and `SlideShow`.
+gcc's vtable pointer placement, alignment and `bool`/enum sizes agree with CodeWarrior's for every class of the game.
+
+The fix is one macro in `include/types.h`: `PC_PMF_PAD(member)` declares a 4-byte member on PC and nothing on the Wii.
+It follows each of the 22 pointers to member function in `include/news`, the two of `NewsScene` in `d_s_news.cpp` and `ut::Font::mReaderFunc` (so `ut::Font`, `ResFont` and `ArchiveFont` keep their Wii sizes).
+With it all 1011 members are at their Wii offsets, `sizeof(NewsScene)` is `0x1D4` as `System.cpp`'s view of it says, and `sizeof(GlobePin)` is `0x170` as the `operator new(0x170, ...)` in `d_s_news.cpp` says.
+`src/pc/selftest_layout.cpp` checks the members that are reached through a private view at compile time.
+
+Views of a class outside its header, all of them now consistent: `GlobePin`, `Globe`, `Dialog`, `Intro`, `Settings`, `HomeMenuInfo`, `NewsScene` (`d_s_news.cpp`); `NewsScene` (`System.cpp`); `Globe`, `GlobeCamera`, `MenuState` (`SlideShow.cpp`); `Globe` (`MainScreen.h`, `d_scene.cpp`); `GlobeView` (`GlobePin.cpp`, `GlobeDots.cpp`).
+
+### Decompilation errors (for the main branch)
+
+All six are in files that are NonMatching on the Wii side, in functions that objdiff reports at or near 100%, and none can be seen in the percentage: the first two differ in the value of a float literal, the other four in which pointer-to-member constant is compared or assigned. Both kinds are anonymous data.
+The fixes are in the shared source without a guard; `main.dol` is still `OK` (these units link the original object) and `report.json` does not change.
+
+| # | Where | Source had | The original has | Evidence |
+| --- | --- | --- | --- | --- |
+| 1 | `Draw2D_Icon()`, `d_s_news.cpp` | `pos->x += 4.0f * scaleX;` | `30.0f` | `lfs f1, lbl_80358BF4` at `0x80035630`; the label is `.float 30` |
+| 2 | `Article_DrawZoomedPicture()`, `d_s_news.cpp` | `x - 4.0f * (1.0f - t)` for the caption's cursor | `30.0f` | the same label at `0x80035C04` |
+| 3 | `SlideShow::CheckInput()` | `if (!(IsState(&StateShow) \|\| IsState(&StateMove)))` return early | `StateZoom`, `StateMessage` | the constants at `lbl_801B1A00 + 0xDC` and `+ 0xE8` are `StateZoom__9SlideShowFPCl` and `StateMessage__9SlideShowFPCl`; `__ptmf_cmpr` returns 0 for equal |
+| 4 | `SlideShow::Draw()` | `if (IsState(&StateShow) \|\| IsState(&StateMove)) mMainLayout->Draw();` | `StateZoom`, `StateMessage` | `lbl_801B1A00 + 0xB8` and `+ 0xC4` |
+| 5 | `SlideShow::StateMessage()`, step 0 | `ChangeSubState(&SlideShow::SubStateIdle)` | `SubStateScroll` | the constant it loads is `lbl_801B1BFC`: `SubStateScroll__9SlideShowFv` |
+| 6 | `SlideShow::StateZoom()`, step -1 (leaving the article) | `ChangeSubState(&SlideShow::SubStateWait)` | `SubStateIdle` | `lbl_801B1A00 + 0x178` |
+
+`pc/tools/wii_const_diff.py` was written from the first of these and found the second without running anything; extended to pointers in data it showed 3 and 4, and then 5 and 6, which had not shown on screen (the slide show's article view scrolled and closed anyway).
+After the fixes it reports seven functions of `SlideShow.cpp`, all below 100% already, whose float loads are the same set in a different order (and two loads of a variable where the source has a literal of the same value); two pointer-to-member constants of `SlideShow.cpp` that the original has in `.data` (`SubStateWait` at `+0x160`, `SubStateIdle` at `+0x1D8`) and no code refers to, which the source does not produce; and for `sound_manager.cpp` a vtable the original does not emit in that unit.
+It is worth running on main after every decompiled file.
+
+Looked at and found to be the original's: `GlobePin::UpdateCards()` takes the width of the "no picture" texture for both width and height (two calls of `TPL_GetWidth`); `NewsArticle`'s constructor leaves `mPicture` and `mSourceLogo` unset (section 9).
+
+### Threads
+
+The download thread and the game's thread ran the news path in twelve fresh starts in a row with the clock fixed (`--date`): the picture of frame 780 is the same file twelve times.
+That and the soak below found nothing; `WiiConnect24.cpp` has still not been audited line by line (section 9).
+
+### Soak
+
+`pc/tools/soak_input.py 18000 1` writes a script that goes through International News (list scrolled, an article, text zoom), National News (article with a location, globe view, zoom, a card, the regional list, an article from it, five times "Back") and the slide show (article, "Continue", next, previous, "End"), with random pointer positions in between, and repeats.
+
+- 18,000 frames (five minutes) without a window, under `gdb -batch -ex run -ex bt`: exit status 0, no stack to print, every thousandth frame a plausible screen.
+- 9,000 frames with a visible window and `--screenshot-window`: the same, and the window's back buffer shows the picture scaled into the window.
+- Too many "Back" presses end on "Wii Menu", which ends the program: a script that leaves early has done that, it has not crashed (seed 7 does).
+
+### Bypasses and what is left
+
+No bypass was added. The one left is the pointer effect (section 15, `TODO(milestone 6)`): there is no pointer picture and no trail.
+
+- **HTTP**: the news comes from a directory; the libcurl source is the next step (section 21, "For the next task").
+- **Pictures that do not fit**: about a third of a WiiLink day's articles are dropped because their pictures do not fit the game's 12 MiB picture heap (section 21); the game's own behaviour, not changed.
+- **`--lang de`** leaves through `OSReturnToMenu()` before the connection screen; not looked into.
+- **Language selection, HOME Menu, the Operations Guide**: not reached.
+- **Not compared with a console**: everything here was checked against the code and the data, not against a capture of the original.
+
