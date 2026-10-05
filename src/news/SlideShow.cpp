@@ -90,8 +90,11 @@ extern "C" {
 
 
 void fn_8001F730(nw4r::lyt::Pane* pane, const nw4r::ut::Color& color);
-// DrawPointerEffect__FUcUs; the call passes a u32 height without truncating it.
-void fn_80036328(u8 alpha, u32 y);
+// DrawPointerEffect(u8, u16); the call passes a u32 height without truncating it.
+void DrawPointerEffect__FUcUs(u8 alpha, u32 y);
+// DrawTabRect(const ut::Rect&, u8, f32); the call passes an s32 alpha without
+// truncating it.
+void DrawTabRect__FRCQ34nw4r2ut4RectUcf(const nw4r::ut::Rect& rect, s32 alpha, f32 z);
 }
 
 // OSu16tof32: u16 to f32 through the paired-single unit (GQR3 = u16).
@@ -701,6 +704,22 @@ static inline void DrawFooter(SlideShow* s) {
     }
 }
 
+static inline void DrawDot(TPLPalette* tpl, f32 x, f32 y, f32 width, f32 height, f32 scale) {
+    Vec pos;
+    pos.x = x - 0.28125f * (width * scale);
+    pos.y = y - 0.28125f * (height * scale);
+    pos.z = 0.0f;
+    Draw2D_Tex(tpl, 0x60, &pos, scale, scale);
+}
+
+static inline void DrawDot2(TPLPalette* tpl, f32 x, f32 y, f32 scale) {
+    Vec pos;
+    pos.x = x;
+    pos.y = y;
+    pos.z = 0.0f;
+    Draw2D_Tex(tpl, 0x60, &pos, scale, scale);
+}
+
 #pragma explicit_zero_data on
 static f32 sLineFromZ = 0.0f;
 static f32 sLineToZ = 0.0f;
@@ -710,7 +729,7 @@ void SlideShow::Draw() {
     if (mAlpha != 0) {
         mSlideLayout->SetAlpha(mAlpha);
         mSlideLayout->Draw();
-        fn_80036328(mAlpha, mView.top);
+        DrawPointerEffect__FUcUs(mAlpha, mView.top);
         DrawFooter(this);
     }
 
@@ -718,15 +737,20 @@ void SlideShow::Draw() {
     static ut::Color sLightColor(255, 255, 255, 255);
     static ut::Color sBackColor(222, 222, 222, 255);
 
-    math::VEC3 from(mView.left, mView.top, sLineFromZ);
-    math::VEC3 to(mView.right, mView.top, sLineToZ);
+    math::VEC3 line[2];
+    line[0].x = mView.left;
+    line[0].y = mView.top;
+    line[0].z = sLineFromZ;
+    line[1].x = mView.right;
+    line[1].y = mView.top;
+    line[1].z = sLineToZ;
     Draw2D_SetupGX();
     Draw2D_SetOrtho();
     Draw2D_FillRect(&mView, &sBackColor);
-    Draw2D_Line(from, to, 12, sLineColor, ut::Color(0xFF));
-    from.y += 1.0f;
-    to.y += 1.0f;
-    Draw2D_Line(from, to, 12, sLightColor, ut::Color(0xFF));
+    Draw2D_Line(line[0], line[1], 12, sLineColor, ut::Color(0xFF));
+    line[0].y += 1.0f;
+    line[1].y += 1.0f;
+    Draw2D_Line(line[0], line[1], 12, sLightColor, ut::Color(0xFF));
 
     DrawPictures();
 
@@ -743,7 +767,7 @@ void SlideShow::Draw() {
         if (mHasTitle) {
             Draw2D_SetupGX();
             Draw2D_SetOrtho();
-            DrawTabRect(mTitleRect, alpha, 0.0f);
+            DrawTabRect__FRCQ34nw4r2ut4RectUcf(mTitleRect, alpha, 0.0f);
             ut::TextWriterBase<wchar_t> writer;
             writer.SetFont(*gSysFont);
             writer.SetDrawFlag(0x122);
@@ -759,19 +783,20 @@ void SlideShow::Draw() {
         }
 
         s32 rate = GetFrameRate();
+        TPLPalette* tpl;
+        s32 speed;
         s32 seconds = mTimer / rate;
-        s32 speed = mSpeed;
-        TPLPalette* tpl = gCursorTpl;
+        speed = mSpeed;
+        tpl = gCursorTpl;
         s32 frac = mTimer - seconds * rate;
         f32 x = (f32)GetContentRight() - 8.0f;
+        f32 y = 421.0f;
         f32 width = TPL_GetWidth(tpl, 0x60);
         f32 height = TPL_GetHeight(tpl, 0x60);
         f32 fade = (f32)(15 - mTimerFade) / 15.0f;
         Draw2D_SetupGX();
         Draw2D_SetOrtho();
-        GXColor shadow = {0, 0, 0, alpha / 2};
-        GXColor shadow2 = {0, 0, 0, alpha / 2};
-        GXSetTevColor(GX_TEVREG0, shadow2);
+        GXSetTevColor(GX_TEVREG0, ut::Color(0, 0, 0, alpha / 2));
 
         for (s32 i = 0; i < speed; i++) {
             static ut::Color sDotOn(64, 180, 32, 0);
@@ -799,18 +824,12 @@ void SlideShow::Draw() {
                 color = sDotDiff;
                 scale = 0.39999998f;
             }
+            color.r = sDotOff.r + (s32)(color.r * fade);
+            color.g = sDotOff.g + (s32)(color.g * fade);
+            color.b = sDotOff.b + (s32)(color.b * fade);
             scale = 0.3f + scale * fade;
-            GXColor c;
-            c.r = sDotOff.r + (s32)(color.r * fade);
-            c.g = sDotOff.g + (s32)(color.g * fade);
-            c.b = sDotOff.b + (s32)(color.b * fade);
-            c.a = color.a;
-            GXSetTevColor(GX_TEVREG1, c);
-            Vec pos;
-            pos.x = x - 0.28125f * (width * scale);
-            pos.y = 421.0f - 0.28125f * (height * scale);
-            pos.z = 0.0f;
-            Draw2D_Tex(tpl, 0x60, &pos, scale, scale);
+            GXSetTevColor(GX_TEVREG1, color);
+            DrawDot2(tpl, x - 0.28125f * (width * scale), y - 0.28125f * (height * scale), scale);
             x -= 18.0f;
         }
     }
