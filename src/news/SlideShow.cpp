@@ -1708,12 +1708,11 @@ void SlideShow::DrawPictures() {
     f32 slide = SinIdx(mSlideAngle);
     f32 width;
     f32 height;
-    f32 hh;
-    f32 hw;
     f32 ofs;
-    f32 border;
+    f32 hh;
     f32 y;
     f32 x;
+    f32 border;
     Vec pos2;
     ut::Rect rect(0.0f, 0.0f, 0.0f, 0.0f);
 
@@ -1721,13 +1720,12 @@ void SlideShow::DrawPictures() {
     if (prev != NULL) {
         s32 alpha = mPrevPicAlpha * fade;
         if (alpha != 0) {
-            x = mSlideDist * slide;
+            ofs = mSlideDist * slide;
             width = mPrevPicScale * prev->width;
             height = mPrevPicScale * prev->height;
-            hw = 0.5f * width;
             hh = 0.5f * height;
-            x = (mPrevPicCenter[0] + x) - hw;
             y = mPrevPicCenter[1] - hh;
+            x = (mPrevPicCenter[0] + ofs) - 0.5f * width;
             border = 0.05f * height;
             pos2.x = x;
             pos2.y = y;
@@ -1756,9 +1754,8 @@ void SlideShow::DrawPictures() {
             ofs = mSlideDist * (1.0f - slide);
             width = mPicScale * GetPictureTexture(mArticle)->width;
             height = mPicScale * GetPictureTexture(mArticle)->height;
-            hw = 0.5f * width;
             hh = 0.5f * height;
-            x = (mPicCenter[0] - ofs) - hw;
+            x = (mPicCenter[0] - ofs) - 0.5f * width;
             y = mPicCenter[1] - hh;
             pos2.x = x;
             pos2.y = y;
