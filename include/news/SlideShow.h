@@ -90,6 +90,10 @@ public:
         (this->*mSubState)();
     }
 
+    void StartWait() {
+        ChangeSubState(&SlideShow::SubStateWait);
+    }
+
     Layout* mCurLayout;                   // at 0x000
     Layout* mMainLayout;                  // at 0x004
     Layout* mSlideLayout;                 // at 0x008

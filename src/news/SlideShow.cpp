@@ -415,6 +415,10 @@ static inline void SetArticleText(SlideShow* s) {
     Article_Reset();
 }
 
+static inline s32 GetNumArticles(u32 category) {
+    return gNewsData->mCategories[category].mNumArticles;
+}
+
 static inline BOOL IsFirstArticle(SlideShow* s) {
     if (s->mArticleIdx == 0) {
         if (s->mLoop) {
@@ -431,9 +435,9 @@ static inline BOOL IsFirstArticle(SlideShow* s) {
 }
 
 static inline BOOL IsLastArticle(SlideShow* s) {
-    u32 cat = s->mCategory;
-    if ((u32)s->mArticleIdx >= (u32)(GetCategory(cat)->mNumArticles - 1)) {
+    if ((u32)s->mArticleIdx >= (u32)(GetNumArticles(s->mCategory) - 1)) {
         if (s->mLoop) {
+            s32 cat = s->mCategory;
             while (++cat < (u32)lbl_803575E0) {
                 if (GetCategory(cat)->mArticles != NULL) {
                     return FALSE;
@@ -1133,8 +1137,8 @@ BOOL SlideShow::StateZoom(const s32* arg) {
         mTextVisible = false;
         mViewTarget[0] = 0.0f;
         mViewTarget[1] = 0.0f;
-        mTextTarget[1] = 83.0f;
         mTextTarget[0] = GetSideMargin();
+        mTextTarget[1] = 83.0f;
         mArticle->mFlags |= 1;
         if (mViewTarget[0] != mView.left || mViewTarget[1] != mView.top) {
             mZoomAngle = 0;
@@ -1168,7 +1172,10 @@ BOOL SlideShow::StateZoom(const s32* arg) {
             break;
         case 2: {
             bool close = false;
-            f32 screenWidth = GetScreenWidth();
+            f32 left = 0.0f;
+            f32 top = 63.0f;
+            f32 right = GetScreenWidth();
+            f32 bottom = 393.0f;
             ut::Rect rect(0.0f, 0.0f, 0.0f, 0.0f);
             if (Article_GetPictureRect(&rect, mText.left, mTextOfs + (mText.top + mScroll), 1.0f)) {
                 bool hold = false;
@@ -1212,7 +1219,7 @@ BOOL SlideShow::StateZoom(const s32* arg) {
                 if (IsPointerValid(i)) {
                     f32 x = gPointerX[i];
                     f32 y = gPointerY[i];
-                    if (x > 0.0f && x < screenWidth && y > 63.0f && y < 393.0f && (gTrig[i] & 0x800)) {
+                    if (x > left && x < right && y > top && y < bottom && (gTrig[i] & 0x800)) {
                         close = true;
                         break;
                     }
@@ -1225,7 +1232,7 @@ BOOL SlideShow::StateZoom(const s32* arg) {
             if (mBackPressed || close) {
                 mStateFrame++;
                 PlaySE(0x21);
-                ChangeSubState(&SlideShow::SubStateWait);
+                StartWait();
                 mBeltVisible = true;
                 return TRUE;
             }
@@ -1233,7 +1240,7 @@ BOOL SlideShow::StateZoom(const s32* arg) {
             if (!IsLastArticle(this) && (gTrigAll & 2)) {
                 mStateFrame = 4;
                 mDirection = 1;
-                ChangeSubState(&SlideShow::SubStateWait);
+                StartWait();
                 PlaySE(0x38);
                 mBeltVisible = true;
                 mQuickMove = true;
@@ -1244,7 +1251,7 @@ BOOL SlideShow::StateZoom(const s32* arg) {
                 mStateFrame = 4;
                 mDirection = 0;
                 PlaySE(0x39);
-                ChangeSubState(&SlideShow::SubStateWait);
+                StartWait();
                 mBeltVisible = true;
                 mQuickMove = true;
                 return TRUE;
@@ -1307,6 +1314,7 @@ BOOL SlideShow::StateZoom(const s32* arg) {
                 return TRUE;
             }
             break;
+        case 4:
         default:
             if (mZoomDone && mZoomAngle == 0x8000) {
                 SetViewToTarget(this);
