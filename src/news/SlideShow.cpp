@@ -368,10 +368,10 @@ SlideShow::~SlideShow() {
 }
 
 static inline void SetViewToTarget(SlideShow* s) {
-    s->mText.left = s->mTextTarget[0];
-    s->mText.top = s->mTextTarget[1];
     s->mView.left = s->mViewTarget[0];
     s->mView.top = s->mViewTarget[1];
+    s->mText.left = s->mTextTarget[0];
+    s->mText.top = s->mTextTarget[1];
     ApplyView(s);
 }
 
@@ -435,9 +435,8 @@ void SlideShow::LoadArticle() {
         return;
     }
 
-    s32 start = list->mCategory;
     s32 count = lbl_803575E0;
-    mCategory = start;
+    s32 start = mCategory = list->mCategory;
     NewsArticle** articles = GetCategory(start)->mArticles;
     while (articles == NULL) {
         if (++mCategory >= count) {
@@ -929,21 +928,11 @@ BOOL SlideShow::CheckInput() {
 
     if (!IsState(&SlideShow::StateMessage)) {
         UpdateLayoutButtons(mCurLayout, 0x23);
-        if (gHold[0] & 0x400) {
-            mDragging[0] = true;
-            dragging = true;
-        }
-        if (gHold[1] & 0x400) {
-            mDragging[1] = true;
-            dragging = true;
-        }
-        if (gHold[2] & 0x400) {
-            mDragging[2] = true;
-            dragging = true;
-        }
-        if (gHold[3] & 0x400) {
-            mDragging[3] = true;
-            dragging = true;
+        for (s32 i = 0; i < 4; i++) {
+            if (gHold[i] & 0x400) {
+                mDragging[i] = true;
+                dragging = true;
+            }
         }
 
         CheckPointer();
