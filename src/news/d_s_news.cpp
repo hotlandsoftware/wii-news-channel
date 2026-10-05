@@ -2720,6 +2720,9 @@ f32 Article_GetMaxScrollOffset() {
     s32 max = (headlineLines + bodyLines + sCreditView->mNumLines + 1) -
               sLinesPerPage[lbl_80356970];
     f32 line = max & ~(max >> 31);
+    // Never read. The original converts headlineLines here as well: the dead conversion
+    // takes an int-to-float stack slot and leaves its xoris in the entry block.
+    f32 headline = headlineLines;
     if (line > creditStart) {
         f32 h = GetLogoHeight();
         return -(sBodyView->mLineHeight * sBodyView->mNumLines +
