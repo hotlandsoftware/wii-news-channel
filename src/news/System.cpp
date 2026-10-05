@@ -298,8 +298,8 @@ static inline f32 GetSmoothRate(f32 current, f32 target) {
     return t;
 }
 
-static inline f32 Lerp(f32 a, f32 b, f32 t) {
-    return (1.0f - t) * a + t * b;
+static inline void LerpTo(f32& a, f32 b, f32 t) {
+    a = (1.0f - t) * a + t * b;
 }
 
 void SystemCalc() {
@@ -326,10 +326,10 @@ void SystemCalc() {
         }
 
         if (!gConnected[i] && wasConnected) {
+            gTrig[i] = 0;
             for (s32 j = 0; j < 16; j++) {
                 gKPADStatus[i][j].trig = 0;
             }
-            gTrig[i] = 0;
             continue;
         }
 
@@ -372,16 +372,16 @@ void SystemCalc() {
         }
 
         f32 tx = GetSmoothRate(gPointerX[i], gCursorX[i][0]);
-        f32 dy = gCursorY[i][0] - gPointerY[i];
-        gPointerX[i] = Lerp(gPointerX[i], gCursorX[i][0], tx);
-        f32 ty = 0.002f * __fabsf(dy);
+        f32 ty = gCursorY[i][0] - gPointerY[i];
+        LerpTo(gPointerX[i], gCursorX[i][0], tx);
+        ty = 0.002f * math::FAbs(ty);
         if (ty < 0.1f) {
             ty = 0.1f;
         }
         if (ty > 1.0f) {
             ty = 1.0f;
         }
-        gPointerY[i] = Lerp(gPointerY[i], gCursorY[i][0], ty);
+        LerpTo(gPointerY[i], gCursorY[i][0], ty);
 
         n = gKPADCount[i];
         BOOL found = FALSE;
@@ -420,7 +420,7 @@ void SystemCalc() {
         if (zoom) {
             f32 r = gPointerDistBase[i] / gCursorDist[i][0];
             if (r < 1.0f) {
-                r = r * (1.2f + 3.0f * (r - 1.0f));
+                r *= 1.2f + 3.0f * (r - 1.0f);
             } else {
                 r = 1.2f + 10.0f * (r - 1.0f);
             }
