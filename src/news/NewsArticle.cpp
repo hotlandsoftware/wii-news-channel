@@ -204,8 +204,7 @@ s32 NewsData::Init(NewsHeader** files, s32 current) {
     mNumCategories = file->numTopics;
 
     // Count the source logos of each file.
-    topicRec = (NewsTopicRec*)file->At(file->topicsOfs);
-    for (i = 0; i < mNumCategories; i++, topicRec++) {
+    for (i = 0, topicRec = (NewsTopicRec*)file->At(file->topicsOfs); i < mNumCategories; i++, topicRec++) {
         entry = (NewsEntryRec*)file->At(topicRec->entriesOfs);
         for (j = 0; j < topicRec->numEntries; j++, entry++) {
             src = GetFile(entry->fileId);
@@ -251,7 +250,7 @@ s32 NewsData::Init(NewsHeader** files, s32 current) {
     }
 
     topicRec = (NewsTopicRec*)file->At(file->topicsOfs);
-    for (i = 0; i < mNumCategories; topicRec++, i++) {
+    for (i = 0; i < mNumCategories; i++, topicRec++) {
         if (topicRec->numEntries == 0) {
             continue;
         }
@@ -281,7 +280,7 @@ s32 NewsData::Init(NewsHeader** files, s32 current) {
 
     topic = mCategories;
     topicRec = (NewsTopicRec*)file->At(file->topicsOfs);
-    for (i = 0; i < mNumCategories; topicRec++, topic++, i++) {
+    for (i = 0; i < mNumCategories; i++, topic++, topicRec++) {
         count = topicRec->numEntries;
         topic->mNumArticles = count;
         if (count != 0) {
@@ -295,7 +294,7 @@ s32 NewsData::Init(NewsHeader** files, s32 current) {
 
     topic = mCategories;
     topicRec = (NewsTopicRec*)file->At(file->topicsOfs);
-    for (i = 0; i < mNumCategories; topicRec++, topic++, i++) {
+    for (i = 0; i < mNumCategories; i++, topic++, topicRec++) {
         topic->mRec = topicRec;
         topic->mName = (wchar_t*)file->At(topicRec->nameOfs);
         if (topicRec->numEntries == 0) {
