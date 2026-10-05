@@ -107,6 +107,10 @@ public:
     f32 GetTop();
     bool GetPictureRect(nw4r::ut::Rect* rect) const;
 
+    void SetSize(const nw4r::math::VEC2* size) {
+        mSize.x = size->x;
+        mSize.y = size->y;
+    }
     f32 GetHeight() { return mHeight; }
     f32 GetLineHeight() { return mLineHeight; }
 

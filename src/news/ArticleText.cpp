@@ -320,8 +320,7 @@ bool ArticleText::Set(const wchar_t* text, NewsPicture* picture, const math::VEC
     }
 
     mFontScale = fontScale;
-    mSize.x = size->x;
-    mSize.y = size->y;
+    SetSize(size);
     mScale = scale;
     mNumLines = 0;
     mText = text;
@@ -408,8 +407,7 @@ bool ArticleText::Set(const wchar_t* text, NewsPicture* picture, const math::VEC
         }
     }
 
-    math::VEC2 origin(0.0f, 0.0f);
-    Layout(&origin, scale);
+    Layout(scale);
 
     f32 y = start->y;
     if (mCount != 0) {
@@ -428,8 +426,7 @@ bool ArticleText::Set(const wchar_t* text, NewsPicture* picture, const math::VEC
     mPicPos.y = picPos->y;
     mPicScale = *picScale / mScale;
     mPicTargetScale = 1.0f;
-    math::VEC2 origin2(0.0f, 0.0f);
-    Layout(&origin2, scale);
+    Layout(scale);
     return true;
 }
 
@@ -744,10 +741,8 @@ bool ArticleText::LayoutPicture(const math::VEC2* pos, f32 scale) {
     mSubTarget.y = mPicBottom;
 
     if (mSub != NULL) {
-        mSub->mSize.x = mPicSize.x;
-        mSub->mSize.y = mPicSize.y;
-        math::VEC2 origin(0.0f, 0.0f);
-        mSub->Layout(&origin, 0.7f * scale);
+        mSub->SetSize(&mPicSize);
+        mSub->Layout(0.7f * scale);
         mPicBottom = 10.0f + (mSubTarget.y + mSub->mLineHeight * mSub->mNumLines);
     }
 
