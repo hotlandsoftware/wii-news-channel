@@ -1060,22 +1060,12 @@ f32 ArticleText::GetTop() {
     return mChars->mPos.y;
 }
 
-bool ArticleText::GetPictureRect(ut::Rect* rect) {
-    u16 height;
-    NewsTexture* pic;
-    f32 scale;
-    f32 left;
-    f32 top;
-    pic = mPicture;
-    if (pic != NULL) {
-        top = mPicPos.y;
-        rect->top = top;
-        scale = mPicScale;
-        height = pic->height;
-        left = mPicPos.x;
-        rect->left = left;
-        rect->bottom = top + scale * height;
-        rect->right = left + scale * pic->width;
+bool ArticleText::GetPictureRect(ut::Rect* rect) const {
+    if (mPicture != NULL) {
+        rect->top = mPicPos.y;
+        rect->bottom = mPicPos.y + mPicScale * mPicture->height;
+        rect->left = mPicPos.x;
+        rect->right = mPicPos.x + mPicScale * mPicture->width;
         return true;
     }
     return false;

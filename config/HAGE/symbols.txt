@@ -538,7 +538,7 @@ StartScroll__11ArticleTextFPCQ34nw4r4math4VEC2PCQ34nw4r4math4VEC2PCQ34nw4r4math4
 Select__11ArticleTextFPCQ34nw4r2ut4Rect = .text:0x80029EBC; // type:function size:0x300
 ClearSelection__11ArticleTextFv = .text:0x8002A1BC; // type:function size:0x78
 GetTop__11ArticleTextFv = .text:0x8002A234; // type:function size:0x20
-GetPictureRect__11ArticleTextFPQ34nw4r2ut4Rect = .text:0x8002A254; // type:function size:0x80
+GetPictureRect__11ArticleTextCFPQ34nw4r2ut4Rect = .text:0x8002A254; // type:function size:0x80
 __sinit_\ArticleText_cpp = .text:0x8002A2D4; // type:function size:0xC0 scope:local
 __ct__8ScrollerFv = .text:0x8002A394; // type:function size:0xE8
 Reset__8ScrollerFv = .text:0x8002A47C; // type:function size:0xB8

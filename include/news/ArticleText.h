@@ -105,7 +105,7 @@ public:
     bool Select(const nw4r::ut::Rect* rect);
     void ClearSelection();
     f32 GetTop();
-    bool GetPictureRect(nw4r::ut::Rect* rect);
+    bool GetPictureRect(nw4r::ut::Rect* rect) const;
 
     f32 GetHeight() { return mHeight; }
     f32 GetLineHeight() { return mLineHeight; }
