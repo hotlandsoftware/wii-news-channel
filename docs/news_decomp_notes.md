@@ -543,3 +543,20 @@ Full write-up in `docs/platform_layer_map.md` ("VC manual viewer"). Codegen tric
 - **Operand order of an int sum sets the call order.** `TPL_GetWidth(tpl, 0x41) + TPL_GetWidth(tpl, 0x42)` calls for `0x42` first (SlideShow `DrawFooterA`/`DrawFooterB`).
 - **Names of shared tables.** `ArticleText.cpp` referred to the kinsoku table as `lbl_801920F0`; it is `gPunctuationTable` (`PunctuationTable.cpp`). The fuzzy percentage ignores such names, but the file could never link with the old one.
 
+
+## Errors the match percentage cannot see
+
+Found by running the PC port (`pc-port` branch) and fixed here. All were in functions objdiff reported at or near 100%, because float literals and pointer-to-member constants are anonymous data that objdiff does not compare. Run `tools/decomp/wii_const_diff.py` on every decompiled file to catch them.
+
+| Where | Source had | Original has |
+| --- | --- | --- |
+| `Draw2D_Icon()`, `d_s_news.cpp` | `pos->x += 4.0f * scaleX` | `30.0f` |
+| `Article_DrawZoomedPicture()`, `d_s_news.cpp` | `x - 4.0f * (1.0f - t)` | `30.0f` |
+| `SlideShow::CheckInput()` | early return unless `StateShow`/`StateMove` | `StateZoom`/`StateMessage` |
+| `SlideShow::Draw()` | main layout drawn in `StateShow`/`StateMove` | `StateZoom`/`StateMessage` |
+| `SlideShow::StateMessage()`, step 0 | `SubStateIdle` | `SubStateScroll` |
+| `SlideShow::StateZoom()`, step -1 | `SubStateWait` | `SubStateIdle` |
+
+Still reported by the tool: seven `SlideShow` functions that load the same float values in a different order, the pointer count in `SlideShow`'s `.data` (41 original, 39 source), and `sound_manager`'s `.data` pointers (4 original, 8 source). No other unit differs (617 compared).
+
+`gErrorSystemArc` (`0x801B3620`) is `0x1759C` bytes, not `0x680`: `lbl_801B3CA0` and `lbl_801B5080` were inside the archive and are removed from `symbols.txt`.

@@ -81,10 +81,10 @@ extern "C" Globe* gGlobe;
 
 void DrawScreenFade(s32 alpha);
 
-// The original calls Layout::SetBlend(s32, s32, s32) with only the first
-// argument set (r5/r6 are left as they are), as if through an older
-// one-argument declaration. Declaring the mangled name with C linkage
-// reproduces that call.
+// The original calls Layout::SetBlend(s32, s32, s32) and only sets up the
+// first argument; r5 and r6 still hold mFooterFade and 15 from computing it,
+// so the callee receives (alpha, mFooterFade, 15). Declaring the mangled name
+// with C linkage and one argument reproduces that code.
 extern "C" void SetBlend__6LayoutFlll(Layout* layout, s32 alpha);
 
 extern "C" {
