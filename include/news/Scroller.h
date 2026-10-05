@@ -38,6 +38,7 @@ private:
 
 public:
     StateFunc mState;     // at 0x00
+    PC_PMF_PAD(mState)
     s32 mPhase;           // at 0x0C
     s32 mMode;            // at 0x10
     BOOL mActive;         // at 0x14

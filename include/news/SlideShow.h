@@ -100,8 +100,11 @@ public:
     NewsTexture* mPrevPicture;            // at 0x02C
     const wchar_t* mPrevCaption;          // at 0x030
     StateFunc mState;                     // at 0x034
+    PC_PMF_PAD(mState)
     SubStateFunc mSubState;               // at 0x040
+    PC_PMF_PAD(mSubState)
     DrawFunc mDrawFooter;                 // at 0x04C
+    PC_PMF_PAD(mDrawFooter)
     nw4r::ut::TextWriterBase<wchar_t> mWriter; // at 0x058
     u8 mUnkB8[0xF8 - 0xB8];               // at 0x0B8
     nw4r::ut::Color mArrowColors[3];      // at 0x0F8

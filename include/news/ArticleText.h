@@ -63,6 +63,7 @@ public:
     f32 mBottom;                 // at 0x3C
     nw4r::ut::Color mColor;      // at 0x40
     StateFunc mState;            // at 0x44
+    PC_PMF_PAD(mState)
     f32 mWordWidth;              // at 0x50
     f32 mRate;                   // at 0x54
     f32 mScaleX;                 // at 0x58

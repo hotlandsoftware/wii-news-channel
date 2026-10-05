@@ -71,6 +71,7 @@ public:
 
 private:
     CharStrmReader::ReadFunc mReaderFunc; // at 0x04
+    PC_PMF_PAD(mReaderFunc)
 };
 
 } // namespace ut

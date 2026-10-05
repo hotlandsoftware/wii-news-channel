@@ -233,14 +233,23 @@ public:
     GlobePin* mCurRelated;                   // at 0x0A4
     FrameTextButton* mButtons[MAX_CATEGORIES];  // at 0x0A8
     ModeFunc mMode;                 // at 0x0E0
+    PC_PMF_PAD(mMode)
     StateFunc mState;               // at 0x0EC
+    PC_PMF_PAD(mState)
     StateFunc mPrevState;           // at 0x0F8
+    PC_PMF_PAD(mPrevState)
     Func mUnk104;                   // at 0x104
+    PC_PMF_PAD(mUnk104)
     Func mDraw;                     // at 0x110
+    PC_PMF_PAD(mDraw)
     Func mUnk11C;                   // at 0x11C
+    PC_PMF_PAD(mUnk11C)
     Func mUnk128;                   // at 0x128
+    PC_PMF_PAD(mUnk128)
     Func mUnk134;                   // at 0x134
+    PC_PMF_PAD(mUnk134)
     Func mUnk140;                   // at 0x140
+    PC_PMF_PAD(mUnk140)
     nw4r::math::VEC2 mUnk14C;       // at 0x14C
     nw4r::math::VEC2 mUnk154;       // at 0x154
     nw4r::math::VEC2 mUnk15C;       // at 0x15C

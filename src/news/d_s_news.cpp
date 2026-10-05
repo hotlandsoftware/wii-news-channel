@@ -264,7 +264,9 @@ public:
     s32 mLoadResult;              // at 0xC8
     s32 mSaveResult;              // at 0xCC
     StateFunc mState;             // at 0xD0
+    PC_PMF_PAD(mState)
     DrawFunc mDraw;               // at 0xDC
+    PC_PMF_PAD(mDraw)
     ut::Color mLogoColor;         // at 0xE8
     ARCFileInfo mArcFile;         // at 0xEC
     ut::TextWriterBase<wchar_t> mArticleWriter;  // at 0xF8

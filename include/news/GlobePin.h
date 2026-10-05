@@ -74,6 +74,7 @@ public:
     u32 m2C;                       // at 0x02C
     NewsArticle* mArticle;         // at 0x030
     StateFunc mState;              // at 0x034
+    PC_PMF_PAD(mState)
     Ripple mRipples[2];            // at 0x040
     Scroller mHeadlineScroller;    // at 0x058
     Scroller mLocationScroller;    // at 0x088

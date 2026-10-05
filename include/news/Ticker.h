@@ -82,6 +82,7 @@ public:
     NewsArticle* mArticle;                      // at 0x08
     nw4r::ut::TextWriterBase<wchar_t>* mWriter; // at 0x0C
     StateFunc mState;                           // at 0x10
+    PC_PMF_PAD(mState)
     f32 unk1C;                                  // at 0x1C
     f32 unk20;                                  // at 0x20
     f32 unk24;                                  // at 0x24

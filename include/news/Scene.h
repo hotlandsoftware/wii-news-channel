@@ -69,7 +69,9 @@ public:
 
     nw4r::ut::TextWriterBase<wchar_t> mBaseWriter; // at 0x04
     DrawFunc mDrawClock;                           // at 0x64
+    PC_PMF_PAD(mDrawClock)
     StateFunc mState;                              // at 0x70
+    PC_PMF_PAD(mState)
     f32 mClockX;                                   // at 0x7C
     f32 mClockY;                                   // at 0x80
     f32 mClockRight;                               // at 0x84

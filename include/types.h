@@ -43,6 +43,16 @@ typedef double f64 __attribute__((aligned(8)));
 #else
 typedef double f64;
 #endif
+// A pointer to member function is 12 bytes for CodeWarrior and 8 for gcc.
+// PC_PMF_PAD(member) after such a member keeps the members behind it at their
+// Wii offsets, which the files that declare their own view of a class rely on
+// (pc/tools/layout_check.py checks every class of include/news).
+#ifdef TARGET_PC
+#define PC_PMF_PAD(member) u32 member##PcPad;
+#else
+#define PC_PMF_PAD(member)
+#endif
+
 typedef volatile f32 vf32;
 typedef volatile f64 vf64;
 

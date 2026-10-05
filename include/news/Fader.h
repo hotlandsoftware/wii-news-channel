@@ -57,6 +57,7 @@ public:
     nw4r::ut::Color mColor;         // at 0x10
     nw4r::math::VEC3 mQuad[4];      // at 0x14
     StateFunc mState;               // at 0x44
+    PC_PMF_PAD(mState)
     s32 mBusy;                      // at 0x50 (Mode)
     s32 mStep;                      // at 0x54
     s32 mFrames;                    // at 0x58

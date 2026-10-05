@@ -95,8 +95,11 @@ public:
     Item* mSelected;                             // at 0x1C
     u32 unk20;                                   // at 0x20
     DrawFunc mDraw;                              // at 0x24
+    PC_PMF_PAD(mDraw)
     StateFunc mState;                            // at 0x30
+    PC_PMF_PAD(mState)
     ScrollFunc mScroll;                          // at 0x3C
+    PC_PMF_PAD(mScroll)
     nw4r::ut::TextWriterBase<wchar_t> mWriter;   // at 0x48
     f32 mListX;                                  // at 0xA8
     f32 mScrollY;                                // at 0xAC
