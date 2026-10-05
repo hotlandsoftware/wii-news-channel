@@ -547,28 +547,23 @@ void ArticleText::Draw(const math::VEC2* pos, bool clip, f32 alpha, f32 zoom) {
         }
     }
 
-    {
-        f32 lineOfs = 0.0f;
-        TextChar* u = &mChars[mFirstVisible];
-        math::VEC3 line[2];
-        line[0].z = line[1].z = line[2].z = line[3].z = 0.0f;
-        if (gNewsData->mHeader->unk2C[0] == 0) {
-            lineOfs = 2.0f;
-        }
-        SetupTexGX();
-        for (s32 j = mFirstVisible; j <= mLastVisible; j++, u++) {
-            if (!u->mHidden && u->mSelected && u->mChar != L'\n') {
-                color.r = u->mColor.r;
-                color.g = u->mColor.g;
-                color.b = u->mColor.b;
-                color.a = a;
-                line[0].x = u->mLeft;
-                line[1].x = u->mRight;
-                f32 y = u->mBottom - lineOfs;
-                line[1].y = y;
-                line[0].y = y;
-                Draw2D_Line(line[0], line[1], 12, color, color);
-            }
+    TextChar* u = &mChars[mFirstVisible];
+    math::VEC3 line[2];
+    line[0].z = line[1].z = line[2].z = line[3].z = 0.0f;
+    f32 lineOfs = gNewsData->mHeader->unk2C[0] == 0 ? 2.0f : 0.0f;
+    SetupTexGX();
+    for (s32 j = mFirstVisible; j <= mLastVisible; j++, u++) {
+        if (!u->mHidden && u->mSelected && u->mChar != L'\n') {
+            color.r = u->mColor.r;
+            color.g = u->mColor.g;
+            color.b = u->mColor.b;
+            color.a = a;
+            line[0].x = u->mLeft;
+            line[1].x = u->mRight;
+            f32 y = u->mBottom - lineOfs;
+            line[1].y = y;
+            line[0].y = y;
+            Draw2D_Line(line[0], line[1], 12, color, color);
         }
     }
 
