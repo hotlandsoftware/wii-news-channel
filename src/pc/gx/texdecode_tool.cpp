@@ -332,7 +332,7 @@ void VisitTPL(Walk& walk, const char* path, void* data, u32 size) {
         texture.wrapT = header->wrapT;
         texture.minFilter = header->minFilter;
         texture.magFilter = header->magFilter;
-        texture.mipmaps = header->maxLOD > header->minLOD;
+        texture.levels = header->maxLOD > header->minLOD ? header->maxLOD - header->minLOD + 1u : 1u;
         const TPLClutHeader* clut = descriptor->CLUTHeader;
         if (clut != nullptr && reinterpret_cast<const u8*>(clut->data) >= begin &&
             reinterpret_cast<const u8*>(clut->data) + clut->numEntries * 2 <= end) {
@@ -361,6 +361,7 @@ void VisitSheets(Walk& walk, const char* path, const char* kind, const ut::FontT
         texture.height = glyphs->sheetHeight;
         texture.wrapS = texture.wrapT = GX_CLAMP;
         texture.minFilter = texture.magFilter = GX_LINEAR;
+        texture.levels = 1;
         Report(walk, texture);
     }
 }
@@ -617,9 +618,24 @@ bool ListOne(const PCGXAssetTexture* texture, void* user) {
         static const char* const tlutNames[] = {"IA8", "RGB565", "RGB5A3"};
         std::printf(" palette %s x%u", texture->tlutFmt < 3 ? tlutNames[texture->tlutFmt] : "?", texture->tlutCount);
     }
-    std::printf(" %s/%s%s", texture->wrapS < 3 ? wraps[texture->wrapS] : "?",
-                texture->wrapT < 3 ? wraps[texture->wrapT] : "?", texture->mipmaps ? " mipmaps" : "");
-    if (PCGXTextureDataSize(texture->fmt, texture->width, texture->height) > texture->dataSize) {
+    static const char* const filters[] = {"near", "linear", "near_mip_near", "lin_mip_near", "near_mip_lin",
+                                          "lin_mip_lin"};
+    std::printf(" %s/%s %s/%s", texture->wrapS < 3 ? wraps[texture->wrapS] : "?",
+                texture->wrapT < 3 ? wraps[texture->wrapT] : "?",
+                texture->minFilter < 6 ? filters[texture->minFilter] : "?",
+                texture->magFilter < 6 ? filters[texture->magFilter] : "?");
+    // All levels of a texture with mipmaps, one after the other.
+    u32 bytes = 0;
+    u32 width = texture->width, height = texture->height;
+    for (u32 level = 0; level < texture->levels; level++) {
+        bytes += PCGXTextureDataSize(texture->fmt, width, height);
+        width = width > 1 ? width >> 1 : 1;
+        height = height > 1 ? height >> 1 : 1;
+    }
+    if (texture->levels > 1) {
+        std::printf(" %u levels", texture->levels);
+    }
+    if (bytes > texture->dataSize) {
         std::printf(" (image runs past the end of the file)");
         state->failed++;
     }

@@ -102,8 +102,9 @@ struct PCGXAssetTexture {
     u32 tlutFmt;
     u32 tlutCount;
     u32 wrapS, wrapT; // GXTexWrapMode
-    u32 minFilter, magFilter;
-    bool mipmaps;
+    u32 minFilter, magFilter; // GXTexFilter
+    u32 levels; // 1, or more for a texture with mipmaps: level n + 1 (half the size, at least
+                // 1x1) follows level n in memory, each a complete image of whole tiles
 };
 
 // Return false to stop the walk.
