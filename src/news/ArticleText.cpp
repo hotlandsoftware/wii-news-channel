@@ -809,10 +809,12 @@ void ArticleText::Layout(const math::VEC2* pos, f32 scale) {
         scale = 0.7f;
     }
 
-    mBaseLineHeight = 1.25f * (((f32)mFont->GetHeight() + lbl_803575CC) * mFontScale);
+    f32 height = mFont->GetHeight();
+    f32 charHeight = height + lbl_803575CC;
+    mBaseLineHeight = 1.25f * (charHeight * mFontScale);
+    mLineHeight = mBaseLineHeight * scale;
     mPicLines = 0;
     mPicWrapped = false;
-    mLineHeight = mBaseLineHeight * scale;
     mTextTop = pos->y;
 
     if (mIsCaption) {
