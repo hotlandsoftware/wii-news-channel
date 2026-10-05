@@ -125,9 +125,9 @@ static inline s32 GetFrameRate() {
     return gRenderMode.viTVmode == 4 ? 50 : 60;
 }
 
-#pragma explicit_zero_data on
-static f32 sUnused[3] = {5.0f, 25.0f, 50.0f};
-#pragma explicit_zero_data reset
+// Not referenced anywhere. It is not static: the file is built with
+// "-ipa file", which drops unused statics.
+f32 sUnused[3] = {5.0f, 25.0f, 50.0f};
 
 static ut::Color sWhite(0xFFFFFFFF);
 
@@ -1365,11 +1365,15 @@ BOOL SlideShow::StateMove(const s32* arg) {
     }
 
     switch (mStateFrame) {
-    case -1:
-        break;
-        // Never reached. The original object has an unreferenced pointer to
+    case -1: {
+        // Never taken. The original object has an unreferenced pointer to
         // SubStateIdle here, in front of the one case 0 uses.
-        ChangeSubState(&SlideShow::SubStateIdle);
+        BOOL reset = FALSE;
+        if (reset) {
+            ChangeSubState(&SlideShow::SubStateIdle);
+        }
+        break;
+    }
     case 0: {
         ChangeSubState(&SlideShow::SubStateIdle);
         bool hadLocation;
