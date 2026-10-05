@@ -114,6 +114,12 @@ file(GLOB PC_THUNK_SOURCES  CONFIGURE_DEPENDS "${REPO}/src/pc/thunks/*.cpp")
 file(GLOB PC_CORE_SOURCES   CONFIGURE_DEPENDS "${REPO}/src/pc/*.cpp")
 # Byte order: one converter per asset format (docs/pc_port.md, "Byte order")
 file(GLOB PC_ENDIAN_SOURCES CONFIGURE_DEPENDS "${REPO}/src/pc/endian/*.cpp")
+# GX backend parts (texture codec; docs/pc_port.md, "Texture formats")
+file(GLOB PC_GX_SOURCES     CONFIGURE_DEPENDS "${REPO}/src/pc/gx/*.cpp")
+# The texture tool derives from ut::ResFont and ut::ArchiveFont to reach their
+# glyph sheets; NW4R is built without RTTI, so there is no typeinfo to refer to.
+set_source_files_properties("${REPO}/src/pc/gx/texdecode_tool.cpp" PROPERTIES
+    COMPILE_OPTIONS "-fno-rtti")
 
 # The generated stubs are linked only into `newschannel`; `newschannel_nostubs`
 # is the same program without them, which pc/tools/gen_stubs.py links to get
@@ -123,7 +129,7 @@ list(REMOVE_ITEM PC_SDK_SOURCES "${PC_STUBS_FILE}")
 
 add_library(pc_backend OBJECT
     ${PC_SDK_SOURCES} ${PC_LIBC_SOURCES} ${PC_CORE_SOURCES} ${PC_THUNK_SOURCES}
-    ${PC_ENDIAN_SOURCES})
+    ${PC_ENDIAN_SOURCES} ${PC_GX_SOURCES})
 news_backend_options(pc_backend)
 target_link_libraries(pc_backend PUBLIC PkgConfig::SDL3 PkgConfig::CURL PkgConfig::GL)
 
