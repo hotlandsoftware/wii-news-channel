@@ -592,8 +592,9 @@ void MainScreen::DrawRelated() {
     }
     u8 a = 255.0f * mUnk25C;
     u8 bgAlpha = 220.0f * mUnk25C;
-    // Faded like the other two but never used: the code is gone, but the original
-    // still has the conversion slots of its alpha (State1B694 fades lbl_803575FC instead).
+    // Faded like the other two but never used (State1B694 fades lbl_803575FC instead).
+    // MWCC removes it late: no instruction is left, but its alpha keeps two conversion
+    // slots in the frame, as in the original.
     ut::Color shadow = sShadowColor;
     ut::Color highlight = gHighlightColor;
     ut::Color sep = gSeparatorColor;
