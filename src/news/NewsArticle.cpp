@@ -175,6 +175,9 @@ s32 NewsData::Init(NewsHeader** files, s32 current) {
     NewsSourceRec* source;
     s32 idx;
     u32 count;
+    s32 catIdx;
+    NewsArticle** art;
+    Category* cat;
     BOOL isCurrent;
     NewsArticle** same;
     NewsArticle* article;
@@ -306,11 +309,11 @@ s32 NewsData::Init(NewsHeader** files, s32 current) {
 
     // Link articles that appear in several topics.
     {
-        Category* cat = mCategories;
-        for (s32 i = 0; i < mNumCategories; i++, cat++) {
-            NewsArticle** art = cat->mArticles;
+        cat = mCategories;
+        for (catIdx = 0; catIdx < mNumCategories; catIdx++, cat++) {
+            art = cat->mArticles;
             for (j = 0; j < cat->mNumArticles; j++, art++) {
-                same = FindArticle((*art)->mText, i, j + 1);
+                same = FindArticle((*art)->mText, catIdx, j + 1);
                 if (same != NULL) {
                     (*art)->mNextSame = *same;
                     (*same)->mPrevSame = *art;
@@ -344,11 +347,11 @@ s32 NewsData::Init(NewsHeader** files, s32 current) {
         for (i = 0; i < mNumCategories; i++, cat++) {
             NewsArticle** art = cat->mArticles;
             for (j = 0; j < cat->mRec->numEntries; j++, art++) {
-                article = *art;
-                if (article->mPictureError) {
+                if ((*art)->mPictureError) {
                     NewsArticle** other = art + 1;
                     for (u32 k = j + 1; k < cat->mRec->numEntries; k++, other++) {
                         if (!(*other)->mPictureError) {
+                            article = *art;
                             *art = *other;
                             *other = article;
                             break;
