@@ -620,6 +620,12 @@ FxVoice::FxVoice() {
     MakeWindow(mWindowB, FX_WINDOW_SIZE, 0);
 }
 
+static inline void Clear(s32* buf, s32 n) {
+    for (s32 i = 0; i < n; i++) {
+        buf[i] = 0;
+    }
+}
+
 static inline void Fir(s32* out, const s32* in, const s32* coef, s32 taps) {
     for (s32 i = FX_FRAME_SAMPLES - 1; i >= 0; i--) {
         s32 sum = 0;
@@ -736,9 +742,7 @@ void FxVoice::PitchDown(s32** buffers) {
     s32 back; s32 h; 
     for (s32 ch = 0; ch < 2; ch++) {
         s32 work[FX_FRAME_SAMPLES];
-        for (s32 i = 0; i < FX_FRAME_SAMPLES; i++) {
-            work[i] = 0;
-        }
+        Clear(work, FX_FRAME_SAMPLES);
         for (s32 k = 0; k < 2; k++) {
             s32 f = (mFrame + k * 64 / 2) % FX_HISTORY_FRAMES;
             back = -f;
@@ -795,9 +799,7 @@ static inline BOOL InWindow(s32 n) {
 void FxVoice::PitchUp(s32** buffers) {
     for (s32 ch = 0; ch < 2; ch++) {
         s32 work[FX_FRAME_SAMPLES + 11];
-        for (s32 i = 0; i < FX_FRAME_SAMPLES + 11; i++) {
-            work[i] = 0;
-        }
+        Clear(work, FX_FRAME_SAMPLES + 11);
         for (s32 k = 0; k < 2; k++) {
             s32 f = (mFrame + k * 64 / 2) % FX_HISTORY_FRAMES;
             for (s32 j = -11; j < FX_FRAME_SAMPLES; j++) {
@@ -812,14 +814,7 @@ void FxVoice::PitchUp(s32** buffers) {
                 }
             }
         }
-        s32* out = buffers[ch];
-        for (s32 i = FX_FRAME_SAMPLES - 1; i >= 0; i--) {
-            s32 sum = 0;
-            for (s32 k = 0; k < 11; k++) {
-                sum += mFilterC[k] * work[i - k + 11];
-            }
-            out[i] = sum / 4096;
-        }
+        Fir(buffers[ch], &work[11], mFilterC, 11);
     }
 }
 
