@@ -820,25 +820,36 @@ void FxVoice::PitchUp(s32** buffers) {
 
 #define FX_DIV(a, b) ((b) == 0 ? 0 : (a) / (b))
 
+static inline void MakeHamming(s32* window, s32 n) {
+    for (s32 i = 0; i < n; i++) {
+        s32 c = 4096.0f * CosIdx(FX_DIV((s64)i * 0x10000, n));
+        window[i] = -c * 0x75C / 4096 + 0x8A3;
+    }
+}
+
+static inline void MakeHann(s32* window, s32 n) {
+    for (s32 i = 0; i < n; i++) {
+        s32 c = 4096.0f * CosIdx(FX_DIV((s64)i * 0x10000, n));
+        window[i] = -c / 2 + 0x800;
+    }
+}
+
 static void MakeWindow(s32* window, s32 n, s32 type) {
     switch (type) {
     case 0:
-        for (s32 i = 0; i < n; i++) {
-            s32 c = 4096.0f * CosIdx(FX_DIV((s64)i * 0x10000, n));
-            window[i] = -c * 0x75C / 4096 + 0x8A3;
-        }
+        MakeHamming(window, n);
         break;
     case 1:
-        for (s32 i = 0; i < n; i++) {
-            s32 c = 4096.0f * CosIdx(FX_DIV((s64)i * 0x10000, n));
-            window[i] = -c / 2 + 0x800;
-        }
+        MakeHann(window, n);
         break;
     case 2: {
-        s32 half = n / 2;
-        s32 a = half + 1;
-        s32 b = n - half;
+        s32 b;
+        s32 a;
+        s32 half;
         s32 i;
+        half = n / 2;
+        a = half + 1;
+        b = n - half;
         for (i = 0; i < n; i++) {
             s32 v;
             if (i < half) {
