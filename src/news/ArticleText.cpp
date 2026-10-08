@@ -459,8 +459,8 @@ void ArticleText::Draw(const math::VEC2* pos, bool clip, f32 alpha, f32 zoom) {
 
     TextChar* c;
     s32 i = mFirstVisible;
-    ut::Color color;
     c = &mChars[i];
+    ut::Color color;
 
     if (gNewsData->mHeader->unk2C[0] == 0) {
         f32 yOfs = 0.0f;
