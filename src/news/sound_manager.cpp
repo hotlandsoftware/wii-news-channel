@@ -560,9 +560,7 @@ static inline f32 CosIdx(u16 idx) {
     return math::CosFIdx(0.00390625f * U16ToF32(&idx));
 }
 
-// One tap of a band-pass FIR filter. The two sines are arguments (evaluated
-// right to left), which gives their u16 temporaries the original stack slots.
-static inline s32 BandPassTap(s32 lo, s32 hi, s32 n) {
+static inline s32 BandPassTap(s32 lo, const s32& hi, s32 n) {
     return ((hi - lo) << 12) / (0x3243 * n);
 }
 
@@ -573,8 +571,7 @@ static inline void MakeBandPass(s32* coef, s32 taps, s32 lo, s32 hi) {
     s32* c = f + taps;
     *c = hi - lo;
     for (i = 1; i <= taps; i++) {
-        s = (s32)(4096.0f * SinIdx((hi * i) << 3));
-        s32 v = ((s - (s32)(4096.0f * SinIdx((lo * i) << 3))) << 12) / (0x3243 * i);
+        s32 v = BandPassTap((s32)(4096.0f * SinIdx((lo * i) << 3)), s = (s32)(4096.0f * SinIdx((hi * i) << 3)), i);
         f[taps - i] = v;
         c[i] = v;
     }
