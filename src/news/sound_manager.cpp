@@ -58,7 +58,12 @@ public:
         return &history[frame * FX_FRAME_SAMPLES + pos];
     }
 
+    s32* GetInput(s32 ch);
     void Read(s32 count, s32* dst, s32 frame, s32* history, s32 pos);
+    s32 ReadFrame(s32 count, s32* dst, s32 frame, s32* history, s32 pos);
+    s32 ReadFrameRef(s32& count, s32*& dst, s32 frame, s32* history, s32 pos);
+    s32 ReadFrame(s32 count, s32* dst, const s32* src, s32 pos);
+    s32 ReadFrame(s32 count, s32* dst, s32 frame, s32* history, s32 pos, s32 n);
 
     bool mEnabled;                        // at 0xC
     bool mPitchUp;                        // at 0xD
@@ -616,23 +621,28 @@ FxVoice::FxVoice() {
     MakeWindow(mWindowB, FX_WINDOW_SIZE, 0);
 }
 
+inline s32 FxVoice::ReadFrame(s32 count, s32* dst, s32 frame, s32* history, s32 pos) {
+    s32 n = FX_FRAME_SAMPLES - pos;
+    if (count <= n) {
+        n = count;
+    }
+    CopyBuffer(GetSample(history, frame, pos), dst, n);
+    return n;
+}
+
 inline void FxVoice::Read(s32 count, s32* dst, s32 frame, s32* history, s32 pos) {
-    frame += pos / FX_FRAME_SAMPLES;
+    s32 f = frame + pos / FX_FRAME_SAMPLES;
     pos %= FX_FRAME_SAMPLES;
     if (pos < 0) {
-        frame--;
+        f--;
         pos += FX_FRAME_SAMPLES;
     }
     while (count > 0) {
-        s32 n = FX_FRAME_SAMPLES - pos;
-        if (count <= n) {
-            n = count;
-        }
-        CopyBuffer(GetSample(history, frame, pos), dst, n);
+        s32 n = ReadFrame(count, dst, f, history, pos);
         count -= n;
         dst += n;
         pos = 0;
-        frame++;
+        f++;
     }
 }
 
