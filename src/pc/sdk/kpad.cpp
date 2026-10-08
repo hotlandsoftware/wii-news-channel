@@ -193,6 +193,11 @@ s32 KPADRead(s32 chan, KPADStatus samplingBufs[], u32 length) {
     }
     Channel* channel = &sChannels[chan];
 
+    // The game reads every channel once per frame: channel 0 starts the
+    // input layer's frame (pulses, key edges; pc_input.h).
+    if (chan == WPAD_CHAN0) {
+        PCInputFrame();
+    }
     PCPadState pad;
     PCInputPoll(chan, &pad);
     if (!pad.connected) {

@@ -25,10 +25,24 @@ void PCVIGetPictureRect(int* x, int* y, int* width, int* height);
 // the mouse, or the mouse is outside the picture.
 bool PCVIGetPointer(f32* x, f32* y);
 
-// WPAD_BUTTON_* bits held on the host devices: left mouse button = A, right =
-// B; Enter/Space/Z = A, X/Backspace = B, arrow keys = the +Control Pad,
-// =/- = PLUS/MINUS, 1/2, Escape/H = HOME. 0 without a window or focus.
-u32 PCVIGetButtons();
+// The host devices, raw; src/pc/pc_input.cpp maps them to the remote.
+enum {
+    PC_MOUSE_LEFT = 1 << 0,
+    PC_MOUSE_RIGHT = 1 << 1,
+    PC_MOUSE_MIDDLE = 1 << 2,
+};
+
+// Mouse buttons that are down (PC_MOUSE_*). They count only while the pointer
+// is over the window; 0 without a window.
+u32 PCVIGetMouseButtons();
+
+// True while the key with this SDL_Scancode is down and the window has the
+// keyboard focus. False without a window.
+bool PCVIGetKey(int scancode);
+
+// Switches the window between fullscreen (the desktop's mode) and windowed.
+// Does nothing without a visible window. Returns the number of calls so far.
+u32 PCVIToggleFullscreen();
 
 // The render mode last given to VIConfigure(), or NULL before the first call.
 const _GXRenderModeObj* PCVIGetRenderMode();

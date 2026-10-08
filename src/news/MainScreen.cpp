@@ -18,6 +18,9 @@
 #include <nw4r/ut/ut_Font.h>
 #include <nw4r/lyt/lyt_textBox.h>
 #include <string.h>
+#ifdef TARGET_PC
+#include <pc/nav.h>
+#endif
 
 using namespace nw4r;
 
@@ -1029,6 +1032,20 @@ void MainScreen::ModeMain() {
             if (mActiveLayout) {
                 UpdateLayoutButtons(mActiveLayout, 0x23);
             }
+#ifdef TARGET_PC
+            // PC enhancements (<pc/nav.h>): the wheel zooms in the globe view,
+            // and a "Back" key must not press "Wii Menu" on the first page.
+            if (PCNavOn()) {
+                if (mActiveLayout == mEarthLayout) {
+                    PCNavSetContext(PC_NAV_GLOBE);
+                } else if (IsListState() && lbl_8035755C != NULL &&
+                           lbl_8035755C->mMode != HeadlineList::MODE_SECTION) {
+                    PCNavSetContext(PC_NAV_TOP);
+                } else {
+                    PCNavSetContext(PC_NAV_SCREEN);
+                }
+            }
+#endif
             for (s32 i = 0; i < 4; i++) {
                 if (gHold[i] & 0x400) {
                     mHeld[i] = true;

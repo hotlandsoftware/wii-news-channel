@@ -21,6 +21,9 @@
 
 enum PCEnhancement {
     // Add new ids here and a row with the same index in enhance.cpp.
+    PC_ENH_MOUSE_SCROLL,   // wheel = +Control Pad pulses (zoom on the globe), middle drag = B
+    PC_ENH_KEYBOARD_NAV,   // Page Up/Down, Home/End, Esc/Backspace = "Back", keys for on-screen buttons
+    PC_ENH_FULLSCREEN_KEY, // F11 and Alt+Enter toggle fullscreen
     PC_ENH_COUNT
 };
 

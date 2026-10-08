@@ -32,6 +32,7 @@
 #include <string.h>
 #ifdef TARGET_PC
 #include <pc/endian.h>
+#include <pc/nav.h>
 #endif
 
 #undef gSysFont
@@ -977,6 +978,14 @@ void UpdateLayoutButtons(Layout* layout, u32 se) {
     f32 scale = baseWidth / width;
     f32 halfHeight = 0.5f * (s32)gRenderMode.efbHeight;
 
+#ifdef TARGET_PC
+    // PC enhancements (keys that press on-screen buttons, <pc/nav.h>): this
+    // layout's buttons are the ones that take input this frame.
+    if (PCNavOn()) {
+        PCNavSetLayout(layout);
+    }
+#endif
+
     for (s32 i = 0; i < 4; i++) {
         if (!IsPointerValid(i)) {
             continue;
@@ -1052,6 +1061,12 @@ s32 CheckButtonHold(const char* name, u32 button) {
             }
         }
     }
+#ifdef TARGET_PC
+    // PC enhancement: a key that presses the button called `name` (<pc/nav.h>).
+    if (PCEnhanced(PC_ENH_KEYBOARD_NAV) && PCNavPress(name, button)) {
+        return 0;
+    }
+#endif
     return -1;
 }
 
@@ -1065,6 +1080,12 @@ s32 CheckButtonTrig(const char* name, u32 button) {
             }
         }
     }
+#ifdef TARGET_PC
+    // PC enhancement: a key that presses the button called `name` (<pc/nav.h>).
+    if (PCEnhanced(PC_ENH_KEYBOARD_NAV) && PCNavPress(name, button)) {
+        return 0;
+    }
+#endif
     return -1;
 }
 

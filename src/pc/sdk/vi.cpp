@@ -40,6 +40,7 @@
 
 #include "gx/pc_gx.h"
 #include "pc_config.h"
+#include "pc_input.h"
 #include "pc_video.h"
 
 namespace {
@@ -200,6 +201,12 @@ void PumpEvents() {
         case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
             RequestClose();
             break;
+        case SDL_EVENT_MOUSE_WHEEL:
+            // The input layer decides what a wheel means (pc_input.h); in
+            // purist mode it means nothing.
+            PCInputWheel(event.wheel.x, event.wheel.y, event.wheel.direction == SDL_MOUSEWHEEL_FLIPPED,
+                         (SDL_GetModState() & SDL_KMOD_CTRL) != 0);
+            break;
         default:
             break;
         }
@@ -266,41 +273,36 @@ bool PCVIGetPointer(f32* x, f32* y) {
     return true;
 }
 
-u32 PCVIGetButtons() {
-    if (s.window == nullptr) {
+u32 PCVIGetMouseButtons() {
+    // Mouse buttons count only while the pointer is over the window.
+    if (s.window == nullptr || SDL_GetMouseFocus() != s.window) {
         return 0;
     }
+    SDL_MouseButtonFlags mouse = SDL_GetMouseState(nullptr, nullptr);
     u32 buttons = 0;
-    // Mouse buttons count only while the pointer is over the window.
-    if (SDL_GetMouseFocus() == s.window) {
-        SDL_MouseButtonFlags mouse = SDL_GetMouseState(nullptr, nullptr);
-        if (mouse & SDL_BUTTON_LMASK) buttons |= WPAD_BUTTON_A;
-        if (mouse & SDL_BUTTON_RMASK) buttons |= WPAD_BUTTON_B;
-    }
-    if (SDL_GetKeyboardFocus() == s.window) {
-        int count = 0;
-        const bool* keys = SDL_GetKeyboardState(&count);
-        static const struct {
-            SDL_Scancode key;
-            u32 button;
-        } sKeyMap[] = {
-            {SDL_SCANCODE_RETURN, WPAD_BUTTON_A},    {SDL_SCANCODE_SPACE, WPAD_BUTTON_A},
-            {SDL_SCANCODE_Z, WPAD_BUTTON_A},         {SDL_SCANCODE_X, WPAD_BUTTON_B},
-            {SDL_SCANCODE_BACKSPACE, WPAD_BUTTON_B}, {SDL_SCANCODE_UP, WPAD_BUTTON_UP},
-            {SDL_SCANCODE_DOWN, WPAD_BUTTON_DOWN},   {SDL_SCANCODE_LEFT, WPAD_BUTTON_LEFT},
-            {SDL_SCANCODE_RIGHT, WPAD_BUTTON_RIGHT}, {SDL_SCANCODE_EQUALS, WPAD_BUTTON_PLUS},
-            {SDL_SCANCODE_KP_PLUS, WPAD_BUTTON_PLUS}, {SDL_SCANCODE_MINUS, WPAD_BUTTON_MINUS},
-            {SDL_SCANCODE_KP_MINUS, WPAD_BUTTON_MINUS}, {SDL_SCANCODE_1, WPAD_BUTTON_1},
-            {SDL_SCANCODE_2, WPAD_BUTTON_2},         {SDL_SCANCODE_ESCAPE, WPAD_BUTTON_HOME},
-            {SDL_SCANCODE_H, WPAD_BUTTON_HOME},
-        };
-        for (const auto& m : sKeyMap) {
-            if (m.key < count && keys[m.key]) {
-                buttons |= m.button;
-            }
-        }
-    }
+    if (mouse & SDL_BUTTON_LMASK) buttons |= PC_MOUSE_LEFT;
+    if (mouse & SDL_BUTTON_RMASK) buttons |= PC_MOUSE_RIGHT;
+    if (mouse & SDL_BUTTON_MMASK) buttons |= PC_MOUSE_MIDDLE;
     return buttons;
+}
+
+bool PCVIGetKey(int scancode) {
+    if (s.window == nullptr || SDL_GetKeyboardFocus() != s.window) {
+        return false;
+    }
+    int count = 0;
+    const bool* keys = SDL_GetKeyboardState(&count);
+    return scancode >= 0 && scancode < count && keys[scancode];
+}
+
+u32 PCVIToggleFullscreen() {
+    static u32 sCalls;
+    sCalls++;
+    if (s.window != nullptr && !s.hidden) {
+        bool fullscreen = (SDL_GetWindowFlags(s.window) & SDL_WINDOW_FULLSCREEN) != 0;
+        SDL_SetWindowFullscreen(s.window, !fullscreen);
+    }
+    return sCalls;
 }
 
 const _GXRenderModeObj* PCVIGetRenderMode() {

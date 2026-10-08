@@ -18,6 +18,9 @@
 #include <nw4r/math/math_triangular.h>
 #include <nw4r/ut/ut_CharWriter.h>
 #include <nw4r/ut/ut_Font.h>
+#ifdef TARGET_PC
+#include <pc/nav.h>
+#endif
 
 using namespace nw4r;
 
@@ -974,6 +977,13 @@ BOOL SlideShow::CheckInput() {
 
     if (!IsState(&SlideShow::StateMessage)) {
         UpdateLayoutButtons(mCurLayout, 0x23);
+#ifdef TARGET_PC
+        // PC enhancements (<pc/nav.h>): in an article a "Back" key is "back"
+        // (Continue); while the slides run it is "end".
+        if (PCNavOn()) {
+            PCNavSetContext(IsState(&SlideShow::StateZoom) ? PC_NAV_SCREEN : PC_NAV_SLIDES);
+        }
+#endif
         for (s32 i = 0; i < 4; i++) {
             if (gHold[i] & 0x400) {
                 mDragging[i] = true;
