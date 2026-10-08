@@ -20,6 +20,8 @@
 //   tv           NEWSCHANNEL_TV           ntsc | pal | eurgb60 | mpal
 //   contents     NEWSCHANNEL_CONTENTS     directory with the WAD contents (NN.app)
 //   nand         NEWSCHANNEL_NAND         directory that stands in for the title's NAND
+//   purist       NEWSCHANNEL_PURIST       0 | 1   (1: every PC enhancement off, <pc/enhance.h>)
+//   enhance.NAME                          1 | 0   (one enhancement; `--list-enhancements`)
 //
 // PCGetConfig() works during static initialisation (it loads on first use).
 

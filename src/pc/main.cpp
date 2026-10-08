@@ -26,6 +26,7 @@
 #include <revolution/gx.h>
 #include <revolution/vi.h>
 
+#include <pc/enhance.h>
 #include <pc/files.h>
 #include <pc/os.h>
 
@@ -70,6 +71,16 @@ void PrintVersion() {
     std::printf("  SDL:      %d.%d.%d\n", SDL_VERSIONNUM_MAJOR(sdl), SDL_VERSIONNUM_MINOR(sdl),
                 SDL_VERSIONNUM_MICRO(sdl));
     std::printf("  libcurl:  %s\n", curl_version_info(CURLVERSION_NOW)->version);
+    int enhanced = 0;
+    for (int i = 0; i < PCEnhancementCount(); i++) {
+        enhanced += PCEnhanced(static_cast<PCEnhancement>(i)) ? 1 : 0;
+    }
+    if (PCIsPurist()) {
+        std::printf("  mode:     purist (every PC enhancement off)\n");
+    } else {
+        std::printf("  mode:     %d of %d PC enhancements on (--purist turns all off)\n", enhanced,
+                    PCEnhancementCount());
+    }
 }
 
 void PrintHelp(const char* program) {
@@ -139,6 +150,10 @@ void PrintHelp(const char* program) {
     std::printf("                   (default $NEWSCHANNEL_DOL, orig/HAGE/sys/main.dol)\n");
     std::printf("  --lang LANG      en, ja, de, fr, es, it or nl (default en)\n");
     std::printf("  --wide           16:9 instead of 4:3\n");
+    std::printf("  --purist         every PC enhancement off: the game functions and looks as it\n");
+    std::printf("                   does on the console\n");
+    std::printf("  --enhance NAME[=0|1]  switch one enhancement (no effect with --purist)\n");
+    std::printf("  --list-enhancements   list the enhancements and their state, then exit\n");
     std::printf("  --config FILE    settings file (default ./newschannel.ini if it exists)\n\n");
     std::printf("Settings can also come from the settings file and from NEWSCHANNEL_* environment\n");
     std::printf("variables; see src/pc/pc_config.h. Closing the window shuts the game down.\n");
@@ -291,6 +306,20 @@ static int RunSelfTest() {
     PC_CHECK(wcscmp(buffer, L"Time 09:05 ok") == 0);
 
     PCSelfTestLayout();
+    // Purist mode switches every enhancement off and leaves the stored
+    // settings alone (<pc/enhance.h>).
+    {
+        bool wasPurist = PCIsPurist();
+        PCSetPurist(true);
+        bool anyOn = false;
+        for (int i = 0; i < PCEnhancementCount(); i++) {
+            anyOn = anyOn || PCEnhanced(static_cast<PCEnhancement>(i));
+        }
+        PC_CHECK(PCIsPurist() && !anyOn);
+        PC_CHECK(!PCEnhanced(PC_ENH_COUNT) && !PCEnhancementSet("no-such-enhancement", true));
+        PCSetPurist(wasPurist);
+        PC_CHECK(PCIsPurist() == wasPurist);
+    }
     PCSelfTestMtx();
     PCSelfTestG3d();
     PCSelfTestG3dRes();
@@ -346,6 +375,7 @@ static int RunWindowTest() {
 int main(int argc, char** argv) {
     bool selftest_only = false;
     bool boot = false;
+    bool listEnhancements = false;
     bool window_test = false;
     bool selftest_gl = false;
     bool audio_test = false;
@@ -450,6 +480,26 @@ int main(int argc, char** argv) {
             SetOption(argv[0], arg, "language", OptionValue(argc, argv, &i));
         } else if (std::strcmp(arg, "--wide") == 0) {
             SetOption(argv[0], arg, "aspect", "16:9");
+        } else if (std::strcmp(arg, "--purist") == 0) {
+            PCSetPurist(true);
+        } else if (std::strcmp(arg, "--enhance") == 0) {
+            const char* value = OptionValue(argc, argv, &i);
+            char name[64];
+            const char* equals = value != nullptr ? std::strchr(value, '=') : nullptr;
+            size_t length = value == nullptr ? 0 : equals != nullptr ? static_cast<size_t>(equals - value) : std::strlen(value);
+            bool on = equals == nullptr || std::strcmp(equals + 1, "0") != 0;
+            if (length == 0 || length >= sizeof(name)) {
+                std::fprintf(stderr, "%s: --enhance needs NAME or NAME=0|1\n", argv[0]);
+                return 2;
+            }
+            std::memcpy(name, value, length);
+            name[length] = '\0';
+            if (!PCEnhancementSet(name, on)) {
+                std::fprintf(stderr, "%s: unknown enhancement '%s' (see --list-enhancements)\n", argv[0], name);
+                return 2;
+            }
+        } else if (std::strcmp(arg, "--list-enhancements") == 0) {
+            listEnhancements = true;
         } else if (std::strcmp(arg, "--list-textures") == 0) {
             list_textures = OptionValue(argc, argv, &i);
         } else if (std::strcmp(arg, "--list-sounds") == 0) {
@@ -505,6 +555,20 @@ int main(int argc, char** argv) {
     }
     if (config->nandDir[0] != '\0') {
         PCSetNandDir(config->nandDir);
+    }
+
+    if (listEnhancements) {
+        std::printf("purist mode: %s\n", PCIsPurist() ? "on (every enhancement off)" : "off");
+        if (PCEnhancementCount() == 0) {
+            std::printf("no enhancements exist yet\n");
+        }
+        for (int i = 0; i < PCEnhancementCount(); i++) {
+            const PCEnhancementInfo* info = PCEnhancementGetInfo(i);
+            std::printf("  %-20s %-3s (default %s)  %s\n", info->key,
+                        PCEnhanced(static_cast<PCEnhancement>(i)) ? "on" : "off", info->defaultOn ? "on" : "off",
+                        info->summary);
+        }
+        return 0;
     }
 
     // Development tools of the texture codec (gx/texdecode_tool.cpp).

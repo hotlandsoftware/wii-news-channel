@@ -244,6 +244,8 @@ A thunk has exactly the parameters of the caller's declaration, which may differ
 
 **R12. No assets, no DOL data, no assembly files in the repository.** Run-time data is read from `orig/HAGE/contents/`; build-time tables from `build/HAGE/include`.
 
+**R13. Enhancements go through `<pc/enhance.h>`, and purist mode turns all of them off.** Anything that makes the PC build look or behave differently from the channel on a Wii (resolution, picture width, limits, timing, extra features) is an enhancement: it gets an id in `include/pc/enhance.h`, a row in `src/pc/enhance.cpp`, and is tested where it acts with `PCEnhanced(id)`. No `#ifdef`, no private global. With the enhancement off the code must take exactly the path it took before the enhancement existed. `--purist` (also `purist = 1`, `$NEWSCHANNEL_PURIST=1`) makes `PCEnhanced()` false for every id. Before adding an enhancement run `pc/tools/purist_check.py --record`; afterwards `pc/tools/purist_check.py` must report the purist frames unchanged. Replacing hardware (window, mouse as pointer, host audio, files) is the port, not an enhancement.
+
 ## 5. Stubs
 
 `pc/tools/gen_stubs.py` links `newschannel_nostubs` (the program without the stubs file), reads the linker's undefined symbols and rewrites `src/pc/sdk/stubs_generated.cpp`:
@@ -2007,3 +2009,36 @@ No bypass was added. The one left is the pointer effect (section 15, `TODO(miles
 - **Language selection, HOME Menu, the Operations Guide**: not reached.
 - **Not compared with a console**: everything here was checked against the code and the data, not against a capture of the original.
 
+## 24. Purist mode and enhancements
+
+`newschannel --purist` runs the game as it functions and looks on the console: every PC enhancement is off (R13). Without `--purist` the enhancements that are switched on apply; `--list-enhancements` shows them, `--enhance NAME[=0|1]` and `enhance.NAME = 0|1` in the config file switch one. There are no enhancements yet, so today both modes are the same program.
+
+| Piece | Where |
+| --- | --- |
+| Ids, `PCEnhanced()`, `PCIsPurist()` | `include/pc/enhance.h` (usable from shared source under `TARGET_PC`) |
+| Table (key, summary, default) and state | `src/pc/enhance.cpp` |
+| `purist`, `enhance.NAME` keys, `$NEWSCHANNEL_PURIST` | `src/pc/pc_config.cpp` |
+| `--purist`, `--enhance`, `--list-enhancements`, the `mode:` line of `--version` | `src/pc/main.cpp` |
+| Regression check of the purist frames | `pc/tools/purist_check.py` (baseline in `build/pc/`, not committed) |
+
+Adding an enhancement:
+
+1. `pc/tools/purist_check.py --record` on the unchanged build.
+2. Add the id to `enum PCEnhancement` and a row at the same index to `kInfo` in `enhance.cpp` (key, one-line summary, default).
+3. At the point of use: `if (PCEnhanced(PC_ENH_X)) { new behaviour } else { the existing code, untouched }`. In shared source the whole thing sits under `TARGET_PC` (R1).
+4. `pc/tools/purist_check.py` must say the purist frames are unchanged; if the enhancement is visible on the screens the check drives, a run without `--purist` should differ.
+
+### Where purist mode still differs from a console
+
+Purist mode switches enhancements off; it cannot add what the port does not have. These differences exist in every mode:
+
+| Difference | Why |
+| --- | --- |
+| No pointer picture; the host mouse arrow is shown | the pointer is an `nw4r::ef` effect and the effect files are not converted (owner's decision: not needed on PC) |
+| The HOME Menu never opens | placeholder (owner's decision) |
+| The Operations Guide cannot open | its viewer runs a PowerPC build of Opera |
+| News comes from a directory of WiiLink files, signature not checked | no WiiConnect24 service; section 21 |
+| Sound: computed 4-tap resampler table, no Wii Remote speaker, surround reduced to stereo | section 18 |
+| `PS*` matrix functions can differ from the console in the last bit | C versions of paired-single code; section 14 |
+| Threads run in parallel instead of by priority | section 11 |
+| The picture is scaled to the window; the console outputs a fixed video mode | presentation only: the game renders the same 640x456 frame (`--screenshot` saves that frame) |

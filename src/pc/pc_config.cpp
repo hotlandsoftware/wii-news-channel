@@ -2,6 +2,8 @@
 
 #include "pc_config.h"
 
+#include <pc/enhance.h>
+
 #include <cctype>
 #include <cstdio>
 #include <cstdlib>
@@ -108,7 +110,7 @@ void ApplyEnvironment() {
         {"NEWSCHANNEL_AREA", "area"},           {"NEWSCHANNEL_COUNTRY", "country"},
         {"NEWSCHANNEL_EURGB60", "eurgb60"},     {"NEWSCHANNEL_WC24", "wc24"},
         {"NEWSCHANNEL_TV", "tv"},               {"NEWSCHANNEL_CONTENTS", "contents"},
-        {"NEWSCHANNEL_NAND", "nand"},
+        {"NEWSCHANNEL_NAND", "nand"},           {"NEWSCHANNEL_PURIST", "purist"},
     };
     for (const auto& variable : kVariables) {
         const char* value = std::getenv(variable[0]);
@@ -216,6 +218,16 @@ bool PCConfigSet(const char* key, const char* value) {
             return false;
         }
         config->tvFormat = static_cast<u8>(number);
+    } else if (strcasecmp(key, "purist") == 0) {
+        if (!Lookup(kBools, value, &number)) {
+            return false;
+        }
+        PCSetPurist(number != 0);
+    } else if (strncasecmp(key, "enhance.", 8) == 0) {
+        // enhance.<name> = 1 | 0 (see <pc/enhance.h>)
+        if (!Lookup(kBools, value, &number) || !PCEnhancementSet(key + 8, number != 0)) {
+            return false;
+        }
     } else if (strcasecmp(key, "contents") == 0) {
         CopyPath(config->contentsDir, sizeof(config->contentsDir), value);
     } else if (strcasecmp(key, "nand") == 0) {
@@ -282,6 +294,10 @@ bool PCConfigSave() {
     }
     std::fprintf(file, "eurgb60 = %d\n", config->euRgb60);
     std::fprintf(file, "wc24 = %d\n", config->wc24Standby);
+    std::fprintf(file, "purist = %d\n", PCIsPurist() ? 1 : 0);
+    for (int i = 0; i < PCEnhancementCount(); i++) {
+        std::fprintf(file, "enhance.%s = %d\n", PCEnhancementGetInfo(i)->key, PCEnhancementIsSet(i) ? 1 : 0);
+    }
     std::fprintf(file, "tv = %s\n", NameOf(kTvFormats, config->tvFormat));
     if (config->contentsDir[0] != '\0') {
         std::fprintf(file, "contents = %s\n", config->contentsDir);
