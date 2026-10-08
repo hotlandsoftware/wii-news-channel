@@ -43,6 +43,9 @@ public:
     virtual void UpdateBuffer(int channels, void** ppBuffer, u32 size, snd::SampleFormat format,
                               f32 sampleRate, snd::OutputMode mode);
 
+    void Store(s32 (*history)[FX_HISTORY_SIZE], s32** buffers);
+    void EchoFilter(s32** buffers);
+    void Chorus(s32** buffers);
     void PitchDown(s32** buffers);
     void Radio(s32** buffers);
     void PitchUp(s32** buffers);
@@ -58,12 +61,8 @@ public:
         return &history[frame * FX_FRAME_SAMPLES + pos];
     }
 
-    s32* GetInput(s32 ch);
     void Read(s32 count, s32* dst, s32 frame, s32* history, s32 pos);
     s32 ReadFrame(s32 count, s32* dst, s32 frame, s32* history, s32 pos);
-    s32 ReadFrameRef(s32& count, s32*& dst, s32 frame, s32* history, s32 pos);
-    s32 ReadFrame(s32 count, s32* dst, const s32* src, s32 pos);
-    s32 ReadFrame(s32 count, s32* dst, s32 frame, s32* history, s32 pos, s32 n);
 
     bool mEnabled;                        // at 0xC
     bool mPitchUp;                        // at 0xD
@@ -621,6 +620,23 @@ FxVoice::FxVoice() {
     MakeWindow(mWindowB, FX_WINDOW_SIZE, 0);
 }
 
+static inline void Fir(s32* out, const s32* in, const s32* coef, s32 taps) {
+    for (s32 i = FX_FRAME_SAMPLES - 1; i >= 0; i--) {
+        s32 sum = 0;
+        for (s32 k = 0; k < taps; k++) {
+            sum += coef[k] * in[i - k];
+        }
+        out[i] = sum / 4096;
+    }
+}
+
+static inline void Mix(s32* dst, const s32* src, s32 n) {
+    for (s32 i = 0; i < n; i++) {
+        dst[i] = ((dst[i] + src[i]) << 12) / 4096;
+    }
+}
+
+
 inline s32 FxVoice::ReadFrame(s32 count, s32* dst, s32 frame, s32* history, s32 pos) {
     s32 n = FX_FRAME_SAMPLES - pos;
     if (count <= n) {
@@ -646,54 +662,58 @@ inline void FxVoice::Read(s32 count, s32* dst, s32 frame, s32* history, s32 pos)
     }
 }
 
+static inline void AddEcho(s32* dst, const s32* echo, s32 n) {
+    for (s32 i = 0; i < n; i++) {
+        dst[i] = ((dst[i] << 12) + echo[i] * 0x999) / 4096;
+    }
+}
+
+inline void FxVoice::Store(s32 (*history)[FX_HISTORY_SIZE], s32** buffers) {
+    for (s32 ch = 0; ch < 2; ch++) {
+        CopyBuffer(buffers[ch], GetSample(history[ch], 0, 0), FX_FRAME_SAMPLES);
+    }
+}
+
+inline void FxVoice::Chorus(s32** buffers) {
+    for (s32 ch = 0; ch < 2; ch++) {
+        s32* out = buffers[ch];
+        s32 lfo = (mFrame % 30) * FX_FRAME_SAMPLES;
+        for (s32 i = 0; i < FX_FRAME_SAMPLES; i++) {
+            out[i] = *GetSample(mInput[ch], -2, i + mLfo[lfo + i]);
+        }
+        s32* echo = GetSample(mOutput[ch], -60, 0);
+        for (s32 i = 0; i < FX_FRAME_SAMPLES; i++) {
+            out[i] = (out[i] * 0xCCC + echo[i] * 0x333) / 4096;
+        }
+    }
+}
+
 void FxVoice::UpdateBuffer(int channels, void** ppBuffer, u32 size, snd::SampleFormat format,
                            f32 sampleRate, snd::OutputMode mode) {
-    s32 ch;
     OSTick start = OSGetTick();
     s32* buffers[2];
     buffers[0] = (s32*)ppBuffer[0];
     buffers[1] = (s32*)ppBuffer[1];
 
-    for (ch = 0; ch < 2; ch++) {
-        CopyBuffer(buffers[ch], GetSample(mInput[ch], 0, 0), FX_FRAME_SAMPLES);
-    }
+    Store(mInput, buffers);
 
     if (mEnabled) {
         switch (mMode) {
         case MODE_ECHO_FILTER:
-            for (ch = 0; ch < 2; ch++) {
+            for (s32 ch = 0; ch < 2; ch++) {
                 s32 echo[FX_FRAME_SAMPLES + 11];
                 s32 work[FX_FRAME_SAMPLES + 11];
                 Read(FX_FRAME_SAMPLES + 11, work, 0, mInput[ch], -11);
                 Read(FX_FRAME_SAMPLES + 11, echo, -60, mOutput[ch], -11);
-                for (s32 i = 0; i < FX_FRAME_SAMPLES + 11; i++) {
-                    work[i] = ((work[i] << 12) + echo[i] * 0x999) / 4096;
-                }
-                s32* out = buffers[ch];
-                for (s32 i = FX_FRAME_SAMPLES - 1; i >= 0; i--) {
-                    s32 sum = 0;
-                    for (s32 k = 0; k < 11; k++) {
-                        sum += mFilterA[k] * work[i - k + 11];
-                    }
-                    out[i] = sum / 4096;
-                }
+                AddEcho(work, echo, FX_FRAME_SAMPLES + 11);
+                Fir(buffers[ch], &work[11], mFilterA, 11);
             }
             break;
         case MODE_PITCH_DOWN:
             PitchDown(buffers);
             break;
         case MODE_CHORUS:
-            for (ch = 0; ch < 2; ch++) {
-                s32* out = buffers[ch];
-                s32 lfo = (mFrame % 30) * FX_FRAME_SAMPLES;
-                for (s32 i = 0; i < FX_FRAME_SAMPLES; i++) {
-                    out[i] = *GetSample(mInput[ch], -2, i + mLfo[lfo + i]);
-                }
-                s32* echo = GetSample(mOutput[ch], -60, 0);
-                for (s32 i = 0; i < FX_FRAME_SAMPLES; i++) {
-                    out[i] = (out[i] * 0xCCC + echo[i] * 0x333) / 4096;
-                }
-            }
+            Chorus(buffers);
             break;
         case MODE_RADIO:
             Radio(buffers);
@@ -701,9 +721,7 @@ void FxVoice::UpdateBuffer(int channels, void** ppBuffer, u32 size, snd::SampleF
         }
     }
 
-    for (ch = 0; ch < 2; ch++) {
-        CopyBuffer(buffers[ch], GetSample(mOutput[ch], 0, 0), FX_FRAME_SAMPLES);
-    }
+    Store(mOutput, buffers);
 
     if (mPitchUp) {
         PitchUp(buffers);
@@ -744,23 +762,6 @@ void FxVoice::PitchDown(s32** buffers) {
     }
 }
 
-static inline void Fir(s32* buf, const s32* coef, s32 taps) {
-    for (s32 i = FX_FRAME_SAMPLES - 1; i >= 0; i--) {
-        s32 sum = 0;
-        for (s32 k = 0; k < taps; k++) {
-            sum += coef[k] * buf[i - k];
-        }
-        buf[i] = sum / 4096;
-    }
-}
-
-static inline void Mix(s32* dst, const s32* src, s32 n) {
-    for (s32 i = 0; i < n; i++) {
-        dst[i] = ((dst[i] + src[i]) << 12) / 4096;
-    }
-}
-
-
 void FxVoice::Radio(s32** buffers) {
     s32 work[FX_FRAME_SAMPLES + 21];
     s32 work2[FX_FRAME_SAMPLES + 21];
@@ -771,7 +772,7 @@ void FxVoice::Radio(s32** buffers) {
 
     Mix(work, work2, FX_FRAME_SAMPLES + 21);
 
-    Fir(p, mFilterB, 21);
+    Fir(p, p, mFilterB, 21);
 
     
     for (s32 i = 0; i < FX_FRAME_SAMPLES; i++) {
