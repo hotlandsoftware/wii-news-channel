@@ -560,7 +560,7 @@ config.libs = [
             Object(Matching, "news/Scroller.cpp"),
             Object(Matching, "news/Ticker.cpp"),
             Object(Matching, "news/HeadlineList.cpp"),
-            Object(Matching, "news/LayoutScreen.cpp", extra_cflags=["-ipa file"]),
+            Object(Matching, "news/LayoutScreen.cpp", extra_cflags=["-inline auto", "-ipa file"]),
             Object(Matching, "news/Camera.cpp"),
             Object(Matching, "news/Locale.cpp"),
             Object(Matching, "news/PointerEffect.cpp"),
@@ -569,7 +569,7 @@ config.libs = [
             Object(Matching, "news/main.cpp"),
             Object(Matching, "news/DrawUtil.cpp"),
             Object(Matching, "news/SmoothValue.cpp"),
-            Object(Matching, "news/PaneButton.cpp", extra_cflags=["-ipa file"]),
+            Object(Matching, "news/PaneButton.cpp", extra_cflags=["-inline auto", "-ipa file"]),
         ],
     },
     {
@@ -592,7 +592,7 @@ config.libs = [
         "progress_category": "game",
         "objects": [
             Object(NonMatching, "news/SlideShow.cpp", extra_cflags=["-ipa file"]),
-            Object(NonMatching, "news/ArticleText.cpp", extra_cflags=["-ipa file"]),
+            Object(NonMatching, "news/ArticleText.cpp", extra_cflags=["-inline auto", "-ipa file"]),
         ],
     },
     {
@@ -601,7 +601,7 @@ config.libs = [
         "cflags": cflags_game,
         "progress_category": "game",
         "objects": [
-            Object(NonMatching, "news/d_s_news.cpp", extra_cflags=["-ipa file"]),
+            Object(NonMatching, "news/d_s_news.cpp", extra_cflags=["-inline auto", "-ipa file"]),
         ],
     },
     {
@@ -610,12 +610,12 @@ config.libs = [
         "cflags": cflags_game,
         "progress_category": "game",
         "objects": [
-            Object(Matching, "news/PaneLayout.cpp", extra_cflags=["-ipa file"]),
+            Object(Matching, "news/PaneLayout.cpp", extra_cflags=["-inline auto", "-ipa file"]),
             Object(Matching, "news/PointerHistory.cpp"),
             Object(Matching, "news/Fader.cpp"),
             Object(Matching, "news/Thread.cpp"),
             Object(Matching, "news/ScreenBase.cpp"),
-            Object(Matching, "news/d_scene.cpp", extra_cflags=["-ipa file"]),
+            Object(Matching, "news/d_scene.cpp", extra_cflags=["-inline auto", "-ipa file"]),
         ],
     },
     {
@@ -1506,7 +1506,7 @@ config.libs = [
         "cflags": cflags_game,
         "progress_category": "game",
         "objects": [
-            Object(NonMatching, "news/MainScreen.cpp", extra_cflags=["-ipa file"]),
+            Object(NonMatching, "news/MainScreen.cpp", extra_cflags=["-inline auto", "-ipa file"]),
         ],
     },
     {
