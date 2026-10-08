@@ -561,26 +561,17 @@ static inline f32 CosIdx(u16 idx) {
     return math::CosFIdx(0.00390625f * U16ToF32(&idx));
 }
 
-static inline s32 BandPassTap(s32 lo, const s32& hi, s32 n) {
-    return ((hi - lo) << 12) / (0x3243 * n);
-}
-
 static inline void MakeBandPass(s32* coef, s32 taps, s32 lo, s32 hi) {
-    s32 i;
-    s32 s;
     s32* f = coef;
     s32* c = f + taps;
     *c = hi - lo;
-    for (i = 1; i <= taps; i++) {
-        s32 v = BandPassTap((s32)(4096.0f * SinIdx((lo * i) << 3)), s = (s32)(4096.0f * SinIdx((hi * i) << 3)), i);
+    for (s32 i = 1; i <= taps; i++) {
+        s32 a = 4096.0f * SinIdx((hi * i) << 3);
+        s32 b = 4096.0f * SinIdx((lo * i) << 3);
+        s32 v = ((a - b) << 12) / (0x3243 * i);
         f[taps - i] = v;
         c[i] = v;
     }
-}
-
-static inline s32 LfoSample(s32 i) {
-    s32 s = 4096.0f * SinIdx((s64)i * 0x10000 / FX_LFO_SIZE);
-    return s * 22 / 4096;
 }
 
 FxVoice::FxVoice() {
@@ -606,7 +597,8 @@ FxVoice::FxVoice() {
     MakeBandPass(mFilterC, 5, 0, 0x900);
 
     for (s32 i = 0; i < FX_LFO_SIZE; i++) {
-        mLfo[i] = LfoSample(i);
+        s32 s = 4096.0f * SinIdx((s64)i * 0x10000 / FX_LFO_SIZE);
+        mLfo[i] = s * 22 / 4096;
     }
 
     MakeWindow(mWindowA, FX_WINDOW_SIZE, 0);
