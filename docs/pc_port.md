@@ -653,7 +653,7 @@ This part of milestone 2 gives the game a screen to wait on, the console's setti
 | `src/pc/sdk/vi.cpp` | VI | real: SDL3 window with an OpenGL context, retrace pacing, shadow registers latched by `VIFlush()`, pre/post-retrace callbacks, shutdown on window close |
 | `src/pc/sdk/sc.cpp` | SC | real: values from `PCConfig` |
 | `src/pc/pc_config.cpp` | (PC) | settings: defaults, `newschannel.ini`, `NEWSCHANNEL_*` variables, command line |
-| `src/pc/sdk/kpad.cpp`, `wpad.cpp` | KPAD, WPAD | placeholder for milestone 4: one remote on channel 0, no buttons, pointing at the mouse |
+| `src/pc/sdk/kpad.cpp`, `wpad.cpp`, `src/pc/pc_input.cpp` | KPAD, WPAD | one remote on channel 0, pointing at the mouse, with the mouse buttons and keys of section 27; no game controllers yet |
 | `src/pc/gx/` | GX | real: section 16 |
 | `src/pc/sdk/ai.cpp`, `dsp.cpp`, `axfx.cpp`, `src/pc/audio/` | AI, DSP, AXFX hooks; AX is the SDK's source | real: section 18 |
 | `src/pc/sdk/nwc24.cpp`, `vf.cpp`, `so.cpp`, `net.cpp`, `src/pc/news/` | NWC24, VF, SO, NCD, `NETGetUniversalCalendar` | real, as far as the game uses them: section 21. News comes from a directory; there is no HTTP yet |
@@ -707,8 +707,9 @@ The two directories belong to the file backends (`PCGetContentsDir()`, `PCGetNan
 
 ### Input (KPAD, WPAD)
 
-`PCInputPoll()` in `wpad.cpp` (declared in `src/pc/pc_input.h`) is the one place that reads host input; `KPADRead()` turns its `PCPadState` into a `KPADStatus` (button edges, pointer, a remote held level and still).
-Milestone 4 fills `PCPadState::buttons` and adds devices there; KPAD does not change.
+`src/pc/pc_input.cpp` (declared in `src/pc/pc_input.h`) is the one place that maps host input to the remote; `KPADRead()` turns its `PCPadState` into a `KPADStatus` (button edges, pointer, a remote held level and still), and `wpad.cpp` answers `WPADProbe()` from it.
+`vi.cpp` owns the window and hands over the raw devices (`PCVIGetMouseButtons()`, `PCVIGetKey()`, `PCVIGetPointer()`, wheel events from the event pump).
+Section 27 has the mapping, the enhancements that add to it, and the `--input` script.
 
 `KPADStatus::pos` is in sensor units, not screen coordinates: the game multiplies it through `KPADGetProjectionPos()` and its own factors. `kpad.cpp` applies the inverse of that projection, so the edges of the picture map to the edges of the game's screen (608 units in 4:3, 832 in 16:9); the self-test checks both.
 
@@ -731,7 +732,7 @@ For backend code the consequence remains: `new`, `std::string`, `std::vector` an
 | `--dol FILE` | the channel's `main.dol` (section 10) |
 | `--news-dir DIR` | where the news comes from: `DIR/v2/<language>/<country>/news.bin.NN`, the files as the server sends them (section 21). Default: `$NEWSCHANNEL_NEWS_DIR`, then `orig/HAGE/news` |
 | `--date YYYY-MM-DDTHH:MM[:SS][Z]` | start the game's clock at this time (local time, or universal time with `Z`) instead of now; default `$NEWSCHANNEL_DATE` (section 21, "The clock") |
-| `--input SCRIPT` | scripted remote for automated runs: `P0:0@1,A@300` points at the centre of the picture from retrace 1 and presses A at retrace 300 (`src/pc/pc_input.h`) |
+| `--input SCRIPT` | scripted input for automated runs: `P0:0@1,A@300` points at the centre of the picture from retrace 1 and presses A at retrace 300; also keys, mouse buttons and the wheel (section 27, `src/pc/pc_input.h`) |
 | `--screenshot N[,N...]` | save the picture shown at these retraces as `frame_NNNNNN.png` (section 16, "Looking at the result"); with `--no-window` the frames are drawn in a hidden window |
 | `--screenshot-dir DIR` | where the screenshots go (default: the current directory; keep them out of the repository, e.g. `build/shots`) |
 | `--mute` | no audio device; audio frames still run in real time (section 18) |
@@ -2011,7 +2012,7 @@ No bypass was added. The one left is the pointer effect (section 15, `TODO(miles
 
 ## 24. Purist mode and enhancements
 
-`newschannel --purist` runs the game as it functions and looks on the console: every PC enhancement is off (R13). Without `--purist` the enhancements that are switched on apply; `--list-enhancements` shows them, `--enhance NAME[=0|1]` and `enhance.NAME = 0|1` in the config file switch one. There are no enhancements yet, so today both modes are the same program.
+`newschannel --purist` runs the game as it functions and looks on the console: every PC enhancement is off (R13). Without `--purist` the enhancements that are switched on apply; `--list-enhancements` shows them, `--enhance NAME[=0|1]` and `enhance.NAME = 0|1` in the config file switch one. The enhancements that exist: `mouse-scroll`, `keyboard-nav` and `fullscreen-key` (section 27).
 
 | Piece | Where |
 | --- | --- |
@@ -2069,3 +2070,157 @@ Behaviour:
 The console's screen setting (`SCGetAspectRatio()`) is 16:9 by default on PC; `--aspect 4:3` (`--4:3`), `aspect = 4:3` or `$NEWSCHANNEL_ASPECT=4:3` select the other. Both are the game's own layouts and both exist on the console, so this is a setting, not a PC enhancement (R13), and purist mode does not change it. The default window is 854x480 in 16:9 and 640x480 in 4:3; the game renders the same 640x456 frame in both and the window stretches it, as a television does.
 
 Until this section the default was 4:3. Input scripts and screenshots described in earlier sections assume 4:3 unless they say `--wide`; `pc/tools/purist_check.py` passes `--aspect 4:3` (its `--aspect 16:9` checks the wide layout against its own baseline).
+
+## 27. Enhancements: mouse wheel and keyboard
+
+Three enhancements (R13), all on by default and all off in purist mode: `mouse-scroll`, `keyboard-nav`, `fullscreen-key`.
+None of them adds anything to the game: each either sends a button of the remote, or presses a button that is on the screen. The scrolling, the sounds, the limits and the animations are the game's.
+
+### Controls
+
+The mouse is the pointer in every mode.
+
+| Input | Base mapping (all there is in purist mode) | With the enhancement |
+| --- | --- | --- |
+| Left click | A | |
+| Right click | B | |
+| Enter, Space, Z | A | `keyboard-nav`: Enter also presses a dialog's single button ("OK", "Back to the Wii Menu") |
+| X | B | |
+| Arrow keys | +Control Pad | |
+| `=` and `-`, keypad `+` and `-` | PLUS, MINUS | |
+| 1, 2 | 1, 2 | |
+| H | HOME | |
+| Esc | HOME | `keyboard-nav`: the on-screen "Back" button (below); no longer HOME |
+| Backspace | B | `keyboard-nav`: the same as Esc; no longer B |
+| Wheel | - | `mouse-scroll`: one press of +Control Pad up or down per notch; in the globe view PLUS or MINUS |
+| Ctrl + wheel | - | `mouse-scroll`: PLUS or MINUS per notch, everywhere |
+| Wheel sideways (tilt, touchpad) | - | `mouse-scroll`: +Control Pad right or left per notch |
+| Middle button, held | - | `mouse-scroll`: B |
+| Page Up, Page Down | - | `keyboard-nav`: three presses of +Control Pad up, down |
+| Home, End | - | `keyboard-nav`: presses of up, down until the screen's arrow button is disabled |
+| Y, N | - | `keyboard-nav`: the on-screen "Yes", "No" |
+| S | - | `keyboard-nav`: "Slide show" |
+| G | - | `keyboard-nav`: "Globe" (in an article with a location) |
+| R | - | `keyboard-nav`: the globe view's reset button (the tilt) |
+| F11, Alt+Enter | - (Alt+Enter is Enter: A) | `fullscreen-key`: fullscreen on and off; Alt+Enter is then not A |
+
+What the remote's buttons do is the game's business (read from `MainScreen.cpp`, `SlideShow.cpp`, `LanguageSelect.cpp`, `d_scene.cpp`):
+
+| Screen | up / down | left / right | PLUS / MINUS | B held | 1 / 2 |
+| --- | --- | --- | --- | --- | --- |
+| Section list, headline list | scroll one step, auto-repeat | - | text size | scroll at a speed set by how far the pointer is from where B went down | - |
+| Article | scroll by `sLinesPerPage` lines (7 at the smallest text, 2 at the largest) | previous / next article | text size | as above | 1 held and moved: a rectangle that marks the letters in it (`Article_HitTest()`) |
+| Globe view | tilt | - | zoom | - (A held on the globe turns it) | - |
+| Regional list | scroll | - | - | as above | - |
+| Slide show, slides | - | previous / next slide | - | - | slower / faster |
+| Slide show, article | scroll | previous / next slide | text size | as above | - |
+| Dialogs | - | - | - | - | - |
+
+So the wheel scrolls every list and article and zooms the globe; Ctrl + wheel changes the text size; a sideways wheel turns pages; the middle button gives what a browser's middle button gives.
+
+"Back" (Esc, Backspace), by screen:
+
+| Screen | The key presses |
+| --- | --- |
+| Headline list of a section, article, globe view, regional list | "back" |
+| Slide show, article | "back", which is "Continue": back to the slides |
+| Slide show, slides | A, then "end" in the article that opens (below) |
+| Yes/No dialog | "no" |
+| Section list (first page) | nothing: its "back" button is "Wii Menu" and ends the program. Close the window for that |
+| Dialog with one button, connection screen | nothing (Enter presses the button) |
+
+### How the pieces fit
+
+| Piece | Where |
+| --- | --- |
+| Raw devices: mouse buttons, keys, wheel events, fullscreen | `src/pc/sdk/vi.cpp` (`PCVIGetMouseButtons()`, `PCVIGetKey()`, `PumpEvents()`, `PCVIToggleFullscreen()`) |
+| The mapping: `BaseButtons()`, then each enhancement under `PCEnhanced(id)`; the pulse queue; the script | `src/pc/pc_input.cpp`, `src/pc/pc_input.h` |
+| One input frame per game frame | `KPADRead()` of channel 0 calls `PCInputFrame()` (`src/pc/sdk/kpad.cpp`) |
+| Keys that press on-screen buttons; the screen context | `include/pc/nav.h`, `src/pc/news/pc_nav.cpp` |
+| The game's side, all under `TARGET_PC` and `PCNavOn()` / `PCEnhanced()` | `UpdateLayoutButtons()`, `CheckButtonTrig()`, `CheckButtonHold()` in `d_scene.cpp`; one `PCNavSetContext()` in `MainScreen::ModeMain()`, two in `SlideShow::CheckInput()` |
+
+`BaseButtons(host, withoutKeys)` is the port's mapping and nothing else; purist mode calls it with `withoutKeys == 0`. An enhancement that gives a key another meaning names the key there (`keyboard-nav`: Esc and Backspace; `fullscreen-key`: Enter while Alt is down), and everything else an enhancement does is added after it.
+
+### The pulse queue
+
+A wheel notch has no button to hold, so it becomes a short press: the button is down for two input frames and up for four, then the next one starts. The game sees a new trigger for each (`gTrig`, and with it `gRepeatFast`), so its own code scrolls one step per notch.
+
+- **Input frames, not retraces.** The queue moves on in `PCInputFrame()`, which `KPADRead()` calls once per read of channel 0, and the game reads once per frame. A press cannot fall between two reads.
+- **Six frames per notch** is what the game can follow. `HeadlineList::ScrollDown()` picks the next row by measuring from where the list is, not from where it is going, and the list moves at most 15 units a frame; a press that comes before the list has nearly arrived repeats the last one. Measured on the headline list with bursts of 3, 5 and 4 notches: at three, four and five frames per notch about one notch in three is swallowed, at six every notch is a row. Articles are similar: `Article_PageDown()` counts `sLinesPerPage` lines from the line at the top now, and the text moves at most 20 units a frame, so a turning wheel scrolls an article at that speed and stops one step after the last notch.
+- **The cap.** Six presses wait at most (0.6 s). Notches beyond that are dropped, so the screen stops soon after the wheel does: a wheel turned for two seconds at one notch a frame scrolls ten steps a second while it turns and ends within the queue's length.
+- **Turning round** first takes back notches that have not been sent.
+- **Fractions.** SDL reports high-resolution wheels and touchpads in fractions of a notch. They are added up per axis; a fraction is dropped when the direction changes or when the wheel has been still for half a second.
+- **Direction.** Scrolling takes SDL's values as they come (y > 0: up), so the system's "natural scrolling" setting applies as in any other program. Zoom (the globe view, Ctrl + wheel) follows the hand whatever that setting is: SDL's "flipped" flag says the system reversed the values, and they are reversed back, so away from the user is always closer.
+- **Sideways** counts only when the event is more sideways than vertical, so that a touchpad scrolling down does not turn the page.
+- Page Up and Page Down put three presses in the same queue: three rows of a headline list (a screenful), three steps of the section list, and in an article about two thirds of a screen at the default text size (the game counts from where the text is, as above). Home and End put in one press at a time for as long as the live layout's "up" or "down" button is enabled, which is how the game shows that there is more; any other key, a click or the wheel stops them, and so do 400 presses. A long list takes two to three seconds, a long article five (the game's scrolling speed).
+- The middle button is not a pulse: it is B for as long as it is held. The game draws its B cursor with the two arrows and scrolls faster the further the pointer moves from where the button went down.
+
+### Keys that press an on-screen button
+
+The remote has no "Back" button: the game's screens ask `CheckButtonTrig(name, 0x800)` or `CheckButtonHold(name, 0x800)`, "is the button called `name` under a pointer whose A went down?". Under `TARGET_PC`, with `keyboard-nav` on, both functions ask one more question after the four pointers: `PCNavPress(name, button)`.
+
+- `UpdateLayoutButtons(layout, ...)` tells `pc_nav.cpp` which layout's buttons take input this frame (`PCNavSetLayout()`). Each screen calls it right before its checks, so the layout is the live one; a layout recorded in an earlier frame is never used.
+- `PCNavPress()` is true when the key for `name` went down in this input frame (`PCNavFrame()` from the input layer) and that layout has a button `name` that a click could reach: not disabled, not hidden or inactive (what `PaneButton::HitTest()` wants), not fixed, and the layout not faded out (`Layout::HitTest()`). It then calls `SetPressed(false)` on the button, as the two functions do for a click, and they return channel 0.
+- From there on the screen's own code runs: its sound, the button's 18-frame press animation, the change of state. A pointer is not needed, and a bar that has slid away because the pointer rests still takes the key.
+- Names: Esc, Backspace: "back" (and "no" when the layout has no usable "back" and no screen reported a context: the dialogs); Y: "yes"; N: "no"; Enter: "next" on a dialog (not in the slide show, whose next-slide button has the same name); S: "slide"; G: "earth"; R: "reset". `PCNavKeysFor()` is the whole rule.
+
+The context is the one thing the input side learns about the game. The screens report it where they handle input (`PCNavSetContext()`), and it lasts one frame:
+
+| Context | Reported by | Used for |
+| --- | --- | --- |
+| `PC_NAV_GLOBE` | `MainScreen`, when its active layout is the globe view's | the wheel sends PLUS/MINUS |
+| `PC_NAV_TOP` | `MainScreen`, in its list states with the first page's list | "back" is not pressed |
+| `PC_NAV_SCREEN` | `MainScreen` otherwise; `SlideShow` in an article | - |
+| `PC_NAV_SLIDES` | `SlideShow` while the slides run | "Back" becomes A, then "end" |
+| `PC_NAV_OTHER` | nobody (dialogs, connection screen, language selection) | Enter presses "next"; "Back" may press "no" |
+
+The other query is `PCNavCanScroll()` for Home and End: whether the layout's "up" or "down" button was usable when it was recorded. It is looked at then, not when the input layer asks, because a screen may be gone between two frames.
+
+**"Back" during the slides.** While the slides run, `SlideShow::CheckInput()` returns before it looks at any button: the slide show has no "End" there, on the console either. The way out with a remote is A, which opens the slide's article, and "End" in it. The key does exactly that: the input layer presses A every six frames while the context is `PC_NAV_SLIDES` (A is ignored while a slide moves in), and the key stays down as `PC_NAV_KEY_END` for at most two seconds until the article's "end" button takes it. On the screen the article starts to open and the slide show fades out, with the sounds of both steps. During the first second after "Slide show" was pressed, before the slide show takes input, the key does nothing.
+
+### Script events
+
+Host events in `--input` go through the same mapping as the real devices, so what they do depends on the mode; that is what makes them usable for comparing an enhancement with purist mode.
+
+| Event | Meaning |
+| --- | --- |
+| `KEY:NAME@FRAME[+FRAMES]` | hold a key (default 2 retraces): `ENTER SPACE Z X BACKSPACE UP DOWN LEFT RIGHT EQUALS KPPLUS MINUS KPMINUS 1 2 ESC H PAGEUP PAGEDOWN HOME END Y N S G R F11 ALT RALT` |
+| `MOUSE:NAME@FRAME[+FRAMES]` | hold `LEFT`, `RIGHT` or `MIDDLE` |
+| `WHEEL:n@FRAME` | `n` notches; positive is away from the user (up); fractions allowed |
+| `WHEELX:n@FRAME` | sideways; positive is to the right |
+| `CTRLWHEEL:n@FRAME` | `WHEEL` with Ctrl held |
+
+A wheel event of the script calls `PCInputWheel()`, the function SDL's wheel event calls from the event pump; scripted keys and mouse buttons are OR-ed into the state read from SDL before the mapping. `BUTTON@FRAME` and `Px:y@FRAME` are the remote itself and work as before, in every mode.
+
+Examples (after `P0:0@1,A@300,P0:0.2@400,A@450`, the headline list of National News; these work in 4:3 and in 16:9):
+
+| Does | `--input` |
+| --- | --- |
+| Scroll the list three rows down and three up (which leaves the title row hidden: the first step down from the very top passes it), a page down, to the end, to the top | `...,WHEEL:-3@650,WHEEL:3@800,KEY:PAGEDOWN@950,KEY:END@1100,KEY:HOME@1300` |
+| Open the second article, scroll, larger text, drag-scroll, back twice | `...,A@800,WHEEL:-2@900,CTRLWHEEL:2@1000,P0:0@1100,MOUSE:MIDDLE@1110+140,P0:0.5@1150,KEY:ESC@1400,KEY:BACKSPACE@1600` |
+| Globe view by key, zoom in and out, tilt, reset, back | `...,A@800,KEY:G@950,WHEEL:3@1150,WHEEL:-5@1300,KEY:UP@1450+60,KEY:R@1600,KEY:ESC@2050` |
+| Slide show by key (from the section list: `P0:0@1,A@300`), next, previous, article, continue, end | `P0:0@1,A@300,KEY:S@600,KEY:RIGHT@1400,KEY:LEFT@1600,KEY:SPACE@2000,KEY:ESC@2400,KEY:ESC@2650` |
+| First start without a pointer | `KEY:Y@300` |
+
+### Checks
+
+- `newschannel --selftest` (`src/pc/selftest_input.cpp`): every base key and mouse button, held as long as the key; N notches are N presses of two frames, six apart; the cap; turning round; fractions; "flipped"; Page keys; the keys that press buttons send no remote button; `PCNavKeysFor()` for every name and context; fullscreen once per press; each enhancement off on its own; purist mode: the wheel and the enhancement keys do nothing, Esc is HOME, Backspace is B, Alt+Enter is A; an `SDL_EVENT_MOUSE_WHEEL` pushed into SDL reaches the queue through the retrace, and not in purist mode.
+- `pc/tools/purist_check.py`: unchanged.
+- On the screens, 4:3 and 16:9, with one day's files: each script was run three ways: enhanced, `--purist`, and with the program from before this section, for which the host events were replaced by the remote buttons they mean in the base mapping (Esc: `HOME`, Backspace: `B`, the rest nothing). The purist frames are the old program's, byte for byte, in every run. `MOUSE:MIDDLE` gives the frames of `B` held for the same time.
+- With a visible window: F11 and Alt+Enter change the window's back buffer from 854x480 to the desktop's size and back.
+- Not checked: a real wheel and a real keyboard under a hand. SDL's side of it is `PumpEvents()` and `PCVIGetKey()`; everything behind them is what the script drives.
+
+### Not mapped, and why
+
+| What | Why |
+| --- | --- |
+| "Back" on the section list | the button there is "Wii Menu": it ends the program. A key that is pressed again and again to get back to the top should not do that |
+| Ending the slide show in one step | the game has no such step; the key takes the remote's two (above) |
+| A key that selects a section or a headline | they are chosen with the pointer (A on the row under it); there is no on-screen button with a name, and the +Control Pad scrolls instead of moving a selection. A selection would be new game behaviour |
+| 1 held on an article (the rectangle that marks letters), A held on the globe (turning it) | they need the pointer anyway: the keys 1 and Z, Enter or Space with the mouse do it |
+| The slide show's speed | it is 1 and 2 already |
+| "main" (a button name `SlideShow::CheckInput()` checks) | the flag it sets is not used by anything |
+| Page keys that scroll exactly a screen in every view | a press scrolls what the game scrolls for a press, which depends on the screen, the text size and where the text is at that moment; three presses is the count that is a screenful of headlines |
+| Home/End in one jump | only the game's own steps are used; they take as long as the game scrolls |
+| Smooth (pixel) scrolling with a touchpad | the game scrolls in steps; fractions are added up to steps |
+| Game controllers, key rebinding | not part of this (section 14, milestone 4) |
