@@ -1,8 +1,8 @@
 # wii-news-channel
 
 ## STATUS
-- **99.39%** decompiled (88.95% byte-matching)
-- **77.86%** fully linked (581 / 626 files)
+- **99.53%** decompiled (93.12% byte-matching)
+- **81.94%** fully linked (588 / 626 files)
 
 Every byte of code in the DOL now has C/C++ source. The remaining work is making the decompiled files match byte for byte.
 
@@ -10,7 +10,7 @@ Percentages are of the DOL's code bytes (1,626,960, including `.init`), as repor
 
 | Area (code size) | Decompiled | Matching | Linked |
 | --- | --- | --- | --- |
-| News Channel game code (`0x80006FC0`–`0x80051D4C`, ~307 KB) | 99.3% | 72.8% | 35.0% |
+| News Channel game code (`0x80006FC0`–`0x80051D4C`, ~307 KB) | 100.0% | 94.9% | 56.6% |
 | HOME Menu, manual viewer, NW4R, RVL SDK (`0x80051D4C`–`0x80179F64`, ~1.21 MB) | 99.4% | 92.5% | 87.3% |
 | Runtime / MSL (`0x80179F64`–`0x8018C7C0`, ~76 KB) | 100% | 94.9% | 91.9% |
 | MetroTRK (`0x8018C7C0`–`0x80191F00`, plus `.init`) | 100% | 100% | 100% |
@@ -18,8 +18,8 @@ Percentages are of the DOL's code bytes (1,626,960, including `.init`), as repor
 Each row is a share of that whole address range. `ninja`'s per-category summary is different: it only counts files that have been split so far.
 
 **Game code**
-- Fully linked: Bubbles, Camera, Connect, ConnectTips, d_scene, DrawUtil, ErrorScreen, Fader, FrameTextButton, GlobePoint, HeadlineList, IconTextButton, LanguageSelect, LayoutScreen, Locale, main, Mascot, MathUtil, Model, PaneButton, PaneLayout, PointerEffect, PointerHistory, PointerScroll, Resource, ScreenBase, Scroller, SmallTextButton, SmoothValue, TextButton, TextChar, Thread, Ticker, plus the message text tables.
-- Decompiled, not yet matching: GlobePin (99.92%), MainScreen (99.92%), GlobeDots (99.87%), System (99.84%), WiiConnect24 (99.65%), NewsArticle (99.56%), Globe (99.51%), d_s_news (99.24%), SaveData (98.90%), ArticleText (97.43%), sound_manager (97.02%), SlideShow (95.89%).
+- Fully linked: ArticleText, Bubbles, Camera, Connect, ConnectTips, d_scene, DrawUtil, ErrorScreen, Fader, FrameTextButton, Globe, GlobeDots, GlobePin, GlobePoint, HeadlineList, IconTextButton, LanguageSelect, LayoutScreen, Locale, main, Mascot, MathUtil, Model, NewsArticle, PaneButton, PaneLayout, PointerEffect, PointerHistory, PointerScroll, Resource, ScreenBase, Scroller, SmallTextButton, SmoothValue, System, TextButton, TextChar, Thread, Ticker, WiiConnect24, plus the message text tables.
+- Decompiled, not yet matching: MainScreen (99.99%), sound_manager (99.99%), SlideShow (99.99%), d_s_news (99.94%), SaveData (99.75%). Eight functions in these five files are left.
 
 **Platform layer**
 - RVL SDK, linked: OS and BASE, EXI, SI, DB, VI, MTX, GX, DVD, AI, AX, AXFX, MEM, DSP, CX, NAND, SC, WENC, ESP, IPC, FS, PAD, WPAD, KPAD, EUART, USB, WUD, TPL, NdevExi2AD, RSO, CNT, ARC, SO, NET, NWC24 (except `NWC24Download.c`, 99.89%), the Bluetooth stack (BTE), and the VF filesystem.
