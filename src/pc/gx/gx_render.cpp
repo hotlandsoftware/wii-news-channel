@@ -44,7 +44,7 @@ struct Program {
     u32 hash;
     GLuint id; // 0: failed to compile
     GLint uReg, uKonst, uAlphaRef, uDstAlpha, uTexScale, uIndMtx;
-    GLint uTexSize, uTexClamp, uEfbScale; // only in the enhanced-sampling variant
+    GLint uTexSize, uTexClamp; // only in the enhanced-sampling variant
     u32 textures;
 };
 
@@ -120,6 +120,15 @@ struct EfbTarget {
     int samples;
 };
 
+// Enhancements only. A blit copies whole pixels: no scissor and, for drivers
+// that apply them to blits, no write masks.
+void BlitState() {
+    glDisable(GL_SCISSOR_TEST);
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    glDepthMask(GL_TRUE);
+    gPCGX.dirty |= PC_GX_DIRTY_PIXEL | PC_GX_DIRTY_RASTER;
+}
+
 // What the EFB should be now: the console's, unless an enhancement is on.
 EfbTarget DesiredEfb() {
     EfbTarget t = {PC_GX_EFB_WIDTH, PC_GX_EFB_HEIGHT, 1.0f, 1.0f, 0};
@@ -142,11 +151,14 @@ EfbTarget DesiredEfb() {
             sx = sx < 1.0f ? 1.0f : (sx > 8.0f ? 8.0f : sx);
             sy = sy < 1.0f ? 1.0f : (sy > 8.0f ? 8.0f : sy);
         }
-        GLint maxSize = 0, maxRenderbuffer = 0;
-        glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxSize);
-        glGetIntegerv(GL_MAX_RENDERBUFFER_SIZE, &maxRenderbuffer);
-        if (maxRenderbuffer < maxSize) {
-            maxSize = maxRenderbuffer;
+        static GLint maxSize; // asked once: this runs after every frame
+        if (maxSize == 0) {
+            GLint maxRenderbuffer = 0;
+            glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxSize);
+            glGetIntegerv(GL_MAX_RENDERBUFFER_SIZE, &maxRenderbuffer);
+            if (maxRenderbuffer < maxSize) {
+                maxSize = maxRenderbuffer;
+            }
         }
         f32 limit = static_cast<f32>(maxSize / PC_GX_EFB_WIDTH);
         if (limit >= 1.0f) {
@@ -163,8 +175,10 @@ EfbTarget DesiredEfb() {
         }
     }
     if (PCEnhanced(PC_ENH_MSAA) && config->msaaSamples >= 2) {
-        GLint maxSamples = 0;
-        glGetIntegerv(GL_MAX_SAMPLES, &maxSamples);
+        static GLint maxSamples = -1;
+        if (maxSamples < 0) {
+            glGetIntegerv(GL_MAX_SAMPLES, &maxSamples);
+        }
         t.samples = config->msaaSamples < maxSamples ? config->msaaSamples : maxSamples;
         if (t.samples < 2) {
             t.samples = 0;
@@ -277,11 +291,10 @@ GLuint ReadableEfb(bool depth) {
     if (bits != 0) {
         glBindFramebuffer(GL_READ_FRAMEBUFFER, e.fbo);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, e.resolveFbo);
-        glDisable(GL_SCISSOR_TEST);
+        BlitState();
         glBlitFramebuffer(0, 0, e.width, e.height, 0, 0, e.width, e.height, bits, GL_NEAREST);
         e.colorResolved = true;
         e.depthResolved = e.depthResolved || depth;
-        gPCGX.dirty |= PC_GX_DIRTY_RASTER;
     }
     return e.resolveFbo;
 }
@@ -309,6 +322,7 @@ bool ConfigureEfb() {
     if (current.fbo != 0) {
         GLuint from = ReadableEfb(true);
         GLuint to = fresh.samples == 0 ? fresh.fbo : fresh.resolveFbo;
+        BlitState();
         glBindFramebuffer(GL_READ_FRAMEBUFFER, from);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, to);
         glBlitFramebuffer(0, 0, current.width, current.height, 0, 0, fresh.width, fresh.height, GL_COLOR_BUFFER_BIT,
@@ -505,7 +519,6 @@ Program* FindProgram(const PCGXShaderKey& key) {
     p->uIndMtx = glGetUniformLocation(id, "uIndMtx");
     p->uTexSize = glGetUniformLocation(id, "uTexSize");
     p->uTexClamp = glGetUniformLocation(id, "uTexClamp");
-    p->uEfbScale = glGetUniformLocation(id, "uEfbScale");
     glUseProgram(id);
     for (u32 i = 0; i < 8; i++) {
         char name[8];
@@ -543,9 +556,6 @@ void SetUniforms(const Program* p) {
             scale[i * 2 + 1] = static_cast<GLfloat>((s.bp[PC_BP_SU_SSIZE0 + i * 2 + 1] & 0xFFFF) + 1);
         }
         glUniform2fv(p->uTexScale, 8, scale);
-    }
-    if (p->uEfbScale >= 0) {
-        glUniform2f(p->uEfbScale, r.efb.scaleX, r.efb.scaleY);
     }
     if (p->uIndMtx >= 0) {
         GLint mtx[24];
@@ -865,7 +875,7 @@ GLuint ReduceTowards(GLuint from, int* x, int* y, int* width, int* height, int o
 // `from` as outWidth x outHeight RGBA8 pixels, row 0 at the top: what the
 // console's EFB would hold where the scaled one holds this.
 u8* ReadReduced(GLuint from, int x, int y, int width, int height, int outWidth, int outHeight) {
-    glDisable(GL_SCISSOR_TEST);
+    BlitState();
     from = ReduceTowards(from, &x, &y, &width, &height, outWidth, outHeight);
     // the last step goes into the texture ReduceTowards() did not just fill
     u32 i = from == r.reduceFbo[0] ? 1 : 0;
@@ -946,6 +956,19 @@ void PCGXRenderApplySettings() {
     if (EnsureGL()) {
         ConfigureEfb();
     }
+}
+
+bool PCGXRenderReadEfb(int x, int y, int width, int height, u8* rgba) {
+    if (!EnsureGL() || x < 0 || y < 0 || width <= 0 || height <= 0 || x + width > r.efb.width ||
+        y + height > r.efb.height) {
+        return false;
+    }
+    GLuint efb = ReadableEfb(false);
+    u8* pixels = ReadPixels(efb, r.efb.height, x, y, width, height);
+    std::memcpy(rgba, pixels, static_cast<size_t>(width) * height * 4);
+    std::free(pixels);
+    BindEfb();
+    return true;
 }
 
 void PCGXSetOutputSize(int width, int height) {
@@ -1046,7 +1069,11 @@ void PCGXRenderCopyDisp(const void* xfb, bool clear) {
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, r.scratchFbo);
         glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, target->texture, 0);
         glBindFramebuffer(GL_READ_FRAMEBUFFER, r.efb.fbo);
-        glDisable(GL_SCISSOR_TEST);
+        if (r.efb.scaled || r.efb.samples != 0) {
+            BlitState();
+        } else {
+            glDisable(GL_SCISSOR_TEST);
+        }
         glBlitFramebuffer(x, y, x + width, y + height, 0, 0, width, height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
         BindEfb();
         gPCGX.dirty |= PC_GX_DIRTY_RASTER | PC_GX_DIRTY_TEXTURES;
@@ -1094,8 +1121,10 @@ void PCGXRenderCopyTex(void* dest, bool clear) {
                 glBindFramebuffer(GL_DRAW_FRAMEBUFFER, r.scratchFbo);
                 glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
                 glBindFramebuffer(GL_READ_FRAMEBUFFER, efb);
-                glDisable(GL_SCISSOR_TEST);
-                glBlitFramebuffer(glX, glY, glX + glWidth, glY + glHeight, 0, 0, glWidth, glHeight, GL_COLOR_BUFFER_BIT,
+                BlitState();
+                // (turned over: the first row of a texture is the top of its
+                // picture, the first row of the EFB the bottom)
+                glBlitFramebuffer(glX, glY, glX + glWidth, glY + glHeight, 0, glHeight, glWidth, 0, GL_COLOR_BUFFER_BIT,
                                   GL_NEAREST);
                 if (s.texCopyFormat == GX_TF_RGB565) {
                     // a texel of this format has no alpha: it reads as 1
@@ -1103,7 +1132,7 @@ void PCGXRenderCopyTex(void* dest, bool clear) {
                     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
                     glClear(GL_COLOR_BUFFER_BIT);
                 }
-                gPCGX.dirty |= PC_GX_DIRTY_PIXEL | PC_GX_DIRTY_RASTER | PC_GX_DIRTY_TEXTURES;
+                gPCGX.dirty |= PC_GX_DIRTY_TEXTURES;
             }
             pixels = ReadReduced(efb, glX, glY, glWidth, glHeight, width, height);
         }

@@ -415,6 +415,10 @@ bool PCGXRenderEnhancedSampling();
 // Makes the EFB follow the settings now (it does so by itself after every
 // display copy). For the self-test.
 void PCGXRenderApplySettings();
+// The EFB's own (OpenGL) pixels, resolved if it is multisampled, as RGBA8
+// with (x, y) counted from the top left. For the self-test: GXPeekARGB() only
+// sees one of them per EFB pixel.
+bool PCGXRenderReadEfb(int x, int y, int width, int height, u8* rgba);
 void PCGXRenderCopyDisp(const void* xfb, bool clear);
 void PCGXRenderCopyTex(void* dest, bool clear);
 bool PCGXRenderPeek(u32 x, u32 y, u32* argb, u32* z);

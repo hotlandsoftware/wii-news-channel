@@ -708,11 +708,12 @@ bool Same(f32 a, f32 b) {
 
 // For each texture coordinate: if the four corners (in order around the
 // quadrilateral) map to the four corners of an axis-aligned rectangle of the
-// texture, that rectangle; otherwise no limit. Such a quadrilateral shows
-// exactly the texels of the rectangle (a layout pane, a glyph, a picture),
-// whatever its shape on the screen; anything else (a model's triangles, a
-// rotated or sheared mapping) is a continuous surface whose neighbours
-// continue the texture, and is left alone.
+// texture, that rectangle; otherwise no limit. Inside such a quadrilateral (a
+// layout pane, a glyph, a picture, a card on the globe; whatever its shape on
+// the screen) every coordinate is within the rectangle, so the fragment
+// shader can bring back the ones multisampling extrapolates beyond an edge
+// (gx_tev.cpp). Anything else (a model's triangles, a rotated or sheared
+// mapping) has no such rectangle and is left alone.
 void QuadTexClamp(const PCGXOutVertex* const corners[4], u32 texGens, PCGXTexClamp* clamp) {
     for (u32 t = 0; t < 8; t++) {
         f32* range = clamp->range[t];

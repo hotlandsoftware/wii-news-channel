@@ -222,24 +222,23 @@ void WriteStage(Writer& w, const PCGXShaderKey* key, u32 n) {
         } else {
             CoordExpr(key, key->texCoord[n], coord, sizeof(coord));
             if (key->texCoord[n] < key->numTexGens && key->enhancedSampling) {
-                // The EFB has more pixels (or samples) than the console's, so
-                // a coordinate can land where no pixel centre of the console
-                // lands: within half a console pixel of the edge of its
-                // quadrilateral, where a bilinear lookup reaches the texels
-                // beyond the ones the quadrilateral shows (the next glyph of
-                // a font sheet, the other side of a repeating texture).
-                // Coordinates are therefore kept inside the range the
-                // console's pixel centres cover: the quadrilateral's texel
-                // rectangle (uTexClamp, from the vertices) less half the
-                // texels a console pixel spans. Where the console draws one
-                // texel per pixel this changes nothing it would have drawn.
+                // A multisampled pixel that an edge of a primitive only
+                // partly covers is shaded at its centre, which can lie
+                // outside the primitive: the coordinate is then extrapolated
+                // past the values the vertices span, by up to a pixel's
+                // worth, into texels the primitive does not show (the other
+                // side of a repeating texture, the next cell of a sheet).
+                // Sampling at the centroid instead would shift the texture
+                // in every edge pixel. So the coordinate is evaluated at the
+                // centre and brought back into the range its quadrilateral's
+                // vertices span (uTexClamp), which never changes a pixel
+                // whose centre is inside. The level of detail is still that
+                // of the unclamped coordinate.
                 u32 k = key->texCoord[n];
                 w.Add("  {\n"
                       "    vec2 tc = %s * uTexScale[%u];\n"
                       "    vec2 gx = dFdx(tc), gy = dFdy(tc);\n"
-                      "    vec2 hf = 0.5 * (abs(gx) * uEfbScale.x + abs(gy) * uEfbScale.y);\n"
-                      "    vec2 lo = uTexClamp[%u].xy * uTexScale[%u] + hf, hi = uTexClamp[%u].zw * uTexScale[%u] - hf;\n"
-                      "    tc = mix(min(max(tc, lo), hi), 0.5 * (lo + hi), vec2(greaterThan(lo, hi)));\n"
+                      "    tc = min(max(tc, uTexClamp[%u].xy * uTexScale[%u]), uTexClamp[%u].zw * uTexScale[%u]);\n"
                       "    tex = ivec4(round(textureGrad(uTex%u, tc / %s, gx / %s, gy / %s) * 255.0))%s;\n"
                       "  }\n",
                       coord, k, k, k, k, k, key->texMap[n], texSize, texSize, texSize, swizzle);
@@ -464,9 +463,8 @@ bool PCGXGenerateFragmentShader(const PCGXShaderKey* key, char* out, u32 outSize
           "uniform vec2 uTexScale[8];\n" // size each coordinate is scaled to (SU registers)
           "uniform ivec4 uIndMtx[6];\n"); // two rows per matrix; w: right shift
     if (key->enhancedSampling) {
-        w.Add("uniform vec2 uTexSize[8];\n"   // texels of each texture map, as the game gave them
-              "uniform vec4 uTexClamp[8];\n"  // per coordinate: the quadrilateral's (s0, t0, s1, t1)
-              "uniform vec2 uEfbScale;\n");   // OpenGL pixels per EFB pixel
+        w.Add("uniform vec2 uTexSize[8];\n"    // texels of each texture map, as the game gave them
+              "uniform vec4 uTexClamp[8];\n"); // per coordinate: the quadrilateral's (s0, t0, s1, t1)
     }
     if (key->dualSourceAlpha) {
         w.Add("layout(location = 0, index = 0) out vec4 oColor;\n"

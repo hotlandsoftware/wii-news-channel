@@ -23,6 +23,8 @@
 #include <revolution/gx.h>
 #include <revolution/vi.h>
 
+#include <pc/enhance.h>
+
 #include "gx/gx_internal.h"
 #include "gx/texdecode.h"
 #include "pc_config.h"
@@ -1100,6 +1102,525 @@ void TestWithContext() {
     PC_CHECK(PCGXGetStats()->badCommands == 0);
 }
 
+// --- The enhancements `hires` and `msaa` (docs/pc_port.md, section 28) ---------------
+
+// Switches the two enhancements and their numbers and makes the EFB follow.
+void SetEfb(bool purist, int scale, int samples) {
+    PCConfig* config = PCGetConfig();
+    PCSetPurist(purist);
+    PCEnhancementSet("hires", scale != 0);
+    PCEnhancementSet("msaa", samples != 0);
+    config->renderScale = static_cast<u8>(scale > 0 ? scale : 1);
+    config->msaaSamples = static_cast<u8>(samples);
+    PCGXRenderApplySettings();
+}
+
+// One of the EFB's own pixels (not one per EFB pixel, as GXPeekARGB()).
+u32 Raw(int x, int y) {
+    u8 p[4] = {0, 0, 0, 0};
+    if (!PCGXRenderReadEfb(x, y, 1, 1, p)) {
+        return 0xFF000000u;
+    }
+    return (static_cast<u32>(p[0]) << 16) | (static_cast<u32>(p[1]) << 8) | p[2];
+}
+
+bool RawIs(int x, int y, u32 rgb) {
+    u32 p = Raw(x, y);
+    if (p != rgb) {
+        std::fprintf(stderr, "  EFB pixel (%d, %d) is %06X, expected %06X\n", x, y, p, rgb);
+    }
+    return p == rgb;
+}
+
+// Quads and lines with a colour per vertex, no texture, no blending.
+void SetupColored() {
+    Setup2D();
+    GXClearVtxDesc();
+    GXSetVtxDesc(GX_VA_POS, GX_DIRECT);
+    GXSetVtxDesc(GX_VA_CLR0, GX_DIRECT);
+    GXSetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_F32, 0);
+    GXSetVtxAttrFmt(GX_VTXFMT0, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0);
+    GXSetChanCtrl(GX_COLOR0A0, GX_FALSE, GX_SRC_REG, GX_SRC_VTX, GX_LIGHT_NULL, GX_DF_NONE, GX_AF_NONE);
+    GXSetNumTexGens(0);
+    GXSetTevOrder(GX_TEVSTAGE0, GX_TEXCOORD_NULL, GX_TEXMAP_NULL, GX_COLOR0A0);
+    GXSetTevColorIn(GX_TEVSTAGE0, GX_CC_ZERO, GX_CC_ZERO, GX_CC_ZERO, GX_CC_RASC);
+    GXSetTevAlphaIn(GX_TEVSTAGE0, GX_CA_ZERO, GX_CA_ZERO, GX_CA_ZERO, GX_CA_RASA);
+    GXSetBlendMode(GX_BM_NONE, GX_BL_ONE, GX_BL_ZERO, GX_LO_COPY);
+    GXSetAlphaCompare(GX_ALWAYS, 0, GX_AOP_AND, GX_ALWAYS, 0);
+}
+
+// A rectangle whose colour goes from `left` to `right` (r, g, b, a).
+void ColorRect(f32 x0, f32 y0, f32 x1, f32 y1, const u8* left, const u8* right) {
+    GXBegin(GX_QUADS, GX_VTXFMT0, 4);
+    GXPosition3f32(x0, y0, 0.0f), GXColor4u8(left[0], left[1], left[2], left[3]);
+    GXPosition3f32(x1, y0, 0.0f), GXColor4u8(right[0], right[1], right[2], right[3]);
+    GXPosition3f32(x1, y1, 0.0f), GXColor4u8(right[0], right[1], right[2], right[3]);
+    GXPosition3f32(x0, y1, 0.0f), GXColor4u8(left[0], left[1], left[2], left[3]);
+    GXEnd();
+}
+
+const u8 kBlack[4] = {0, 0, 0, 255};
+const u8 kWhite[4] = {255, 255, 255, 255};
+const u8 kRed[4] = {255, 0, 0, 255};
+const u8 kFlat[4] = {10, 20, 30, 255};
+
+// The picture the copy tests use: a flat square, a ramp beside it, and a
+// small white square whose edges are not on EFB pixel boundaries.
+void DrawCopyPicture() {
+    SetupColored();
+    ClearEfb(0, 0, 0);
+    SetupColored();
+    ColorRect(100.0f, 50.0f, 200.0f, 150.0f, kFlat, kFlat);
+    ColorRect(200.0f, 50.0f, 264.0f, 114.0f, kBlack, kRed);
+    ColorRect(180.4f, 60.4f, 190.4f, 70.4f, kWhite, kWhite);
+}
+
+enum { kCopyX = 168, kCopyY = 50, kCopyWidth = 96, kCopyHeight = 64 };
+
+// Everything that is said in EFB pixels, on an EFB of `scale` times the
+// console's size. `reference`: the texture copy of scale 1, filled at scale 1
+// and compared with at the others.
+void TestScaledEfb(int scale, u8* reference) {
+    const int n = scale;
+    SetEfb(false, n, 0);
+    PCGXEfbInfo info;
+    PCGXRenderGetEfbInfo(&info);
+    PC_CHECK(info.width == PC_GX_EFB_WIDTH * n && info.height == PC_GX_EFB_HEIGHT * n && info.samples == 0);
+    PC_CHECK(info.scaleX == static_cast<f32>(n) && info.scaleY == static_cast<f32>(n));
+    PC_CHECK(PCGXRenderEnhancedSampling() == (n != 1));
+    if (info.width != PC_GX_EFB_WIDTH * n) {
+        return;
+    }
+
+    // A known quad lands on the expected pixels: the viewport mapping.
+    GXInit(sFifoMemory, sizeof(sFifoMemory));
+    DrawCopyPicture();
+    PC_CHECK(PixelNear(150, 100, 10, 20, 30, 0) && PixelNear(100, 50, 10, 20, 30, 0) && PixelNear(199, 149, 10, 20, 30, 0));
+    PC_CHECK(PixelNear(99, 100, 0, 0, 0, 0) && PixelNear(150, 150, 0, 0, 0, 0));
+    PC_CHECK(RawIs(100 * n, 50 * n, 0x0A141E) && RawIs(100 * n - 1, 50 * n, 0) && RawIs(100 * n, 50 * n - 1, 0));
+    PC_CHECK(RawIs(200 * n - 1, 150 * n - 1, 0x0A141E) && RawIs(150 * n, 150 * n, 0));
+    // the small square: its edges fall where the centre rule puts them at
+    // this scale, not on the console's pixel boundaries
+    int edge = static_cast<int>(std::ceil(180.4f * n - 0.5f));
+    PC_CHECK(RawIs(edge, 65 * n, 0xFFFFFF) && RawIs(edge - 1, 65 * n, 0x0A141E));
+
+    // A viewport of the lower right quarter.
+    GXSetViewport(304.0f, 228.0f, 304.0f, 228.0f, 0.0f, 1.0f);
+    ColorRect(0.0f, 0.0f, 608.0f, 456.0f, kRed, kRed);
+    GXSetViewport(0.0f, 0.0f, 608.0f, 456.0f, 0.0f, 1.0f);
+    PC_CHECK(RawIs(304 * n, 228 * n, 0xFF0000) && RawIs(304 * n - 1, 228 * n, 0) && RawIs(304 * n, 228 * n - 1, 0));
+    PC_CHECK(RawIs(608 * n - 1, 456 * n - 1, 0xFF0000));
+
+    // Scissor.
+    GXSetScissor(0, 0, 120, 456);
+    ColorRect(100.0f, 200.0f, 200.0f, 220.0f, kWhite, kWhite);
+    GXSetScissor(0, 0, 608, 456);
+    PC_CHECK(RawIs(120 * n - 1, 210 * n, 0xFFFFFF) && RawIs(120 * n, 210 * n, 0));
+    // with a scissor box offset: the box and the picture move together
+    GXSetScissorBoxOffset(20, 10);
+    GXSetScissor(20, 10, 40, 20);
+    GXSetViewport(20.0f, 10.0f, 608.0f, 456.0f, 0.0f, 1.0f);
+    ColorRect(0.0f, 0.0f, 100.0f, 100.0f, kWhite, kWhite);
+    GXSetScissorBoxOffset(0, 0);
+    GXSetScissor(0, 0, 608, 456);
+    GXSetViewport(0.0f, 0.0f, 608.0f, 456.0f, 0.0f, 1.0f);
+    PC_CHECK(RawIs(0, 0, 0xFFFFFF) && RawIs(40 * n - 1, 20 * n - 1, 0xFFFFFF) && RawIs(40 * n, 10 * n, 0) &&
+             RawIs(10 * n, 20 * n, 0));
+
+    // Line width and point size are in sixths of an EFB pixel.
+    GXSetLineWidth(24, GX_TO_ZERO); // 4 EFB pixels
+    GXBegin(GX_LINES, GX_VTXFMT0, 2);
+    GXPosition3f32(220.0f, 320.0f, 0.0f), GXColor4u8(255, 255, 0, 255);
+    GXPosition3f32(280.0f, 320.0f, 0.0f), GXColor4u8(255, 255, 0, 255);
+    GXEnd();
+    PC_CHECK(RawIs(250 * n, 318 * n, 0xFFFF00) && RawIs(250 * n, 322 * n - 1, 0xFFFF00));
+    PC_CHECK(RawIs(250 * n, 318 * n - 1, 0) && RawIs(250 * n, 322 * n, 0));
+    GXSetPointSize(36, GX_TO_ZERO); // 6 EFB pixels
+    GXBegin(GX_POINTS, GX_VTXFMT0, 1);
+    GXPosition3f32(300.0f, 320.0f, 0.0f), GXColor4u8(0, 255, 255, 255);
+    GXEnd();
+    PC_CHECK(RawIs(297 * n, 317 * n, 0x00FFFF) && RawIs(303 * n - 1, 323 * n - 1, 0x00FFFF));
+    PC_CHECK(RawIs(297 * n - 1, 320 * n, 0) && RawIs(303 * n, 320 * n, 0));
+
+    // Depth is peeked under the centre of the EFB pixel.
+    GXSetZMode(GX_TRUE, GX_LEQUAL, GX_TRUE);
+    GXBegin(GX_QUADS, GX_VTXFMT0, 4);
+    GXPosition3f32(20.0f, 300.0f, -0.25f), GXColor4u8(0, 0, 255, 255);
+    GXPosition3f32(60.0f, 300.0f, -0.25f), GXColor4u8(0, 0, 255, 255);
+    GXPosition3f32(60.0f, 340.0f, -0.25f), GXColor4u8(0, 0, 255, 255);
+    GXPosition3f32(20.0f, 340.0f, -0.25f), GXColor4u8(0, 0, 255, 255);
+    GXEnd();
+    GXSetZMode(GX_FALSE, GX_LEQUAL, GX_FALSE);
+    u32 z = 0;
+    GXPeekZ(40, 320, &z);
+    PC_CHECK(z > 0x3F0000 && z < 0x410000);
+    GXPeekZ(59, 339, &z);
+    PC_CHECK(z > 0x3F0000 && z < 0x410000);
+    GXPeekZ(60, 340, &z);
+    PC_CHECK(z == 0xFFFFFF);
+
+    // Four translucent tiles that share edges between pixels: every pixel
+    // of the block is covered exactly once (no gap, no doubled seam).
+    GXSetBlendMode(GX_BM_BLEND, GX_BL_SRCALPHA, GX_BL_INVSRCALPHA, GX_LO_COPY);
+    const u8 half[4] = {255, 255, 255, 128};
+    const f32 tx[3] = {400.3f, 416.6f, 432.9f}, ty[3] = {160.7f, 176.2f, 191.7f};
+    for (int i = 0; i < 2; i++) {
+        for (int j = 0; j < 2; j++) {
+            ColorRect(tx[i], ty[j], tx[i + 1], ty[j + 1], half, half);
+        }
+    }
+    GXSetBlendMode(GX_BM_NONE, GX_BL_ONE, GX_BL_ZERO, GX_LO_COPY);
+    {
+        int x0 = static_cast<int>(std::ceil(tx[0] * n)) + 1, x1 = static_cast<int>(tx[2] * n) - 1;
+        int y0 = static_cast<int>(std::ceil(ty[0] * n)) + 1, y1 = static_cast<int>(ty[2] * n) - 1;
+        static u8 block[160 * 160 * 4];
+        bool even = PCGXRenderReadEfb(x0, y0, x1 - x0, y1 - y0, block);
+        for (int i = 0; even && i < (x1 - x0) * (y1 - y0); i++) {
+            even = block[i * 4] >= 127 && block[i * 4] <= 129;
+        }
+        PC_CHECK(even);
+    }
+
+    // GXCopyTex: the game's buffer gets the console's size whatever the
+    // scale, with the same picture (flat colour and a ramp, away from the
+    // edges, within rounding).
+    static u8 copy[kCopyWidth * kCopyHeight * 4];
+    static u8 decoded[kCopyWidth * kCopyHeight * 4];
+    DrawCopyPicture();
+    GXSetTexCopySrc(kCopyX, kCopyY, kCopyWidth, kCopyHeight);
+    GXSetTexCopyDst(kCopyWidth, kCopyHeight, GX_TF_RGBA8, GX_FALSE);
+    GXCopyTex(copy, GX_FALSE);
+    PC_CHECK(PCGXDecodeTexture(copy, GX_TF_RGBA8, kCopyWidth, kCopyHeight, nullptr, 0, 0, true, decoded));
+    if (n == 1) {
+        std::memcpy(reference, decoded, sizeof(decoded));
+        // pixel (173, 55) is the flat square; (232, 60) half way up the ramp
+        PC_CHECK(decoded[(5 * kCopyWidth + 5) * 4] == 10 && decoded[(5 * kCopyWidth + 5) * 4 + 2] == 30);
+        int ramp = decoded[(10 * kCopyWidth + 64) * 4];
+        PC_CHECK(ramp >= 127 && ramp <= 131);
+    } else {
+        bool same = true;
+        for (int y = 2; y < kCopyHeight - 2 && same; y++) {
+            for (int x = 2; x < kCopyWidth - 2 && same; x++) {
+                bool flat = x < 8 && (y < 8 || y > 24);
+                bool ramp = x >= 36 && x < kCopyWidth - 4;
+                if (!flat && !ramp) {
+                    continue;
+                }
+                for (int c = 0; c < 4; c++) {
+                    int d = decoded[(y * kCopyWidth + x) * 4 + c] - reference[(y * kCopyWidth + x) * 4 + c];
+                    same = same && d >= -2 && d <= 2;
+                }
+            }
+        }
+        PC_CHECK(same);
+    }
+
+    // Drawn back as a texture the copy is the picture at the EFB's own
+    // resolution: the small square's edges are where they were, between the
+    // console's pixels.
+    Setup2D();
+    GXSetBlendMode(GX_BM_NONE, GX_BL_ONE, GX_BL_ZERO, GX_LO_COPY);
+    GXSetAlphaCompare(GX_ALWAYS, 0, GX_AOP_AND, GX_ALWAYS, 0);
+    GXSetTevColorIn(GX_TEVSTAGE0, GX_CC_ZERO, GX_CC_ZERO, GX_CC_ZERO, GX_CC_TEXC);
+    GXSetTevAlphaIn(GX_TEVSTAGE0, GX_CA_ZERO, GX_CA_ZERO, GX_CA_ZERO, GX_CA_TEXA);
+    GXTexObj tex;
+    GXInitTexObj(&tex, copy, kCopyWidth, kCopyHeight, GX_TF_RGBA8, GX_CLAMP, GX_CLAMP, GX_FALSE);
+    GXLoadTexObj(&tex, GX_TEXMAP0);
+    const int dstX = 300, dstY = 300;
+    Quad(dstX, dstY, dstX + kCopyWidth, dstY + kCopyHeight);
+    {
+        static u8 from[kCopyWidth * 3 * kCopyHeight * 3 * 4], to[kCopyWidth * 3 * kCopyHeight * 3 * 4];
+        int w = kCopyWidth * n, h = kCopyHeight * n;
+        bool same = PCGXRenderReadEfb(kCopyX * n, kCopyY * n, w, h, from) && PCGXRenderReadEfb(dstX * n, dstY * n, w, h, to);
+        int worst = 0;
+        for (int i = 0; same && i < w * h * 4; i++) {
+            int d = std::abs(from[i] - to[i]);
+            worst = d > worst ? d : worst;
+        }
+        PC_CHECK(same && worst <= 1);
+        PC_CHECK(RawIs(dstX * n + (edge - kCopyX * n), dstY * n + 15 * n, 0xFFFFFF) &&
+                 RawIs(dstX * n + (edge - kCopyX * n) - 1, dstY * n + 15 * n, 0x0A141E));
+    }
+    // When the game writes into its buffer, the buffer is the texture.
+    {
+        static u8 green[kCopyWidth * kCopyHeight * 4];
+        for (int i = 0; i < kCopyWidth * kCopyHeight; i++) {
+            green[i * 4 + 0] = 0, green[i * 4 + 1] = 200, green[i * 4 + 2] = 0, green[i * 4 + 3] = 255;
+        }
+        PC_CHECK(PCGXEncodeTexture(green, GX_TF_RGBA8, kCopyWidth, kCopyHeight, copy));
+        GXInvalidateTexAll();
+        Quad(dstX, dstY, dstX + kCopyWidth, dstY + kCopyHeight);
+        PC_CHECK(RawIs(dstX * n + (edge - kCopyX * n), dstY * n + 15 * n, 0x00C800));
+    }
+    // An RGB565 copy has no alpha: it reads as 1, also from the kept copy.
+    static u8 copy565[kCopyWidth * kCopyHeight * 2];
+    DrawCopyPicture();
+    GXSetTexCopySrc(kCopyX, kCopyY, kCopyWidth, kCopyHeight);
+    GXSetTexCopyDst(kCopyWidth, kCopyHeight, GX_TF_RGB565, GX_FALSE);
+    GXCopyTex(copy565, GX_TRUE); // and clear: only the copy source
+    PC_CHECK(RawIs(kCopyX * n, kCopyY * n, 0) && RawIs(kCopyX * n - 1, kCopyY * n, 0x0A141E) &&
+             RawIs((kCopyX + kCopyWidth) * n - 1, (kCopyY + kCopyHeight) * n - 1, 0) &&
+             RawIs(kCopyX * n, (kCopyY + kCopyHeight) * n, 0x0A141E));
+    Setup2D();
+    GXSetBlendMode(GX_BM_BLEND, GX_BL_SRCALPHA, GX_BL_INVSRCALPHA, GX_LO_COPY);
+    GXSetTevColorIn(GX_TEVSTAGE0, GX_CC_ZERO, GX_CC_ZERO, GX_CC_ZERO, GX_CC_TEXC);
+    GXSetTevAlphaIn(GX_TEVSTAGE0, GX_CA_ZERO, GX_CA_ZERO, GX_CA_ZERO, GX_CA_TEXA);
+    GXInitTexObj(&tex, copy565, kCopyWidth, kCopyHeight, GX_TF_RGB565, GX_CLAMP, GX_CLAMP, GX_FALSE);
+    GXLoadTexObj(&tex, GX_TEXMAP0);
+    Quad(dstX, dstY, dstX + kCopyWidth, dstY + kCopyHeight);
+    GXSetBlendMode(GX_BM_NONE, GX_BL_ONE, GX_BL_ZERO, GX_LO_COPY);
+    // (the kept copy has the EFB's 8 bits per channel; the buffer's texels have 5, 6 and 5)
+    PC_CHECK(RawIs(dstX * n + (edge - kCopyX * n), dstY * n + 15 * n, 0xFFFFFF) &&
+             RawIs(dstX * n + 2, dstY * n + 2, n == 1 ? 0x081418 : 0x0A141E));
+
+    // GXCopyDisp: the XFB's picture has the EFB's resolution.
+    static u8 xfb[16];
+    GXSetDispCopySrc(0, 0, 608, 456);
+    GXCopyDisp(xfb, GX_FALSE);
+    char path[512];
+    const char* tmp = std::getenv("TMPDIR");
+    std::snprintf(path, sizeof(path), "%s/newschannel_selftest_gl_%d.png", tmp != nullptr ? tmp : "/tmp", n);
+    PC_CHECK(PCGXSaveScreenshot(path, xfb));
+    std::FILE* file = std::fopen(path, "rb");
+    PC_CHECK(file != nullptr);
+    if (file != nullptr) {
+        u8 head[24];
+        PC_CHECK(std::fread(head, 1, sizeof(head), file) == sizeof(head));
+        PC_CHECK(((head[16] << 24) | (head[17] << 16) | (head[18] << 8) | head[19]) == 608 * n);
+        PC_CHECK(((head[20] << 24) | (head[21] << 16) | (head[22] << 8) | head[23]) == 456 * n);
+        std::fclose(file);
+        std::remove(path);
+    }
+    PC_CHECK(glGetError() == GL_NO_ERROR);
+    PC_CHECK(PCGXGetStats()->badCommands == 0);
+}
+
+// The pixels of a region of the EFB after drawing shapes with edges between
+// pixels, with or without multisampling.
+struct EdgeCounts {
+    int rectPartial;     // pixels of the upright rectangle that are neither background nor its colour
+    int trianglePartial; // the same for the slanted edge of a triangle
+    u32 rectSum, textSum; // sums over the rectangle's and the textured quad's surroundings
+};
+
+EdgeCounts DrawEdges(int n) {
+    EdgeCounts counts = {0, 0, 0, 0};
+    GXInit(sFifoMemory, sizeof(sFifoMemory));
+    SetupColored();
+    ClearEfb(0, 0, 0);
+    SetupColored();
+    // an upright rectangle with every edge inside a pixel
+    ColorRect(100.3f, 50.4f, 140.6f, 90.7f, kWhite, kWhite);
+    // a triangle with one slanted edge
+    GXBegin(GX_TRIANGLES, GX_VTXFMT0, 3);
+    GXPosition3f32(200.0f, 50.0f, 0.0f), GXColor4u8(255, 255, 255, 255);
+    GXPosition3f32(260.0f, 50.0f, 0.0f), GXColor4u8(255, 255, 255, 255);
+    GXPosition3f32(200.0f, 87.0f, 0.0f), GXColor4u8(255, 255, 255, 255);
+    GXEnd();
+    // a textured quad between pixels, as a glyph is
+    static u8 rgba[8 * 8 * 4], texels[8 * 8 * 4];
+    for (u32 i = 0; i < 64; i++) {
+        u8 v = static_cast<u8>(((i % 8) + (i / 8)) % 2 ? 255 : 40);
+        rgba[i * 4 + 0] = rgba[i * 4 + 1] = rgba[i * 4 + 2] = v;
+        rgba[i * 4 + 3] = 255;
+    }
+    PC_CHECK(PCGXEncodeTexture(rgba, GX_TF_RGBA8, 8, 8, texels));
+    Setup2D();
+    GXSetBlendMode(GX_BM_NONE, GX_BL_ONE, GX_BL_ZERO, GX_LO_COPY);
+    GXSetAlphaCompare(GX_ALWAYS, 0, GX_AOP_AND, GX_ALWAYS, 0);
+    GXSetTevColorIn(GX_TEVSTAGE0, GX_CC_ZERO, GX_CC_ZERO, GX_CC_ZERO, GX_CC_TEXC);
+    GXSetTevAlphaIn(GX_TEVSTAGE0, GX_CA_ZERO, GX_CA_ZERO, GX_CA_ZERO, GX_CA_TEXA);
+    GXTexObj tex;
+    GXInitTexObj(&tex, texels, 8, 8, GX_TF_RGBA8, GX_REPEAT, GX_REPEAT, GX_FALSE);
+    GXLoadTexObj(&tex, GX_TEXMAP0);
+    Quad(300.3f, 50.6f, 316.3f, 66.6f);
+
+    static u8 region[70 * 3 * 50 * 3 * 4];
+    int w = 70 * n, h = 50 * n;
+    if (PCGXRenderReadEfb(95 * n, 45 * n, w, h, region)) {
+        for (int i = 0; i < w * h; i++) {
+            counts.rectPartial += region[i * 4] != 0 && region[i * 4] != 255;
+            counts.rectSum += region[i * 4];
+        }
+    }
+    if (PCGXRenderReadEfb(195 * n, 45 * n, w, h, region)) {
+        for (int i = 0; i < w * h; i++) {
+            counts.trianglePartial += region[i * 4] != 0 && region[i * 4] != 255;
+        }
+    }
+    if (PCGXRenderReadEfb(295 * n, 45 * n, 30 * n, 30 * n, region)) {
+        for (int i = 0; i < 30 * n * 30 * n; i++) {
+            counts.textSum += region[i * 4];
+        }
+    }
+    return counts;
+}
+
+void TestEnhancedEfb() {
+    PCConfig* config = PCGetConfig();
+    const PCConfig saved = *config;
+    config->aspectRatio = 0; // 4:3: a fixed scale is the same in both directions
+    PCGXSetOutputSize(0, 0);
+
+    // 1. A scaled EFB at 1x, 2x and 3x.
+    static u8 reference[kCopyWidth * kCopyHeight * 4];
+    for (int scale = 1; scale <= 3; scale++) {
+        TestScaledEfb(scale, reference);
+    }
+
+    // 2. With the 16:9 setting a fixed scale is 4/3 as wide.
+    config->aspectRatio = 1;
+    SetEfb(false, 3, 0);
+    PCGXEfbInfo info;
+    PCGXRenderGetEfbInfo(&info);
+    PC_CHECK(info.width == 2560 && info.height == 1584 && info.scaleX == 4.0f && info.scaleY == 3.0f);
+    SetupColored();
+    ClearEfb(0, 0, 0);
+    SetupColored();
+    ColorRect(100.0f, 50.0f, 200.0f, 150.0f, kFlat, kFlat);
+    PC_CHECK(RawIs(400, 150, 0x0A141E) && RawIs(399, 150, 0) && RawIs(799, 449, 0x0A141E) && RawIs(800, 449, 0));
+    config->aspectRatio = 0;
+
+    // 3. render_scale = auto: the display copy source gets the picture's
+    // pixels, and the EFB follows the window after a display copy, keeping
+    // its contents.
+    static u8 xfb[16];
+    GXSetDispCopySrc(0, 0, 640, 456);
+    PCGXSetOutputSize(1280, 912);
+    config->renderScale = 0;
+    PCGXRenderApplySettings();
+    PCGXRenderGetEfbInfo(&info);
+    PC_CHECK(info.width == 1280 && info.height == 1056 && info.scaleX == 2.0f && info.scaleY == 2.0f);
+    SetupColored();
+    ClearEfb(0, 0, 0);
+    SetupColored();
+    ColorRect(100.0f, 50.0f, 200.0f, 150.0f, kFlat, kFlat);
+    PCGXSetOutputSize(1920, 1080); // 3 x 2.368
+    PCGXRenderGetEfbInfo(&info);
+    PC_CHECK(info.width == 1280); // not in the middle of a frame
+    GXCopyDisp(xfb, GX_FALSE);
+    PCGXRenderGetEfbInfo(&info);
+    PC_CHECK(info.width == 1920 && info.height == 1251 && info.scaleX == 3.0f);
+    PC_CHECK(PixelNear(150, 100, 10, 20, 30, 1) && PixelNear(110, 60, 10, 20, 30, 1) && PixelNear(90, 100, 0, 0, 0, 1) &&
+             PixelNear(150, 160, 0, 0, 0, 1));
+    // a non-integer scale: rectangles in EFB pixels are rounded to the nearest pixel
+    GXSetScissor(0, 200, 120, 100);
+    ColorRect(0.0f, 0.0f, 608.0f, 456.0f, kRed, kRed);
+    GXSetScissor(0, 0, 608, 456);
+    // 120 x 3 = 360; 200 x 2.368 = 473.7; 300 x 2.368 = 710.5
+    PC_CHECK(RawIs(359, 474, 0xFF0000) && RawIs(359, 473, 0) && RawIs(359, 710, 0xFF0000) && RawIs(359, 711, 0) &&
+             RawIs(360, 600, 0));
+    // a window smaller than the console's picture: never below 1 x
+    PCGXSetOutputSize(320, 228);
+    GXCopyDisp(xfb, GX_FALSE);
+    PCGXRenderGetEfbInfo(&info);
+    PC_CHECK(info.width == PC_GX_EFB_WIDTH && info.height == PC_GX_EFB_HEIGHT && !PCGXRenderEnhancedSampling());
+    PCGXSetOutputSize(0, 0);
+
+    // 4. Multisampling, at the console's size and at twice that.
+    for (int scale = 1; scale <= 2; scale++) {
+        SetEfb(false, scale, 0);
+        EdgeCounts plain = DrawEdges(scale);
+        SetEfb(false, scale, 4);
+        PCGXRenderGetEfbInfo(&info);
+        if (info.samples < 2) {
+            std::printf("self-test (OpenGL): no multisampled framebuffers here; msaa not tested\n");
+            break;
+        }
+        PC_CHECK(info.width == PC_GX_EFB_WIDTH * scale && PCGXRenderEnhancedSampling());
+        EdgeCounts multi = DrawEdges(scale);
+        // the slanted edge is smoothed; without multisampling no pixel is partly covered
+        PC_CHECK(plain.trianglePartial == 0 && multi.trianglePartial > 20 * scale);
+        // an upright rectangle and a textured quad are exactly what they are without
+        PC_CHECK(plain.rectPartial == 0 && multi.rectPartial == 0 && multi.rectSum == plain.rectSum);
+        PC_CHECK(multi.textSum == plain.textSum || scale == 1);
+        // (at 1x the shaders differ: texture() or textureGrad(); allow the last bit)
+        PC_CHECK(std::abs(static_cast<int>(multi.textSum) - static_cast<int>(plain.textSum)) <= 30 * 30);
+
+        // peeks, copies and destination alpha go through the resolved EFB
+        SetupColored();
+        ColorRect(100.0f, 100.0f, 200.0f, 150.0f, kFlat, kFlat);
+        PC_CHECK(PixelNear(150, 120, 10, 20, 30, 0));
+        static u8 copy[64 * 32 * 4], decoded[64 * 32 * 4];
+        GXSetTexCopySrc(120, 110, 64, 32);
+        GXSetTexCopyDst(64, 32, GX_TF_RGBA8, GX_FALSE);
+        GXCopyTex(copy, GX_FALSE);
+        PC_CHECK(PCGXDecodeTexture(copy, GX_TF_RGBA8, 64, 32, nullptr, 0, 0, true, decoded));
+        PC_CHECK(decoded[0] == 10 && decoded[1] == 20 && decoded[2] == 30 && decoded[(31 * 64 + 63) * 4 + 1] == 20);
+        GXSetPixelFmt(GX_PF_RGBA6_Z24, GX_ZC_LINEAR);
+        GXSetAlphaUpdate(GX_TRUE);
+        GXSetDstAlpha(GX_TRUE, 0x40);
+        GXSetBlendMode(GX_BM_BLEND, GX_BL_SRCALPHA, GX_BL_INVSRCALPHA, GX_LO_COPY);
+        const u8 nine[4] = {9, 8, 7, 255};
+        ColorRect(560.0f, 300.0f, 600.0f, 340.0f, nine, nine);
+        u32 argb = 0;
+        GXPeekARGB(580, 320, &argb);
+        PC_CHECK(argb == 0x40090807);
+        // a copy with clear resets alpha through the mask as without multisampling
+        GXSetTexCopySrc(560, 300, 40, 40);
+        GXSetTexCopyDst(40, 40, GX_TF_RGBA8, GX_FALSE);
+        GXColor clear = {1, 2, 3, 0x80};
+        GXSetCopyClear(clear, 0xFFFFFF);
+        GXCopyTex(copy, GX_TRUE);
+        PC_CHECK(PCGXDecodeTexture(copy, GX_TF_RGBA8, 40, 40, nullptr, 0, 0, true, decoded));
+        PC_CHECK(decoded[0] == 9 && decoded[3] == 0x40);
+        GXPeekARGB(580, 320, &argb);
+        PC_CHECK(argb == 0x80010203);
+        GXSetDstAlpha(GX_FALSE, 0);
+        GXSetPixelFmt(GX_PF_RGB8_Z24, GX_ZC_LINEAR);
+        GXSetAlphaUpdate(GX_FALSE);
+        GXSetBlendMode(GX_BM_NONE, GX_BL_ONE, GX_BL_ZERO, GX_LO_COPY);
+        u32 z = 0;
+        GXPeekZ(580, 320, &z);
+        PC_CHECK(z == 0xFFFFFF);
+        GXCopyDisp(xfb, GX_TRUE);
+        PC_CHECK(glGetError() == GL_NO_ERROR);
+    }
+
+    // 5. msaa without hires: the console's 640 x 528, multisampled.
+    PCSetPurist(false);
+    PCEnhancementSet("hires", false);
+    PCEnhancementSet("msaa", true);
+    config->msaaSamples = 4;
+    config->renderScale = 3; // has no effect: its enhancement is off
+    PCGXRenderApplySettings();
+    PCGXRenderGetEfbInfo(&info);
+    PC_CHECK(info.width == PC_GX_EFB_WIDTH && info.height == PC_GX_EFB_HEIGHT && info.scaleX == 1.0f);
+    // ... and hires without msaa
+    PCEnhancementSet("hires", true);
+    PCEnhancementSet("msaa", false);
+    PCGXRenderApplySettings();
+    PCGXRenderGetEfbInfo(&info);
+    PC_CHECK(info.width == PC_GX_EFB_WIDTH * 3 && info.samples == 0);
+
+    // 6. Purist mode: whatever is set, the console's EFB and shaders.
+    PCEnhancementSet("hires", true);
+    PCEnhancementSet("msaa", true);
+    config->renderScale = 3;
+    config->msaaSamples = 8;
+    PCGXSetOutputSize(1920, 1080);
+    PCSetPurist(true);
+    PCGXRenderApplySettings();
+    PCGXRenderGetEfbInfo(&info);
+    PC_CHECK(info.width == PC_GX_EFB_WIDTH && info.height == PC_GX_EFB_HEIGHT && info.scaleX == 1.0f && info.scaleY == 1.0f &&
+             info.samples == 0 && !PCGXRenderEnhancedSampling());
+    PCGXShaderKey key;
+    PCGXBuildShaderKey(&key);
+    PC_CHECK(key.enhancedSampling == 0);
+    static char source[65536];
+    PC_CHECK(PCGXGenerateFragmentShader(&key, source, sizeof(source)) && std::strstr(source, "uTexClamp") == nullptr &&
+             std::strstr(source, "uTexSize") == nullptr);
+    EdgeCounts purist = DrawEdges(1);
+    PC_CHECK(purist.trianglePartial == 0 && purist.rectPartial == 0);
+    GXCopyDisp(xfb, GX_TRUE);
+    PCGXRenderGetEfbInfo(&info);
+    PC_CHECK(info.width == PC_GX_EFB_WIDTH && info.samples == 0);
+    PC_CHECK(glGetError() == GL_NO_ERROR);
+
+    PCGXSetOutputSize(0, 0);
+    *config = saved;
+}
+
 } // namespace
 
 void PCSelfTestGX() {
@@ -1120,13 +1641,24 @@ bool PCSelfTestGXWithContext() {
     // A hidden window with an OpenGL context, as --no-window --screenshot uses.
     PCGetConfig()->noWindow = true;
     PCGXRequireContext();
+    // The first part is the console's EFB, which is what purist mode gives;
+    // the enhancements that change it are tested after it.
+    const bool wasPurist = PCIsPurist();
+    const bool wasHires = PCEnhancementIsSet(PC_ENH_HIRES), wasMsaa = PCEnhancementIsSet(PC_ENH_MSAA);
+    PCSetPurist(true);
     VIInit();
     if (PCVIGetGLContext() == nullptr || !PCGXRenderAvailable()) {
         std::printf("self-test (OpenGL): no OpenGL 3.3 context here; skipped\n");
+        PCSetPurist(wasPurist);
         return true;
     }
     int before = PCSelfTestFailures();
     TestWithContext();
+    TestEnhancedEfb();
+    PCEnhancementSet("hires", wasHires);
+    PCEnhancementSet("msaa", wasMsaa);
+    PCSetPurist(wasPurist);
+    PCGXRenderApplySettings();
     sGLFailures = PCSelfTestFailures() - before;
     const PCGXStats* stats = PCGXGetStats();
     std::printf("self-test (OpenGL): %u TEV programs, %u textures decoded, %u primitives\n", stats->programs,
