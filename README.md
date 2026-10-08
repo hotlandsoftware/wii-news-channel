@@ -100,6 +100,8 @@ PC enhancements are being added on top of this. `--purist` switches every one of
 
 News is downloaded automatically, as on the console. Nintendo's server is gone, so the game's request is sent to a mirror: by default [WiiLink](https://www.wiilink24.com/)'s, which hosts the same files at `http://news.wiilink.ca/v2/1/049/news.bin.00` to `.23` (language 1 = English, country 049 = USA, one file per hour). `--url URL` selects another mirror, `--news-dir DIR` reads the files from disk instead, and `--offline` rules the network out.
 
+The picture is 16:9 by default (the console's widescreen setting and the game's own wide layouts); `--4:3` gives the other.
+
 Build and run (on the `pc-port` branch; needs `gcc` with 32-bit support, `cmake`, `ninja`, and the 32-bit SDL3, OpenGL and libcurl libraries):
 
 ```sh
