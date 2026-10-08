@@ -2576,15 +2576,29 @@ f32 Article_GetScrollOffset() {
     return -y;
 }
 
-s32 Article_GetLineAt(const f32& offset) {
+// Height of the gap between the headline and the body, where the source logo is drawn.
+static inline f32 GetLogoSpace() {
+    f32 h = GetLogoHeight();
+    return h * gTextScale;
+}
+
+// Scroll offsets are negative; text positions are positive.
+// The local matters: a value held in a local of an inline gets its callee-saved register
+// before the caller's own locals (y is f31 in Article_GetLineAt).
+static inline f32 OffsetToY(const f32& offset) {
     f32 y = -offset;
+    return y;
+}
+
+s32 Article_GetLineAt(const f32& offset) {
+    f32 y = OffsetToY(offset);
     f32 headlineY = lbl_80357568->mHeight;
-    f32 logoHeight = GetLogoHeight();
+    f32 logoSpace = GetLogoSpace();
     ArticleText* headline = lbl_80357568;
     ArticleText* body = sBodyView;
     ArticleText* credit = sCreditView;
     f32 bodyStart = headline->GetHeight();
-    bodyStart += logoHeight * gTextScale;
+    bodyStart += logoSpace;
     f32 bodyY = body->GetHeight();
     f32 creditStart = body->GetHeight() + body->GetLineHeight();
     f32 creditY = credit->mHeight;
