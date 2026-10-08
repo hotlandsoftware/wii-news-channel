@@ -615,9 +615,12 @@ s32 CheckNewsFiles(NewsHeader** files, u32* sizes, s32* current, u32* mask) {
     }
     *current = newest;
 
-    NewsHeader* header = headers[newest];
-    NewsTopicRec* topic = (NewsTopicRec*)((u8*)files[newest] + header->topicsOfs);
-    for (s32 t = 0; t < header->numTopics; topic++, t++) {
+    // A pointer to the array element: the header and the address of headers[] then get the
+    // original's r4 and r5 (a plain NewsHeader* local is given a register after the loop's
+    // temporaries).
+    NewsHeader** header = &headers[newest];
+    NewsTopicRec* topic = (NewsTopicRec*)((u8*)files[newest] + headers[newest]->topicsOfs);
+    for (s32 t = 0; t < (*header)->numTopics; topic++, t++) {
         if (topic->entriesOfs & 3) {
             result = -1;
             break;
@@ -627,7 +630,7 @@ s32 CheckNewsFiles(NewsHeader** files, u32* sizes, s32* current, u32* mask) {
             result = -1;
             break;
         }
-        if (topic->nameOfs >= header->fileSize) {
+        if (topic->nameOfs >= (*header)->fileSize) {
             result = -1;
             break;
         }
@@ -635,7 +638,7 @@ s32 CheckNewsFiles(NewsHeader** files, u32* sizes, s32* current, u32* mask) {
             result = -1;
             break;
         }
-        if (topic->entriesOfs + topic->numEntries * sizeof(NewsEntryRec) > header->fileSize) {
+        if (topic->entriesOfs + topic->numEntries * sizeof(NewsEntryRec) > (*header)->fileSize) {
             result = -1;
         }
         for (u32 e = 0; e < topic->numEntries; e++) {

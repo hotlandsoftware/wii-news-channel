@@ -9,17 +9,8 @@ extern MEMAllocator gNewsAllocator; // general allocator
 extern MEMAllocator gPictureAllocator; // picture allocator
 extern s32 gBlinkPhase;
 
-// operator new(size_t, MEMAllocator*) (System.cpp) is called through an inline wrapper:
-// calling the operator directly changes the register allocation of NewsData::GetPicture.
-// operator new[](size_t, MEMAllocator*) is called directly.
-extern "C" {
-void* __nw__FUlP12MEMAllocator(size_t size, MEMAllocator* allocator);
-}
-
-inline void* operator new(size_t size, MEMAllocator* allocator) {
-    return __nw__FUlP12MEMAllocator(size, allocator);
-}
-
+// Defined in System.cpp.
+void* operator new(size_t size, MEMAllocator* allocator);
 void* operator new[](size_t size, MEMAllocator* allocator);
 
 static const u32 sIconLocal[4][2] = {
@@ -184,6 +175,9 @@ s32 NewsData::Init(NewsHeader** files, s32 current) {
     NewsSourceRec* source;
     s32 idx;
     u32 count;
+    s32 catIdx;
+    NewsArticle** art;
+    Category* cat;
     BOOL isCurrent;
     NewsArticle** same;
     NewsArticle* article;
@@ -315,11 +309,11 @@ s32 NewsData::Init(NewsHeader** files, s32 current) {
 
     // Link articles that appear in several topics.
     {
-        Category* cat = mCategories;
-        for (s32 i = 0; i < mNumCategories; i++, cat++) {
-            NewsArticle** art = cat->mArticles;
+        cat = mCategories;
+        for (catIdx = 0; catIdx < mNumCategories; catIdx++, cat++) {
+            art = cat->mArticles;
             for (j = 0; j < cat->mNumArticles; j++, art++) {
-                same = FindArticle((*art)->mText, i, j + 1);
+                same = FindArticle((*art)->mText, catIdx, j + 1);
                 if (same != NULL) {
                     (*art)->mNextSame = *same;
                     (*same)->mPrevSame = *art;
@@ -353,11 +347,11 @@ s32 NewsData::Init(NewsHeader** files, s32 current) {
         for (i = 0; i < mNumCategories; i++, cat++) {
             NewsArticle** art = cat->mArticles;
             for (j = 0; j < cat->mRec->numEntries; j++, art++) {
-                article = *art;
-                if (article->mPictureError) {
+                if ((*art)->mPictureError) {
                     NewsArticle** other = art + 1;
                     for (u32 k = j + 1; k < cat->mRec->numEntries; k++, other++) {
                         if (!(*other)->mPictureError) {
+                            article = *art;
                             *art = *other;
                             *other = article;
                             break;
@@ -410,6 +404,7 @@ NewsArticle** NewsData::FindArticle(NewsTextBuffer* text, u32 topicIdx, u32 star
 NewsPicture* NewsData::GetPicture(NewsTextBuffer* text) {
     u32 fileId = text->pictureFileId;
     u32 idx = text->pictureIdx;
+    NewsPicture* pic;
     if (fileId == 0 || idx == 0xFFFFFFFF) {
         return NULL;
     }
@@ -431,8 +426,8 @@ NewsPicture* NewsData::GetPicture(NewsTextBuffer* text) {
             }
             if (file->picturesOfs != 0 && idx < file->numPictures) {
                 NewsPictureRec* rec = (NewsPictureRec*)file->At(file->picturesOfs) + idx;
-                void* data = file->At(rec->dataOfs);
-                NewsPicture* pic = new (&gPictureAllocator) NewsPicture;
+                void* data = (u8*)file + rec->dataOfs;
+                pic = new (&gPictureAllocator) NewsPicture;
                 if (pic != NULL) {
                     pic->texture = decoder.Decode(data, rec->size, &gPictureAllocator);
                     if (pic->texture != NULL) {
