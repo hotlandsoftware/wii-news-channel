@@ -1807,6 +1807,15 @@ void FillXfbRect(u8* xfb, u16 width, u32 size, s32 x, s32 y, s32 w, s32 h, u8 y8
 }
 #pragma pop
 
+// Colour (luma) of bar i of the loading indicator; the current bar is darker.
+static inline u8 GetBarColor(s32 i, s32 current) {
+    u8 c = 160;
+    if (i == current) {
+        c = 100;
+    }
+    return c;
+}
+
 void PostRetraceCallback(u32 retraceCount) {
     if (++sLoadCounter >= 64) {
         sLoadCounter = 0;
@@ -1824,11 +1833,9 @@ void PostRetraceCallback(u32 retraceCount) {
     s32 gap = (width * 6) / GetScreenWidth();
     s32 x = (width - (w * 8 + gap * 7)) / 2;
     s32 y = (height - h) / 2;
+    s32 current = counter / 8;
     for (s32 i = 0; i < 8; i++) {
-        u8 c = 160;
-        if (i == counter / 8) {
-            c = 100;
-        }
+        u8 c = GetBarColor(i, current);
         FillXfbRect(xfb, width, size, x, y - 1, w, 1, 180);
         FillXfbRect(xfb, width, size, x, y + h, w, 1, 180);
         FillXfbRect(xfb, width, size, x - 1, y, 1, h, 180);
