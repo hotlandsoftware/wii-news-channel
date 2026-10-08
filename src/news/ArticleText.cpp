@@ -434,6 +434,14 @@ bool ArticleText::Set(const wchar_t* text, NewsPicture* picture, const math::VEC
     return true;
 }
 
+// A texture's size along one axis. Draw() reads the picture's width and height
+// through a helper with a constant flag: the branch is folded after the two
+// statements were optimised separately, so `zoom - 1.0f` is evaluated inside
+// each expression (and merged later) instead of ahead of both.
+static inline u16 GetSize(const NewsTexture* tex, bool vertical) {
+    return vertical ? tex->height : tex->width;
+}
+
 #define DRAW_CHAR(c, yOfs)                                                                         \
     {                                                                                              \
         f32 sy = c->mScale * mScale;                                                               \
@@ -521,10 +529,9 @@ void ArticleText::Draw(const math::VEC2* pos, bool clip, f32 alpha, f32 zoom) {
     }
 
     if (mPicture != NULL) {
-        f32 grow = zoom - 1.0f;
         math::VEC3 picPos;
-        picPos.x = pos->x + mPicPos.x - 0.5f * (grow * mPicScale * mPicture->width);
-        picPos.y = pos->y + mPicPos.y - 0.5f * (grow * mPicScale * mPicture->height);
+        picPos.x = pos->x + mPicPos.x - 0.5f * ((zoom - 1.0f) * mPicScale * GetSize(mPicture, false));
+        picPos.y = pos->y + mPicPos.y - 0.5f * ((zoom - 1.0f) * mPicScale * GetSize(mPicture, true));
         picPos.z = 0.0f;
         f32 picScale = zoom * mPicScale;
         SetupTexGX();
