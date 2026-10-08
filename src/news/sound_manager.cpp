@@ -43,15 +43,14 @@ public:
     virtual void UpdateBuffer(int channels, void** ppBuffer, u32 size, snd::SampleFormat format,
                               f32 sampleRate, snd::OutputMode mode);
 
-    void Store(s32 (*history)[FX_HISTORY_SIZE], s32** buffers);
-    void StoreCh(s32* history, const s32* buffer);
     void EchoFilter(s32** buffers);
-    void FilterA(s32* out, const s32* in);
     void Chorus(s32** buffers);
     void PitchDown(s32** buffers);
     void Radio(s32** buffers);
     void PitchUp(s32** buffers);
 
+    // Sample `pos` of the frame that lies `frame` frames after the current one
+    // (both may be negative or out of range).
     s32* GetSample(s32* history, s32 frame, s32 pos) {
         frame += pos / FX_FRAME_SAMPLES;
         pos %= FX_FRAME_SAMPLES;
@@ -561,6 +560,8 @@ static inline f32 CosIdx(u16 idx) {
     return math::CosFIdx(0.00390625f * U16ToF32(&idx));
 }
 
+// Coefficients of a band-pass FIR filter with 2 * taps + 1 taps, symmetric
+// around the centre tap.
 static inline void MakeBandPass(s32* coef, s32 taps, s32 lo, s32 hi) {
     s32* f = coef;
     s32* c = f + taps;
@@ -605,6 +606,9 @@ FxVoice::FxVoice() {
     MakeWindow(mWindowB, FX_WINDOW_SIZE, 0);
 }
 
+// Loops over sample buffers. They have to be inline helpers: the loop
+// variables of an inlined helper are numbered ahead of the pointers MWCC
+// creates for the loop, those of a loop written in place come after them.
 static inline void Clear(s32* buf, s32 n) {
     for (s32 i = 0; i < n; i++) {
         buf[i] = 0;
@@ -627,11 +631,13 @@ static inline void Mix(s32* dst, const s32* src, s32 n) {
     }
 }
 
-
+// Not ut::Min: that one tests a > b, the original tests count <= rest.
 static inline s32 Min(s32 a, s32 b) {
     return a <= b ? a : b;
 }
 
+// Copies `count` samples starting at (frame, pos) out of a history buffer,
+// one frame at a time.
 inline void FxVoice::Read(s32 count, s32* dst, s32 frame, s32* history, s32 pos) {
     s32 f = frame + pos / FX_FRAME_SAMPLES;
     pos %= FX_FRAME_SAMPLES;
@@ -722,7 +728,11 @@ void FxVoice::UpdateBuffer(int channels, void** ppBuffer, u32 size, snd::SampleF
 }
 
 void FxVoice::PitchDown(s32** buffers) {
-    s32 back; s32 h; 
+    // Declared up here: the original gives these two the registers above the
+    // loop counters.
+    s32 back;
+    s32 h;
+
     for (s32 ch = 0; ch < 2; ch++) {
         s32 work[FX_FRAME_SAMPLES];
         Clear(work, FX_FRAME_SAMPLES);
@@ -753,7 +763,10 @@ void FxVoice::Radio(s32** buffers) {
     s32 work[FX_FRAME_SAMPLES + 21];
     s32 work2[FX_FRAME_SAMPLES + 21];
     s32* p = &work[21];
- 
+
+    // The two channels are addressed as one flat buffer: with mInput[1] the
+    // offset is folded into the address arithmetic inside the loop, the
+    // original keeps the second channel's base in a register.
     Read(FX_FRAME_SAMPLES + 21, work, 0, (s32*)mInput, -21);
     Read(FX_FRAME_SAMPLES + 21, work2, 0, (s32*)mInput + FX_HISTORY_SIZE, -21);
 
@@ -761,12 +774,13 @@ void FxVoice::Radio(s32** buffers) {
 
     Fir(p, p, mFilterB, 21);
 
-    
     for (s32 i = 0; i < FX_FRAME_SAMPLES; i++) {
         if (i % 8 == 0) {
             sNoiseSeed = sNoiseSeed * 0x80D + 7;
         }
         p[i] = p[i] * ((s32)((s64)(s32)(sNoiseSeed & 0xFFF) * 0x19A / 4096) + 0xE66) / 4096;
+        // Masked through an unsigned pointer: the original walks a second
+        // pointer for this store.
         ((u32*)p)[i] &= ~0x7F;
     }
 
@@ -826,6 +840,8 @@ static void MakeWindow(s32* window, s32 n, s32 type) {
         MakeHann(window, n);
         break;
     case 2: {
+        // Declared in this order for the original's saved registers
+        // (half, a, b from r27 down).
         s32 b;
         s32 a;
         s32 half;
