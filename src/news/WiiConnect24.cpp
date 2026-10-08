@@ -52,7 +52,6 @@ public:
     s32 deleteDlTasks(BOOL first, BOOL second);
     s32 readLZ77FileEx(VFFile file, MEMHeapHandle heap, void** dst, u32* size);
 
-
     s32 mType;                           // at 0x000
     u16 mKind[2];                        // at 0x004 (2: the news download task)
     u32 mMask;                           // at 0x008
@@ -278,6 +277,18 @@ static inline s32 CloseLib(CWiiConnect24* task) {
     return 0;
 }
 
+// The caller's pointer to the file of an hour. The getter takes the request
+// through a pointer to const and both take an unsigned index: the original
+// keeps `hour * 4` as the induction variable and computes the address again
+// after the call to MEMFreeToExpHeap.
+static inline void* GetFile(const CWiiConnect24* task, u32 hour) {
+    return *task->mFiles[hour];
+}
+
+static inline void SetFile(CWiiConnect24* task, u32 hour, void* file) {
+    *task->mFiles[hour] = file;
+}
+
 static void* ThreadMain(void* arg) {
     bool quit;
     do {
@@ -322,9 +333,9 @@ static void* ThreadMain(void* arg) {
                     break;
                 }
                 for (s32 i = 0; i < WC24_NUM_FILES; i++) {
-                    if (*task->mFiles[i]) {
-                        MEMFreeToExpHeap(task->mHeap, *task->mFiles[i]);
-                        *task->mFiles[i] = NULL;
+                    if (GetFile(task, i)) {
+                        MEMFreeToExpHeap(task->mHeap, GetFile(task, i));
+                        SetFile(task, i, NULL);
                     }
                 }
                 task->mStatus = WC24_STATUS_DOWNLOAD;
@@ -665,7 +676,6 @@ s32 CWiiConnect24::setupDlTasks(BOOL first, BOOL second, u8 force, u16 interval,
     const char* url[2];
     NWC24DlTask dl[2];
     u8 dta[0x448];
-    s32 i;
     NWC24Err err;
     s32 result;
     BOOL mounted = FALSE;
@@ -687,7 +697,7 @@ s32 CWiiConnect24::setupDlTasks(BOOL first, BOOL second, u8 force, u16 interval,
         url[1] = NULL;
     }
 
-    for (i = 0; i < 2; i++) {
+    for (s32 i = 0; i < 2; i++) {
         if (kind[i] == 0) {
             continue;
         }
@@ -769,7 +779,7 @@ s32 CWiiConnect24::setupDlTasks(BOOL first, BOOL second, u8 force, u16 interval,
     }
 
     if (!add) {
-        for (i = 0; i < 2; i++) {
+        for (s32 i = 0; i < 2; i++) {
             if (kind[i] == 0) {
                 continue;
             }
@@ -800,7 +810,7 @@ s32 CWiiConnect24::setupDlTasks(BOOL first, BOOL second, u8 force, u16 interval,
 
     if (add) {
         BOOL vfCreated = FALSE;
-        for (i = 0; i < 2; i++) {
+        for (s32 i = 0; i < 2; i++) {
             if (kind[i] == 0) {
                 continue;
             }
@@ -844,7 +854,10 @@ s32 CWiiConnect24::setupDlTasks(BOOL first, BOOL second, u8 force, u16 interval,
             }
             switch (kind[i]) {
             case 2:
-                err = NWC24SetDlServerInterval(&dl[i], 1440);
+                // The original takes the task through a pointer to const here
+                // (it shares the induction variable of the getters).
+                const NWC24DlTask* task = &dl[i];
+                err = NWC24SetDlServerInterval((NWC24DlTask*)task, 1440);
                 if (err != NWC24_OK) {
                     SetError(this, "NWC24SetDlServerInterval() failed.", NWC24GetErrorCode(), err);
                     return ConvertError(err);
@@ -886,7 +899,7 @@ s32 CWiiConnect24::setupDlTasks(BOOL first, BOOL second, u8 force, u16 interval,
         }
     }
 
-    for (i = 0; i < 2; i++) {
+    for (s32 i = 0; i < 2; i++) {
         if (kind[i] == 0) {
             continue;
         }

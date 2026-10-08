@@ -102,6 +102,11 @@ struct QUAT : _QUAT {
  * VEC3 functions
  *
  ******************************************************************************/
+// The work registers of these inline-asm helpers come out in opposite orders
+// in the NW4R libraries (built with -ipa file) and in the News Channel's own
+// code. A game file that needs the second order defines
+// NW4R_MATH_WORK_REGS_REVERSED before including this header; only the
+// declaration order of the locals changes.
 VEC3* VEC3Maximize(VEC3* pOut, const VEC3* pA, const VEC3* pB);
 VEC3* VEC3Minimize(VEC3* pOut, const VEC3* pA, const VEC3* pB);
 VEC3* VEC3TransformNormal(VEC3* pOut, const MTX34* pMtx, const VEC3* pVec);
@@ -111,7 +116,11 @@ inline f32 VEC3Dot(register const VEC3* pA, register const VEC3* pB) {
     return pA->x * pB->x + pA->y * pB->y + pA->z * pB->z;
 #else
     register f32 dot;
+#ifdef NW4R_MATH_WORK_REGS_REVERSED
+    register f32 work3, work2, work1, work0;
+#else
     register f32 work0, work1, work2, work3;
+#endif
 
     ASM {
         psq_l  work0, VEC3.y(pA), 0, 0
@@ -179,7 +188,11 @@ inline VEC3* VEC3Sub(register VEC3* pOut, register const VEC3* pA,
     pOut->y = pA->y - pB->y;
     pOut->z = pA->z - pB->z;
 #else
+#ifdef NW4R_MATH_WORK_REGS_REVERSED
+    register f32 work2, work1, work0;
+#else
     register f32 work0, work1, work2;
+#endif
 
     ASM {
         psq_l  work0, VEC3.x(pA),   0, 0

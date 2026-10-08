@@ -524,37 +524,33 @@ void MainScreen::Draw() {
     Draw2D_SetupGX();
     Draw2D_SetOrtho();
     f32 scale = gWidescreen ? 832.0f / 608.0f : 1.0f;
-    f32 alpha = mUnk248;
-    GXColor black;
-    black.r = 0;
-    black.g = 0;
-    black.b = 0;
-    GXColor white;
-    white.r = 255;
-    u8 a = 255.0f * alpha;
-    black.a = a;
-    u8 bgAlpha = mUnk324 * alpha;
-    white.g = 255;
-    white.b = 255;
-    white.a = a;
-    math::VEC3 pos;
-    pos.x = mScreenRect.right - scale * TPL_GetWidth(gCommonTpl, 0);
-    pos.y = sCursorY;
-    pos.z = sCursorZ;
+    u8 bgAlpha = mUnk324 * mUnk248;
+    u8 a = 255.0f * mUnk248;
+    ut::Color black(0, 0, 0, a);
+    ut::Color white(255, 255, 255, a);
+    // Room for four points, of which two are used (the original frame has 24 untouched
+    // bytes behind them); ArticleText::Draw has the same kind of array.
+    math::VEC3 line[4];
+    line[0].x = mScreenRect.right - scale * TPL_GetWidth(gCommonTpl, 0);
+    line[0].y = sCursorY;
+    line[0].z = sCursorZ;
     if (IsState(&MainScreen::State195A0) || IsState(&MainScreen::State17E6C)) {
         ut::Color bg(0xDE, 0xDE, 0xDE, bgAlpha);
         Draw2D_FillRect(&mScreenRect, &bg);
     } else {
         GXSetTevColor(GX_TEVREG0, ut::Color(255, 255, 255, bgAlpha));
-        Draw2D_Tex(gCommonTpl, 0, &pos, scale, 1.0f);
+        Draw2D_Tex(gCommonTpl, 0, &line[0], scale, 1.0f);
     }
-    pos.x = mScreenRect.right - 2.0f;
-    math::VEC3 end(pos.x, 456.0f, sLineZ);
+    f32 bottom = 456.0f;
+    line[0].x = mScreenRect.right - 2.0f;
+    line[1].x = line[0].x;
+    line[1].y = bottom;
+    line[1].z = sLineZ;
     Draw2D_SetupGX();
-    Draw2D_Line(pos, end, 12, white, white);
-    pos.x += 1.0f;
-    end.x += 1.0f;
-    Draw2D_Line(pos, end, 12, black, black);
+    Draw2D_Line(line[0], line[1], 12, white, white);
+    line[0].x += 1.0f;
+    line[1].x += 1.0f;
+    Draw2D_Line(line[0], line[1], 12, black, black);
     if (mDraw) {
         (this->*mDraw)();
     }
@@ -594,21 +590,16 @@ void MainScreen::DrawRelated() {
     if (!mShowRelated) {
         return;
     }
-    f32 alpha = mUnk25C;
+    u8 a = 255.0f * mUnk25C;
+    u8 bgAlpha = 220.0f * mUnk25C;
+    // Faded like the other two but never used (State1B694 fades lbl_803575FC instead).
+    // MWCC removes it late: no instruction is left, but its alpha keeps two conversion
+    // slots in the frame, as in the original.
+    ut::Color shadow = sShadowColor;
     ut::Color highlight = gHighlightColor;
     ut::Color sep = gSeparatorColor;
-    GXColor black;
-    GXColor white;
-    u8 a = 255.0f * alpha;
-    u8 bgAlpha = 220.0f * alpha;
-    black.r = 0;
-    black.g = 0;
-    black.b = 0;
-    black.a = a;
-    white.r = 255;
-    white.g = 255;
-    white.b = 255;
-    white.a = a;
+    ut::Color black(0, 0, 0, a);
+    ut::Color white(255, 255, 255, a);
     math::VEC2 pos;
     pos.y = mUnk1A0;
     pos.x = mUnk19C - 0.5f * mUnk1A4;
@@ -624,6 +615,7 @@ void MainScreen::DrawRelated() {
     }
     f32 rowHeight = mUnk24C * fontScale * GetTextScale(lbl_80356970);
     f32 scrollY = mUnk254;
+    shadow.a = shadow.a * mUnk25C;
     highlight.a = highlight.a * mUnk25C;
     sep.a = sep.a * mUnk25C;
 
@@ -648,24 +640,24 @@ void MainScreen::DrawRelated() {
     rect.left = left - 1.0f;
     rect.top = top - 2.0f;
     rect.bottom = 1.0f + bottom;
-    Draw2D_FillRect(&rect, (ut::Color*)&black);
+    Draw2D_FillRect(&rect, &black);
     rect.left = 1.0f + right;
     rect.right = 2.0f + right;
-    Draw2D_FillRect(&rect, (ut::Color*)&black);
+    Draw2D_FillRect(&rect, &black);
     rect.bottom = top - 1.0f;
     rect.left = left - 1.0f;
-    Draw2D_FillRect(&rect, (ut::Color*)&black);
+    Draw2D_FillRect(&rect, &black);
     rect.top = bottom;
     rect.bottom = 1.0f + bottom;
-    Draw2D_FillRect(&rect, (ut::Color*)&black);
+    Draw2D_FillRect(&rect, &black);
     rect.left = left;
     rect.bottom = top;
     rect.right = 1.0f + right;
     rect.top = top - 1.0f;
-    Draw2D_FillRect(&rect, (ut::Color*)&white);
+    Draw2D_FillRect(&rect, &white);
     rect.left = right;
     rect.bottom = bottom;
-    Draw2D_FillRect(&rect, (ut::Color*)&white);
+    Draw2D_FillRect(&rect, &white);
     rect.left = left;
     rect.right = right;
 
@@ -746,7 +738,8 @@ void MainScreen::DrawRelated() {
     mWriter->SetDrawFlag(0x100);
     mWriter->SetFont(*gSysFont);
     mWriter->SetupGX();
-    mWriter->SetCharSpace(gCharSpaceScale);
+    f32 space = gCharSpaceScale;
+    mWriter->SetCharSpace(space);
     mWriter->SetScale(0.8f * scale);
     Draw2D_SetScissor(pos.x, clipTop, 5.0f + mRelated->mLocationScroller.mViewWidth, clipBottom);
 
@@ -1770,7 +1763,11 @@ void MainScreen::State17E6C(s32* arg) {
             mUnk284 = mUnk238;
             mUnk288 = 0.0f;
             mUnk28C = 456.0f;
-            math::VEC2 ofs(item->GetPos().x - mUnk16C.x, item->GetPos().y - (123.0f + mUnk224));
+            // Unused, as in State1A750, but here it is not a VEC2: the original keeps the
+            // first member in the object's slot and the second in a separate word at the
+            // bottom of the frame, which MWCC does for an 8-byte class without a destructor.
+            // Which such type the original used is not known; lyt::Size is the NW4R one.
+            nw4r::lyt::Size ofs(item->GetPos().x - mUnk16C.x, item->GetPos().y - (123.0f + mUnk224));
             mUnk280 = mUnk284 = mFadeRect.left = mFadeRect.right = item->GetPos().x;
             mUnk288 = mUnk28C = mFadeRect.top = mFadeRect.bottom = item->GetPos().y;
             mUnk2BF = true;
@@ -2523,7 +2520,7 @@ void MainScreen::State1B694(s32* arg) {
         mDraw = &MainScreen::DrawGlobe;
         Pins_SetStateAll(1);
         mUnk250 = GetFontScale() * GetTextScale(lbl_80356970);
-        f32 split;
+        f32 listHeight;
         f32 maxHeight = 290.0f;
         f32 width = GetContentRight() - GetSideMargin();
         f32 height = 10.0f + (67.0f + mUnk2F8 * (mUnk24C * mUnk250));
@@ -2535,9 +2532,10 @@ void MainScreen::State1B694(s32* arg) {
         mUnk1A4 = width;
         mUnk1A8 = height;
         mUnk1AC = width;
-        mUnk1B0 = height - 67.0f;
-        mUnk260 = split = 0.3f * width;
-        mUnk264 = width - split;
+        listHeight = height - 67.0f;
+        mUnk1B0 = listHeight;
+        mUnk260 = 0.3f * width;
+        mUnk264 = width - mUnk260;
         mShowRelated = true;
         f32 rowHeight = mUnk24C * GetFontScale() * GetTextScale(lbl_80356970);
         mUnk2FC = mUnk300;

@@ -551,7 +551,7 @@ config.libs = [
         "progress_category": "game",
         "objects": [
             Object(Matching, "news/Mascot.cpp"),
-            Object(NonMatching, "news/NewsArticle.cpp"),
+            Object(Matching, "news/NewsArticle.cpp"),
             Object(Matching, "news/LanguageSelect.cpp"),
             Object(Matching, "news/TextButton.cpp"),
             Object(Matching, "news/FrameTextButton.cpp"),
@@ -578,9 +578,9 @@ config.libs = [
         "cflags": cflags_game,
         "progress_category": "game",
         "objects": [
-            Object(NonMatching, "news/GlobeDots.cpp"),
-            Object(NonMatching, "news/System.cpp"),
-            Object(NonMatching, "news/WiiConnect24.cpp"),
+            Object(Matching, "news/GlobeDots.cpp"),
+            Object(Matching, "news/System.cpp"),
+            Object(Matching, "news/WiiConnect24.cpp"),
             Object(Matching, "news/PointerScroll.cpp"),
             Object(Matching, "news/MathUtil.cpp"),
         ],
@@ -591,8 +591,8 @@ config.libs = [
         "cflags": cflags_game,
         "progress_category": "game",
         "objects": [
-            Object(NonMatching, "news/SlideShow.cpp"),
-            Object(NonMatching, "news/ArticleText.cpp", extra_cflags=["-inline auto", "-ipa file"]),
+            Object(NonMatching, "news/SlideShow.cpp", extra_cflags=["-ipa file"]),
+            Object(Matching, "news/ArticleText.cpp", extra_cflags=["-inline auto", "-ipa file"]),
         ],
     },
     {
@@ -1497,7 +1497,7 @@ config.libs = [
             Object(Matching, "news/Bubbles.cpp"),
             Object(Matching, "news/GlobePoint.cpp"),
             Object(Matching, "news/TextChar.cpp"),
-            Object(NonMatching, "news/GlobePin.cpp"),
+            Object(Matching, "news/GlobePin.cpp"),
         ],
     },
     {
@@ -1515,9 +1515,9 @@ config.libs = [
         "cflags": cflags_game,
         "progress_category": "game",
         "objects": [
-            Object(NonMatching, "news/Globe.cpp"),
+            Object(Matching, "news/Globe.cpp"),
             Object(Matching, "news/Resource.cpp", extra_cflags=["-ipa file"]),
-            Object(NonMatching, "news/sound_manager.cpp"),
+            Object(NonMatching, "news/sound_manager.cpp", extra_cflags=["-ipa file"]),
         ],
     },
 ]

@@ -1,6 +1,9 @@
 // The 3D globe view: scene root, camera, zoom/tilt levels and Wii Remote
 // drag/twist input.
 #define NW4R_MATH_VEC3_NO_DTOR
+// The nw4r::math inline-asm helpers (VEC3Dot, VEC3Sub) allocate their work
+// registers in this file in the opposite order from the NW4R libraries.
+#define NW4R_MATH_WORK_REGS_REVERSED
 #include <revolution/kpad.h>
 #include <news/Globe.h>
 #include <news/Camera.h>
@@ -17,6 +20,7 @@
 #include <nw4r/math/math_arithmetic.h>
 #include <nw4r/math/math_triangular.h>
 #include <nw4r/snd/snd_SoundHandle.h>
+#include <nw4r/ut/ut_algorithm.h>
 #include <nw4r/ut/ut_Color.h>
 #include <nw4r/ut/ut_Rect.h>
 #include <revolution/mtx.h>
@@ -61,10 +65,6 @@ inline BOOL IsWithin(f32 x, f32 r) {
 
 inline f32 Min(f32 a, f32 b) {
     return a > b ? b : a;
-}
-
-inline f32 Clamp01(f32 x) {
-    return x > 1.0f ? 1.0f : (x < 0.0f ? 0.0f : x);
 }
 
 Globe::Globe()
@@ -252,6 +252,14 @@ void Globe::CalcCameraMtx(math::MTX34* mtx) {
     *mtx = gWorkMtx;
 }
 
+// The south pole direction goes through a second local (one inline level
+// down: it sits below the operator- temporaries on the stack).
+static inline void SetDifference(math::VEC3& out, const math::VEC3& a, const math::VEC3& b) {
+    math::VEC3 d;
+    d = a - b;
+    out = d;
+}
+
 void Globe::CalcPoles() {
     if (gEarthModel != NULL) {
         gEarthModel->Calc();
@@ -271,9 +279,7 @@ void Globe::CalcPoles() {
     mNorthAhead = math::VEC3Dot(&dir, &toPole) < 0.0f;
 
     pole = mSouthPole;
-    math::VEC3 south;
-    south = mSouthPole - camera->mPos;
-    toPole = south;
+    SetDifference(toPole, mSouthPole, camera->mPos);
     PSVECNormalize(pole, pole);
     PSVECNormalize(toPole, toPole);
     mSouthFacing = math::VEC3Dot(&pole, &dir) < 0.0f;
@@ -658,11 +664,12 @@ void Globe::UpdateCamera() {
     g3d::Camera::PostureInfo posture;
     math::MTX34 mtx;
 
-    f32 fade = Clamp01((100.0f - mDistance) / 35.0f);
-    f32 near = Clamp01((mDistance - 2.0f) / 15.0f);
-    fade = near > fade ? fade : near;
-    f32 scale = 0.85f + 0.15f * Clamp01((mDistance - 40.0f) / 20.0f);
-    f32 alpha = Clamp01((mDistance - 2.0f) / 15.0f);
+    // Fades in from 2 to 17 and out from 65 to 100. (ut::Min evaluates its
+    // second argument first.)
+    f32 fade = ut::Min(ut::Clamp((mDistance - 2.0f) / 15.0f, 0.0f, 1.0f),
+                       ut::Clamp((100.0f - mDistance) / 35.0f, 0.0f, 1.0f));
+    f32 scale = 0.85f + 0.15f * ut::Clamp((mDistance - 40.0f) / 20.0f, 0.0f, 1.0f);
+    f32 alpha = ut::Clamp((mDistance - 2.0f) / 15.0f, 0.0f, 1.0f);
 
     s32 scaleExp = 0;
     f32 m = 0.0f;
@@ -693,9 +700,15 @@ void Globe::UpdateCamera() {
     Mtx_RotateZDeg(&gWorkMtx, mCamera->mTargetRot.z);
     Mtx_RotateYDeg(&gWorkMtx, mCamera->mTargetRot.y);
     PSMTXCopy(gWorkMtx, mtx);
-    math::VEC3 target(mtx._03, mtx._13, mtx._23);
+    math::VEC3 target;
+    target.x = mtx._03;
+    target.y = mtx._13;
+    target.z = mtx._23;
+    f32 pz = posOfs.z;
+    f32 py = posOfs.y;
+    f32 px = posOfs.x;
 
-    PSMTXTrans(gWorkMtx, posOfs.x, posOfs.y, posOfs.z);
+    PSMTXTrans(gWorkMtx, px, py, pz);
     Mtx_RotateXDeg(&gWorkMtx, mCamera->mRot.x);
     Mtx_RotateZDeg(&gWorkMtx, mCamera->mRot.z);
     Mtx_RotateYDeg(&gWorkMtx, mCamera->mRot.y);

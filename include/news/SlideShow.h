@@ -50,7 +50,7 @@ public:
     void DrawSelection();
     void DrawFooterA();
     void DrawFooterB();
-    void DrawCaption(const wchar_t* text, u8 alpha, f32 x, f32 y, f32 width, f32 height);
+    void DrawCaption(const wchar_t* text, s32 alpha, f32 x, f32 y, f32 width, f32 height);
 
     void NextArticle();
     void PrevArticle();
@@ -62,6 +62,10 @@ public:
 
     bool IsState(StateFunc state) {
         return mState == state;
+    }
+
+    bool IsMessageState() {
+        return IsState(&SlideShow::StateMessage);
     }
 
     void ChangeState(StateFunc state, const s32* arg = NULL) {
@@ -84,6 +88,10 @@ public:
         mSubState = state;
         mSubStateFrame = 0;
         (this->*mSubState)();
+    }
+
+    void StartWait() {
+        ChangeSubState(&SlideShow::SubStateWait);
     }
 
     Layout* mCurLayout;                   // at 0x000

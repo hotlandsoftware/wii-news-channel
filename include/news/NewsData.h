@@ -150,12 +150,10 @@ public:
     NewsTexture* LoadLogo(NewsHeader* file, u32 ofs, u32 size);
 
     NewsHeader* GetFile(u32 id) {
-        NewsHeader* file;
-        NewsHeader** p = mFiles;
-        for (s32 i = 0; i < NEWS_FILE_MAX; p++, i++) {
-            file = *p;
-            if (file != NULL && file->id == id) {
-                return file;
+        for (s32 i = 0; i < NEWS_FILE_MAX; i++) {
+            NewsHeader** p = &mFiles[i];
+            if (*p != NULL && (*p)->id == id) {
+                return *p;
             }
         }
         return NULL;

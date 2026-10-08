@@ -27,7 +27,7 @@ public:
     void FadeOut(s32 frames);
     void SetOpaque();
     void SetClear();
-    void SetColors(const nw4r::ut::Color* colors, u8 alpha);
+    void SetColors(const nw4r::ut::Color* colors);
     void SetColor(nw4r::ut::Color color, u8 alpha);
 
     BOOL StateIdle();

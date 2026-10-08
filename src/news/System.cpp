@@ -249,8 +249,11 @@ void SystemInit() {
     gInitFlag = false;
     WC24Init();
     CNTInit();
-    for (u32 i = 4; i < 10; i++) {
-        contentInitHandleNAND(i + 2, &gContentHandles[i], &gContentAllocator);
+    // Contents 6..11 go to handles 4..9. The content index is a counter of its
+    // own: MWCC folds it into `i + 2`, but evaluates it before the handle.
+    s32 content = 6;
+    for (u32 i = 4; i < 10; i++, content++) {
+        contentInitHandleNAND(content, &gContentHandles[i], &gContentAllocator);
     }
     gArchive = 7;
     g3d::G3dInit(true);
@@ -284,8 +287,8 @@ static inline f32 GetScreenHalfHeight() {
 }
 
 // The cursor follows the pointer faster the further away it is.
-static inline f32 GetSmoothRate(f32 current, f32 target) {
-    f32 t = 0.002f * __fabsf(target - current);
+static inline f32 GetSmoothRate(f32 d) {
+    f32 t = 0.002f * math::FAbs(d);
     if (t < 0.1f) {
         t = 0.1f;
     }
@@ -295,8 +298,16 @@ static inline f32 GetSmoothRate(f32 current, f32 target) {
     return t;
 }
 
-static inline f32 Lerp(f32 a, f32 b, f32 t) {
-    return (1.0f - t) * a + t * b;
+static inline void LerpTo(f32& a, f32 b, f32 t) {
+    a = (1.0f - t) * a + t * b;
+}
+
+// One axis of the cursor smoothing. Both axes go through this inline: the
+// original interleaves the two expansions (the y difference is computed before
+// the x store), which is the scheduler's doing, not the source order.
+static inline void SmoothTo(f32& pos, const f32& target) {
+    f32 d = target - pos;
+    LerpTo(pos, target, GetSmoothRate(d));
 }
 
 void SystemCalc() {
@@ -309,9 +320,9 @@ void SystemCalc() {
     rect.bottom = 456.0f;
 
     for (s32 i = 0; i < 4; i++) {
+        u32 prevHold = gHold[i];
         bool wasConnected = gConnected[i];
         gConnected[i] = false;
-        u32 prevHold = gHold[i];
         s32 n = gKPADCount[i] = KPADRead(i, gKPADStatus[i], 16);
         if (n > 0) {
             for (s32 j = 0; j < n; j++) {
@@ -323,10 +334,10 @@ void SystemCalc() {
         }
 
         if (!gConnected[i] && wasConnected) {
+            gTrig[i] = 0;
             for (s32 j = 0; j < 16; j++) {
                 gKPADStatus[i][j].trig = 0;
             }
-            gTrig[i] = 0;
             continue;
         }
 
@@ -368,17 +379,8 @@ void SystemCalc() {
             gPointerValid[i][j] = false;
         }
 
-        f32 tx = GetSmoothRate(gPointerX[i], gCursorX[i][0]);
-        f32 dy = gCursorY[i][0] - gPointerY[i];
-        gPointerX[i] = Lerp(gPointerX[i], gCursorX[i][0], tx);
-        f32 ty = 0.002f * __fabsf(dy);
-        if (ty < 0.1f) {
-            ty = 0.1f;
-        }
-        if (ty > 1.0f) {
-            ty = 1.0f;
-        }
-        gPointerY[i] = Lerp(gPointerY[i], gCursorY[i][0], ty);
+        SmoothTo(gPointerX[i], gCursorX[i][0]);
+        SmoothTo(gPointerY[i], gCursorY[i][0]);
 
         n = gKPADCount[i];
         BOOL found = FALSE;
@@ -417,7 +419,7 @@ void SystemCalc() {
         if (zoom) {
             f32 r = gPointerDistBase[i] / gCursorDist[i][0];
             if (r < 1.0f) {
-                r = r * (1.2f + 3.0f * (r - 1.0f));
+                r *= 1.2f + 3.0f * (r - 1.0f);
             } else {
                 r = 1.2f + 10.0f * (r - 1.0f);
             }
@@ -858,8 +860,9 @@ void* LoadArcFile(u32 archive, const char* name, s32 align, u32* size, MEMHeapHa
                 CXUncompressHuffman(comp, buf);
                 break;
             default:
+                // The original format has a %d but passes no argument.
 #line 2247
-                OSPanic(__FILE__, __LINE__, "CXCompressionType unsupported.");
+                OSPanic(__FILE__, __LINE__, "CXCompressionType %d unsupported.");
                 break;
             }
             MEMFreeToExpHeap(heap, comp);

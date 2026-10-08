@@ -17,7 +17,7 @@ using namespace nw4r;
 
 void* operator new[](u32 size, MEMAllocator* allocator);
 
-extern "C" void fn_80036358();  // sets up GX for Draw2D_Texture
+void SetupTexGX();  // d_s_news.cpp: sets up GX for Draw2D_Texture
 
 extern "C" ArticleText* lbl_80357574;  // the shared caption text
 extern "C" f32 lbl_803575CC;           // extra line spacing
@@ -196,12 +196,13 @@ bool ArticleText::IsNoBreak(const wchar_t* p, const wchar_t* start) {
 
     if (gLanguage != 0) {
         wchar_t c = p[0];
-        const wchar_t* s = sSpaces;
-        while (*s != 0) {
-            if (*s == c) {
+        s32 i = 0;
+        while (sSpaces[i] != 0) {
+            wchar_t sp = sSpaces[i];
+            if (sp == c) {
                 return false;
             }
-            s++;
+            i++;
         }
         return true;
     }
@@ -319,8 +320,7 @@ bool ArticleText::Set(const wchar_t* text, NewsPicture* picture, const math::VEC
     }
 
     mFontScale = fontScale;
-    mSize.x = size->x;
-    mSize.y = size->y;
+    SetSize(size);
     mScale = scale;
     mNumLines = 0;
     mText = text;
@@ -344,15 +344,17 @@ bool ArticleText::Set(const wchar_t* text, NewsPicture* picture, const math::VEC
     }
 
     c = mChars;
-    for (; *p != 0; c++, p++) {
-        c->mChar = *p;
+    wchar_t ch;
+    for (; (ch = *p) != 0; c++, p++) {
+        c->mChar = ch;
         c->mScale = mFontScale;
         Deselect(c);
         c->mScaleX = 1.0f;
         c->mWordIndex = word;
         if (IsNoBreak(p, mText)) {
-            c->mNext = c + 1;
-            c[1].mPrev = c;
+            TextChar* next = c + 1;
+            c->mNext = next;
+            next->mPrev = c;
         } else {
             word++;
         }
@@ -384,13 +386,17 @@ bool ArticleText::Set(const wchar_t* text, NewsPicture* picture, const math::VEC
     c->mScaleX = 1.0f;
     c->mWordIndex = word + 1;
 
-    for (c = mChars; c->mChar != 0; c++) {
-        if (c->mPrev == NULL) {
-            f32 width = c->mScaledWidth;
-            for (TextChar* n = c->mNext; n != NULL; n = n->mNext) {
-                width += gCharSpaceScale + n->mScaledWidth;
+    TextChar* n; // declared ahead of the loop pointer: n is r3, w is r4
+    for (TextChar* w = mChars; w->mChar != 0; w++) {
+        if (w->mPrev == NULL) {
+            f32 width; // declared ahead of space: width is f2, space is f3
+            f32 space = gCharSpaceScale;
+            width = w->mScaledWidth;
+            for (n = w->mNext; n != NULL; n = n->mNext) {
+                width += space + n->mScaledWidth;
             }
-            c->mWordWidth = width * 1.0f;
+            f32 scaleX = 1.0f;
+            w->mWordWidth = width * scaleX;
         }
     }
 
@@ -405,17 +411,16 @@ bool ArticleText::Set(const wchar_t* text, NewsPicture* picture, const math::VEC
         }
     }
 
-    math::VEC2 origin(0.0f, 0.0f);
-    Layout(&origin, scale);
+    Layout(scale);
 
     f32 y = start->y;
     if (mCount != 0) {
         if (mPicture != NULL) {
             mPicTarget.y = y;
         }
-        c = mChars;
-        for (u32 i = 0; i < mCount; i++, c++) {
-            c->mTarget.y = y;
+        u32 i = 0; // the counter comes first (r3), then a pointer of its own (r4)
+        for (TextChar* t = mChars; i < mCount; i++, t++) {
+            t->mTarget.y = y;
         }
     }
 
@@ -425,16 +430,24 @@ bool ArticleText::Set(const wchar_t* text, NewsPicture* picture, const math::VEC
     mPicPos.y = picPos->y;
     mPicScale = *picScale / mScale;
     mPicTargetScale = 1.0f;
-    math::VEC2 origin2(0.0f, 0.0f);
-    Layout(&origin2, scale);
+    Layout(scale);
     return true;
+}
+
+// A texture's size along one axis. Draw() reads the picture's width and height
+// through a helper with a constant flag: the branch is folded after the two
+// statements were optimised separately, so `zoom - 1.0f` is evaluated inside
+// each expression (and merged later) instead of ahead of both.
+static inline u16 GetSize(const NewsTexture* tex, bool vertical) {
+    return vertical ? tex->height : tex->width;
 }
 
 #define DRAW_CHAR(c, yOfs)                                                                         \
     {                                                                                              \
         f32 sy = c->mScale * mScale;                                                               \
         mWriter->SetScale(mScale * (c->mScale * c->mScaleX), sy);                                  \
-        mWriter->SetCursor(pos->x + c->mPos.x, yOfs * sy + (pos->y + c->mPos.y));                  \
+        f32 cy = yOfs * sy; \
+        mWriter->SetCursor(pos->x + c->mPos.x, cy + (pos->y + c->mPos.y)); \
         color.r = c->mColor.r;                                                                     \
         color.g = c->mColor.g;                                                                     \
         color.b = c->mColor.b;                                                                     \
@@ -458,8 +471,8 @@ void ArticleText::Draw(const math::VEC2* pos, bool clip, f32 alpha, f32 zoom) {
 
     TextChar* c;
     s32 i = mFirstVisible;
-    ut::Color color;
     c = &mChars[i];
+    ut::Color color; // declared after the pointer is set: the white constant is numbered last (r4)
 
     if (gNewsData->mHeader->unk2C[0] == 0) {
         f32 yOfs = 0.0f;
@@ -473,8 +486,7 @@ void ArticleText::Draw(const math::VEC2* pos, bool clip, f32 alpha, f32 zoom) {
             if (!c->mHidden) {
                 DRAW_CHAR(c, yOfs);
                 if (mTruncated) {
-                    f32 h = 2.0f * mWriter->GetScaleH();
-                    mWriter->MoveCursorY(mWriter->GetFontDescent() + h);
+                    mWriter->MoveCursorY(mWriter->GetFontDescent() + 2.0f * mWriter->GetScaleH());
                     mWriter->Print(0x2026);
                 } else {
                     mWriter->Print(c->mChar);
@@ -500,8 +512,7 @@ void ArticleText::Draw(const math::VEC2* pos, bool clip, f32 alpha, f32 zoom) {
             if (!c->mHidden) {
                 DRAW_CHAR(c, yOfs);
                 if (mTruncated) {
-                    f32 h = 2.0f * mWriter->GetScaleH();
-                    mWriter->MoveCursorY(mWriter->GetFontDescent() + h);
+                    mWriter->MoveCursorY(mWriter->GetFontDescent() + 2.0f * mWriter->GetScaleH());
                     mWriter->Print(0x2026);
                 } else {
                     mWriter->Print(c->mChar);
@@ -518,15 +529,13 @@ void ArticleText::Draw(const math::VEC2* pos, bool clip, f32 alpha, f32 zoom) {
     }
 
     if (mPicture != NULL) {
-        f32 grow = zoom - 1.0f;
         math::VEC3 picPos;
-        picPos.x = pos->x + mPicPos.x - 0.5f * (grow * mPicScale * mPicture->width);
-        picPos.y = pos->y + mPicPos.y - 0.5f * (grow * mPicScale * mPicture->height);
+        picPos.x = pos->x + mPicPos.x - 0.5f * ((zoom - 1.0f) * mPicScale * GetSize(mPicture, false));
+        picPos.y = pos->y + mPicPos.y - 0.5f * ((zoom - 1.0f) * mPicScale * GetSize(mPicture, true));
         picPos.z = 0.0f;
         f32 picScale = zoom * mPicScale;
-        fn_80036358();
-        GXColor white = {255, 255, 255, a};
-        GXSetTevColor(GX_TEVREG0, white);
+        SetupTexGX();
+        GXSetTevColor(GX_TEVREG0, (GXColor){255, 255, 255, a});
         Draw2D_Texture(mPicture, &picPos, picScale);
 
         if (mPicLabel != NULL) {
@@ -548,26 +557,29 @@ void ArticleText::Draw(const math::VEC2* pos, bool clip, f32 alpha, f32 zoom) {
         }
     }
 
-    f32 lineOfs = 0.0f;
     TextChar* u = &mChars[mFirstVisible];
-    math::VEC3 from(0.0f, 0.0f, 0.0f);
-    math::VEC3 to(0.0f, 0.0f, 0.0f);
-    if (gNewsData->mHeader->unk2C[0] == 0) {
-        lineOfs = 2.0f;
-    }
-    fn_80036358();
+    math::VEC3 line[2];
+    // The original clears z of four points, but the array has two: the other
+    // two stores land in the stack space of the (dead) label writer above.
+#ifdef __MWERKS__
+    line[0].z = line[1].z = line[2].z = line[3].z = 0.0f;
+#else
+    line[0].z = line[1].z = 0.0f;
+#endif
+    f32 lineOfs = gNewsData->mHeader->unk2C[0] == 0 ? 2.0f : 0.0f;
+    SetupTexGX();
     for (s32 j = mFirstVisible; j <= mLastVisible; j++, u++) {
         if (!u->mHidden && u->mSelected && u->mChar != L'\n') {
             color.r = u->mColor.r;
-            from.x = u->mLeft;
             color.g = u->mColor.g;
-            to.x = u->mRight;
             color.b = u->mColor.b;
-            f32 y = u->mBottom - lineOfs;
             color.a = a;
-            to.y = y;
-            from.y = y;
-            Draw2D_Line(from, to, 12, color, color);
+            line[0].x = u->mLeft;
+            line[1].x = u->mRight;
+            f32 y = u->mBottom - lineOfs;
+            line[1].y = y;
+            line[0].y = y;
+            Draw2D_Line(line[0], line[1], 12, color, color);
         }
     }
 
@@ -614,12 +626,12 @@ void ArticleText::Update(const math::VEC2* pos, bool clip, f32 scroll) {
     Ease(&mPicScale, mPicTargetScale, 0.2f, 1.0f, 0.005f);
     Ease(&mSubPos, &mSubTarget, 0.2f, 100.0f, 0.01f);
 
+    mFirstVisible = mCount;
     mLastVisible = 0;
-    s32 i = 0;
+    s32 i;
     bool overflow = false;
     mLastFull = 0;
-    mFirstVisible = mCount;
-    for (; c->mChar != 0; c++) {
+    for (i = 0; c->mChar != 0; c++) {
         c->Update(pos, &mRevealRate);
         f32 top = pos->y + c->mPos.y;
         f32 lineBottom = top + mLineHeight;
@@ -635,12 +647,11 @@ void ArticleText::Update(const math::VEC2* pos, bool clip, f32 scroll) {
             overflow = true;
         }
         i++;
-        f32 x = pos->x + c->mPos.x;
-        c->mLeft = x;
-        f32 y = pos->y + c->mPos.y;
-        c->mTop = y;
+        f32 x = c->mLeft = pos->x + c->mPos.x;
+        f32 y = c->mTop = pos->y + c->mPos.y;
         c->mRight = x + mScale * (c->mWidth * (c->mScale * c->mScaleX));
-        c->mBottom = c->mScaledHeight * mScale + y;
+        f32 h = c->mScaledHeight * mScale;
+        c->mBottom = h + y;
     }
 
     if (clip) {
@@ -704,16 +715,17 @@ bool ArticleText::LayoutPicture(const math::VEC2* pos, f32 scale) {
         return false;
     }
 
-    math::VEC2 size;
-    f32 maxHeight = lbl_80192348[lbl_80356970];
-    size.x = mSmallPicture ? lbl_80192320[lbl_80356970] : lbl_801922F8[lbl_80356970];
-    f32 maxAspect = maxHeight / size.x;
-    f32 texWidth = mPicture->width;
-    f32 texHeight = mPicture->height;
-    size.y = maxHeight;
-    f32 aspect = texHeight / texWidth;
-
+    f32 texHeight;
+    f32 texWidth;
+    f32 aspect;
+    f32 maxAspect;
     f32 labelHeight;
+    math::VEC2 size(mSmallPicture ? lbl_80192320[lbl_80356970] : lbl_801922F8[lbl_80356970], lbl_80192348[lbl_80356970]);
+    maxAspect = size.y / size.x;
+    texWidth = mPicture->width;
+    texHeight = mPicture->height;
+    aspect = texHeight / texWidth;
+
     if (mPicLabel != NULL) {
         ut::TextWriterBase<wchar_t> writer;
         writer.SetFont(*gSysFont);
@@ -731,23 +743,21 @@ bool ArticleText::LayoutPicture(const math::VEC2* pos, f32 scale) {
     }
     texWidth *= mPicTargetScale;
 
-    f32 left = mRight - size.x;
-    mPicSize.y = size.y;
-    mSubTarget.x = left;
-    mPicSize.x = size.x;
+    mPicSize = size;
+    mSubTarget.x = mRight - size.x;
     mPicTarget.y = mCursor.y;
-    mWrapRight = pos->x + left - mIndent;
+    mWrapRight = pos->x + mSubTarget.x - mIndent;
     size.y = size.y + labelHeight;
     mPicBottom = mCursor.y + size.y;
-    mPicTarget.x = left + 0.5f * (size.x - texWidth);
+    mPicTarget.x = mSubTarget.x + 0.5f * (size.x - texWidth);
     mSubTarget.y = mPicBottom;
 
     if (mSub != NULL) {
-        mSub->mSize.x = size.x;
-        mSub->mSize.y = mPicSize.y;
-        math::VEC2 origin(0.0f, 0.0f);
-        mSub->Layout(&origin, 0.7f * scale);
-        mPicBottom = 10.0f + (mSubTarget.y + mSub->mLineHeight * mSub->mNumLines);
+        mSub->SetSize(&mPicSize);
+        mSub->Layout(0.7f * scale);
+        f32 lineHeight = mSub->mLineHeight;
+        f32 subHeight = lineHeight * mSub->mNumLines;
+        mPicBottom = 10.0f + (mSubTarget.y + subHeight);
     }
 
     f32 space = scale * gCharSpaceScale;
@@ -783,8 +793,9 @@ bool ArticleText::LayoutPicture(const math::VEC2* pos, f32 scale) {
         mCursor.x += wordWidth + space;
         if (NeedsLineBreak(last, &mCursor.x, right, scale)) {
             mCursor.x = mLeft;
+            f32 h = 1.25f * (last->mScaledHeight * scale);
             mNumLines++;
-            mCursor.y += 1.25f * (last->mScaledHeight * scale);
+            mCursor.y += h;
         }
         c = last + 1;
     }
@@ -813,10 +824,12 @@ void ArticleText::Layout(const math::VEC2* pos, f32 scale) {
         scale = 0.7f;
     }
 
-    mBaseLineHeight = 1.25f * (((f32)mFont->GetHeight() + lbl_803575CC) * mFontScale);
+    f32 height = mFont->GetHeight();
+    f32 charHeight = height + lbl_803575CC;
+    mBaseLineHeight = 1.25f * (charHeight * mFontScale);
+    mLineHeight = mBaseLineHeight * scale;
     mPicLines = 0;
     mPicWrapped = false;
-    mLineHeight = mBaseLineHeight * scale;
     mTextTop = pos->y;
 
     if (mIsCaption) {
@@ -1006,6 +1019,8 @@ bool ArticleText::Select(const ut::Rect* rect) {
     f32 left = rect->left;
     f32 right = rect->right;
     TextChar* c = mChars;
+    s32 i; // declared ahead of p: the counter of the main loop is numbered before the scan's variables
+    TextChar* p = c;
     if (left < right) {
         minX = left;
         maxX = right;
@@ -1015,9 +1030,19 @@ bool ArticleText::Select(const ut::Rect* rect) {
     }
 
     s32 first0, last0;
-    GetSelection(c, mCount, first0, last0);
+    s32 j;
+    last0 = -1;
+    first0 = -1;
+    for (j = 0; j < mCount; j++, p++) {
+        if (first0 < 0 && p->mSelected) {
+            first0 = j;
+        }
+        if (p->mSelected) {
+            last0 = j;
+        }
+    }
 
-    for (s32 i = 0; i < mCount; i++, c++) {
+    for (i = 0; i < mCount; i++, c++) {
         f32 top = rect->top;
         Deselect(c);
         if (c->mTop <= top && c->mBottom >= top && c->mTop <= rect->bottom &&
@@ -1060,22 +1085,12 @@ f32 ArticleText::GetTop() {
     return mChars->mPos.y;
 }
 
-bool ArticleText::GetPictureRect(ut::Rect* rect) {
-    u16 height;
-    NewsTexture* pic;
-    f32 scale;
-    f32 left;
-    f32 top;
-    pic = mPicture;
-    if (pic != NULL) {
-        top = mPicPos.y;
-        rect->top = top;
-        scale = mPicScale;
-        height = pic->height;
-        left = mPicPos.x;
-        rect->left = left;
-        rect->bottom = top + scale * height;
-        rect->right = left + scale * pic->width;
+bool ArticleText::GetPictureRect(ut::Rect* rect) const {
+    if (mPicture != NULL) {
+        rect->top = mPicPos.y;
+        rect->bottom = mPicPos.y + mPicScale * mPicture->height;
+        rect->left = mPicPos.x;
+        rect->right = mPicPos.x + mPicScale * mPicture->width;
         return true;
     }
     return false;

@@ -106,10 +106,16 @@ public:
     bool Select(const nw4r::ut::Rect* rect);
     void ClearSelection();
     f32 GetTop();
-    bool GetPictureRect(nw4r::ut::Rect* rect);
+    bool GetPictureRect(nw4r::ut::Rect* rect) const;
 
+    void SetSize(const nw4r::math::VEC2* size) {
+        mSize.x = size->x;
+        mSize.y = size->y;
+    }
     f32 GetHeight() { return mHeight; }
     f32 GetLineHeight() { return mLineHeight; }
+    s32 GetNumLines() { return mNumLines; }
+    NewsTexture* GetPicture() const { return mPicture; }
 
     MEMAllocator* mAllocator;          // at 0x00
     nw4r::ut::CharWriter* mWriter;     // at 0x04
