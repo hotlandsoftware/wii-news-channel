@@ -48,13 +48,14 @@ public:
     void PitchUp(s32** buffers);
 
     s32* GetSample(s32* history, s32 frame, s32 pos) {
-        s32 f = frame + pos / FX_FRAME_SAMPLES;
+        frame += pos / FX_FRAME_SAMPLES;
         pos %= FX_FRAME_SAMPLES;
         if (pos < 0) {
-            f--;
+            frame--;
             pos += FX_FRAME_SAMPLES;
         }
-        return &history[((mFrame + f + FX_HISTORY_FRAMES) % FX_HISTORY_FRAMES) * FX_FRAME_SAMPLES + pos];
+        frame = (mFrame + frame + FX_HISTORY_FRAMES) % FX_HISTORY_FRAMES;
+        return &history[frame * FX_FRAME_SAMPLES + pos];
     }
 
     void Read(s32 count, s32* dst, s32 frame, s32* history, s32 pos);
@@ -704,41 +705,30 @@ void FxVoice::UpdateBuffer(int channels, void** ppBuffer, u32 size, snd::SampleF
 }
 
 void FxVoice::PitchDown(s32** buffers) {
-    s32 h;
-    s32 v;
-    s32 pos;
-    s32 i;
-    s32 f;
-    s32 ch;
-    s32 k;
-    s32* src;
-    s32* out;
-    s32 base;
-    s32 back;
-
-    for (ch = 0; ch < 2; ch++) {
+    s32 back; s32 h; 
+    for (s32 ch = 0; ch < 2; ch++) {
         s32 work[FX_FRAME_SAMPLES];
-        for (i = 0; i < FX_FRAME_SAMPLES; i++) {
+        for (s32 i = 0; i < FX_FRAME_SAMPLES; i++) {
             work[i] = 0;
         }
-        for (k = 0; k < 2; k++) {
-            f = (mFrame + k * 64 / 2) % FX_HISTORY_FRAMES;
+        for (s32 k = 0; k < 2; k++) {
+            s32 f = (mFrame + k * 64 / 2) % FX_HISTORY_FRAMES;
             back = -f;
-            base = FX_FRAME_SAMPLES * f;
-            pos = base / 2;
-            src = GetSample(mInput[ch], back, pos);
-            for (i = 0; i < FX_FRAME_SAMPLES; i++) {
+            s32* src = GetSample(mInput[ch], back, f * FX_FRAME_SAMPLES / 2);
+            for (s32 i = 0; i < FX_FRAME_SAMPLES; i++) {
+                s32 v;
                 if (i == FX_FRAME_SAMPLES - 1) {
                     h = i / 2;
-                    v = (src[h] + *GetSample(mInput[ch], back, h + pos + 1)) / 2;
+                    s32 b = *GetSample(mInput[ch], back, h + f * FX_FRAME_SAMPLES / 2 + 1);
+                    v = (src[h] + b) / 2;
                 } else {
                     v = (src[i / 2] + src[i / 2 + 1]) / 2;
                 }
-                work[i] += v * mWindowA[base + i] / 4096;
+                work[i] += v * mWindowA[f * FX_FRAME_SAMPLES + i] / 4096;
             }
         }
-        out = buffers[ch];
-        for (i = 0; i < FX_FRAME_SAMPLES; i++) {
+        s32* out = buffers[ch];
+        for (s32 i = 0; i < FX_FRAME_SAMPLES; i++) {
             out[i] = work[i] * 0x1333 / 4096;
         }
     }
@@ -785,43 +775,29 @@ static inline BOOL InWindow(s32 n) {
 }
 
 void FxVoice::PitchUp(s32** buffers) {
-    s32 sum;
-    s32 pos;
-    s32 f;
-    s32 s1;
-    s32 frac;
-    s32 ch;
-    s32 s0;
-    s32 i;
-    s32 v;
-    s32* out;
-    s32 k;
-    s32 j;
-    s32 n;
-
-    for (ch = 0; ch < 2; ch++) {
+    for (s32 ch = 0; ch < 2; ch++) {
         s32 work[FX_FRAME_SAMPLES + 11];
-        for (i = 0; i < FX_FRAME_SAMPLES + 11; i++) {
+        for (s32 i = 0; i < FX_FRAME_SAMPLES + 11; i++) {
             work[i] = 0;
         }
-        for (k = 0; k < 2; k++) {
-            f = (mFrame + k * 64 / 2) % FX_HISTORY_FRAMES;
-            n = f * FX_FRAME_SAMPLES - 11;
-            for (j = -11; j < FX_FRAME_SAMPLES; j++, n++) {
+        for (s32 k = 0; k < 2; k++) {
+            s32 f = (mFrame + k * 64 / 2) % FX_HISTORY_FRAMES;
+            for (s32 j = -11; j < FX_FRAME_SAMPLES; j++) {
+                s32 n = f * FX_FRAME_SAMPLES + j;
                 if (InWindow(n)) {
-                    pos = n * 0x1800 / 4096;
-                    s0 = *GetSample(mOutput[ch], -32 - f, pos);
-                    s1 = *GetSample(mOutput[ch], -32 - f, pos + 1);
-                    frac = n * 0x1800 % 4096;
-                    v = s0 + (s32)((s64)frac * (s1 - s0) / 4096);
+                    s32 pos = n * 0x1800 / 4096;
+                    s32 s0 = *GetSample(mOutput[ch], -32 - f, pos);
+                    s32 s1 = *GetSample(mOutput[ch], -32 - f, pos + 1);
+                    s32 frac = n * 0x1800 % 4096;
+                    s32 v = s0 + (s32)((s64)frac * (s1 - s0) / 4096);
                     work[j + 11] += v * mWindowB[n] / 4096;
                 }
             }
         }
-        out = buffers[ch];
-        for (i = FX_FRAME_SAMPLES - 1; i >= 0; i--) {
-            sum = 0;
-            for (k = 0; k < 11; k++) {
+        s32* out = buffers[ch];
+        for (s32 i = FX_FRAME_SAMPLES - 1; i >= 0; i--) {
+            s32 sum = 0;
+            for (s32 k = 0; k < 11; k++) {
                 sum += mFilterC[k] * work[i - k + 11];
             }
             out[i] = sum / 4096;
