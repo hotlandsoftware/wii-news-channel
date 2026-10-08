@@ -344,15 +344,17 @@ bool ArticleText::Set(const wchar_t* text, NewsPicture* picture, const math::VEC
     }
 
     c = mChars;
-    for (; *p != 0; c++, p++) {
-        c->mChar = *p;
+    wchar_t ch;
+    for (; (ch = *p) != 0; c++, p++) {
+        c->mChar = ch;
         c->mScale = mFontScale;
         Deselect(c);
         c->mScaleX = 1.0f;
         c->mWordIndex = word;
         if (IsNoBreak(p, mText)) {
-            c->mNext = c + 1;
-            c[1].mPrev = c;
+            TextChar* next = c + 1;
+            c->mNext = next;
+            next->mPrev = c;
         } else {
             word++;
         }
@@ -384,15 +386,17 @@ bool ArticleText::Set(const wchar_t* text, NewsPicture* picture, const math::VEC
     c->mScaleX = 1.0f;
     c->mWordIndex = word + 1;
 
-    for (c = mChars; c->mChar != 0; c++) {
-        if (c->mPrev == NULL) {
+    TextChar* n; // declared ahead of the loop pointer: n is r3, w is r4
+    for (TextChar* w = mChars; w->mChar != 0; w++) {
+        if (w->mPrev == NULL) {
+            f32 width; // declared ahead of space: width is f2, space is f3
             f32 space = gCharSpaceScale;
-            f32 width = c->mScaledWidth;
-            for (TextChar* n = c->mNext; n != NULL; n = n->mNext) {
+            width = w->mScaledWidth;
+            for (n = w->mNext; n != NULL; n = n->mNext) {
                 width += space + n->mScaledWidth;
             }
             f32 scaleX = 1.0f;
-            c->mWordWidth = width * scaleX;
+            w->mWordWidth = width * scaleX;
         }
     }
 
@@ -414,9 +418,9 @@ bool ArticleText::Set(const wchar_t* text, NewsPicture* picture, const math::VEC
         if (mPicture != NULL) {
             mPicTarget.y = y;
         }
-        c = mChars;
-        for (u32 i = 0; i < mCount; i++, c++) {
-            c->mTarget.y = y;
+        u32 i = 0; // the counter comes first (r3), then a pointer of its own (r4)
+        for (TextChar* t = mChars; i < mCount; i++, t++) {
+            t->mTarget.y = y;
         }
     }
 
@@ -428,6 +432,14 @@ bool ArticleText::Set(const wchar_t* text, NewsPicture* picture, const math::VEC
     mPicTargetScale = 1.0f;
     Layout(scale);
     return true;
+}
+
+// A texture's size along one axis. Draw() reads the picture's width and height
+// through a helper with a constant flag: the branch is folded after the two
+// statements were optimised separately, so `zoom - 1.0f` is evaluated inside
+// each expression (and merged later) instead of ahead of both.
+static inline u16 GetSize(const NewsTexture* tex, bool vertical) {
+    return vertical ? tex->height : tex->width;
 }
 
 #define DRAW_CHAR(c, yOfs)                                                                         \
@@ -459,8 +471,8 @@ void ArticleText::Draw(const math::VEC2* pos, bool clip, f32 alpha, f32 zoom) {
 
     TextChar* c;
     s32 i = mFirstVisible;
-    ut::Color color;
     c = &mChars[i];
+    ut::Color color; // declared after the pointer is set: the white constant is numbered last (r4)
 
     if (gNewsData->mHeader->unk2C[0] == 0) {
         f32 yOfs = 0.0f;
@@ -517,10 +529,9 @@ void ArticleText::Draw(const math::VEC2* pos, bool clip, f32 alpha, f32 zoom) {
     }
 
     if (mPicture != NULL) {
-        f32 grow = zoom - 1.0f;
         math::VEC3 picPos;
-        picPos.x = pos->x + mPicPos.x - 0.5f * (grow * mPicScale * mPicture->width);
-        picPos.y = pos->y + mPicPos.y - 0.5f * (grow * mPicScale * mPicture->height);
+        picPos.x = pos->x + mPicPos.x - 0.5f * ((zoom - 1.0f) * mPicScale * GetSize(mPicture, false));
+        picPos.y = pos->y + mPicPos.y - 0.5f * ((zoom - 1.0f) * mPicScale * GetSize(mPicture, true));
         picPos.z = 0.0f;
         f32 picScale = zoom * mPicScale;
         SetupTexGX();
@@ -1008,6 +1019,7 @@ bool ArticleText::Select(const ut::Rect* rect) {
     f32 left = rect->left;
     f32 right = rect->right;
     TextChar* c = mChars;
+    s32 i; // declared ahead of p: the counter of the main loop is numbered before the scan's variables
     TextChar* p = c;
     if (left < right) {
         minX = left;
@@ -1030,7 +1042,7 @@ bool ArticleText::Select(const ut::Rect* rect) {
         }
     }
 
-    for (s32 i = 0; i < mCount; i++, c++) {
+    for (i = 0; i < mCount; i++, c++) {
         f32 top = rect->top;
         Deselect(c);
         if (c->mTop <= top && c->mBottom >= top && c->mTop <= rect->bottom &&
