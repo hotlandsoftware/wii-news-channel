@@ -1517,7 +1517,7 @@ config.libs = [
         "objects": [
             Object(Matching, "news/Globe.cpp"),
             Object(Matching, "news/Resource.cpp", extra_cflags=["-ipa file"]),
-            Object(NonMatching, "news/sound_manager.cpp"),
+            Object(NonMatching, "news/sound_manager.cpp", extra_cflags=["-ipa file"]),
         ],
     },
 ]

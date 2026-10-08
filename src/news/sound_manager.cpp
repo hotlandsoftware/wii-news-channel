@@ -43,18 +43,23 @@ public:
     virtual void UpdateBuffer(int channels, void** ppBuffer, u32 size, snd::SampleFormat format,
                               f32 sampleRate, snd::OutputMode mode);
 
+    void EchoFilter(s32** buffers);
+    void Chorus(s32** buffers);
     void PitchDown(s32** buffers);
     void Radio(s32** buffers);
     void PitchUp(s32** buffers);
 
+    // Sample `pos` of the frame that lies `frame` frames after the current one
+    // (both may be negative or out of range).
     s32* GetSample(s32* history, s32 frame, s32 pos) {
-        s32 f = frame + pos / FX_FRAME_SAMPLES;
+        frame += pos / FX_FRAME_SAMPLES;
         pos %= FX_FRAME_SAMPLES;
         if (pos < 0) {
-            f--;
+            frame--;
             pos += FX_FRAME_SAMPLES;
         }
-        return &history[((mFrame + f + FX_HISTORY_FRAMES) % FX_HISTORY_FRAMES) * FX_FRAME_SAMPLES + pos];
+        frame = (mFrame + frame + FX_HISTORY_FRAMES) % FX_HISTORY_FRAMES;
+        return &history[frame * FX_FRAME_SAMPLES + pos];
     }
 
     void Read(s32 count, s32* dst, s32 frame, s32* history, s32 pos);
@@ -555,10 +560,19 @@ static inline f32 CosIdx(u16 idx) {
     return math::CosFIdx(0.00390625f * U16ToF32(&idx));
 }
 
-// One tap of a band-pass FIR filter. The two sines are arguments (evaluated
-// right to left), which gives their u16 temporaries the original stack slots.
-static inline s32 BandPassTap(s32 lo, s32 hi, s32 n) {
-    return ((hi - lo) << 12) / (0x3243 * n);
+// Coefficients of a band-pass FIR filter with 2 * taps + 1 taps, symmetric
+// around the centre tap.
+static inline void MakeBandPass(s32* coef, s32 taps, s32 lo, s32 hi) {
+    s32* f = coef;
+    s32* c = f + taps;
+    *c = hi - lo;
+    for (s32 i = 1; i <= taps; i++) {
+        s32 a = 4096.0f * SinIdx((hi * i) << 3);
+        s32 b = 4096.0f * SinIdx((lo * i) << 3);
+        s32 v = ((a - b) << 12) / (0x3243 * i);
+        f[taps - i] = v;
+        c[i] = v;
+    }
 }
 
 FxVoice::FxVoice() {
@@ -579,32 +593,9 @@ FxVoice::FxVoice() {
     }
     mTicks = 0;
 
-    s32* f = mFilterA;
-    s32* up = f + 6;
-    f[5] = 0xE00 - 0x100;
-    for (s32 i = 1; i <= 5; i++) {
-        s32 v = BandPassTap((s32)(4096.0f * SinIdx((0x100 * i) << 3)), (s32)(4096.0f * SinIdx((0xE00 * i) << 3)), i);
-        f[5 - i] = v;
-        *up++ = v;
-    }
-
-    f = mFilterB;
-    up = f + 11;
-    f[10] = 0x366 - 0x100;
-    for (s32 i = 1; i <= 10; i++) {
-        s32 v = BandPassTap((s32)(4096.0f * SinIdx((0x100 * i) << 3)), (s32)(4096.0f * SinIdx((0x366 * i) << 3)), i);
-        f[10 - i] = v;
-        *up++ = v;
-    }
-
-    f = mFilterC;
-    up = f + 6;
-    f[5] = 0x900 - 0;
-    for (s32 i = 1; i <= 5; i++) {
-        s32 v = BandPassTap((s32)(4096.0f * SinIdx((0 * i) << 3)), (s32)(4096.0f * SinIdx((0x900 * i) << 3)), i);
-        f[5 - i] = v;
-        *up++ = v;
-    }
+    MakeBandPass(mFilterA, 5, 0x100, 0xE00);
+    MakeBandPass(mFilterB, 10, 0x100, 0x366);
+    MakeBandPass(mFilterC, 5, 0, 0x900);
 
     for (s32 i = 0; i < FX_LFO_SIZE; i++) {
         s32 s = 4096.0f * SinIdx((s64)i * 0x10000 / FX_LFO_SIZE);
@@ -615,74 +606,107 @@ FxVoice::FxVoice() {
     MakeWindow(mWindowB, FX_WINDOW_SIZE, 0);
 }
 
+// Loops over sample buffers. They have to be inline helpers: the loop
+// variables of an inlined helper are numbered ahead of the pointers MWCC
+// creates for the loop, those of a loop written in place come after them.
+static inline void Clear(s32* buf, s32 n) {
+    for (s32 i = 0; i < n; i++) {
+        buf[i] = 0;
+    }
+}
+
+static inline void Fir(s32* out, const s32* in, const s32* coef, s32 taps) {
+    for (s32 i = FX_FRAME_SAMPLES - 1; i >= 0; i--) {
+        s32 sum = 0;
+        for (s32 k = 0; k < taps; k++) {
+            sum += coef[k] * in[i - k];
+        }
+        out[i] = sum / 4096;
+    }
+}
+
+static inline void Mix(s32* dst, const s32* src, s32 n) {
+    for (s32 i = 0; i < n; i++) {
+        dst[i] = ((dst[i] + src[i]) << 12) / 4096;
+    }
+}
+
+// Not ut::Min: that one tests a > b, the original tests count <= rest.
+static inline s32 Min(s32 a, s32 b) {
+    return a <= b ? a : b;
+}
+
+// Copies `count` samples starting at (frame, pos) out of a history buffer,
+// one frame at a time.
 inline void FxVoice::Read(s32 count, s32* dst, s32 frame, s32* history, s32 pos) {
-    frame += pos / FX_FRAME_SAMPLES;
+    s32 f = frame + pos / FX_FRAME_SAMPLES;
     pos %= FX_FRAME_SAMPLES;
     if (pos < 0) {
-        frame--;
+        f--;
         pos += FX_FRAME_SAMPLES;
     }
     while (count > 0) {
-        s32 n = FX_FRAME_SAMPLES - pos;
-        if (count <= n) {
-            n = count;
-        }
-        CopyBuffer(GetSample(history, frame, pos), dst, n);
+        s32 n = Min(count, FX_FRAME_SAMPLES - pos);
+        CopyBuffer(GetSample(history, f, pos), dst, n);
         count -= n;
         dst += n;
         pos = 0;
-        frame++;
+        f++;
+    }
+}
+
+static inline void AddEcho(s32* dst, const s32* echo, s32 n) {
+    for (s32 i = 0; i < n; i++) {
+        dst[i] = ((dst[i] << 12) + echo[i] * 0x999) / 4096;
+    }
+}
+
+inline void FxVoice::EchoFilter(s32** buffers) {
+    for (s32 ch = 0; ch < 2; ch++) {
+        s32 work[FX_FRAME_SAMPLES + 11];
+        s32 echo[FX_FRAME_SAMPLES + 11];
+        Read(FX_FRAME_SAMPLES + 11, work, 0, mInput[ch], -11);
+        Read(FX_FRAME_SAMPLES + 11, echo, -60, mOutput[ch], -11);
+        AddEcho(work, echo, FX_FRAME_SAMPLES + 11);
+        Fir(buffers[ch], &work[11], mFilterA, 11);
+    }
+}
+
+inline void FxVoice::Chorus(s32** buffers) {
+    for (s32 ch = 0; ch < 2; ch++) {
+        s32* out = buffers[ch];
+        s32 lfo = (mFrame % 30) * FX_FRAME_SAMPLES;
+        for (s32 i = 0; i < FX_FRAME_SAMPLES; i++) {
+            out[i] = *GetSample(mInput[ch], -2, i + mLfo[lfo + i]);
+        }
+        s32* echo = GetSample(mOutput[ch], -60, 0);
+        for (s32 i = 0; i < FX_FRAME_SAMPLES; i++) {
+            out[i] = (out[i] * 0xCCC + echo[i] * 0x333) / 4096;
+        }
     }
 }
 
 void FxVoice::UpdateBuffer(int channels, void** ppBuffer, u32 size, snd::SampleFormat format,
                            f32 sampleRate, snd::OutputMode mode) {
-    s32 ch;
     OSTick start = OSGetTick();
     s32* buffers[2];
     buffers[0] = (s32*)ppBuffer[0];
     buffers[1] = (s32*)ppBuffer[1];
 
-    for (ch = 0; ch < 2; ch++) {
+    for (s32 ch = 0; ch < 2; ch++) {
         CopyBuffer(buffers[ch], GetSample(mInput[ch], 0, 0), FX_FRAME_SAMPLES);
     }
 
     if (mEnabled) {
         switch (mMode) {
         case MODE_ECHO_FILTER:
-            for (ch = 0; ch < 2; ch++) {
-                s32 echo[FX_FRAME_SAMPLES + 11];
-                s32 work[FX_FRAME_SAMPLES + 11];
-                Read(FX_FRAME_SAMPLES + 11, work, 0, mInput[ch], -11);
-                Read(FX_FRAME_SAMPLES + 11, echo, -60, mOutput[ch], -11);
-                for (s32 i = 0; i < FX_FRAME_SAMPLES + 11; i++) {
-                    work[i] = ((work[i] << 12) + echo[i] * 0x999) / 4096;
-                }
-                s32* out = buffers[ch];
-                for (s32 i = FX_FRAME_SAMPLES - 1; i >= 0; i--) {
-                    s32 sum = 0;
-                    for (s32 k = 0; k < 11; k++) {
-                        sum += mFilterA[k] * work[i - k + 11];
-                    }
-                    out[i] = sum / 4096;
-                }
-            }
+            EchoFilter(buffers);
             break;
         case MODE_PITCH_DOWN:
             PitchDown(buffers);
             break;
         case MODE_CHORUS:
-            for (ch = 0; ch < 2; ch++) {
-                s32* out = buffers[ch];
-                s32 lfo = (mFrame % 30) * FX_FRAME_SAMPLES;
-                for (s32 i = 0; i < FX_FRAME_SAMPLES; i++) {
-                    out[i] = *GetSample(mInput[ch], -2, i + mLfo[lfo + i]);
-                }
-                s32* echo = GetSample(mOutput[ch], -60, 0);
-                for (s32 i = 0; i < FX_FRAME_SAMPLES; i++) {
-                    out[i] = (out[i] * 0xCCC + echo[i] * 0x333) / 4096;
-                }
-            }
+            Chorus(buffers);
             break;
         case MODE_RADIO:
             Radio(buffers);
@@ -690,7 +714,7 @@ void FxVoice::UpdateBuffer(int channels, void** ppBuffer, u32 size, snd::SampleF
         }
     }
 
-    for (ch = 0; ch < 2; ch++) {
+    for (s32 ch = 0; ch < 2; ch++) {
         CopyBuffer(buffers[ch], GetSample(mOutput[ch], 0, 0), FX_FRAME_SAMPLES);
     }
 
@@ -704,41 +728,32 @@ void FxVoice::UpdateBuffer(int channels, void** ppBuffer, u32 size, snd::SampleF
 }
 
 void FxVoice::PitchDown(s32** buffers) {
-    s32 h;
-    s32 v;
-    s32 pos;
-    s32 i;
-    s32 f;
-    s32 ch;
-    s32 k;
-    s32* src;
-    s32* out;
-    s32 base;
+    // Declared up here: the original gives these two the registers above the
+    // loop counters.
     s32 back;
+    s32 h;
 
-    for (ch = 0; ch < 2; ch++) {
+    for (s32 ch = 0; ch < 2; ch++) {
         s32 work[FX_FRAME_SAMPLES];
-        for (i = 0; i < FX_FRAME_SAMPLES; i++) {
-            work[i] = 0;
-        }
-        for (k = 0; k < 2; k++) {
-            f = (mFrame + k * 64 / 2) % FX_HISTORY_FRAMES;
+        Clear(work, FX_FRAME_SAMPLES);
+        for (s32 k = 0; k < 2; k++) {
+            s32 f = (mFrame + k * 64 / 2) % FX_HISTORY_FRAMES;
             back = -f;
-            base = FX_FRAME_SAMPLES * f;
-            pos = base / 2;
-            src = GetSample(mInput[ch], back, pos);
-            for (i = 0; i < FX_FRAME_SAMPLES; i++) {
+            s32* src = GetSample(mInput[ch], back, f * FX_FRAME_SAMPLES / 2);
+            for (s32 i = 0; i < FX_FRAME_SAMPLES; i++) {
+                s32 v;
                 if (i == FX_FRAME_SAMPLES - 1) {
                     h = i / 2;
-                    v = (src[h] + *GetSample(mInput[ch], back, h + pos + 1)) / 2;
+                    s32 b = *GetSample(mInput[ch], back, h + f * FX_FRAME_SAMPLES / 2 + 1);
+                    v = (src[h] + b) / 2;
                 } else {
                     v = (src[i / 2] + src[i / 2 + 1]) / 2;
                 }
-                work[i] += v * mWindowA[base + i] / 4096;
+                work[i] += v * mWindowA[f * FX_FRAME_SAMPLES + i] / 4096;
             }
         }
-        out = buffers[ch];
-        for (i = 0; i < FX_FRAME_SAMPLES; i++) {
+        s32* out = buffers[ch];
+        for (s32 i = 0; i < FX_FRAME_SAMPLES; i++) {
             out[i] = work[i] * 0x1333 / 4096;
         }
     }
@@ -747,35 +762,29 @@ void FxVoice::PitchDown(s32** buffers) {
 void FxVoice::Radio(s32** buffers) {
     s32 work[FX_FRAME_SAMPLES + 21];
     s32 work2[FX_FRAME_SAMPLES + 21];
-    s32 ch;
     s32* p = &work[21];
 
-    Read(FX_FRAME_SAMPLES + 21, work, 0, mInput[0], -21);
-    Read(FX_FRAME_SAMPLES + 21, work2, 0, mInput[1], -21);
-    for (s32 i = 0; i < FX_FRAME_SAMPLES + 21; i++) {
-        work[i] = ((work[i] + work2[i]) << 12) / 4096;
-    }
+    // The two channels are addressed as one flat buffer: with mInput[1] the
+    // offset is folded into the address arithmetic inside the loop, the
+    // original keeps the second channel's base in a register.
+    Read(FX_FRAME_SAMPLES + 21, work, 0, (s32*)mInput, -21);
+    Read(FX_FRAME_SAMPLES + 21, work2, 0, (s32*)mInput + FX_HISTORY_SIZE, -21);
 
-    for (s32 i = FX_FRAME_SAMPLES - 1; i >= 0; i--) {
-        s32 sum = 0;
-        for (s32 k = 0; k < 21; k++) {
-            sum += mFilterB[k] * p[i - k];
-        }
-        p[i] = sum / 4096;
-    }
+    Mix(work, work2, FX_FRAME_SAMPLES + 21);
 
-    u32 seed = sNoiseSeed;
+    Fir(p, p, mFilterB, 21);
+
     for (s32 i = 0; i < FX_FRAME_SAMPLES; i++) {
         if (i % 8 == 0) {
-            seed = seed * 0x80D + 7;
-            sNoiseSeed = seed;
+            sNoiseSeed = sNoiseSeed * 0x80D + 7;
         }
-        s32 noise = (s32)((s64)(s32)(seed & 0xFFF) * 0x19A / 4096) + 0xE66;
-        p[i] = p[i] * noise / 4096;
-        work[i + 21] &= ~0x7F;
+        p[i] = p[i] * ((s32)((s64)(s32)(sNoiseSeed & 0xFFF) * 0x19A / 4096) + 0xE66) / 4096;
+        // Masked through an unsigned pointer: the original walks a second
+        // pointer for this store.
+        ((u32*)p)[i] &= ~0x7F;
     }
 
-    for (ch = 0; ch < 2; ch++) {
+    for (s32 ch = 0; ch < 2; ch++) {
         CopyBuffer(p, buffers[ch], FX_FRAME_SAMPLES);
     }
 }
@@ -785,71 +794,61 @@ static inline BOOL InWindow(s32 n) {
 }
 
 void FxVoice::PitchUp(s32** buffers) {
-    s32 sum;
-    s32 pos;
-    s32 f;
-    s32 s1;
-    s32 frac;
-    s32 ch;
-    s32 s0;
-    s32 i;
-    s32 v;
-    s32* out;
-    s32 k;
-    s32 j;
-    s32 n;
-
-    for (ch = 0; ch < 2; ch++) {
+    for (s32 ch = 0; ch < 2; ch++) {
         s32 work[FX_FRAME_SAMPLES + 11];
-        for (i = 0; i < FX_FRAME_SAMPLES + 11; i++) {
-            work[i] = 0;
-        }
-        for (k = 0; k < 2; k++) {
-            f = (mFrame + k * 64 / 2) % FX_HISTORY_FRAMES;
-            n = f * FX_FRAME_SAMPLES - 11;
-            for (j = -11; j < FX_FRAME_SAMPLES; j++, n++) {
+        Clear(work, FX_FRAME_SAMPLES + 11);
+        for (s32 k = 0; k < 2; k++) {
+            s32 f = (mFrame + k * 64 / 2) % FX_HISTORY_FRAMES;
+            for (s32 j = -11; j < FX_FRAME_SAMPLES; j++) {
+                s32 n = f * FX_FRAME_SAMPLES + j;
                 if (InWindow(n)) {
-                    pos = n * 0x1800 / 4096;
-                    s0 = *GetSample(mOutput[ch], -32 - f, pos);
-                    s1 = *GetSample(mOutput[ch], -32 - f, pos + 1);
-                    frac = n * 0x1800 % 4096;
-                    v = s0 + (s32)((s64)frac * (s1 - s0) / 4096);
+                    s32 pos = n * 0x1800 / 4096;
+                    s32 s0 = *GetSample(mOutput[ch], -32 - f, pos);
+                    s32 s1 = *GetSample(mOutput[ch], -32 - f, pos + 1);
+                    s32 frac = n * 0x1800 % 4096;
+                    s32 v = s0 + (s32)((s64)frac * (s1 - s0) / 4096);
                     work[j + 11] += v * mWindowB[n] / 4096;
                 }
             }
         }
-        out = buffers[ch];
-        for (i = FX_FRAME_SAMPLES - 1; i >= 0; i--) {
-            sum = 0;
-            for (k = 0; k < 11; k++) {
-                sum += mFilterC[k] * work[i - k + 11];
-            }
-            out[i] = sum / 4096;
-        }
+        Fir(buffers[ch], &work[11], mFilterC, 11);
     }
 }
 
 #define FX_DIV(a, b) ((b) == 0 ? 0 : (a) / (b))
 
+static inline void MakeHamming(s32* window, s32 n) {
+    for (s32 i = 0; i < n; i++) {
+        s32 c = 4096.0f * CosIdx(FX_DIV((s64)i * 0x10000, n));
+        window[i] = -c * 0x75C / 4096 + 0x8A3;
+    }
+}
+
+static inline void MakeHann(s32* window, s32 n) {
+    for (s32 i = 0; i < n; i++) {
+        s32 c = 4096.0f * CosIdx(FX_DIV((s64)i * 0x10000, n));
+        window[i] = -c / 2 + 0x800;
+    }
+}
+
 static void MakeWindow(s32* window, s32 n, s32 type) {
     switch (type) {
     case 0:
-        for (s32 i = 0; i < n; i++) {
-            s32 c = 4096.0f * CosIdx(FX_DIV((s64)i * 0x10000, n));
-            window[i] = -c * 0x75C / 4096 + 0x8A3;
-        }
+        MakeHamming(window, n);
         break;
     case 1:
-        for (s32 i = 0; i < n; i++) {
-            s32 c = 4096.0f * CosIdx(FX_DIV((s64)i * 0x10000, n));
-            window[i] = -c / 2 + 0x800;
-        }
+        MakeHann(window, n);
         break;
     case 2: {
-        s32 half = n / 2;
-        s32 a = half + 1;
-        s32 b = n - half;
+        // Declared in this order for the original's saved registers
+        // (half, a, b from r27 down).
+        s32 b;
+        s32 a;
+        s32 half;
         s32 i;
+        half = n / 2;
+        a = half + 1;
+        b = n - half;
         for (i = 0; i < n; i++) {
             s32 v;
             if (i < half) {
