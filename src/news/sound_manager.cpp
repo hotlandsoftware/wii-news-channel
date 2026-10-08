@@ -44,6 +44,7 @@ public:
                               f32 sampleRate, snd::OutputMode mode);
 
     void Store(s32 (*history)[FX_HISTORY_SIZE], s32** buffers);
+    void StoreCh(s32* history, const s32* buffer);
     void EchoFilter(s32** buffers);
     void Chorus(s32** buffers);
     void PitchDown(s32** buffers);
@@ -661,12 +662,6 @@ static inline void AddEcho(s32* dst, const s32* echo, s32 n) {
     }
 }
 
-inline void FxVoice::Store(s32 (*history)[FX_HISTORY_SIZE], s32** buffers) {
-    for (s32 ch = 0; ch < 2; ch++) {
-        CopyBuffer(buffers[ch], GetSample(history[ch], 0, 0), FX_FRAME_SAMPLES);
-    }
-}
-
 inline void FxVoice::Chorus(s32** buffers) {
     for (s32 ch = 0; ch < 2; ch++) {
         s32* out = buffers[ch];
@@ -688,7 +683,9 @@ void FxVoice::UpdateBuffer(int channels, void** ppBuffer, u32 size, snd::SampleF
     buffers[0] = (s32*)ppBuffer[0];
     buffers[1] = (s32*)ppBuffer[1];
 
-    Store(mInput, buffers);
+    for (s32 ch = 0; ch < 2; ch++) {
+        CopyBuffer(buffers[ch], GetSample(mInput[ch], 0, 0), FX_FRAME_SAMPLES);
+    }
 
     if (mEnabled) {
         switch (mMode) {
@@ -714,7 +711,9 @@ void FxVoice::UpdateBuffer(int channels, void** ppBuffer, u32 size, snd::SampleF
         }
     }
 
-    Store(mOutput, buffers);
+    for (s32 ch = 0; ch < 2; ch++) {
+        CopyBuffer(buffers[ch], GetSample(mOutput[ch], 0, 0), FX_FRAME_SAMPLES);
+    }
 
     if (mPitchUp) {
         PitchUp(buffers);
