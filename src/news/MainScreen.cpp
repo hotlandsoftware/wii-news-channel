@@ -523,38 +523,34 @@ f32 sGlobe2Y = 0.0f;
 void MainScreen::Draw() {
     Draw2D_SetupGX();
     Draw2D_SetOrtho();
-    // The original frame has 24 bytes in front of `end` and `pos` that no instruction
-    // touches. A copy MWCC only removes after laying out the frame reproduces them; what
-    // the original source had there is unknown.
-    math::VEC3 unused[2];
-    unused[0] = unused[0];
     f32 scale = gWidescreen ? 832.0f / 608.0f : 1.0f;
     u8 bgAlpha = mUnk324 * mUnk248;
     u8 a = 255.0f * mUnk248;
     ut::Color black(0, 0, 0, a);
     ut::Color white(255, 255, 255, a);
-    math::VEC3 end;
-    math::VEC3 pos;
-    pos.x = mScreenRect.right - scale * TPL_GetWidth(gCommonTpl, 0);
-    pos.y = sCursorY;
-    pos.z = sCursorZ;
+    // Room for four points, of which two are used (the original frame has 24 untouched
+    // bytes behind them); ArticleText::Draw has the same kind of array.
+    math::VEC3 line[4];
+    line[0].x = mScreenRect.right - scale * TPL_GetWidth(gCommonTpl, 0);
+    line[0].y = sCursorY;
+    line[0].z = sCursorZ;
     if (IsState(&MainScreen::State195A0) || IsState(&MainScreen::State17E6C)) {
         ut::Color bg(0xDE, 0xDE, 0xDE, bgAlpha);
         Draw2D_FillRect(&mScreenRect, &bg);
     } else {
         GXSetTevColor(GX_TEVREG0, ut::Color(255, 255, 255, bgAlpha));
-        Draw2D_Tex(gCommonTpl, 0, &pos, scale, 1.0f);
+        Draw2D_Tex(gCommonTpl, 0, &line[0], scale, 1.0f);
     }
     f32 bottom = 456.0f;
-    pos.x = mScreenRect.right - 2.0f;
-    end.x = pos.x;
-    end.y = bottom;
-    end.z = sLineZ;
+    line[0].x = mScreenRect.right - 2.0f;
+    line[1].x = line[0].x;
+    line[1].y = bottom;
+    line[1].z = sLineZ;
     Draw2D_SetupGX();
-    Draw2D_Line(pos, end, 12, white, white);
-    pos.x += 1.0f;
-    end.x += 1.0f;
-    Draw2D_Line(pos, end, 12, black, black);
+    Draw2D_Line(line[0], line[1], 12, white, white);
+    line[0].x += 1.0f;
+    line[1].x += 1.0f;
+    Draw2D_Line(line[0], line[1], 12, black, black);
     if (mDraw) {
         (this->*mDraw)();
     }
