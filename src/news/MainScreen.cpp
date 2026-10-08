@@ -2515,7 +2515,7 @@ void MainScreen::State1B694(s32* arg) {
         mDraw = &MainScreen::DrawGlobe;
         Pins_SetStateAll(1);
         mUnk250 = GetFontScale() * GetTextScale(lbl_80356970);
-        f32 split;
+        f32 listHeight;
         f32 maxHeight = 290.0f;
         f32 width = GetContentRight() - GetSideMargin();
         f32 height = 10.0f + (67.0f + mUnk2F8 * (mUnk24C * mUnk250));
@@ -2527,9 +2527,10 @@ void MainScreen::State1B694(s32* arg) {
         mUnk1A4 = width;
         mUnk1A8 = height;
         mUnk1AC = width;
-        mUnk1B0 = height - 67.0f;
-        mUnk260 = split = 0.3f * width;
-        mUnk264 = width - split;
+        listHeight = height - 67.0f;
+        mUnk1B0 = listHeight;
+        mUnk260 = 0.3f * width;
+        mUnk264 = width - mUnk260;
         mShowRelated = true;
         f32 rowHeight = mUnk24C * GetFontScale() * GetTextScale(lbl_80356970);
         mUnk2FC = mUnk300;
