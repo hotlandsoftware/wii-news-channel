@@ -114,6 +114,17 @@ void CoordExpr(const PCGXShaderKey* key, u32 coord, char* out, u32 size) {
     }
 }
 
+// The size of the texture on `map` in texels, as the game gave it. In the
+// enhanced-sampling variant that is a uniform, because the OpenGL texture
+// may be a larger picture of the same image (a kept EFB copy).
+void TexSizeExpr(const PCGXShaderKey* key, u32 map, char* out, u32 size) {
+    if (key->enhancedSampling) {
+        std::snprintf(out, size, "uTexSize[%u]", map);
+    } else {
+        std::snprintf(out, size, "vec2(textureSize(uTex%u, 0))", map);
+    }
+}
+
 // An indirect stage reference is active if it does anything to the
 // coordinates (matrix, wrap or add-previous bits).
 bool IndirectActive(const PCGXShaderKey* key, u32 stage) {
@@ -203,12 +214,36 @@ void WriteStage(Writer& w, const PCGXShaderKey* key, u32 n) {
     // Texture
     if (key->texEnable[n]) {
         SwapSwizzle(key->swapTable[(alphaEnv >> 2) & 3], swizzle);
+        char texSize[48];
+        TexSizeExpr(key, key->texMap[n], texSize, sizeof(texSize));
         if (indirect) {
-            w.Add("  tex = ivec4(round(texture(uTex%u, vec2(tevcoord) / (vec2(textureSize(uTex%u, 0)) * 128.0)) * 255.0))%s;\n",
-                  key->texMap[n], key->texMap[n], swizzle);
+            w.Add("  tex = ivec4(round(texture(uTex%u, vec2(tevcoord) / (%s * 128.0)) * 255.0))%s;\n", key->texMap[n],
+                  texSize, swizzle);
         } else {
             CoordExpr(key, key->texCoord[n], coord, sizeof(coord));
-            if (key->texCoord[n] < key->numTexGens) {
+            if (key->texCoord[n] < key->numTexGens && key->enhancedSampling) {
+                // The EFB has more pixels (or samples) than the console's, so
+                // a coordinate can land where no pixel centre of the console
+                // lands: within half a console pixel of the edge of its
+                // quadrilateral, where a bilinear lookup reaches the texels
+                // beyond the ones the quadrilateral shows (the next glyph of
+                // a font sheet, the other side of a repeating texture).
+                // Coordinates are therefore kept inside the range the
+                // console's pixel centres cover: the quadrilateral's texel
+                // rectangle (uTexClamp, from the vertices) less half the
+                // texels a console pixel spans. Where the console draws one
+                // texel per pixel this changes nothing it would have drawn.
+                u32 k = key->texCoord[n];
+                w.Add("  {\n"
+                      "    vec2 tc = %s * uTexScale[%u];\n"
+                      "    vec2 gx = dFdx(tc), gy = dFdy(tc);\n"
+                      "    vec2 hf = 0.5 * (abs(gx) * uEfbScale.x + abs(gy) * uEfbScale.y);\n"
+                      "    vec2 lo = uTexClamp[%u].xy * uTexScale[%u] + hf, hi = uTexClamp[%u].zw * uTexScale[%u] - hf;\n"
+                      "    tc = mix(min(max(tc, lo), hi), 0.5 * (lo + hi), vec2(greaterThan(lo, hi)));\n"
+                      "    tex = ivec4(round(textureGrad(uTex%u, tc / %s, gx / %s, gy / %s) * 255.0))%s;\n"
+                      "  }\n",
+                      coord, k, k, k, k, k, key->texMap[n], texSize, texSize, texSize, swizzle);
+            } else if (key->texCoord[n] < key->numTexGens) {
                 w.Add("  tex = ivec4(round(texture(uTex%u, %s * uTexScale[%u] / vec2(textureSize(uTex%u, 0))) * 255.0))%s;\n",
                       key->texMap[n], coord, key->texCoord[n], key->texMap[n], swizzle);
             } else {
@@ -331,6 +366,7 @@ void PCGXBuildShaderKey(PCGXShaderKey* key) {
     bool dstAlpha = (s.bp[PC_BP_CMODE1] >> 8) & 1;
     key->dualSourceAlpha = efbAlpha && alphaUpdate && dstAlpha;
     key->zCompLocBeforeTex = (s.bp[PC_BP_PE_CONTROL] >> 6) & 1;
+    key->enhancedSampling = PCGXRenderEnhancedSampling();
 
     for (u32 i = 0; i < 4; i++) {
         u32 rg = s.bp[PC_BP_TEV_KSEL0 + i * 2];
@@ -427,6 +463,11 @@ bool PCGXGenerateFragmentShader(const PCGXShaderKey* key, char* out, u32 outSize
           "uniform int uDstAlpha;\n"
           "uniform vec2 uTexScale[8];\n" // size each coordinate is scaled to (SU registers)
           "uniform ivec4 uIndMtx[6];\n"); // two rows per matrix; w: right shift
+    if (key->enhancedSampling) {
+        w.Add("uniform vec2 uTexSize[8];\n"   // texels of each texture map, as the game gave them
+              "uniform vec4 uTexClamp[8];\n"  // per coordinate: the quadrilateral's (s0, t0, s1, t1)
+              "uniform vec2 uEfbScale;\n");   // OpenGL pixels per EFB pixel
+    }
     if (key->dualSourceAlpha) {
         w.Add("layout(location = 0, index = 0) out vec4 oColor;\n"
               "layout(location = 0, index = 1) out vec4 oBlend;\n");
@@ -450,8 +491,10 @@ bool PCGXGenerateFragmentShader(const PCGXShaderKey* key, char* out, u32 outSize
         CoordExpr(key, key->indTexCoord[i], coord, sizeof(coord));
         w.Add("  fix = ivec2(floor(%s * uTexScale[%u] * 128.0)) >> ivec2(%u, %u);\n", coord, key->indTexCoord[i],
               key->indScaleS[i], key->indScaleT[i]);
-        w.Add("  ivec3 ind%u = ivec4(round(texture(uTex%u, vec2(fix) / (vec2(textureSize(uTex%u, 0)) * 128.0)) * 255.0)).abg;\n",
-              i, key->indTexMap[i], key->indTexMap[i]);
+        char texSize[48];
+        TexSizeExpr(key, key->indTexMap[i], texSize, sizeof(texSize));
+        w.Add("  ivec3 ind%u = ivec4(round(texture(uTex%u, vec2(fix) / (%s * 128.0)) * 255.0)).abg;\n", i,
+              key->indTexMap[i], texSize);
     }
 
     for (u32 i = 0; i < key->numStages; i++) {

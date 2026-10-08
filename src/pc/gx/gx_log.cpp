@@ -142,9 +142,11 @@ void PCGXLogDraw(u32 primitive, u32 vat, u32 count, const PCGXOutVertex* vertice
     for (u32 i = 0; i < shown; i++) {
         const PCGXOutVertex& v = vertices[i];
         f32 w = v.pos[3] != 0.0f ? v.pos[3] : 1.0f;
-        // back to EFB pixels for reading
-        f32 px = (v.pos[0] / w * 0.5f + 0.5f) * PC_GX_EFB_WIDTH;
-        f32 py = (0.5f - v.pos[1] / w * 0.5f) * PC_GX_EFB_HEIGHT;
+        // back to EFB pixels for reading (the console's, also when the EFB is scaled)
+        f32 efbWidth, efbHeight;
+        PCGXRenderGetEfbExtent(&efbWidth, &efbHeight);
+        f32 px = (v.pos[0] / w * 0.5f + 0.5f) * efbWidth;
+        f32 py = (0.5f - v.pos[1] / w * 0.5f) * efbHeight;
         PCGXLog("  v%u: efb(%.2f, %.2f) z=%.4f w=%.3f c0=%02X%02X%02X%02X c1=%02X%02X%02X%02X t0=(%.4f, %.4f, %.3f)\n", i,
                 px, py, v.pos[2] / w, v.pos[3], v.color[0][0], v.color[0][1], v.color[0][2], v.color[0][3],
                 v.color[1][0], v.color[1][1], v.color[1][2], v.color[1][3], v.tex[0][0], v.tex[0][1], v.tex[0][2]);

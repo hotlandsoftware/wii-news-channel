@@ -11,6 +11,8 @@ const PCEnhancementInfo kInfo[PC_ENH_COUNT + 1] = {
     {"mouse-scroll", "mouse wheel scrolls (zooms on the globe, Ctrl+wheel zooms), middle-button drag scrolls", true},
     {"keyboard-nav", "Page Up/Down, Home/End, Esc/Backspace = Back, Y/N/S/G/R/Enter press on-screen buttons", true},
     {"fullscreen-key", "F11 and Alt+Enter toggle fullscreen", true},
+    {"hires", "render at the display's resolution instead of 640x456 stretched (render_scale)", true},
+    {"msaa", "multisample anti-aliasing of the frame buffer (msaa)", true},
     {nullptr, nullptr, false}, // end of table
 };
 

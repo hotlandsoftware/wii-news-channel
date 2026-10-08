@@ -23,6 +23,22 @@
 //   news_url     NEWSCHANNEL_NEWS_URL     news server to download from (default http://news.wiilink.ca)
 //   purist       NEWSCHANNEL_PURIST       0 | 1   (1: every PC enhancement off, <pc/enhance.h>)
 //   enhance.NAME                          1 | 0   (one enhancement; `--list-enhancements`)
+//   render_scale NEWSCHANNEL_RENDER_SCALE auto | 1..8    (enhancement `hires`, below)
+//   msaa         NEWSCHANNEL_MSAA         4 | 0 | 2 | 8  (enhancement `msaa`, below)
+//
+// The two numbers only take effect while their enhancement is on, so never in
+// purist mode (docs/pc_port.md, section 28):
+//
+//   render_scale  how large the frame buffer (EFB) the game draws into is.
+//                 `auto`: the size of the picture in the window, so one frame
+//                 buffer pixel is one screen pixel whatever the window's size
+//                 and shape; it follows the window. `N`: with the 4:3 setting
+//                 N times the console's 640 x 528 in both directions; with
+//                 the 16:9 setting N vertically and 4N/3 horizontally, which
+//                 gives the wide picture the pixel shape the 4:3 picture has
+//                 at N (N = 3 is exactly 4 x 3). The window then scales it.
+//   msaa          samples per frame buffer pixel; 0 = no multisampling.
+//                 Independent of render_scale: it also works at 640 x 528.
 //
 // PCGetConfig() works during static initialisation (it loads on first use).
 
@@ -41,6 +57,8 @@ struct PCConfig {
     u8 wc24Standby;    // SCIdleModeInfo::mode (1 = WiiConnect24 on)
     u8 tvFormat;       // VI_NTSC, VI_PAL, VI_MPAL, VI_EURGB60
     u32 simpleAddress; // SCGetSimpleAddressID(); 0xFFFFFFFF = not set
+    u8 renderScale;    // 0 = auto, else 1..8 (acts only with the enhancement `hires`)
+    u8 msaaSamples;    // 0, 2, 4 or 8 (acts only with the enhancement `msaa`)
     char contentsDir[512];
     char nandDir[512];
     char configFile[512]; // "" = none loaded; SCFlush() writes here if set
@@ -48,6 +66,7 @@ struct PCConfig {
     // Boot driver only (not stored in the file)
     s32 maxFrames;  // --frames N: exit after N retraces; 0 = run until closed
     bool noWindow;  // --no-window: do not open a window (pacing only)
+    u16 windowWidth, windowHeight; // --window-size WxH: the window's size; 0 = the default
 };
 
 // The configuration (loaded from the file and the environment on first use).

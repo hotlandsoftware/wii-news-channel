@@ -106,7 +106,116 @@ void Remove(u32 index) {
     sEntries[index] = sEntries[--sNumEntries];
 }
 
+// Kept EFB copies (gx_internal.h). None exist unless the EFB is scaled.
+struct Copy {
+    const void* image;
+    u16 width, height; // as a GX texture; 0 until PCGXCopyTextureEnd()
+    u8 format;
+    GLuint texture;
+    u32 dataSize;
+    u32 dataHash;
+    u32 checkedGeneration;
+    u32 lastUsedFrame;
+};
+
+enum { kMaxCopies = 8 };
+
+Copy sCopies[kMaxCopies];
+u32 sNumCopies;
+
+void RemoveCopy(u32 index) {
+    glDeleteTextures(1, &sCopies[index].texture);
+    sCopies[index] = sCopies[--sNumCopies];
+}
+
+// The kept copy for a texture unit's image, if the buffer still holds what
+// the copy wrote.
+GLuint CopyForUnit(const PCGXTexUnit& unit) {
+    for (u32 i = 0; i < sNumCopies; i++) {
+        Copy& c = sCopies[i];
+        if (c.image != unit.image) {
+            continue;
+        }
+        if (c.width != unit.width || c.height != unit.height || c.format != unit.format) {
+            return 0; // used as another texture: only the texels can say what it is
+        }
+        if (c.checkedGeneration != sGeneration) {
+            c.checkedGeneration = sGeneration;
+            if (PCGXHashBytes(c.image, c.dataSize) != c.dataHash) {
+                RemoveCopy(i); // the game wrote into its buffer
+                return 0;
+            }
+        }
+        c.lastUsedFrame = sFrame;
+        return c.texture;
+    }
+    return 0;
+}
+
 } // namespace
+
+u32 PCGXCopyTextureBegin(const void* image, u32 width, u32 height) {
+    Copy* copy = nullptr;
+    for (u32 i = 0; i < sNumCopies; i++) {
+        if (sCopies[i].image == image) {
+            copy = &sCopies[i];
+        }
+    }
+    if (copy == nullptr) {
+        if (sNumCopies == kMaxCopies) {
+            u32 oldest = 0;
+            for (u32 i = 1; i < sNumCopies; i++) {
+                if (sCopies[i].lastUsedFrame < sCopies[oldest].lastUsedFrame) {
+                    oldest = i;
+                }
+            }
+            RemoveCopy(oldest);
+        }
+        copy = &sCopies[sNumCopies++];
+        std::memset(copy, 0, sizeof(*copy));
+        copy->image = image;
+        glGenTextures(1, &copy->texture);
+    }
+    copy->width = copy->height = 0; // not usable until the buffer is written
+    copy->lastUsedFrame = sFrame;
+    glBindTexture(GL_TEXTURE_2D, copy->texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, static_cast<GLsizei>(width), static_cast<GLsizei>(height), 0, GL_RGBA,
+                 GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+    return copy->texture;
+}
+
+void PCGXCopyTextureEnd(const void* image, u32 texWidth, u32 texHeight, u32 format) {
+    for (u32 i = 0; i < sNumCopies; i++) {
+        Copy& c = sCopies[i];
+        if (c.image == image) {
+            c.width = static_cast<u16>(texWidth);
+            c.height = static_cast<u16>(texHeight);
+            c.format = static_cast<u8>(format);
+            c.dataSize = PCGXTextureDataSize(format, texWidth, texHeight);
+            c.dataHash = PCGXHashBytes(image, c.dataSize);
+            c.checkedGeneration = sGeneration;
+            return;
+        }
+    }
+}
+
+void PCGXCopyTextureDrop(const void* image) {
+    for (u32 i = 0; i < sNumCopies; i++) {
+        if (sCopies[i].image == image) {
+            RemoveCopy(i);
+            return;
+        }
+    }
+}
+
+void PCGXCopyTextureDropAll() {
+    while (sNumCopies != 0) {
+        RemoveCopy(sNumCopies - 1);
+    }
+    PCGXTextureNewGeneration();
+}
 
 u32 PCGXHashBytes(const void* data, u32 size) {
     // FNV-1a over 32-bit words, then the tail bytes.
@@ -184,6 +293,12 @@ u32 PCGXTextureForUnit(u32 unitIndex, bool* mipmapped) {
     *mipmapped = false;
     if (unit.image == nullptr || unit.width == 0 || unit.height == 0) {
         return 0;
+    }
+    if (sNumCopies != 0) {
+        GLuint copy = CopyForUnit(unit);
+        if (copy != 0) {
+            return copy;
+        }
     }
 
     Entry key;

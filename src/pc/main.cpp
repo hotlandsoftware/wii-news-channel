@@ -126,10 +126,15 @@ void PrintHelp(const char* program) {
     std::printf("Options for --boot:\n");
     std::printf("  --frames N       exit after N frames (for automated runs)\n");
     std::printf("  --no-window      do not open a window\n");
-    std::printf("  --screenshot N[,N...]  save the picture shown at these retraces as PNG files\n");
-    std::printf("                   (frame_NNNNNN.png); works with --no-window too\n");
-    std::printf("  --screenshot-window    also save the window's back buffer (frame_NNNNNN_window.png);\n");
-    std::printf("                         needs a visible window\n");
+    std::printf("  --screenshot N[,N...]  save the frame shown at these retraces as PNG files\n");
+    std::printf("                   (frame_NNNNNN.png); works with --no-window too. The frame as the\n");
+    std::printf("                   game drew it: 640x456 with --purist (or hires off), otherwise at\n");
+    std::printf("                   the resolution the hires enhancement gave it\n");
+    std::printf("  --screenshot-window    also save what the window shows (frame_NNNNNN_window.png):\n");
+    std::printf("                   the frame in its 4:3 or 16:9 rectangle, in window pixels; with\n");
+    std::printf("                   --no-window, what a window of --window-size would show\n");
+    std::printf("  --window-size WxH      the window's size (default 854x480, or 640x480 with 4:3);\n");
+    std::printf("                   with --no-window, the size of the window that is not shown\n");
     std::printf("  --screenshot-dir DIR   where to save them (default: the current directory)\n");
     std::printf("  --mute           no audio device (audio frames still run in real time)\n");
     std::printf("  --audio-dump FILE.wav  write the mixed stereo output of the run to a WAV file\n");
@@ -164,6 +169,10 @@ void PrintHelp(const char* program) {
     std::printf("                   does on the console\n");
     std::printf("  --enhance NAME[=0|1]  switch one enhancement (no effect with --purist)\n");
     std::printf("  --list-enhancements   list the enhancements and their state, then exit\n");
+    std::printf("  --render-scale auto|1..8  with the hires enhancement: draw at the size of the picture\n");
+    std::printf("                   in the window (auto, the default), or at N times the console's\n");
+    std::printf("                   resolution (16:9: N high, 4N/3 wide)\n");
+    std::printf("  --msaa 0|2|4|8   with the msaa enhancement: samples per pixel (default 4)\n");
     std::printf("  --config FILE    settings file (default ./newschannel.ini if it exists)\n\n");
     std::printf("Settings can also come from the settings file and from NEWSCHANNEL_* environment\n");
     std::printf("variables; see src/pc/pc_config.h. Closing the window shuts the game down.\n");
@@ -184,6 +193,9 @@ void PrintHelp(const char* program) {
     std::printf("                  Y, N: Yes, No; Enter: a dialog's button; S: Slide show;\n");
     std::printf("                  G: Globe; R: reset the globe's tilt\n");
     std::printf("  fullscreen-key  F11, Alt+Enter: fullscreen\n");
+    std::printf("  hires           the game draws at the display's resolution (--render-scale)\n");
+    std::printf("                  instead of 640x456 stretched to the window\n");
+    std::printf("  msaa            multisample anti-aliasing (--msaa)\n");
 }
 
 // The value of option argv[*index], which is the next argument.
@@ -530,6 +542,21 @@ int main(int argc, char** argv) {
             SetOption(argv[0], arg, "aspect", "4:3");
         } else if (std::strcmp(arg, "--aspect") == 0) {
             SetOption(argv[0], arg, "aspect", OptionValue(argc, argv, &i));
+        } else if (std::strcmp(arg, "--render-scale") == 0) {
+            SetOption(argv[0], arg, "render_scale", OptionValue(argc, argv, &i));
+        } else if (std::strcmp(arg, "--msaa") == 0) {
+            SetOption(argv[0], arg, "msaa", OptionValue(argc, argv, &i));
+        } else if (std::strcmp(arg, "--window-size") == 0) {
+            const char* value = OptionValue(argc, argv, &i);
+            unsigned width = 0, height = 0;
+            char tail = '\0';
+            if (std::sscanf(value, "%ux%u%c", &width, &height, &tail) != 2 || width < 64 || height < 64 || width > 16384 ||
+                height > 16384) {
+                std::fprintf(stderr, "%s: bad value '%s' for --window-size (WIDTHxHEIGHT, e.g. 1280x720)\n", argv[0], value);
+                return 2;
+            }
+            config->windowWidth = static_cast<u16>(width);
+            config->windowHeight = static_cast<u16>(height);
         } else if (std::strcmp(arg, "--purist") == 0) {
             PCSetPurist(true);
         } else if (std::strcmp(arg, "--enhance") == 0) {
@@ -614,6 +641,25 @@ int main(int argc, char** argv) {
             std::printf("  %-20s %-3s (default %s)  %s\n", info->key,
                         PCEnhanced(static_cast<PCEnhancement>(i)) ? "on" : "off", info->defaultOn ? "on" : "off",
                         info->summary);
+            // the numbers behind an enhancement, when it is on
+            if (i == PC_ENH_HIRES && PCEnhanced(PC_ENH_HIRES)) {
+                const bool wide = config->aspectRatio == 1; // SC_ASPECT_RATIO_16x9
+                if (config->renderScale == 0) {
+                    std::printf("  %-20s     render_scale = auto: the frame is drawn at the size of the picture in the window\n", "");
+                } else {
+                    const int n = config->renderScale;
+                    std::printf("  %-20s     render_scale = %d: the 640x456 frame is drawn as %dx%d (%s)\n", "", n,
+                                wide ? (640 * n * 4 + 2) / 3 : 640 * n, 456 * n, wide ? "16:9: 4/3 as wide" : "4:3");
+                }
+            }
+            if (i == PC_ENH_MSAA && PCEnhanced(PC_ENH_MSAA)) {
+                if (config->msaaSamples >= 2) {
+                    std::printf("  %-20s     msaa = %d samples per pixel (at most what the OpenGL driver offers)\n", "",
+                                config->msaaSamples);
+                } else {
+                    std::printf("  %-20s     msaa = 0: no multisampling\n", "");
+                }
+            }
         }
         return 0;
     }

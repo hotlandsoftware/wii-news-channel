@@ -25,7 +25,9 @@ void PCGXRetrace(u32 retraceCount, const void* xfb);
 // --- Screenshots (--screenshot, --screenshot-dir) -----------------------------
 
 // "30,120,600": the retraces to save as <dir>/frame_NNNNNN.png. Returns false
-// for a malformed list.
+// for a malformed list. The picture is the XFB as GXCopyDisp() left it: the
+// console's 640 x 456 pixels in purist mode (or with `hires` off), and with
+// `hires` the frame at the resolution it was drawn in.
 bool PCGXRequestScreenshots(const char* frames);
 void PCGXSetScreenshotDir(const char* dir);
 // --screenshot-window: with each screenshot also save what PCGXPresent() drew
@@ -34,6 +36,16 @@ void PCGXSetScreenshotDir(const char* dir);
 // VI backend between PCGXPresent() and the swap.
 void PCGXSetScreenshotWindow(bool enable);
 void PCGXAfterPresent(int windowWidth, int windowHeight);
+bool PCGXScreenshotWindowWanted();
+// The window is not on screen (--no-window): PCGXPresent() then draws into a
+// texture of the window's size instead of the back buffer, and the window
+// screenshot is read from there.
+void PCGXSetOffscreenWindow(bool enable);
+
+// The size, in pixels, of the picture rectangle in the window: what the
+// enhancement `hires` with `render_scale = auto` makes the frame the game
+// draws as large as. Called by the VI backend; takes effect between frames.
+void PCGXSetOutputSize(int width, int height);
 // True if a screenshot is still pending: the VI backend then creates a hidden
 // window with an OpenGL context even under --no-window.
 bool PCGXWantsContext();

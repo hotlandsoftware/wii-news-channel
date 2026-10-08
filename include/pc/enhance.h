@@ -24,6 +24,8 @@ enum PCEnhancement {
     PC_ENH_MOUSE_SCROLL,   // wheel = +Control Pad pulses (zoom on the globe), middle drag = B
     PC_ENH_KEYBOARD_NAV,   // Page Up/Down, Home/End, Esc/Backspace = "Back", keys for on-screen buttons
     PC_ENH_FULLSCREEN_KEY, // F11 and Alt+Enter toggle fullscreen
+    PC_ENH_HIRES,          // the EFB at the display's resolution (render_scale, src/pc/pc_config.h)
+    PC_ENH_MSAA,           // the EFB multisampled (msaa, src/pc/pc_config.h)
     PC_ENH_COUNT
 };
 

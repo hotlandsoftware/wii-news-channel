@@ -40,6 +40,12 @@ struct DrawInfo {
 
 PCGXDrawHook sDrawHook;
 
+// What the OpenGL render target covers in EFB pixels, which is what clip
+// coordinates are relative to: the EFB's 640 x 528, or a fraction more when
+// the EFB is scaled and its size was rounded up (PCGXRenderGetEfbExtent()).
+// Set for each primitive.
+f32 sEfbWidth = PC_GX_EFB_WIDTH, sEfbHeight = PC_GX_EFB_HEIGHT;
+
 // Scratch buffers, grown as needed and kept.
 PCGXOutVertex* sOut;
 u32 sOutCapacity;
@@ -428,7 +434,8 @@ void TransformVertex(const DrawInfo& info, const InVertex& in, const PCGXViewpor
     // The viewport is folded into the clip coordinates: OpenGL's viewport is
     // always the whole EFB. That way geometry outside the GX viewport is not
     // clipped (the hardware only scissors it), and fractional viewports work.
-    const f32 efbW = PC_GX_EFB_WIDTH, efbH = PC_GX_EFB_HEIGHT;
+    // (sEfbWidth x sEfbHeight is 640 x 528 unless the EFB is scaled.)
+    const f32 efbW = sEfbWidth, efbH = sEfbHeight;
     out->pos[0] = clip[0] * (viewport.width / efbW) + clip[3] * ((2.0f * viewport.left + viewport.width) / efbW - 1.0f);
     out->pos[1] = clip[1] * (viewport.height / efbH) + clip[3] * (1.0f - (2.0f * viewport.top + viewport.height) / efbH);
     out->pos[2] = 2.0f * clip[2] + clip[3]; // [-w, 0] -> [-w, w]
@@ -562,8 +569,8 @@ void EmitThick(const PCGXOutVertex& a, const PCGXOutVertex& b, f32 half, PCGXOut
     f32 wa = a.pos[3] != 0.0f ? a.pos[3] : 1.0f;
     f32 wb = b.pos[3] != 0.0f ? b.pos[3] : 1.0f;
     // direction in pixels
-    f32 dx = (b.pos[0] / wb - a.pos[0] / wa) * (PC_GX_EFB_WIDTH / 2.0f);
-    f32 dy = (b.pos[1] / wb - a.pos[1] / wa) * (PC_GX_EFB_HEIGHT / 2.0f);
+    f32 dx = (b.pos[0] / wb - a.pos[0] / wa) * (sEfbWidth / 2.0f);
+    f32 dy = (b.pos[1] / wb - a.pos[1] / wa) * (sEfbHeight / 2.0f);
     f32 length = std::sqrt(dx * dx + dy * dy);
     f32 nx, ny; // perpendicular, in pixels
     f32 ex = 0.0f, ey = 0.0f; // extension along the segment (points only)
@@ -576,8 +583,8 @@ void EmitThick(const PCGXOutVertex& a, const PCGXOutVertex& b, f32 half, PCGXOut
         ny = dx / length * half;
     }
     // pixels -> clip units
-    f32 ox = nx * 2.0f / PC_GX_EFB_WIDTH, oy = ny * 2.0f / PC_GX_EFB_HEIGHT;
-    f32 px = ex * 2.0f / PC_GX_EFB_WIDTH, py = ey * 2.0f / PC_GX_EFB_HEIGHT;
+    f32 ox = nx * 2.0f / sEfbWidth, oy = ny * 2.0f / sEfbHeight;
+    f32 px = ex * 2.0f / sEfbWidth, py = ey * 2.0f / sEfbHeight;
 
     PCGXOutVertex q[4] = {a, a, b, b};
     q[0].pos[0] += (ox - px) * wa, q[0].pos[1] += (oy - py) * wa;
@@ -669,6 +676,158 @@ u32 Triangulate(u32 primitive, const PCGXOutVertex* v, u32 count, PCGXOutVertex*
         break;
     }
     return n;
+}
+
+// --- Enhanced sampling: the texels of a quadrilateral ---------------------------
+//
+// Only used while the EFB is scaled or multisampled (docs/pc_port.md,
+// section 28).
+
+PCGXTexClamp* sClamps;
+u32 sClampsCapacity;
+
+// True for primitives that are a list of quadrilaterals of four vertices
+// each: GX_QUADS, and a strip or fan of exactly four vertices.
+bool IsQuadrilaterals(u32 primitive, u32 count) {
+    switch (primitive) {
+    case GX_QUADS:
+    case 0x88:
+        return count >= 4;
+    case GX_TRIANGLESTRIP:
+    case GX_TRIANGLEFAN:
+        return count == 4;
+    default:
+        return false;
+    }
+}
+
+bool Same(f32 a, f32 b) {
+    f32 scale = std::fabs(a) > std::fabs(b) ? std::fabs(a) : std::fabs(b);
+    return std::fabs(a - b) <= 1e-5f * (scale > 1.0f ? scale : 1.0f);
+}
+
+// For each texture coordinate: if the four corners (in order around the
+// quadrilateral) map to the four corners of an axis-aligned rectangle of the
+// texture, that rectangle; otherwise no limit. Such a quadrilateral shows
+// exactly the texels of the rectangle (a layout pane, a glyph, a picture),
+// whatever its shape on the screen; anything else (a model's triangles, a
+// rotated or sheared mapping) is a continuous surface whose neighbours
+// continue the texture, and is left alone.
+void QuadTexClamp(const PCGXOutVertex* const corners[4], u32 texGens, PCGXTexClamp* clamp) {
+    for (u32 t = 0; t < 8; t++) {
+        f32* range = clamp->range[t];
+        range[0] = range[1] = -1e30f;
+        range[2] = range[3] = 1e30f;
+        if (t >= texGens) {
+            continue;
+        }
+        f32 st[4][2];
+        for (u32 i = 0; i < 4; i++) {
+            // as the fragment shader divides (gx_tev.cpp, CoordExpr)
+            const f32* c = corners[i]->tex[t];
+            f32 q = c[2] == 0.0f ? 1.0f : c[2];
+            st[i][0] = c[0] / q;
+            st[i][1] = c[1] / q;
+        }
+        // 0-1 and 3-2 along s, 1-2 and 0-3 along t; or the other way round
+        bool upright = Same(st[0][1], st[1][1]) && Same(st[3][1], st[2][1]) && Same(st[0][0], st[3][0]) &&
+                       Same(st[1][0], st[2][0]);
+        bool turned = Same(st[0][0], st[1][0]) && Same(st[3][0], st[2][0]) && Same(st[0][1], st[3][1]) &&
+                      Same(st[1][1], st[2][1]);
+        if (!upright && !turned) {
+            continue;
+        }
+        range[0] = st[0][0] < st[2][0] ? st[0][0] : st[2][0];
+        range[2] = st[0][0] < st[2][0] ? st[2][0] : st[0][0];
+        range[1] = st[0][1] < st[2][1] ? st[0][1] : st[2][1];
+        range[3] = st[0][1] < st[2][1] ? st[2][1] : st[0][1];
+    }
+}
+
+// --- Multisampling: rectangles keep the pixel-centre rule -------------------------
+//
+// Only used while the EFB is multisampled. Multisampling is there for edges
+// that cross pixels at a slant (the globe's limb, a rotated card, a line).
+// The edge of an upright rectangle that falls inside a pixel would become a
+// row of half-covered pixels instead: every pane, glyph cell and picture of
+// the 2D screens would get a soft outline, and thin frames would fade. An
+// upright rectangle is therefore rasterised as it is without multisampling:
+// a pixel belongs to it if its centre does. That is done by moving each edge
+// to the pixel boundary the centre rule picks; colours, depth and texture
+// coordinates are extended to the moved corners, so nothing inside shifts.
+
+bool SamePixel(f32 a, f32 b) {
+    return std::fabs(a - b) <= 1e-3f;
+}
+
+u8 MixColor(f32 v) {
+    return static_cast<u8>(v < 0.0f ? 0.0f : (v > 255.0f ? 255.0f : v + 0.5f));
+}
+
+// corners: in order around the quadrilateral. pixelsX/Y: the render target.
+void SnapRectangle(PCGXOutVertex* const corners[4], f32 pixelsX, f32 pixelsY) {
+    f32 w = corners[0]->pos[3];
+    if (w == 0.0f) {
+        return;
+    }
+    f32 x[4], y[4];
+    for (u32 i = 0; i < 4; i++) {
+        if (corners[i]->pos[3] != w) {
+            return; // perspective: not a 2D rectangle
+        }
+        x[i] = (corners[i]->pos[0] / w * 0.5f + 0.5f) * pixelsX;
+        y[i] = (corners[i]->pos[1] / w * 0.5f + 0.5f) * pixelsY;
+    }
+    bool upright = SamePixel(y[0], y[1]) && SamePixel(y[3], y[2]) && SamePixel(x[0], x[3]) && SamePixel(x[1], x[2]);
+    bool turned = SamePixel(x[0], x[1]) && SamePixel(x[3], x[2]) && SamePixel(y[0], y[3]) && SamePixel(y[1], y[2]);
+    if (!upright && !turned) {
+        return;
+    }
+    // corner 0 is at (xa, ya), corner 2 at (xb, yb)
+    f32 xa = x[0], xb = x[2], ya = y[0], yb = y[2];
+    // the boundary below the first pixel centre at or after an edge
+    f32 xa2 = std::ceil(xa - 0.5f), xb2 = std::ceil(xb - 0.5f);
+    f32 ya2 = std::ceil(ya - 0.5f), yb2 = std::ceil(yb - 0.5f);
+    if (xa == xb || ya == yb || xa2 == xb2 || ya2 == yb2) {
+        // No pixel centre inside (thinner than a pixel): the centre rule
+        // would drop it. Its coverage is all there is to draw; leave it.
+        return;
+    }
+    // (tx, ty) of the moved corners in the rectangle's own coordinates,
+    // where corner 0 is (0, 0) and corner 2 is (1, 1)
+    f32 tx[2] = {(xa2 - xa) / (xb - xa), (xb2 - xa) / (xb - xa)};
+    f32 ty[2] = {(ya2 - ya) / (yb - ya), (yb2 - ya) / (yb - ya)};
+    // the corners by where they are: [at xb][at yb]
+    const PCGXOutVertex at[2][2] = {{*corners[0], upright ? *corners[3] : *corners[1]},
+                                    {upright ? *corners[1] : *corners[3], *corners[2]}};
+    PCGXOutVertex* target[2][2] = {{corners[0], upright ? corners[3] : corners[1]},
+                                   {upright ? corners[1] : corners[3], corners[2]}};
+    for (u32 ix = 0; ix < 2; ix++) {
+        for (u32 iy = 0; iy < 2; iy++) {
+            f32 u = tx[ix], v = ty[iy];
+            // Bilinear, written from corner 0 outwards so that a value all
+            // four corners share stays exactly that value (a depth on the
+            // near plane must not leave the clip volume).
+            auto mix = [u, v](f32 a00, f32 a10, f32 a01, f32 a11) {
+                return a00 + u * (a10 - a00) + v * (a01 - a00) + u * v * ((a11 - a10) - (a01 - a00));
+            };
+            PCGXOutVertex* out = target[ix][iy];
+            out->pos[0] = ((ix ? xb2 : xa2) / pixelsX * 2.0f - 1.0f) * w;
+            out->pos[1] = ((iy ? yb2 : ya2) / pixelsY * 2.0f - 1.0f) * w;
+            out->pos[2] = mix(at[0][0].pos[2], at[1][0].pos[2], at[0][1].pos[2], at[1][1].pos[2]);
+            for (u32 c = 0; c < 2; c++) {
+                for (u32 i = 0; i < 4; i++) {
+                    out->color[c][i] = MixColor(
+                        mix(at[0][0].color[c][i], at[1][0].color[c][i], at[0][1].color[c][i], at[1][1].color[c][i]));
+                }
+            }
+            for (u32 t = 0; t < 8; t++) {
+                for (u32 i = 0; i < 3; i++) {
+                    out->tex[t][i] = mix(at[0][0].tex[t][i], at[1][0].tex[t][i], at[0][1].tex[t][i], at[1][1].tex[t][i]);
+                }
+            }
+        }
+    }
 }
 
 } // namespace
@@ -791,6 +950,7 @@ void PCGXDrawPrimitive(u32 primitive, u32 vat, u32 count, const u8* data) {
     }
 
     sOut = Grow(sOut, &sOutCapacity, count);
+    PCGXRenderGetEfbExtent(&sEfbWidth, &sEfbHeight);
     PCGXViewport viewport = PCGXGetViewport();
     for (u32 i = 0; i < count; i++) {
         InVertex in;
@@ -813,6 +973,32 @@ void PCGXDrawPrimitive(u32 primitive, u32 vat, u32 count, const u8* data) {
         return;
     }
     sTriangles = Grow(sTriangles, &sTrianglesCapacity, triangleVertices);
+    const bool enhancedQuads = PCGXRenderEnhancedSampling() && IsQuadrilaterals(primitive, count);
+    u32 quads = 0;
+    if (enhancedQuads) {
+        // A scaled or multisampled EFB (docs/pc_port.md, section 28): each
+        // quadrilateral says which texels are its own (PCGXTexClamp,
+        // gx_tev.cpp), and with multisampling upright rectangles keep the
+        // pixel-centre rule.
+        PCGXEfbInfo efb;
+        PCGXRenderGetEfbInfo(&efb);
+        quads = primitive == GX_QUADS || primitive == 0x88 ? count / 4 : 1;
+        sClamps = Grow(sClamps, &sClampsCapacity, quads);
+        u32 texGens = PCGXNumTexGens();
+        for (u32 q = 0; q < quads; q++) {
+            // the four corners in order around the quadrilateral
+            PCGXOutVertex* v = sOut + q * 4;
+            PCGXOutVertex* corners[4] = {&v[0], &v[1], &v[2], &v[3]};
+            if (primitive == GX_TRIANGLESTRIP) {
+                corners[2] = &v[3];
+                corners[3] = &v[2];
+            }
+            QuadTexClamp(corners, texGens, &sClamps[q]);
+            if (efb.samples != 0) {
+                SnapRectangle(corners, static_cast<f32>(efb.width), static_cast<f32>(efb.height));
+            }
+        }
+    }
     u32 n = Triangulate(primitive, sOut, count, sTriangles);
     // Lines and points have no facing: the caller's cull mode must not
     // remove them.
@@ -824,6 +1010,8 @@ void PCGXDrawPrimitive(u32 primitive, u32 vat, u32 count, const u8* data) {
         PCGXRenderTriangles(sTriangles, n);
         s.bp[PC_BP_GENMODE] = genMode;
         s.dirty |= PC_GX_DIRTY_RASTER;
+    } else if (enhancedQuads) {
+        PCGXRenderTriangles(sTriangles, n, sClamps, quads);
     } else {
         PCGXRenderTriangles(sTriangles, n);
     }

@@ -60,6 +60,7 @@ struct State {
     SDL_Window* window;
     SDL_GLContext context;
     bool hidden; // --no-window with screenshots: a context, nothing on screen
+    int createdWidth, createdHeight; // the size the window was created with
 
     Registers shadow;
     Registers current;
@@ -117,6 +118,13 @@ void OpenWindow() {
     // to viWidth by the video interface.
     int width = Wide() ? 854 : 640;
     int height = 480;
+    if (config->windowWidth != 0 && config->windowHeight != 0) {
+        // --window-size
+        width = config->windowWidth;
+        height = config->windowHeight;
+    }
+    s.createdWidth = width;
+    s.createdHeight = height;
 
     // An OpenGL 3.3 core context for the GX layer of milestone 3, or whatever
     // the driver offers if that is not available.
@@ -143,6 +151,9 @@ void OpenWindow() {
         } else {
             // Pacing is done by VIWaitForRetrace(), not by the swap.
             SDL_GL_SetSwapInterval(0);
+            // A window that is never shown has no back buffer to rely on:
+            // what would be presented goes into a texture of its size.
+            PCGXSetOffscreenWindow(hidden && PCGXScreenshotWindowWanted());
         }
     } else {
         // No OpenGL at all (for example the "dummy" video driver).
@@ -156,28 +167,55 @@ void OpenWindow() {
 // Shows the frame the application selected: the picture of the current XFB,
 // scaled into the picture rectangle of the window, or black while the
 // screen is blanked. Also the moment a requested screenshot is saved.
+// The window's size and the picture rectangle in it, in pixels (OpenGL's
+// unit; PCVIGetPictureRect() is in window coordinates). A hidden window has
+// the size it was created with.
+void GetPictureInPixels(int* width, int* height, int* x, int* y, int* w, int* h) {
+    PCVIGetPictureRect(x, y, w, h);
+    if (s.hidden) {
+        *width = s.createdWidth;
+        *height = s.createdHeight;
+        return;
+    }
+    SDL_GetWindowSizeInPixels(s.window, width, height);
+    int pointsW = 0, pointsH = 0;
+    SDL_GetWindowSize(s.window, &pointsW, &pointsH);
+    if (pointsW > 0 && pointsH > 0 && (pointsW != *width || pointsH != *height)) {
+        *x = *x * *width / pointsW;
+        *w = *w * *width / pointsW;
+        *y = *y * *height / pointsH;
+        *h = *h * *height / pointsH;
+    }
+}
+
+// Tells the GX backend how large the picture is on the screen (the
+// enhancement `hires` draws the frame that large, pc_gx.h).
+void ReportOutputSize() {
+    if (s.window == nullptr || s.context == nullptr) {
+        return;
+    }
+    int width, height, x, y, w, h;
+    GetPictureInPixels(&width, &height, &x, &y, &w, &h);
+    PCGXSetOutputSize(w, h);
+}
+
 void Present() {
     const void* frame = s.current.black ? nullptr : s.current.frameBuffer;
     PCGXRetrace(s.retraceCount, frame);
-    if (s.window == nullptr || s.context == nullptr || s.hidden) {
+    ReportOutputSize();
+    // Without a window on screen there is nothing to present, unless the
+    // presented picture was asked for (--screenshot-window).
+    if (s.window == nullptr || s.context == nullptr || (s.hidden && !PCGXScreenshotWindowWanted())) {
         return;
     }
     int width, height;
-    SDL_GetWindowSizeInPixels(s.window, &width, &height);
     int x, y, w, h;
-    PCVIGetPictureRect(&x, &y, &w, &h);
-    // PCVIGetPictureRect() is in window coordinates; OpenGL wants pixels.
-    int pointsW = 0, pointsH = 0;
-    SDL_GetWindowSize(s.window, &pointsW, &pointsH);
-    if (pointsW > 0 && pointsH > 0 && (pointsW != width || pointsH != height)) {
-        x = x * width / pointsW;
-        w = w * width / pointsW;
-        y = y * height / pointsH;
-        h = h * height / pointsH;
-    }
+    GetPictureInPixels(&width, &height, &x, &y, &w, &h);
     PCGXPresent(frame, x, y, w, h, width, height);
     PCGXAfterPresent(width, height);
-    SDL_GL_SwapWindow(s.window);
+    if (!s.hidden) {
+        SDL_GL_SwapWindow(s.window);
+    }
 }
 
 void RequestClose() {
@@ -234,7 +272,10 @@ void* PCVIGetGLContext() {
 
 void PCVIGetPictureRect(int* x, int* y, int* width, int* height) {
     int w = 0, h = 0;
-    if (s.window != nullptr) {
+    if (s.window != nullptr && s.hidden) {
+        w = s.createdWidth;
+        h = s.createdHeight;
+    } else if (s.window != nullptr) {
         SDL_GetWindowSize(s.window, &w, &h);
     }
     // Largest 4:3 or 16:9 rectangle that fits, centred.
@@ -359,6 +400,7 @@ void VIInit(void) {
     s.shadow.black = TRUE; // the SDK starts with the screen blanked
     s.current.black = TRUE;
     OpenWindow();
+    ReportOutputSize();
     PCOSAtExit(CloseWindow);
     s.nextRetrace = SDL_GetTicksNS() + RetracePeriodNS();
 }

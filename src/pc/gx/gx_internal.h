@@ -351,7 +351,12 @@ struct PCGXShaderKey {
     u8 dualSourceAlpha; // destination alpha with blending on an EFB with alpha
     u8 zCompLocBeforeTex; // informational only
     u8 swapTable[4];    // 2 bits per output channel: r, g, b, a
-    u8 pad[4];
+    // The EFB is scaled or multisampled (PCGXRenderEnhancedSampling()):
+    // texture sizes come from uniforms, and coordinates stay inside the
+    // texel rectangle of their quadrilateral (uTexClamp). 0 otherwise, and
+    // the source is then the one from before the enhancements existed.
+    u8 enhancedSampling;
+    u8 pad[3];
     u32 colorEnv[16];
     u32 alphaEnv[16];
     u32 indCmd[16];
@@ -381,8 +386,35 @@ void PCGXDescribeTev(const PCGXShaderKey* key, char* out, u32 outSize);
 bool PCGXRenderAvailable();
 // True if the program of the current TEV state compiled and linked.
 bool PCGXRenderProgramOK();
-// Triangle list.
-void PCGXRenderTriangles(const PCGXOutVertex* vertices, u32 count);
+// Enhanced sampling only (below): the rectangle of each texture coordinate
+// that the texels of one quadrilateral come from, as (s0, t0, s1, t1) in the
+// coordinate's normalised units; (-1e30, -1e30, 1e30, 1e30) for "no limit".
+struct PCGXTexClamp {
+    f32 range[8][4];
+};
+// Triangle list. `clamps`, if not NULL, has one entry per six vertices.
+void PCGXRenderTriangles(const PCGXOutVertex* vertices, u32 count, const PCGXTexClamp* clamps = nullptr,
+                         u32 numClamps = 0);
+
+// The EFB is 640 x 528 pixels with one sample each unless the enhancement
+// `hires` or `msaa` is on (docs/pc_port.md, section 28).
+struct PCGXEfbInfo {
+    int width, height;  // OpenGL pixels
+    f32 scaleX, scaleY; // OpenGL pixels per EFB pixel
+    int samples;        // 0: not multisampled
+};
+void PCGXRenderGetEfbInfo(PCGXEfbInfo* info);
+// What the OpenGL render target covers, in EFB pixels: 640 x 528, or a
+// little more when the scaled size was rounded up. Clip coordinates are
+// relative to this.
+void PCGXRenderGetEfbExtent(f32* width, f32* height);
+// True while the EFB is scaled or multisampled: fragment shaders are then
+// generated in their enhanced-sampling variant (gx_tev.cpp) and quadrilaterals
+// are drawn with a PCGXTexClamp.
+bool PCGXRenderEnhancedSampling();
+// Makes the EFB follow the settings now (it does so by itself after every
+// display copy). For the self-test.
+void PCGXRenderApplySettings();
 void PCGXRenderCopyDisp(const void* xfb, bool clear);
 void PCGXRenderCopyTex(void* dest, bool clear);
 bool PCGXRenderPeek(u32 x, u32 y, u32* argb, u32* z);
@@ -398,6 +430,18 @@ void PCGXTextureNewGeneration(); // contents may have changed: check again
 void PCGXTextureFrameEnd();
 bool PCGXTextureIsHostOrder(const void* image);
 u32 PCGXHashBytes(const void* data, u32 size);
+
+// Kept EFB copies (enhancement `hires`): GXCopyTex() from a scaled EFB also
+// leaves the copied picture, at the EFB's resolution, in an OpenGL texture
+// that PCGXTextureForUnit() returns in place of the decoded texels of the
+// destination buffer for as long as the buffer holds what the copy wrote.
+// Begin: the texture to fill (width x height OpenGL pixels), bound to the
+// active unit. End: the buffer now holds the encoded copy, a texture of
+// texWidth x texHeight in `format`.
+u32 PCGXCopyTextureBegin(const void* image, u32 width, u32 height);
+void PCGXCopyTextureEnd(const void* image, u32 texWidth, u32 texHeight, u32 format);
+void PCGXCopyTextureDrop(const void* image);
+void PCGXCopyTextureDropAll();
 
 // --- gx_log.cpp -----------------------------------------------------------------
 

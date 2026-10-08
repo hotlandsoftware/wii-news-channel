@@ -52,10 +52,14 @@ bool Near(f32 a, f32 b, f32 eps = 1e-3f) {
 
 // EFB pixel position of a transformed vertex.
 f32 PixelX(const PCGXOutVertex& v) {
-    return (v.pos[0] / v.pos[3] * 0.5f + 0.5f) * PC_GX_EFB_WIDTH;
+    f32 width, height;
+    PCGXRenderGetEfbExtent(&width, &height);
+    return (v.pos[0] / v.pos[3] * 0.5f + 0.5f) * width;
 }
 f32 PixelY(const PCGXOutVertex& v) {
-    return (0.5f - v.pos[1] / v.pos[3] * 0.5f) * PC_GX_EFB_HEIGHT;
+    f32 width, height;
+    PCGXRenderGetEfbExtent(&width, &height);
+    return (0.5f - v.pos[1] / v.pos[3] * 0.5f) * height;
 }
 
 bool ColorIs(const u8* c, u8 r, u8 g, u8 b, u8 a) {

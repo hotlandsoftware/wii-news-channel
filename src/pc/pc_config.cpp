@@ -101,6 +101,8 @@ void SetDefaults(PCConfig* config) {
     config->wc24Standby = 1;
     config->tvFormat = VI_NTSC;
     config->simpleAddress = 0xFFFFFFFFu;
+    config->renderScale = 0; // auto
+    config->msaaSamples = 4;
     // "" = not set: cnt.cpp and nand.cpp choose their defaults (<pc/files.h>).
     config->contentsDir[0] = '\0';
     config->nandDir[0] = '\0';
@@ -114,7 +116,8 @@ void ApplyEnvironment() {
         {"NEWSCHANNEL_EURGB60", "eurgb60"},     {"NEWSCHANNEL_WC24", "wc24"},
         {"NEWSCHANNEL_TV", "tv"},               {"NEWSCHANNEL_CONTENTS", "contents"},
         {"NEWSCHANNEL_NAND", "nand"},           {"NEWSCHANNEL_PURIST", "purist"},
-        {"NEWSCHANNEL_NEWS_URL", "news_url"},
+        {"NEWSCHANNEL_NEWS_URL", "news_url"},   {"NEWSCHANNEL_RENDER_SCALE", "render_scale"},
+        {"NEWSCHANNEL_MSAA", "msaa"},
     };
     for (const auto& variable : kVariables) {
         const char* value = std::getenv(variable[0]);
@@ -236,6 +239,24 @@ bool PCConfigSet(const char* key, const char* value) {
         if (!Lookup(kBools, value, &number) || !PCEnhancementSet(key + 8, number != 0)) {
             return false;
         }
+    } else if (strcasecmp(key, "render_scale") == 0) {
+        if (strcasecmp(value, "auto") == 0) {
+            config->renderScale = 0;
+        } else {
+            char* end;
+            long scale = std::strtol(value, &end, 10);
+            if (end == value || *end != '\0' || scale < 1 || scale > 8) {
+                return false;
+            }
+            config->renderScale = static_cast<u8>(scale);
+        }
+    } else if (strcasecmp(key, "msaa") == 0) {
+        char* end;
+        long samples = std::strtol(value, &end, 10);
+        if (end == value || *end != '\0' || (samples != 0 && samples != 2 && samples != 4 && samples != 8)) {
+            return false;
+        }
+        config->msaaSamples = static_cast<u8>(samples);
     } else if (strcasecmp(key, "contents") == 0) {
         CopyPath(config->contentsDir, sizeof(config->contentsDir), value);
     } else if (strcasecmp(key, "nand") == 0) {
@@ -306,6 +327,12 @@ bool PCConfigSave() {
     for (int i = 0; i < PCEnhancementCount(); i++) {
         std::fprintf(file, "enhance.%s = %d\n", PCEnhancementGetInfo(i)->key, PCEnhancementIsSet(i) ? 1 : 0);
     }
+    if (config->renderScale == 0) {
+        std::fprintf(file, "render_scale = auto\n");
+    } else {
+        std::fprintf(file, "render_scale = %d\n", config->renderScale);
+    }
+    std::fprintf(file, "msaa = %d\n", config->msaaSamples);
     std::fprintf(file, "tv = %s\n", NameOf(kTvFormats, config->tvFormat));
     if (config->contentsDir[0] != '\0') {
         std::fprintf(file, "contents = %s\n", config->contentsDir);
