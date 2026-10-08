@@ -2696,6 +2696,13 @@ void Article_ResetHeadline() {
     lbl_80357568->HideAll();
 }
 
+// Scales a height of the unscaled layout by the text size.
+// Going through the parameter matters: the scaled value gets its register before the
+// temporaries of the expressions that follow.
+static inline f32 ScaleText(f32 v) {
+    return v * gTextScale;
+}
+
 f32 Article_GetMaxScrollOffset() {
     s32 headlineLines = lbl_80357568->mNumLines;
     s32 bodyLines = sBodyView->mNumLines;
@@ -2707,22 +2714,30 @@ f32 Article_GetMaxScrollOffset() {
     f32 headline = headlineLines;
     if (line > creditStart) {
         f32 h = GetLogoHeight();
-        f32 y = lbl_80357568->GetLineHeight() * lbl_80357568->GetNumLines() + h * gTextScale;
-        y = sBodyView->GetLineHeight() * sBodyView->mNumLines + y;
+        f32 logo = ScaleText(h);
+        f32 headlineHeight = lbl_80357568->GetLineHeight() * lbl_80357568->GetNumLines();
+        f32 numBodyLines = sBodyView->GetNumLines();
+        f32 bodyHeight = sBodyView->GetLineHeight() * numBodyLines;
+        f32 y = bodyHeight + (headlineHeight + logo);
         y += (line - creditStart) * sCreditView->GetLineHeight();
         return -y;
     }
     if (line > bodyStart) {
         f32 h = GetLogoHeight();
-        f32 logo = h * gTextScale;
-        return -(lbl_80357568->mLineHeight * lbl_80357568->GetNumLines() + logo +
-                 (line - bodyStart) * sBodyView->mLineHeight);
+        f32 logo = ScaleText(h);
+        f32 y = lbl_80357568->GetLineHeight() * lbl_80357568->GetNumLines();
+        y += logo;
+        y += (line - bodyStart) * sBodyView->GetLineHeight();
+        return -y;
     }
     if (line > headlineLines) {
         f32 h = GetLogoHeight();
-        return -(lbl_80357568->GetLineHeight() * lbl_80357568->GetNumLines() + h * gTextScale);
+        f32 logo = ScaleText(h);
+        f32 y = lbl_80357568->GetLineHeight() * lbl_80357568->GetNumLines();
+        y += logo;
+        return -y;
     }
-    return -(line * (headlineLines * lbl_80357568->GetLineHeight()));
+    return -(line * (lbl_80357568->GetLineHeight() * lbl_80357568->GetNumLines()));
 }
 
 void Article_SetHeight(f32 width) {
