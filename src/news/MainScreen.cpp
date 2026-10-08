@@ -1760,7 +1760,11 @@ void MainScreen::State17E6C(s32* arg) {
             mUnk284 = mUnk238;
             mUnk288 = 0.0f;
             mUnk28C = 456.0f;
-            math::VEC2 ofs(item->GetPos().x - mUnk16C.x, item->GetPos().y - (123.0f + mUnk224));
+            // Unused, as in State1A750, but here it is not a VEC2: the original keeps the
+            // first member in the object's slot and the second in a separate word at the
+            // bottom of the frame, which MWCC does for an 8-byte class without a destructor.
+            // Which such type the original used is not known; lyt::Size is the NW4R one.
+            nw4r::lyt::Size ofs(item->GetPos().x - mUnk16C.x, item->GetPos().y - (123.0f + mUnk224));
             mUnk280 = mUnk284 = mFadeRect.left = mFadeRect.right = item->GetPos().x;
             mUnk288 = mUnk28C = mFadeRect.top = mFadeRect.bottom = item->GetPos().y;
             mUnk2BF = true;
