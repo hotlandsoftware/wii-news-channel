@@ -592,7 +592,7 @@ config.libs = [
         "progress_category": "game",
         "objects": [
             Object(NonMatching, "news/SlideShow.cpp", extra_cflags=["-ipa file"]),
-            Object(NonMatching, "news/ArticleText.cpp", extra_cflags=["-inline auto", "-ipa file"]),
+            Object(Matching, "news/ArticleText.cpp", extra_cflags=["-inline auto", "-ipa file"]),
         ],
     },
     {
