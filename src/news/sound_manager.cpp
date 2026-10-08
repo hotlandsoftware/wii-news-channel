@@ -46,6 +46,7 @@ public:
     void Store(s32 (*history)[FX_HISTORY_SIZE], s32** buffers);
     void StoreCh(s32* history, const s32* buffer);
     void EchoFilter(s32** buffers);
+    void FilterA(s32* out, const s32* in);
     void Chorus(s32** buffers);
     void PitchDown(s32** buffers);
     void Radio(s32** buffers);
@@ -662,6 +663,17 @@ static inline void AddEcho(s32* dst, const s32* echo, s32 n) {
     }
 }
 
+static inline void Fir2(s32* out, const s32* in, const s32* coef, s32 taps) {
+    s32 k;
+    for (s32 i = FX_FRAME_SAMPLES - 1; i >= 0; i--) {
+        s32 sum = 0;
+        for (k = 0; k < taps; k++) {
+            sum += coef[k] * in[i - k];
+        }
+        out[i] = sum / 4096;
+    }
+}
+
 inline void FxVoice::Chorus(s32** buffers) {
     for (s32 ch = 0; ch < 2; ch++) {
         s32* out = buffers[ch];
@@ -696,7 +708,7 @@ void FxVoice::UpdateBuffer(int channels, void** ppBuffer, u32 size, snd::SampleF
                 Read(FX_FRAME_SAMPLES + 11, work, 0, mInput[ch], -11);
                 Read(FX_FRAME_SAMPLES + 11, echo, -60, mOutput[ch], -11);
                 AddEcho(work, echo, FX_FRAME_SAMPLES + 11);
-                Fir(buffers[ch], &work[11], mFilterA, 11);
+                Fir2(buffers[ch], &work[11], mFilterA, 11);
             }
             break;
         case MODE_PITCH_DOWN:
