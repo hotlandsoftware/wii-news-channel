@@ -9,17 +9,8 @@ extern MEMAllocator gNewsAllocator; // general allocator
 extern MEMAllocator gPictureAllocator; // picture allocator
 extern s32 gBlinkPhase;
 
-// operator new(size_t, MEMAllocator*) (System.cpp) is called through an inline wrapper:
-// calling the operator directly changes the register allocation of NewsData::GetPicture.
-// operator new[](size_t, MEMAllocator*) is called directly.
-extern "C" {
-void* __nw__FUlP12MEMAllocator(size_t size, MEMAllocator* allocator);
-}
-
-inline void* operator new(size_t size, MEMAllocator* allocator) {
-    return __nw__FUlP12MEMAllocator(size, allocator);
-}
-
+// Defined in System.cpp.
+void* operator new(size_t size, MEMAllocator* allocator);
 void* operator new[](size_t size, MEMAllocator* allocator);
 
 static const u32 sIconLocal[4][2] = {
@@ -410,6 +401,7 @@ NewsArticle** NewsData::FindArticle(NewsTextBuffer* text, u32 topicIdx, u32 star
 NewsPicture* NewsData::GetPicture(NewsTextBuffer* text) {
     u32 fileId = text->pictureFileId;
     u32 idx = text->pictureIdx;
+    NewsPicture* pic;
     if (fileId == 0 || idx == 0xFFFFFFFF) {
         return NULL;
     }
@@ -431,8 +423,8 @@ NewsPicture* NewsData::GetPicture(NewsTextBuffer* text) {
             }
             if (file->picturesOfs != 0 && idx < file->numPictures) {
                 NewsPictureRec* rec = (NewsPictureRec*)file->At(file->picturesOfs) + idx;
-                void* data = file->At(rec->dataOfs);
-                NewsPicture* pic = new (&gPictureAllocator) NewsPicture;
+                void* data = (u8*)file + rec->dataOfs;
+                pic = new (&gPictureAllocator) NewsPicture;
                 if (pic != NULL) {
                     pic->texture = decoder.Decode(data, rec->size, &gPictureAllocator);
                     if (pic->texture != NULL) {
