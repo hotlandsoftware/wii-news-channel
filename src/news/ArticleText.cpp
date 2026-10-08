@@ -344,8 +344,9 @@ bool ArticleText::Set(const wchar_t* text, NewsPicture* picture, const math::VEC
     }
 
     c = mChars;
-    for (; *p != 0; c++, p++) {
-        c->mChar = *p;
+    wchar_t ch;
+    for (; (ch = *p) != 0; c++, p++) {
+        c->mChar = ch;
         c->mScale = mFontScale;
         Deselect(c);
         c->mScaleX = 1.0f;
