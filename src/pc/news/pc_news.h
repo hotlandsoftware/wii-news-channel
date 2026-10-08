@@ -5,9 +5,9 @@
 // checks the file's signature, removes the wrapper and stores the payload in
 // the task's archive. src/pc/sdk/nwc24.cpp does the same and gets the served
 // bytes from a "news source": anything that answers a GET for a URL. There is
-// one implementation, a directory that mirrors the server's paths. An HTTP
-// source (libcurl) only has to fill in another PCNewsSource; neither NWC24 nor
-// the game changes.
+// two implementations: an HTTP source (libcurl, news_http.cpp), used when the
+// game runs, and a directory that mirrors the server's paths, used when one is
+// named and by the tools and self-tests. Neither NWC24 nor the game knows which.
 
 #ifndef PC_NEWS_H
 #define PC_NEWS_H
@@ -40,6 +40,23 @@ struct PCNewsSource {
 const PCNewsSource* PCNewsGetSource();
 // For tests: use `source` instead (NULL: back to the configured one).
 void PCNewsSetSource(const PCNewsSource* source);
+
+// Which source PCNewsGetSource() returns when no test has set one: the HTTP
+// source when `http` is true, otherwise the directory source. main() switches
+// HTTP on for a run of the game unless a news directory was named
+// (`--news-dir`, $NEWSCHANNEL_NEWS_DIR). Tools and self-tests stay on the
+// directory, so they never use the network.
+void PCNewsUseHttp(bool http);
+bool PCNewsUsesHttp();
+
+// The HTTP source (news_http.cpp): GETs <base><path of the game's URL> with
+// libcurl. The base is a mirror of the news server, "http://host[:port][/prefix]":
+// PCNewsSetUrl() (`--url`, `news_url`), $NEWSCHANNEL_NEWS_URL, else
+// http://news.wiilink.ca. PCNewsSetUrl() returns false for anything that is
+// not an http(s) URL.
+const PCNewsSource* PCNewsGetHttpSource();
+bool PCNewsSetUrl(const char* base);
+const char* PCNewsGetUrl();
 
 // The directory source. The directory mirrors the server:
 // <dir>/v2/<language>/<country>/news.bin.<hour>. In order: PCNewsSetDir()

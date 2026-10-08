@@ -139,9 +139,15 @@ void PrintHelp(const char* program) {
     std::printf("  --contents DIR   the channel's WAD contents, NN.app (default orig/HAGE/contents)\n");
     std::printf("  --nand-dir DIR   directory used as the Wii's NAND (default $NEWSCHANNEL_NAND,\n");
     std::printf("                   ~/.local/share/newschannel/nand)\n");
+    std::printf("  --url URL        news server to download from (default http://news.wiilink.ca, or\n");
+    std::printf("                   $NEWSCHANNEL_NEWS_URL): the game's request for\n");
+    std::printf("                   /v2/<language>/<country>/news.bin.NN is sent to URL + that path\n");
+    std::printf("  --offline        do not use the network: news only from --news-dir (or the default\n");
+    std::printf("                   directory orig/HAGE/news); without one the game reports no connection\n");
     std::printf("  --news-dir DIR   where the news comes from: DIR/v2/<language>/<country>/news.bin.NN,\n");
-    std::printf("                   the files as the server sends them (default $NEWSCHANNEL_NEWS_DIR,\n");
-    std::printf("                   then orig/HAGE/news). Also for --list-news\n");
+    std::printf("                   the files as the server sends them, instead of downloading\n");
+    std::printf("                   (also $NEWSCHANNEL_NEWS_DIR). Also for --list-news, whose default\n");
+    std::printf("                   is orig/HAGE/news\n");
     std::printf("  --date YYYY-MM-DDTHH:MM[:SS][Z]\n");
     std::printf("                   start the game's clock at this time (local, or universal with Z)\n");
     std::printf("                   instead of now, e.g. to read news files of an earlier day\n");
@@ -376,6 +382,12 @@ int main(int argc, char** argv) {
     bool selftest_only = false;
     bool boot = false;
     bool listEnhancements = false;
+    bool newsUrlSet = false;
+    // A news directory named by the user (the self-test also sets and restores the
+    // directory, so the news source cannot tell).
+    const char* newsDirEnv = std::getenv("NEWSCHANNEL_NEWS_DIR");
+    bool newsDirNamed = newsDirEnv != nullptr && newsDirEnv[0] != '\0';
+    bool offline = false;
     bool window_test = false;
     bool selftest_gl = false;
     bool audio_test = false;
@@ -462,6 +474,17 @@ int main(int argc, char** argv) {
             PCDolDataSetPath(OptionValue(argc, argv, &i));
         } else if (std::strcmp(arg, "--news-dir") == 0) {
             PCNewsSetDir(OptionValue(argc, argv, &i));
+            newsDirNamed = true;
+        } else if (std::strcmp(arg, "--url") == 0 || std::strcmp(arg, "--news-url") == 0) {
+            const char* value = OptionValue(argc, argv, &i);
+            if (!PCNewsSetUrl(value)) {
+                std::fprintf(stderr, "%s: --url needs http://host[:port][/prefix], got '%s'\n", argv[0],
+                             value != nullptr ? value : "");
+                return 2;
+            }
+            newsUrlSet = true;
+        } else if (std::strcmp(arg, "--offline") == 0) {
+            offline = true;
         } else if (std::strcmp(arg, "--date") == 0) {
             const char* value = OptionValue(argc, argv, &i);
             s64 when = 0;
@@ -648,6 +671,13 @@ int main(int argc, char** argv) {
         PCExit(result);
     }
 
+    // The game asks WiiConnect24 to download its news; on PC that is an HTTP
+    // GET from a mirror (`--url`), unless a directory of files was named or
+    // the network is ruled out. Not an enhancement: purist mode downloads too.
+    PCNewsUseHttp(!offline && !newsDirNamed);
+    if (newsUrlSet && !PCNewsUsesHttp()) {
+        std::fprintf(stderr, "%s: --url has no effect with %s\n", argv[0], offline ? "--offline" : "a news directory");
+    }
     std::printf("contents: %s\nnand:     %s\n", PCGetContentsDir(), PCGetNandDir());
     std::printf("news:     %s\n", PCNewsGetSource()->describe());
     if (!PCDolDataLoad()) {

@@ -4,6 +4,8 @@
 
 #include <pc/enhance.h>
 
+#include "news/pc_news.h"
+
 #include <cctype>
 #include <cstdio>
 #include <cstdlib>
@@ -111,6 +113,7 @@ void ApplyEnvironment() {
         {"NEWSCHANNEL_EURGB60", "eurgb60"},     {"NEWSCHANNEL_WC24", "wc24"},
         {"NEWSCHANNEL_TV", "tv"},               {"NEWSCHANNEL_CONTENTS", "contents"},
         {"NEWSCHANNEL_NAND", "nand"},           {"NEWSCHANNEL_PURIST", "purist"},
+        {"NEWSCHANNEL_NEWS_URL", "news_url"},
     };
     for (const auto& variable : kVariables) {
         const char* value = std::getenv(variable[0]);
@@ -218,6 +221,10 @@ bool PCConfigSet(const char* key, const char* value) {
             return false;
         }
         config->tvFormat = static_cast<u8>(number);
+    } else if (strcasecmp(key, "news_url") == 0) {
+        if (!PCNewsSetUrl(value)) {
+            return false;
+        }
     } else if (strcasecmp(key, "purist") == 0) {
         if (!Lookup(kBools, value, &number)) {
             return false;

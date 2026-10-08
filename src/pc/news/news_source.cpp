@@ -6,9 +6,8 @@
 // directory: <dir>/v2/1/049/news.bin.07. The files are the served ones,
 // wrapper included (PCNewsUnwrap()).
 //
-// This program does not use the network: there is no HTTP source yet. One
-// would GET the same path from a configurable host (WiiLink serves it at
-// http://news.wiilink.ca) and return the body.
+// The HTTP source is news_http.cpp. PCNewsGetSource() picks between the two
+// (PCNewsUseHttp()).
 //
 // No `new` and no standard containers here (docs/pc_port.md, section 12, "The
 // framework"): the global operator new is the game's.
@@ -32,6 +31,7 @@ char sDir[1024];
 bool sDirSet;       // sDir was decided (by PCNewsSetDir() or the search)
 bool sDirExplicit;  // by PCNewsSetDir() or the environment: report it when it is missing
 const PCNewsSource* sOverride;
+bool sUseHttp;
 char sDescription[1100];
 // Last fallback that was reported, so that 24 files give one line.
 char sReportedFallback[64];
@@ -226,9 +226,22 @@ const PCNewsSource sDirSource = {DirDescribe, DirAvailable, DirGet};
 
 const PCNewsSource* PCNewsGetSource() {
     pthread_mutex_lock(&sMutex);
-    const PCNewsSource* source = sOverride != nullptr ? sOverride : &sDirSource;
+    const PCNewsSource* source = sOverride != nullptr ? sOverride : sUseHttp ? PCNewsGetHttpSource() : &sDirSource;
     pthread_mutex_unlock(&sMutex);
     return source;
+}
+
+void PCNewsUseHttp(bool http) {
+    pthread_mutex_lock(&sMutex);
+    sUseHttp = http;
+    pthread_mutex_unlock(&sMutex);
+}
+
+bool PCNewsUsesHttp() {
+    pthread_mutex_lock(&sMutex);
+    bool http = sUseHttp;
+    pthread_mutex_unlock(&sMutex);
+    return http;
 }
 
 void PCNewsSetSource(const PCNewsSource* source) {

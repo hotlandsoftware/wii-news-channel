@@ -316,7 +316,7 @@ Stubs are not the whole picture: KPAD/WPAD buttons and HBM are hand-written plac
 - [x] **2. It boots.** `--boot` runs the game's `main()` and its main loop in a window, and shuts down cleanly when the window is closed (section 15): OS (threads, mutexes, message queues, alarms, time, arenas), MEM heaps, MTX, CNT/ARC/NAND file access on `orig/HAGE/contents`, CX decompression, SC settings, a window, byte order of the formats the boot parses (archives, palettes, fonts, layouts, layout animations, the sound archive's tables). Formats of later milestones are not converted yet and their loaders are guarded (section 15, "Bypasses").
 - [x] **3. It draws.** GX to OpenGL layer (state, TEV, textures, the FIFO), VI frame pacing; layouts and fonts on screen (sections 16 and 17; what was looked at and what is still missing: section 16, "Integration: what the screens look like").
 - [ ] **4. Input.** KPAD/WPAD from the mouse and keyboard work (left click = A, right click = B, arrows, Esc = HOME; `PCVIGetButtons()`), and the pointer follows the mouse. Not planned: a drawn pointer (the owner's decision: on PC the mouse arrow is enough, so the `nw4r::ef` pointer effect stays bypassed). Still open: game controllers, a configurable mapping, rumble.
-- [x] **5. News.** NWC24 download tasks, VF and NET replaced by host files; a news file loads, articles and slide show work, JPEG pictures decode. The whole path runs from disk (section 21): the game registers its download task, the downloader takes the served files from a directory (`--news-dir`), the game reads, decompresses, checks and parses them. Every screen behind the download was driven with a day's real files and looked at (section 23): section list, headline lists, articles with text, picture, caption and source logo, text zoom, the globe beside the article, the globe view with its pins, cards and regional lists, the slide show. Still open under this heading: the HTTP source (libcurl), which replaces the directory behind the same three functions.
+- [x] **5. News.** NWC24 download tasks, VF and NET replaced by host files; a news file loads, articles and slide show work, JPEG pictures decode. The whole path runs from disk (section 21): the game registers its download task, the downloader takes the served files from a directory (`--news-dir`), the game reads, decompresses, checks and parses them. Every screen behind the download was driven with a day's real files and looked at (section 23): section list, headline lists, articles with text, picture, caption and source logo, text zoom, the globe beside the article, the globe view with its pins, cards and regional lists, the slide show. The HTTP source (`src/pc/news/news_http.cpp`, libcurl) is what a run of the game uses: the game's request is sent to a mirror of the news server (default `http://news.wiilink.ca`, `--url`), section 25.
 - [ ] **6. Globe, effects, sound.** `nw4r::g3d` globe, `nw4r::ef` pointer effects, AX/AI output through SDL audio, `nw4r::snd` playing the sound archive. Done: sound (sections 18 to 20) and the globe (section 22), which runs inside the game now: beside an article, in the globe view and behind the slide show (section 23). Not started: the pointer effects.
 - [ ] **7. Polish.** Settings and language selection, window scaling and aspect ratio, packaging, 64-bit. Not planned (the owner's decisions): the HOME Menu (stays a placeholder that never opens) and the Operations Guide (its viewer runs a PowerPC build of Opera).
 
@@ -2042,3 +2042,24 @@ Purist mode switches enhancements off; it cannot add what the port does not have
 | `PS*` matrix functions can differ from the console in the last bit | C versions of paired-single code; section 14 |
 | Threads run in parallel instead of by priority | section 11 |
 | The picture is scaled to the window; the console outputs a fixed video mode | presentation only: the game renders the same 640x456 frame (`--screenshot` saves that frame) |
+
+## 25. Downloading the news
+
+When the game runs (`--boot`) it downloads its news, as on the console: the game registers its WiiConnect24 download task with the URL `http://news.wapp.wii.com/v2/<language>/<country>/news.bin`, the downloader (`src/pc/sdk/nwc24.cpp`) asks the news source for that URL plus `.<hour>`, and the HTTP source (`src/pc/news/news_http.cpp`) sends the request to a mirror: it keeps the path and replaces the scheme and host by a base URL. This is not a PC enhancement (R13): it is what the original program asks the system to do, so purist mode downloads too.
+
+| Setting | Effect |
+| --- | --- |
+| (default) | base `http://news.wiilink.ca` (WiiLink serves the files Nintendo's server did) |
+| `--url URL`, `news_url = URL`, `$NEWSCHANNEL_NEWS_URL` | another mirror: `http(s)://host[:port][/prefix]`; the request goes to `URL` + `/v2/<language>/<country>/news.bin.<hour>` |
+| `--news-dir DIR`, `$NEWSCHANNEL_NEWS_DIR` | no network: the files are read from `DIR/v2/...` (the directory source, section 21) |
+| `--offline` | no network: the default directory `orig/HAGE/news` if it exists, otherwise the game reports no connection |
+
+Behaviour:
+
+- **When it downloads** is the game's decision (section 21): on a start where the task's archive in the NAND directory is missing, incomplete or expired. A second start within the validity of the files downloads nothing.
+- **What the game shows**: its own "Downloading... This may take a few moments." screen while the 24 hourly files arrive, then the section list.
+- **Errors** reach the game as the console's codes: no answer from the server is "no link" (`SOStartup()` fails, error 051099); an HTTP status other than 200 is `117000 + status`; a file without a usable wrapper is 117900 (PC only).
+- **Limits**: http and https only, at most four redirects, 10 s to connect, 60 s per file, 8 MiB per file. The signature of the files is not verified (section 21, "Deviations").
+- All requests share one connection. Each is logged on stderr (`news: GET <url>: <n> bytes`).
+- The tools and self-tests (`--list-news`, `--selftest`) never use the network: only `--boot` switches the HTTP source on (`PCNewsUseHttp()` in `main.cpp`).
+- `pc/tools/purist_check.py` names a news directory, so it runs without the network.
