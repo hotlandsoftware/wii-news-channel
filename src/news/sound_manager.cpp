@@ -765,7 +765,7 @@ void FxVoice::Radio(s32** buffers) {
     s32 work[FX_FRAME_SAMPLES + 21];
     s32 work2[FX_FRAME_SAMPLES + 21];
     s32* p = &work[21];
-
+ 
     Read(FX_FRAME_SAMPLES + 21, work, 0, (s32*)mInput, -21);
     Read(FX_FRAME_SAMPLES + 21, work2, 0, (s32*)mInput + FX_HISTORY_SIZE, -21);
 
@@ -773,13 +773,12 @@ void FxVoice::Radio(s32** buffers) {
 
     Fir(p, mFilterB, 21);
 
-    u32 seed = sNoiseSeed;
+    
     for (s32 i = 0; i < FX_FRAME_SAMPLES; i++) {
         if (i % 8 == 0) {
-            seed = seed * 0x80D + 7;
-            sNoiseSeed = seed;
+            sNoiseSeed = sNoiseSeed * 0x80D + 7;
         }
-        p[i] = p[i] * ((s32)((s64)(s32)(seed & 0xFFF) * 0x19A / 4096) + 0xE66) / 4096;
+        p[i] = p[i] * ((s32)((s64)(s32)(sNoiseSeed & 0xFFF) * 0x19A / 4096) + 0xE66) / 4096;
         ((u32*)p)[i] &= ~0x7F;
     }
 
