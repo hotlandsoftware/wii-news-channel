@@ -944,15 +944,6 @@ void NewsScene::OnHomeMenuOpen() {
     }
 }
 
-// At most 14 news sections are shown.
-static inline u32 GetNumCategories(NewsData* data) {
-    u32 num = 14;
-    if (data->mNumCategories <= 14) {
-        num = data->mNumCategories;
-    }
-    return num;
-}
-
 BOOL NewsScene::InitNews() {
     gHideClock = gUpdateMsgType == 1;
     ClearButtonHover();
@@ -970,7 +961,8 @@ BOOL NewsScene::InitNews() {
     BOOL hasCaption;
 
     data = gNewsData;
-    numCategories = GetNumCategories(data);
+    // At most 14 news sections are shown.
+    numCategories = ut::Min<u32>(data->mNumCategories, 14);
     lbl_803575E0 = numCategories;
     if (data->mHeader->unk2C[0] == 0) {
         gCharSpaceScale = -2.0f;
