@@ -11,6 +11,11 @@
 // - GXCopyDisp() copies the EFB into a texture kept per XFB pointer; the VI
 //   backend presents the one the application selected. GXCopyTex() reads
 //   the EFB back and encodes it into the application's buffer.
+// - The enhancements `hires` and `msaa` (<pc/enhance.h>; docs/pc_port.md,
+//   section 28) make the EFB larger than 640 x 528 and multisampled. What
+//   the application says in EFB pixels is converted here (EfbRect()); the
+//   multisampled EFB is resolved when it is copied or peeked. With both off
+//   (always in purist mode) the EFB is the console's.
 //
 // Not implemented (documented in docs/pc_port.md): fog, Z textures, the copy
 // filter and gamma, dithering, GXSetZCompLoc() before texturing (depth is

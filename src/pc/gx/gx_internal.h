@@ -327,7 +327,8 @@ typedef void (*PCGXDrawHook)(u32 primitive, const PCGXOutVertex* vertices, u32 c
 void PCGXSetDrawHook(PCGXDrawHook hook);
 
 // The EFB is 640 x 528 on every console; the render mode only selects how
-// much of it is used.
+// much of it is used. These are EFB pixels, the unit of the API. The OpenGL
+// render target can have more pixels than that (PCGXEfbInfo, below).
 enum { PC_GX_EFB_WIDTH = 640, PC_GX_EFB_HEIGHT = 528 };
 
 // Viewport of the hardware in EFB pixels (y down), from the XF registers and

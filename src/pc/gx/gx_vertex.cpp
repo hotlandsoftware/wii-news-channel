@@ -563,6 +563,12 @@ void TransformVertex(const DrawInfo& info, const InVertex& in, const PCGXViewpor
 
 // --- Primitive assembly -----------------------------------------------------------
 
+// The render target's size in OpenGL pixels while it is multisampled, else
+// 0: set for each primitive. SnapRectangle() is with the other enhanced
+// sampling code below.
+f32 sSnapWidth, sSnapHeight;
+void SnapRectangle(PCGXOutVertex* const corners[4], f32 pixelsX, f32 pixelsY);
+
 // A screen-aligned quad around a line segment or a point, as two triangles.
 // `half` is half the width in EFB pixels.
 void EmitThick(const PCGXOutVertex& a, const PCGXOutVertex& b, f32 half, PCGXOutVertex* out) {
@@ -591,6 +597,12 @@ void EmitThick(const PCGXOutVertex& a, const PCGXOutVertex& b, f32 half, PCGXOut
     q[1].pos[0] -= (ox + px) * wa, q[1].pos[1] -= (oy + py) * wa;
     q[2].pos[0] -= (ox - px) * wb, q[2].pos[1] -= (oy - py) * wb;
     q[3].pos[0] += (ox + px) * wb, q[3].pos[1] += (oy + py) * wb;
+    if (sSnapWidth != 0.0f) {
+        // multisampled EFB: a horizontal or vertical line, or a point, is an
+        // upright rectangle like any other (SnapRectangle(), below)
+        PCGXOutVertex* corners[4] = {&q[0], &q[1], &q[2], &q[3]};
+        SnapRectangle(corners, sSnapWidth, sSnapHeight);
+    }
     out[0] = q[0], out[1] = q[1], out[2] = q[2];
     out[3] = q[0], out[4] = q[2], out[5] = q[3];
 }
@@ -976,6 +988,15 @@ void PCGXDrawPrimitive(u32 primitive, u32 vat, u32 count, const u8* data) {
     sTriangles = Grow(sTriangles, &sTrianglesCapacity, triangleVertices);
     const bool enhancedQuads = PCGXRenderEnhancedSampling() && IsQuadrilaterals(primitive, count);
     u32 quads = 0;
+    sSnapWidth = sSnapHeight = 0.0f;
+    if (PCGXRenderEnhancedSampling()) {
+        PCGXEfbInfo efb;
+        PCGXRenderGetEfbInfo(&efb);
+        if (efb.samples != 0) {
+            sSnapWidth = static_cast<f32>(efb.width);
+            sSnapHeight = static_cast<f32>(efb.height);
+        }
+    }
     if (enhancedQuads) {
         // A scaled or multisampled EFB (docs/pc_port.md, section 28): each
         // quadrilateral says which texels are its own (PCGXTexClamp,

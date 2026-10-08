@@ -30,6 +30,11 @@ Contents:
 21. [How the channel gets its news](#21-how-the-channel-gets-its-news)
 22. [The globe (nw4r::g3d)](#22-the-globe-nw4rg3d)
 23. [The channel with today's news](#23-the-channel-with-todays-news)
+24. [Purist mode and enhancements](#24-purist-mode-and-enhancements)
+25. [Downloading the news](#25-downloading-the-news)
+26. [Screen shape](#26-screen-shape)
+27. [Enhancements: mouse wheel and keyboard](#27-enhancements-mouse-wheel-and-keyboard)
+28. [Enhancements: resolution and anti-aliasing](#28-enhancements-resolution-and-anti-aliasing)
 
 ## 1. Decisions
 
@@ -734,6 +739,9 @@ For backend code the consequence remains: `new`, `std::string`, `std::vector` an
 | `--date YYYY-MM-DDTHH:MM[:SS][Z]` | start the game's clock at this time (local time, or universal time with `Z`) instead of now; default `$NEWSCHANNEL_DATE` (section 21, "The clock") |
 | `--input SCRIPT` | scripted input for automated runs: `P0:0@1,A@300` points at the centre of the picture from retrace 1 and presses A at retrace 300; also keys, mouse buttons and the wheel (section 27, `src/pc/pc_input.h`) |
 | `--screenshot N[,N...]` | save the picture shown at these retraces as `frame_NNNNNN.png` (section 16, "Looking at the result"); with `--no-window` the frames are drawn in a hidden window |
+| `--screenshot-window` | also save what the window shows as `frame_NNNNNN_window.png`; with `--no-window`, what a window of `--window-size` would show (section 28) |
+| `--window-size WxH` | the window's size (default 854x480, with 4:3 640x480); with `--no-window` the size of the window that is not shown |
+| `--render-scale auto\|1..8`, `--msaa 0\|2\|4\|8` | the numbers of the enhancements `hires` and `msaa` (section 28) |
 | `--screenshot-dir DIR` | where the screenshots go (default: the current directory; keep them out of the repository, e.g. `build/shots`) |
 | `--mute` | no audio device; audio frames still run in real time (section 18) |
 | `--audio-dump FILE.wav` | write the mixed stereo output of the run to a WAV file (32 kHz, 16 bits). Never commit it (R12); write it below `build/` |
@@ -911,7 +919,8 @@ Texels from files are big-endian. Buffers whose 16-bit texels are in host order 
 ### Looking at the result
 
 - `--screenshot N[,N...] --screenshot-dir DIR` writes `frame_NNNNNN.png` for retrace N: the frame the window shows at that retrace, or black while the screen is blanked. The picture is the XFB as copied (640 x 456 for the game's mode), not stretched to the display's aspect ratio: on a 4:3 television it is about 5 % narrower, and in 16:9 mode it is anamorphic. Works with `--no-window` (hidden window) and with `SDL_VIDEODRIVER=offscreen`. **Never commit screenshots**: they show the game's assets.
-- `--screenshot-window` (with a visible window) also writes `frame_NNNNNN_window.png`: the window's back buffer after `PCGXPresent()`, in window pixels, read just before the swap. This is the picture as presented (scaled to 4:3 or 16:9, with bars if the window has another shape).
+- `--screenshot-window` also writes `frame_NNNNNN_window.png`: the window's back buffer after `PCGXPresent()`, in window pixels, read just before the swap. This is the picture as presented (scaled to 4:3 or 16:9, with bars if the window has another shape). With `--no-window` the frame is presented into a texture of the window's size (`--window-size`) instead and that is saved (section 28).
+- With the enhancement `hires` (section 28) the XFB, and with it the `--screenshot` picture, has the resolution the frame was drawn in; the 640 x 456 picture is what `--purist` or `--enhance hires=0` saves.
 - `NEWSCHANNEL_GX_LOG=N[,N...]` (or `all`) dumps every primitive of those frames: vertex format, the first four vertices after the transform (in EFB pixels), matrices, viewport and scissor, lighting channels, each TEV stage, register and konst colours, the textures (pointer, size, format, wrap, filter), coordinate scales, blend, depth, alpha compare and cull state, and the EFB copies. `NEWSCHANNEL_GX_LOG_FILE=path` writes to a file instead of stderr. The frame number is the retrace that shows the frame, so the log of frame N describes screenshot N as long as the game draws one frame per retrace.
 - `PCGXGetStats()` counts primitives, vertices, register loads, display lists, copies, programs, textures and FIFO bytes that were not a command (`badCommands`: if this is not 0 the command stream lost step, which means a vertex descriptor and the data written for it disagree).
 - Problems are printed once each (`PCGXWarnOnce()`): an undecodable texture format (drawn magenta), an unknown FIFO command, an indexed attribute without an array, a copy format that is not implemented.
@@ -2012,7 +2021,7 @@ No bypass was added. The one left is the pointer effect (section 15, `TODO(miles
 
 ## 24. Purist mode and enhancements
 
-`newschannel --purist` runs the game as it functions and looks on the console: every PC enhancement is off (R13). Without `--purist` the enhancements that are switched on apply; `--list-enhancements` shows them, `--enhance NAME[=0|1]` and `enhance.NAME = 0|1` in the config file switch one. The enhancements that exist: `mouse-scroll`, `keyboard-nav` and `fullscreen-key` (section 27).
+`newschannel --purist` runs the game as it functions and looks on the console: every PC enhancement is off (R13). Without `--purist` the enhancements that are switched on apply; `--list-enhancements` shows them, `--enhance NAME[=0|1]` and `enhance.NAME = 0|1` in the config file switch one. The enhancements that exist: `mouse-scroll`, `keyboard-nav` and `fullscreen-key` (section 27), `hires` and `msaa` (section 28). An enhancement can have a number behind it (`render_scale`, `msaa`): those are settings of `PCConfig` (`src/pc/pc_config.h`) that are only read where `PCEnhanced()` is true, and `--list-enhancements` prints them.
 
 | Piece | Where |
 | --- | --- |
@@ -2042,7 +2051,7 @@ Purist mode switches enhancements off; it cannot add what the port does not have
 | Sound: computed 4-tap resampler table, no Wii Remote speaker, surround reduced to stereo | section 18 |
 | `PS*` matrix functions can differ from the console in the last bit | C versions of paired-single code; section 14 |
 | Threads run in parallel instead of by priority | section 11 |
-| The picture is scaled to the window; the console outputs a fixed video mode | presentation only: the game renders the same 640x456 frame (`--screenshot` saves that frame) |
+| The picture is scaled to the window; the console outputs a fixed video mode | presentation only: in purist mode the game renders the same 640x456 frame (`--screenshot` saves that frame). Rendering at the window's resolution is the enhancement `hires` (section 28) |
 
 ## 25. Downloading the news
 
@@ -2067,7 +2076,7 @@ Behaviour:
 
 ## 26. Screen shape
 
-The console's screen setting (`SCGetAspectRatio()`) is 16:9 by default on PC; `--aspect 4:3` (`--4:3`), `aspect = 4:3` or `$NEWSCHANNEL_ASPECT=4:3` select the other. Both are the game's own layouts and both exist on the console, so this is a setting, not a PC enhancement (R13), and purist mode does not change it. The default window is 854x480 in 16:9 and 640x480 in 4:3; the game renders the same 640x456 frame in both and the window stretches it, as a television does.
+The console's screen setting (`SCGetAspectRatio()`) is 16:9 by default on PC; `--aspect 4:3` (`--4:3`), `aspect = 4:3` or `$NEWSCHANNEL_ASPECT=4:3` select the other. Both are the game's own layouts and both exist on the console, so this is a setting, not a PC enhancement (R13), and purist mode does not change it. The default window is 854x480 in 16:9 and 640x480 in 4:3 (`--window-size WxH` for another); the game renders the same 640x456 frame in both and the window stretches it, as a television does. With the enhancement `hires` (section 28) the frame is drawn at the window's resolution instead and nothing is stretched.
 
 Until this section the default was 4:3. Input scripts and screenshots described in earlier sections assume 4:3 unless they say `--wide`; `pc/tools/purist_check.py` passes `--aspect 4:3` (its `--aspect 16:9` checks the wide layout against its own baseline).
 
@@ -2224,3 +2233,173 @@ Examples (after `P0:0@1,A@300,P0:0.2@400,A@450`, the headline list of National N
 | Home/End in one jump | only the game's own steps are used; they take as long as the game scrolls |
 | Smooth (pixel) scrolling with a touchpad | the game scrolls in steps; fractions are added up to steps |
 | Game controllers, key rebinding | not part of this (section 14, milestone 4) |
+
+## 28. Enhancements: resolution and anti-aliasing
+
+Two enhancements (R13), both on by default and both off in purist mode:
+
+| Enhancement | What it does | Its number |
+| --- | --- | --- |
+| `hires` | the game draws at the display's resolution instead of drawing 640x456 and having the window stretch it | `render_scale = auto \| 1..8` |
+| `msaa` | the frame buffer is multisampled: edges that cross pixels at a slant are smoothed | `msaa = 4 \| 0 \| 2 \| 8` |
+
+They are independent: `msaa` alone multisamples the console's 640x528, `hires` alone draws one sample per pixel.
+Neither touches the game or NW4R: everything is in `src/pc/gx` and `src/pc/sdk/vi.cpp`. The game still thinks in its 608 (or 812) by 456 units and the console's 640x528 EFB pixels; only the number of OpenGL pixels behind an EFB pixel changes.
+
+### Settings
+
+| Where | `hires` | `msaa` |
+| --- | --- | --- |
+| Switch | `--enhance hires=0\|1`, `enhance.hires = 0\|1` | `--enhance msaa=0\|1`, `enhance.msaa = 0\|1` |
+| Number: command line | `--render-scale auto\|1..8` | `--msaa 0\|2\|4\|8` |
+| Number: settings file | `render_scale = auto\|1..8` | `msaa = 0\|2\|4\|8` |
+| Number: environment | `$NEWSCHANNEL_RENDER_SCALE` | `$NEWSCHANNEL_MSAA` |
+| Default | `auto` | `4` |
+
+The numbers are fields of `PCConfig` (`renderScale`, `msaaSamples`; `src/pc/pc_config.h` documents them) and are read in one place, `DesiredEfb()` in `gx_render.cpp`, under `PCEnhanced(PC_ENH_HIRES)` and `PCEnhanced(PC_ENH_MSAA)`. With the enhancement off, or in purist mode, the number is kept and ignored. `--list-enhancements` prints the numbers of the enhancements that are on.
+
+**`render_scale = auto`** makes the picture exactly as many pixels as it has in the window: the display copy source (640x456) becomes the picture rectangle (`PCVIGetPictureRect()` in pixels, so HiDPI counts), and the present is a 1:1 copy. A 1280x720 window gives 2.0 x 1.579 OpenGL pixels per EFB pixel, 1920x1080 gives 3.0 x 2.368, a 1280x960 window with the 4:3 setting 2.0 x 2.105. So in 16:9 the anamorphic squeeze is gone: the frame is drawn with square screen pixels, circles are circles in the frame itself. The EFB follows the window (resize, fullscreen); the scale is never below 1 (a window smaller than 640x456 gets the console's frame reduced, as before) and never above 8.
+
+**`render_scale = N`** is a fixed size, whatever the window: with the 4:3 setting N x N, so the 640x456 frame is 640N x 456N; with the 16:9 setting N vertically and 4N/3 horizontally (N = 3: 2560x1368).
+The decision behind the 4N/3: a 640-pixel line was never made of square pixels (on a 4:3 screen a pixel of the 640x456 picture is 0.95 as wide as it is high), and the wide picture is the same 640 pixels shown 4/3 as wide. Giving it 4/3 as many pixels gives the wide frame the pixel shape the 4:3 frame has at N: within 5 % of square in both settings, with the multiple a whole number in 4:3 for every N and in 16:9 for N = 3 and 6. Exactly square pixels are what `auto` is for. The window scales a fixed-size frame into the picture rectangle; when the frame is more than twice as large as its place it is halved in steps first, so `render_scale` larger than the window is supersampling.
+
+**`msaa`** is limited to what the driver offers (`GL_MAX_SAMPLES`). 0 with the enhancement on is the same as the enhancement off.
+
+**`--window-size WxH`** (not an enhancement) sets the window's size. With `--no-window` it is the size of the window that is not shown, which is what `auto` scales to and what `--screenshot-window` saves.
+
+### The EFB
+
+`struct Efb` in `gx_render.cpp`: its size in OpenGL pixels, the OpenGL pixels per EFB pixel in each direction, the sample count, the framebuffer and, when it is multisampled, a second framebuffer with one sample per pixel (the resolved copy).
+
+- Without either enhancement it is what it was: two textures of 640x528, created by the same calls.
+- **Size.** `ceil(640 * scaleX)` by `ceil(528 * scaleY)`. A non-integer scale is normal with `auto`.
+- **Multisampled** it is two renderbuffers; copies and peeks read the resolved copy, which is brought up to date (one blit) when one of them needs it and something was drawn since. `GXCopyDisp` resolves straight into the XFB's texture.
+- **When it changes.** `ConfigureEfb()` compares what there is with what `DesiredEfb()` asks for: once when the renderer starts and after every `GXCopyDisp`, which is between two frames. The VI backend reports the picture's size every retrace (`PCGXSetOutputSize()`), so a resize acts on the next frame. The old contents (colour and depth) are carried over, scaled, because a game need not clear between frames. Kept copies (below) are dropped.
+- It prints one line when it is not the console's: `GX: frame buffer 1920x1251 (3.000 x 2.368 of the console's), 4 samples per pixel`.
+
+### What is in EFB pixels, and how it is converted
+
+| What | Where | How |
+| --- | --- | --- |
+| Clip coordinates (viewport, scissor box offset, the field offset of `GXSetViewportJitter`) | `TransformVertex()`, `gx_vertex.cpp` | The viewport was already folded into the clip coordinates on the CPU, relative to an EFB of 640x528 that OpenGL's viewport covers. Now it is relative to what the render target covers in EFB pixels (`PCGXRenderGetEfbExtent()`: 640x528, or a fraction more where the size was rounded up), and OpenGL's viewport is the whole render target. Exact for any scale; nothing in the transform knows the scale |
+| Scissor | `ApplyRasterState()` | `EfbRect()`: the rectangle's edges times the scale, rounded to the nearest pixel, clamped |
+| Copy source of `GXCopyDisp` / `GXCopyTex` (`GXSetDispCopySrc`, `GXSetTexCopySrc`), the clear after a copy | `PCGXRenderCopyDisp()`, `PCGXRenderCopyTex()`, `ClearCopySource()` | `EfbRect()`. The clear still goes through the colour, alpha and depth update masks and clears every sample |
+| `GXPeekARGB`, `GXPeekZ` | `PCGXRenderPeek()` | the pixel under the centre of the EFB pixel, from the resolved copy |
+| Line width, point size (sixths of an EFB pixel) | `EmitThick()` | lines and points were already quads built in EFB pixels; they are that many EFB pixels wide at any scale (a 1-pixel line is `scale` pixels) |
+| The XFB's picture | `PCGXRenderCopyDisp()` | the copy source's OpenGL pixels: with `auto`, the picture's size in the window |
+| Level of detail of mipmapped textures | OpenGL | from the real pixels: at a higher resolution the larger level is used sooner. Eight textures have mipmaps (section 17) |
+
+Not there to convert: polygon offset (the co-planar bit is not implemented, section 16), `GXPoke*` (not defined), the copy filter and the Y scale of the display copy (not implemented).
+`GXSetViewportJitter` moves the picture half an EFB line for one of two fields; that is scaled like everything else, and only happens in an interlaced, field-rendering mode (not the default).
+
+### Copies of the EFB into textures
+
+`GXCopyTex` is used in one place: the fade of `SystemDraw()` (`System.cpp`), which copies the frame into `gFadeTex` (RGB565, 640x456) and then draws that texture, darkening. `StartFade(2, ...)` is only called on the way into and out of the fatal-error screen (`Scene::StateFatal()`, `ErrorScreen::Calc()`); the fades between the ordinary screens are a black quad over the live picture. NW4R does not copy. So this path is seen with `--lang it` (the error screen, section 16): frames 10 to 30 and, after A, 25 frames more.
+
+The game owns the buffer and its size, so:
+
+- **The buffer gets the console's picture.** The copy source is reduced on the GPU to the size the game asked for (`ReadReduced()`: halved while it is more than twice as large, then one bilinear step), read back at that size and encoded as before. Flat areas and ramps come out as at 1x; an edge is a little softer at a scale that is not a power of two. Nothing larger than the game's own texture is ever read back.
+- **The picture is also kept at the EFB's resolution** (`PCGXCopyTextureBegin/End()` in `gx_texture.cpp`): an OpenGL texture found by the buffer's pointer. When the game draws a texture with that pointer, size and format, and the buffer still holds what the copy wrote (a checksum, compared once per texture generation, as for every cached texture), the kept texture is bound instead of the decoded buffer. If the game writes into the buffer, uses it as another texture, or the EFB changes size, the kept copy is gone and the buffer's texels are the texture. Kept for `GX_TF_RGB565` and `GX_TF_RGBA8`; other formats (intensity, the copy-only formats) are not a plain picture and use the buffer.
+- The kept picture has the EFB's 8 bits per channel, not RGB565's 5, 6 and 5: a fading picture does not get the colour steps the console's has. Its alpha is 1 for RGB565, as a texel of that format reads.
+- The fragment shader must not take the texture's size from OpenGL then: in the enhanced-sampling variant (below) texture sizes are a uniform with the size the game gave.
+
+Checked on the error screen at 1920x1080 and 1280x960: during the fade the text is as sharp as before it, the right way up, and each frame reduced to 640x456 differs from the purist frame by no more than the frame before the fade does (mean 0.8 of 255).
+
+### Sampling rules
+
+The principle: a texel and a pixel centre are where the hardware puts them (OpenGL's conventions are the same, section 16), the filter of each texture is the game's (`GX_NEAR`, `GX_LINEAR`, the mipmap modes, through the sampler objects as before), and nothing is blurred or sharpened to hide anything. What had to be decided:
+
+1. **No centroid sampling.** A multisampled pixel that an edge only partly covers is shaded at its centre, also when the centre is outside the primitive. Sampling at the centroid would move the texture in every edge pixel and disturb the derivatives. Instead, where the primitive is a quadrilateral whose texture coordinates are the four corners of a rectangle of the texture (a pane, a glyph, a picture, a card on the globe: `QuadTexClamp()` in `gx_vertex.cpp`, for `GX_QUADS` and four-vertex strips and fans), the coordinate is brought back into that rectangle in the fragment shader (`uTexClamp`), so the extrapolation cannot reach across a repeating texture's edge or into the next cell. A pixel whose centre is inside is never changed by this. A model's triangles have no such rectangle and are left alone.
+2. **Upright rectangles keep the pixel-centre rule under multisampling** (`SnapRectangle()` in `gx_vertex.cpp`). Multisampling is for slanted edges. The edge of an upright rectangle that falls inside a pixel would become a row of half-covered pixels: a soft outline around every pane, a grey line beside a button's border. The layouts centre their panes, so half-pixel positions are common, and with `auto` nearly every horizontal edge is between pixels. So a quadrilateral that is an upright rectangle on screen (no perspective), and a horizontal or vertical line or a point (which are quads here), is rasterised as without multisampling: each edge is moved to the pixel boundary the centre rule picks, and depth, colours and texture coordinates are extended to the moved corners, so nothing inside shifts. A rectangle too thin to contain a pixel centre is left to its coverage instead of disappearing.
+3. **No alpha-to-coverage.** The alpha test discards per pixel, as it did; blending is per sample. An alpha-tested or alpha-blended edge inside a texture is the texture's business.
+4. **No inset against bleeding.** An obvious rule for scaled 2D is to keep coordinates half a texel inside the rectangle, so that a bilinear lookup never mixes in the texel beyond. It was tried and is wrong here: the glyphs of the fonts fill their cells, and their soft outer edge is the blend with the spare texel around the cell, which the console shows too whenever a pixel centre falls in that half texel. The inset cut the letters' edges hard on one side and smeared the border of reduced photos. Without it nothing bleeds on any screen (below).
+
+The fragment shader has a second variant for a scaled or multisampled EFB (`PCGXShaderKey::enhancedSampling`): texture sizes from `uTexSize`, the rectangle of rule 1, `textureGrad()` with the unclamped derivatives. With the console's EFB the generated source is the old one, byte for byte.
+
+### Screenshots
+
+- `--screenshot` saves the XFB as `GXCopyDisp` left it. In purist mode (and with `hires` off) that is the console's 640x456, which `purist_check.py` depends on. With `hires` it is the frame at the resolution it was drawn in: with `auto` the picture as it is in the window, pixel for pixel; with a fixed scale the frame before the window scales it.
+- `--screenshot-window` saves what the window shows (the picture rectangle and the bars). It no longer needs a visible window: with `--no-window` the frame is presented into a texture of `--window-size` (`PCGXSetOffscreenWindow()`), so an automated run can save what a user would see at any window size.
+
+### Performance
+
+- Vertex processing is on the CPU and does not depend on the resolution. The two rules above cost a comparison per quadrilateral; a `GXBegin` of several quads is still one buffer upload, and one draw call per run of quads with the same texel rectangle.
+- Nothing is read back from the GPU that was not before: `GXCopyTex` reads the game's texture size (after the reduction on the GPU), `GXPeek*` one pixel, and neither is called in a normal frame. A multisampled EFB is resolved once per frame, by the blit that makes the XFB's picture.
+- Memory: the EFB is 4 bytes of colour and 4 of depth per sample. 1920x1251 with 4 samples is 73 MiB, plus the resolved copy and the XFB textures.
+- The limits asked of OpenGL (`GL_MAX_TEXTURE_SIZE`, `GL_MAX_SAMPLES`) are asked once.
+- Measured (1900 frames through the lists, an article and the globe view, hidden window, Radeon/Mesa): 21.1 s of CPU time in purist mode, 22.3 s at 1920x1080 with 4 samples; both run at the 59.94 Hz the game is paced at.
+- With a software renderer the cost is the fill rate: `--enhance msaa=0`, a fixed `--render-scale`, or `--purist`.
+
+### What was found on the screens
+
+Every screen was captured in purist mode and with both enhancements at 1280x720 and 1920x1080 (16:9) and 1280x960 (4:3), and looked at whole and in enlarged crops, beside the purist frame enlarged; the numbers are each frame reduced to the purist frame's size and subtracted from it. All of it with `--no-window`, one day's files, `--date` of that day, a fresh `--nand-dir`.
+
+| Found | Where | What it was | What was done |
+| --- | --- | --- | --- |
+| A grey line beside the dark border of the "Yes"/"No" buttons; soft upper and lower edges on every pane | date dialog, 1280x960 (2.0 x 2.105) | multisampling: the edges of upright rectangles fall inside pixels (the layout centres panes at half units; a non-integer scale puts every horizontal edge between pixels) and became half-covered rows | sampling rule 2: upright rectangles keep the pixel-centre rule. The edges are sharp at every scale now |
+| The dark line above and below the highlighted headline row twice as thick and grey | headline list, `msaa` alone at 640x528 | the same for `GX_LINES`: a one-pixel horizontal line at a whole coordinate is a quad that straddles two rows | lines and points are quads here, and get the same rule (`EmitThick()`). With `msaa` alone the 2D screens are the purist frames to the pixel (the date dialog exactly; the lists but for one pixel on a tie) and only slanted edges differ |
+| Half of some glyphs and button pieces missing, cut along the diagonal | the first version of that rule | the depth of the moved corners was a weighted sum that came out a last bit beyond the near plane (2D is drawn exactly on it): one triangle of the quad was clipped | the corners are extended from corner 0 with differences, so a value all four share stays that value |
+| Letters with a hard edge on one side and a doubled grey one on the other; a smeared column at the border of the list's photos | 1920x1080, the first version of rule 1, which kept coordinates half a texel (or half a console pixel) inside the texel rectangle | the inset removed texels the picture needs (rule 4) | no inset: the rectangle only limits extrapolation. Frames with and without the rectangle are now identical on the 2D screens |
+| The fading picture upside down | the fatal-error screen's fade | the kept copy was blitted bottom row first; found by the self-test before it was seen | turned over in the blit |
+| The border of a button is two console pixels wide in purist mode and one and a half at twice the resolution | date dialog | not an artefact: the pane's edge is at a fraction of a console pixel, and the console's pixel-centre rule rounds that to whole pixels. The geometry is the game's; at a higher resolution it is rounded less. Nothing is displaced by more than half a console pixel | nothing |
+| A white line, one pixel wide, down the right edge of the paper on the lists | all sizes, and one console pixel wide in purist mode | the game's own: it is in the purist frame, a console pixel wide, and here a screen pixel wide | nothing |
+| Stars smaller than a console pixel are smaller and fainter | globe view, zoomed out | they are triangles (`GlobeDots`): the console lights a whole pixel or none, a finer raster draws them their size | nothing |
+
+Looked for and not found, at 2 x, 3 x and the non-integer scales between: seams between the tiles of a window frame, between a bar's three buttons, in the repeated dotted band and striped title; lines at the edges of panes from a repeating or clamped texture; bleeding between glyphs; gaps between the 28 pieces of the globe's surface; a shifted or missing element. The game's projections have no half-pixel offset (`C_MTXOrtho(0, 456, 0, width)`), and its tiles share their edge coordinates exactly, so the usual seams of scaled 2D do not arise; `--selftest-gl` checks the rasteriser side of that with tiles whose shared edges are between pixels.
+
+Screen by screen (difference from the purist frame after reducing: mean of 255 at 1280x720 / 1920x1080 / 1280x960; it is the sharpness, and is largest where there is most fine detail):
+
+| Screen | With `hires` and `msaa` | Mean difference |
+| --- | --- | --- |
+| Date dialog | same layout; panel corners and button bevels smooth instead of blocky; text smooth | 0.8 / 0.7 / 0.9 |
+| A black fader over it (the ordinary fade) | same darkness at the same frame | 0.6 / 0.5 / 0.7 |
+| Connection screen (panel, cat, page icons) | same | 0.4 / 0.3 / 0.4 |
+| Section list (title box with its stripes, dotted band, rows, bars sliding in) | same; stripes and dots even, no seams between the bars' three buttons | 1.8 / 1.8 / 1.8 |
+| Headline list with photos | same; the thumbnails show clearly more of their photos; the row's border lines one pixel | 1.9 / 1.8 / 1.7 |
+| Article beside the globe (headline, source logo, serif body text, photo, caption, globe with ring and place name) | same; the globe's surface far more detailed; the ring smooth | 2.9 / 2.9 / 2.7 |
+| Globe view (cards, labels, zoom and rotate buttons) | same; the cards' slanted edges and shadows smooth, their photos legible | 2.4 / 2.2 / 2.3 |
+| Globe view zoomed out (limb, glow, stars, a stack of cards on the limb) | same; the stack at a grazing angle is separate cards instead of noise; the limb is a soft glow in the model and was smooth already; small stars smaller (above) | 1.2 / 1.2 / 1.4 |
+| Slide show (globe with ring behind the photo, section name, headline, the green belt) | same; in 16:9 the ring is a circle in the frame itself | 2.9 / 2.5 / 2.8 |
+| The copy fade (fatal-error screen, `--lang it`) | above | 0.8 (during the fade, 1920x1080) |
+
+With `render_scale` 2 and 4 (4:3) and 3 (16:9: 2560x1368) the same screens are clean at the frame's own resolution, and the window shows them reduced (4 x into 1280x960 is supersampling). With `hires` alone and with `msaa` alone likewise; `--enhance hires=0 --enhance msaa=0` gives the purist frames byte for byte. With a visible window the EFB followed the window from 1000x651 to the maximised size, to the fullscreen 1920x1251 (F11) and back, one line of log each.
+
+`pc/tools/purist_check.py` reports the purist frames unchanged for its three baselines (4:3, `--aspect 16:9`, `--news-dir`), and sixteen purist frames from the date dialog to the globe view, and eleven of the error screen and its fade, are the files the program wrote before this section.
+
+### What stays low resolution
+
+Drawing at a higher resolution adds no detail to a texture. What the art is made of (section 17):
+
+| What | Its resolution | At 1080p |
+| --- | --- | --- |
+| Fonts | small glyphs on I4 sheets (128x1024 and 256x512 sheets, section 17) | smooth and clean, but soft: bilinear enlargement of small glyphs. The gain is that they are no longer enlarged twice (texture to 640x456, then to the window) |
+| News photos | small JPEGs, a few hundred pixels wide at most | where the game reduces them (the lists' thumbnails, the cards on the globe) more of the photo is seen than at 640x456; in an article it is the photo enlarged |
+| The globe's surface | 28 pieces of 1024x1024, CMPR | much more detail than the console's frame shows, down to the block edges of the compression along coast lines at the closest zoom |
+| Paper background | 608x456 CMPR | enlarged; its grain hides it |
+| Buttons, panels, frames | 8 to 64 texels, stretched | gradients and rounded corners enlarge well; the corner of the panels is as smooth as its texture |
+| Icons (the small globe, page, AP logo), the cat | 24 to 64 texels | enlarged |
+| The pointer | not drawn at all (section 15) | - |
+
+### Self-tests
+
+`newschannel --selftest-gl` (`TestEnhancedEfb()` in `selftest_gx.cpp`; skipped without OpenGL, the multisampling part skipped where the driver has none). The first, older part now runs in purist mode, which is the console's EFB.
+
+- **A scaled EFB at 1 x, 2 x and 3 x**, read back pixel by pixel (`PCGXRenderReadEfb()`): a quad's four edges; a viewport of a quarter of the screen; a scissor, and a scissor with a box offset; a 4-pixel line and a 6-pixel point; the depth under an EFB pixel; four translucent tiles whose shared edges are between pixels, each pixel covered exactly once; `GXCopyTex` to RGBA8 of 96x64 whatever the scale, equal to the 1 x result within 2 of 255 on a flat area and a ramp; the copy drawn back as a texture equal to its source to the pixel, with an edge that lies between the console's pixels; the buffer overwritten by the "game" and drawn again (the buffer wins); an RGB565 copy with clear (only the copy source is cleared) drawn with blending; `GXCopyDisp` and the size of the screenshot.
+- **The 16:9 fixed scale**: 3 is 2560x1584 (4 x 3).
+- **`render_scale = auto`**: 1280x912 gives 2 x 2; changing the output size acts after the next display copy, not before, and the picture is still there; rectangles at 3 x 2.368 are rounded to the nearest pixel; a 320x228 window gives the console's EFB.
+- **Multisampling** at 1 x and 2 x: a slanted edge has partly covered pixels (none without); an upright rectangle with every edge inside a pixel, and a textured quad at a fractional position, are exactly what they are without; peeks, copies, the clear after a copy and destination alpha (the dual-source program) give the same values as without.
+- **Each enhancement alone**, and `render_scale` ignored while `hires` is off.
+- **Purist mode** with every setting at its highest: 640x528, one sample, the old shader source (no `uTexClamp`, no `uTexSize`), and it stays so after a display copy.
+- No OpenGL error after any of it.
+
+### Not done
+
+| What | Why |
+| --- | --- |
+| A larger or filtered texture for fonts and art (texture replacement, scaling filters) | another enhancement; this one only stops throwing resolution away |
+| Exact area filter for the reduced `GXCopyTex` data at scales that are not powers of two | the buffer is not what is shown while the kept copy is valid; flat areas and ramps are exact |
+| Kept copies for intensity and copy-only formats, for depth copies | nothing uses them (depth copies are not implemented at all, section 16) |
+| The inset of rule 4 for art that needs it | no screen of this game does; a game whose sheets had no spare texel would |
+| Supersampling as an anti-aliasing mode of its own | `render_scale` above the window's size does it (the present reduces in steps) |
+| Anything for the pointer effect, the HOME Menu | not drawn (section 24) |
+| Seen on a display | every picture here was a file, reduced or enlarged for reading: motion (the EFB following a resize, shimmer of the globe while it turns, the bars sliding at a non-integer scale) was not watched |
