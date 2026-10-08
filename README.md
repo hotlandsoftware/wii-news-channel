@@ -89,14 +89,22 @@ The [`pc-port`](https://github.com/hotlandsoftware/wii-news-channel/tree/pc-port
 | Compiles (all 217 game and NW4R files) | done |
 | Boots (OS, memory, files, byte order of the asset formats) | done |
 | Draws (GX → OpenGL, all GX texture formats) | done |
-| Input | mouse and keyboard done (left click = A, right click = B); game controllers not yet |
+| Input | mouse and keyboard done, with wheel and keyboard navigation as enhancements; game controllers not yet |
 | Sound (the SDK's AX compiled natively, a DSP mixer, SDL3 audio) | done |
 | News | done: downloaded from a mirror of the news server (WiiLink by default), or read from disk |
 | Globe | done |
 
 Not planned on PC: the HOME Menu, the Wii pointer cursor, the Operations Guide viewer (it runs a PowerPC build of Opera).
 
-PC enhancements are being added on top of this. `--purist` switches every one of them off, so the game functions and looks as it does on the console; each enhancement can also be switched individually (`--list-enhancements`).
+PC enhancements sit on top of this. `--purist` switches every one of them off, so the game functions and looks as it does on the console; each can also be switched individually (`--list-enhancements`, `--enhance NAME=0`). So far:
+
+| Enhancement | What it adds |
+| --- | --- |
+| `mouse-scroll` | The wheel scrolls lists and articles and zooms on the globe; Ctrl+wheel changes the text size; holding the middle button scrolls as holding B does. |
+| `keyboard-nav` | Page Up/Down, Home/End, Esc or Backspace for "Back", Y/N on dialogs, S for the slide show, G for the globe, R to reset its tilt. |
+| `fullscreen-key` | F11 and Alt+Enter toggle fullscreen. |
+
+Every one of these drives the game's own controls (a wheel notch is a +Control Pad press; "Back" presses the on-screen button), so nothing bypasses the game's logic. Without them the mouse and keyboard are a plain Wii Remote: left click = A, right click = B, arrow keys = +Control Pad, `=`/`-` = PLUS/MINUS.
 
 News is downloaded automatically, as on the console. Nintendo's server is gone, so the game's request is sent to a mirror: by default [WiiLink](https://www.wiilink24.com/)'s, which hosts the same files at `http://news.wiilink.ca/v2/1/049/news.bin.00` to `.23` (language 1 = English, country 049 = USA, one file per hour). `--url URL` selects another mirror, `--news-dir DIR` reads the files from disk instead, and `--offline` rules the network out.
 
