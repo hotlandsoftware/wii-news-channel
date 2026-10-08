@@ -1008,6 +1008,7 @@ bool ArticleText::Select(const ut::Rect* rect) {
     f32 left = rect->left;
     f32 right = rect->right;
     TextChar* c = mChars;
+    s32 i; // declared ahead of p: the counter of the main loop is numbered before the scan's variables
     TextChar* p = c;
     if (left < right) {
         minX = left;
@@ -1030,7 +1031,7 @@ bool ArticleText::Select(const ut::Rect* rect) {
         }
     }
 
-    for (s32 i = 0; i < mCount; i++, c++) {
+    for (i = 0; i < mCount; i++, c++) {
         f32 top = rect->top;
         Deselect(c);
         if (c->mTop <= top && c->mBottom >= top && c->mTop <= rect->bottom &&
