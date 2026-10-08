@@ -386,8 +386,9 @@ bool ArticleText::Set(const wchar_t* text, NewsPicture* picture, const math::VEC
 
     for (c = mChars; c->mChar != 0; c++) {
         if (c->mPrev == NULL) {
+            f32 width;
             f32 space = gCharSpaceScale;
-            f32 width = c->mScaledWidth;
+            width = c->mScaledWidth;
             for (TextChar* n = c->mNext; n != NULL; n = n->mNext) {
                 width += space + n->mScaledWidth;
             }
