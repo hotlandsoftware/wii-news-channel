@@ -700,7 +700,7 @@ What each placeholder promises:
 
 ### Settings (SC)
 
-`src/pc/pc_config.h` documents the keys. Defaults: English, 4:3, progressive, stereo, product area USA, country not set, WiiConnect24 standby on, NTSC.
+`src/pc/pc_config.h` documents the keys. Defaults: English, 16:9, progressive, stereo, product area USA, country not set, WiiConnect24 standby on, NTSC.
 `SCSetLanguage()` changes the value in memory; `SCFlush()` writes the settings back only if a config file is in use.
 The two directories belong to the file backends (`PCGetContentsDir()`, `PCGetNandDir()` in `<pc/files.h>`, section 13, which also read `NEWSCHANNEL_CONTENTS` and `NEWSCHANNEL_NAND`). `contents` and `nand` in the settings file or on the command line override them: the boot driver passes them on with `PCSetContentsDir()` and `PCSetNandDir()`.
 `PCGetConfig()` works during static initialisation.
@@ -736,7 +736,7 @@ For backend code the consequence remains: `new`, `std::string`, `std::vector` an
 | `--screenshot-dir DIR` | where the screenshots go (default: the current directory; keep them out of the repository, e.g. `build/shots`) |
 | `--mute` | no audio device; audio frames still run in real time (section 18) |
 | `--audio-dump FILE.wav` | write the mixed stereo output of the run to a WAV file (32 kHz, 16 bits). Never commit it (R12); write it below `build/` |
-| `--lang LANG`, `--wide` | language (`en ja de fr es it nl`), 16:9 |
+| `--lang LANG`, `--aspect 16:9\|4:3` (`--wide`, `--4:3`) | language (`en ja de fr es it nl`); the console's screen setting, 16:9 by default (4:3 until section 26) |
 | `--config FILE` | settings file (default `./newschannel.ini` if it exists) |
 | `--window-test` | the video path without the game: open the window, run `--frames` empty frames (default 120), print the rate |
 
@@ -1914,7 +1914,7 @@ Sound: the log of `NEWSCHANNEL_AX_LOG` has `NEW_BGM_NEWS` and `NEW_BGM_READ` sta
 
 ### Input scripts
 
-Pointer coordinates are -1..1 over the 4:3 picture.
+Pointer coordinates are -1..1 over the 4:3 picture. The scripts in this section were written for the 4:3 layout, which was the default then: run them with `--4:3`.
 Where things are once a screen has settled:
 
 | Target | Pointer |
@@ -2063,3 +2063,9 @@ Behaviour:
 - All requests share one connection. Each is logged on stderr (`news: GET <url>: <n> bytes`).
 - The tools and self-tests (`--list-news`, `--selftest`) never use the network: only `--boot` switches the HTTP source on (`PCNewsUseHttp()` in `main.cpp`).
 - `pc/tools/purist_check.py` names a news directory, so it runs without the network.
+
+## 26. Screen shape
+
+The console's screen setting (`SCGetAspectRatio()`) is 16:9 by default on PC; `--aspect 4:3` (`--4:3`), `aspect = 4:3` or `$NEWSCHANNEL_ASPECT=4:3` select the other. Both are the game's own layouts and both exist on the console, so this is a setting, not a PC enhancement (R13), and purist mode does not change it. The default window is 854x480 in 16:9 and 640x480 in 4:3; the game renders the same 640x456 frame in both and the window stretches it, as a television does.
+
+Until this section the default was 4:3. Input scripts and screenshots described in earlier sections assume 4:3 unless they say `--wide`; `pc/tools/purist_check.py` passes `--aspect 4:3` (its `--aspect 16:9` checks the wide layout against its own baseline).

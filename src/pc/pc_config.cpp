@@ -92,7 +92,8 @@ bool sLoading;
 void SetDefaults(PCConfig* config) {
     std::memset(config, 0, sizeof(*config));
     config->language = SC_LANG_ENGLISH;
-    config->aspectRatio = SC_ASPECT_RATIO_4x3;
+    // 16:9 by default: the console's widescreen setting, which most PC displays suit.
+    config->aspectRatio = SC_ASPECT_RATIO_16x9;
     config->progressive = SC_PROGRESSIVE_MODE_ON;
     config->soundMode = SC_SOUND_MODE_STEREO;
     config->productArea = SC_AREA_USA;

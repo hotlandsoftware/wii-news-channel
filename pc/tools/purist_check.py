@@ -13,7 +13,7 @@ this machine's WAD contents, news files and OpenGL driver: record and compare
 on the same machine. Screenshots go to build/scratch/purist and are not
 committed.
 
-Options: --binary FILE, --news-dir DIR (default: none, the run ends on the
+Options: --binary FILE, --aspect 4:3|16:9 (default 4:3), --news-dir DIR (default: none, the run ends on the
 connection error screen), --date ISO (default 2026-01-01T12:00Z).
 """
 
@@ -37,6 +37,7 @@ def run(args):
     os.makedirs(os.path.join(SHOTS, "nand"))
     cmd = [
         args.binary, "--boot", "--purist", "--no-window", "--mute",
+        "--aspect", args.aspect,
         "--nand-dir", os.path.join(SHOTS, "nand"),
         "--date", args.date,
         "--frames", str(max(FRAMES) + 20),
@@ -66,9 +67,10 @@ def main():
     parser.add_argument("--binary", default=os.path.join(ROOT, "build", "pc", "newschannel"))
     parser.add_argument("--news-dir", default="")
     parser.add_argument("--date", default="2026-01-01T12:00Z")
+    parser.add_argument("--aspect", default="4:3", choices=["4:3", "16:9"])
     args = parser.parse_args()
 
-    key = {"news_dir": args.news_dir, "date": args.date, "input": INPUT}
+    key = {"news_dir": args.news_dir, "date": args.date, "input": INPUT, "aspect": args.aspect}
     hashes = run(args)
     if args.record:
         with open(BASELINE, "w") as f:

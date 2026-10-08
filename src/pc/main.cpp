@@ -155,7 +155,8 @@ void PrintHelp(const char* program) {
     std::printf("  --dol FILE       the channel's main.dol, for data tables without source\n");
     std::printf("                   (default $NEWSCHANNEL_DOL, orig/HAGE/sys/main.dol)\n");
     std::printf("  --lang LANG      en, ja, de, fr, es, it or nl (default en)\n");
-    std::printf("  --wide           16:9 instead of 4:3\n");
+    std::printf("  --aspect 16:9|4:3  the console's screen setting (default 16:9); --4:3 and --wide are\n");
+    std::printf("                   short for the two\n");
     std::printf("  --purist         every PC enhancement off: the game functions and looks as it\n");
     std::printf("                   does on the console\n");
     std::printf("  --enhance NAME[=0|1]  switch one enhancement (no effect with --purist)\n");
@@ -503,6 +504,10 @@ int main(int argc, char** argv) {
             SetOption(argv[0], arg, "language", OptionValue(argc, argv, &i));
         } else if (std::strcmp(arg, "--wide") == 0) {
             SetOption(argv[0], arg, "aspect", "16:9");
+        } else if (std::strcmp(arg, "--4:3") == 0) {
+            SetOption(argv[0], arg, "aspect", "4:3");
+        } else if (std::strcmp(arg, "--aspect") == 0) {
+            SetOption(argv[0], arg, "aspect", OptionValue(argc, argv, &i));
         } else if (std::strcmp(arg, "--purist") == 0) {
             PCSetPurist(true);
         } else if (std::strcmp(arg, "--enhance") == 0) {

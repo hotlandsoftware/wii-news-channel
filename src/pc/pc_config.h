@@ -10,7 +10,7 @@
 //
 //   key          environment              values (default first)
 //   language     NEWSCHANNEL_LANG         en ja de fr es it nl (or 0..9)
-//   aspect       NEWSCHANNEL_ASPECT       4:3 | 16:9
+//   aspect       NEWSCHANNEL_ASPECT       16:9 | 4:3
 //   progressive  NEWSCHANNEL_PROGRESSIVE  1 | 0
 //   sound        NEWSCHANNEL_SOUND        stereo | mono | surround
 //   area         NEWSCHANNEL_AREA         usa jpn eur aus bra twn kor hkg asi ltn saf
