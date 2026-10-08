@@ -91,21 +91,14 @@ The [`pc-port`](https://github.com/hotlandsoftware/wii-news-channel/tree/pc-port
 | Draws (GX → OpenGL, all GX texture formats) | done |
 | Input | mouse and keyboard done (left click = A, right click = B); game controllers not yet |
 | Sound (the SDK's AX compiled natively, a DSP mixer, SDL3 audio) | done |
-| News | loads from disk; automatic download not yet |
+| News | done: downloaded from a mirror of the news server (WiiLink by default), or read from disk |
 | Globe | done |
 
 Not planned on PC: the HOME Menu, the Wii pointer cursor, the Operations Guide viewer (it runs a PowerPC build of Opera).
 
 PC enhancements are being added on top of this. `--purist` switches every one of them off, so the game functions and looks as it does on the console; each enhancement can also be switched individually (`--list-enhancements`).
 
-News comes from [WiiLink](https://www.wiilink24.com/)'s servers, which host the same files Nintendo's did: `http://news.wiilink.ca/v2/1/049/news.bin.00` to `.23` (language 1 = English, country 049 = USA, one file per hour). For now you download them yourself:
-
-```sh
-mkdir -p orig/HAGE/news/v2/1/049
-for h in $(seq -w 0 23); do
-  curl -s -o orig/HAGE/news/v2/1/049/news.bin.$h http://news.wiilink.ca/v2/1/049/news.bin.$h
-done
-```
+News is downloaded automatically, as on the console. Nintendo's server is gone, so the game's request is sent to a mirror: by default [WiiLink](https://www.wiilink24.com/)'s, which hosts the same files at `http://news.wiilink.ca/v2/1/049/news.bin.00` to `.23` (language 1 = English, country 049 = USA, one file per hour). `--url URL` selects another mirror, `--news-dir DIR` reads the files from disk instead, and `--offline` rules the network out.
 
 Build and run (on the `pc-port` branch; needs `gcc` with 32-bit support, `cmake`, `ninja`, and the 32-bit SDL3, OpenGL and libcurl libraries):
 
@@ -113,7 +106,7 @@ Build and run (on the `pc-port` branch; needs `gcc` with 32-bit support, `cmake`
 .venv/bin/python tools/extract_wad.py --contents "path/to/News Channel (USA) (v7) (Channel).wad"
 python3 configure.py && ninja          # the Wii build, needed once
 cmake -S pc -B build/pc -G Ninja && ninja -C build/pc
-build/pc/newschannel --boot --news-dir orig/HAGE/news
+build/pc/newschannel --boot
 ```
 
 Like the decompilation, the port needs your own WAD: layouts, fonts, textures and sounds are loaded from its contents at run time, and nothing from the game is stored in the repository.
