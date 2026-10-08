@@ -944,15 +944,6 @@ void NewsScene::OnHomeMenuOpen() {
     }
 }
 
-// At most 14 news sections are shown.
-static inline u32 GetNumCategories(NewsData* data) {
-    u32 num = 14;
-    if (data->mNumCategories <= 14) {
-        num = data->mNumCategories;
-    }
-    return num;
-}
-
 BOOL NewsScene::InitNews() {
     gHideClock = gUpdateMsgType == 1;
     ClearButtonHover();
@@ -970,7 +961,8 @@ BOOL NewsScene::InitNews() {
     BOOL hasCaption;
 
     data = gNewsData;
-    numCategories = GetNumCategories(data);
+    // At most 14 news sections are shown.
+    numCategories = ut::Min<u32>(data->mNumCategories, 14);
     lbl_803575E0 = numCategories;
     if (data->mHeader->unk2C[0] == 0) {
         gCharSpaceScale = -2.0f;
@@ -1807,6 +1799,15 @@ void FillXfbRect(u8* xfb, u16 width, u32 size, s32 x, s32 y, s32 w, s32 h, u8 y8
 }
 #pragma pop
 
+// Colour (luma) of bar i of the loading indicator; the current bar is darker.
+static inline u8 GetBarColor(s32 i, s32 current) {
+    u8 c = 160;
+    if (i == current) {
+        c = 100;
+    }
+    return c;
+}
+
 void PostRetraceCallback(u32 retraceCount) {
     if (++sLoadCounter >= 64) {
         sLoadCounter = 0;
@@ -1824,11 +1825,9 @@ void PostRetraceCallback(u32 retraceCount) {
     s32 gap = (width * 6) / GetScreenWidth();
     s32 x = (width - (w * 8 + gap * 7)) / 2;
     s32 y = (height - h) / 2;
+    s32 current = counter / 8;
     for (s32 i = 0; i < 8; i++) {
-        u8 c = 160;
-        if (i == counter / 8) {
-            c = 100;
-        }
+        u8 c = GetBarColor(i, current);
         FillXfbRect(xfb, width, size, x, y - 1, w, 1, 180);
         FillXfbRect(xfb, width, size, x, y + h, w, 1, 180);
         FillXfbRect(xfb, width, size, x - 1, y, 1, h, 180);
@@ -1996,6 +1995,14 @@ static inline f32 PinDistance(const math::VEC2& a, GlobePin* pin) {
     return math::FSqrt(d.x * d.x + d.y * d.y);
 }
 
+// The pin in a slot of the pin tables.
+// The local matters: in the stack-count loop of Pins_Sort it gives the pin the first register (r3),
+// ahead of the caller's locals.
+static inline GlobePin* GetPin(GlobePin** slot) {
+    GlobePin* pin = *slot;
+    return pin;
+}
+
 void Pins_Sort() {
     Pins_ResetStacks();
     GlobePin** pin = sPins;
@@ -2003,6 +2010,8 @@ void Pins_Sort() {
     BOOL linked;
     u32 i;
     u32 j;
+    GlobePin* q;
+    s32 n;
     if (pin == NULL || sSortedPins == NULL) {
         return;
     }
@@ -2039,11 +2048,11 @@ void Pins_Sort() {
     }
 
     sorted = sSortedPins;
-    for (i = 0; i < sNumPins; i++, sorted++) {
-        GlobePin* p = *sorted;
+    for (u32 k = 0; k < sNumPins; k++, sorted++) {
+        GlobePin* p = GetPin(sorted);
         if (p) {
-            s32 n = 0;
-            for (GlobePin* q = p; q; q = q->mNext) {
+            n = 0;
+            for (q = p; q; q = q->mNext) {
                 n++;
             }
             p->mStackCount = n;
@@ -2576,15 +2585,29 @@ f32 Article_GetScrollOffset() {
     return -y;
 }
 
-s32 Article_GetLineAt(const f32& offset) {
+// Height of the gap between the headline and the body, where the source logo is drawn.
+static inline f32 GetLogoSpace() {
+    f32 h = GetLogoHeight();
+    return h * gTextScale;
+}
+
+// Scroll offsets are negative; text positions are positive.
+// The local matters: a value held in a local of an inline gets its callee-saved register
+// before the caller's own locals (y is f31 in Article_GetLineAt).
+static inline f32 OffsetToY(const f32& offset) {
     f32 y = -offset;
+    return y;
+}
+
+s32 Article_GetLineAt(const f32& offset) {
+    f32 y = OffsetToY(offset);
     f32 headlineY = lbl_80357568->mHeight;
-    f32 logoHeight = GetLogoHeight();
+    f32 logoSpace = GetLogoSpace();
     ArticleText* headline = lbl_80357568;
     ArticleText* body = sBodyView;
     ArticleText* credit = sCreditView;
     f32 bodyStart = headline->GetHeight();
-    bodyStart += logoHeight * gTextScale;
+    bodyStart += logoSpace;
     f32 bodyY = body->GetHeight();
     f32 creditStart = body->GetHeight() + body->GetLineHeight();
     f32 creditY = credit->mHeight;
@@ -2673,6 +2696,13 @@ void Article_ResetHeadline() {
     lbl_80357568->HideAll();
 }
 
+// Scales a height of the unscaled layout by the text size.
+// Going through the parameter matters: the scaled value gets its register before the
+// temporaries of the expressions that follow.
+static inline f32 ScaleText(f32 v) {
+    return v * gTextScale;
+}
+
 f32 Article_GetMaxScrollOffset() {
     s32 headlineLines = lbl_80357568->mNumLines;
     s32 bodyLines = sBodyView->mNumLines;
@@ -2684,22 +2714,30 @@ f32 Article_GetMaxScrollOffset() {
     f32 headline = headlineLines;
     if (line > creditStart) {
         f32 h = GetLogoHeight();
-        f32 y = lbl_80357568->GetLineHeight() * lbl_80357568->GetNumLines() + h * gTextScale;
-        y = sBodyView->GetLineHeight() * sBodyView->mNumLines + y;
+        f32 logo = ScaleText(h);
+        f32 headlineHeight = lbl_80357568->GetLineHeight() * lbl_80357568->GetNumLines();
+        f32 numBodyLines = sBodyView->GetNumLines();
+        f32 bodyHeight = sBodyView->GetLineHeight() * numBodyLines;
+        f32 y = bodyHeight + (headlineHeight + logo);
         y += (line - creditStart) * sCreditView->GetLineHeight();
         return -y;
     }
     if (line > bodyStart) {
         f32 h = GetLogoHeight();
-        f32 logo = h * gTextScale;
-        return -(lbl_80357568->mLineHeight * lbl_80357568->GetNumLines() + logo +
-                 (line - bodyStart) * sBodyView->mLineHeight);
+        f32 logo = ScaleText(h);
+        f32 y = lbl_80357568->GetLineHeight() * lbl_80357568->GetNumLines();
+        y += logo;
+        y += (line - bodyStart) * sBodyView->GetLineHeight();
+        return -y;
     }
     if (line > headlineLines) {
         f32 h = GetLogoHeight();
-        return -(lbl_80357568->GetLineHeight() * lbl_80357568->GetNumLines() + h * gTextScale);
+        f32 logo = ScaleText(h);
+        f32 y = lbl_80357568->GetLineHeight() * lbl_80357568->GetNumLines();
+        y += logo;
+        return -y;
     }
-    return -(line * (headlineLines * lbl_80357568->GetLineHeight()));
+    return -(line * (lbl_80357568->GetLineHeight() * lbl_80357568->GetNumLines()));
 }
 
 void Article_SetHeight(f32 width) {
