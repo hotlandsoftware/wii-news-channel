@@ -1631,9 +1631,11 @@ void SlideShow::SubStateDrag() {
     case 0:
         mSubStateFrame++;
         lbl_801EDFA0[1] = gWidescreen ? 19 : 34;
-        f32 y = 456 - (gWidescreen ? 19 : 34);
-        f32 d = lbl_803575D0;
-        lbl_801EDFB8[1] = y - d;
+        {
+            f32 y = 456 - (gWidescreen ? 19 : 34);
+            f32 d = lbl_803575D0;
+            lbl_801EDFB8[1] = y - d;
+        }
         lbl_80357600.a = 100;
         PlaySE(0x16);
         break;
