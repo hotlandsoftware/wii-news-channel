@@ -756,8 +756,9 @@ void FxVoice::Radio(s32** buffers) {
     s32 work2[FX_FRAME_SAMPLES + 21];
     s32* p = &work[21];
 
-    Read(FX_FRAME_SAMPLES + 21, work, 0, mInput[0], -21);
-    Read(FX_FRAME_SAMPLES + 21, work2, 0, mInput[1], -21);
+    Read(FX_FRAME_SAMPLES + 21, work, 0, (s32*)mInput, -21);
+    Read(FX_FRAME_SAMPLES + 21, work2, 0, (s32*)mInput + FX_HISTORY_SIZE, -21);
+
     Mix(work, work2, FX_FRAME_SAMPLES + 21);
 
     Fir(p, mFilterB, 21);
