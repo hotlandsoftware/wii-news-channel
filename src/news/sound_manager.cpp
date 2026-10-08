@@ -62,7 +62,6 @@ public:
     }
 
     void Read(s32 count, s32* dst, s32 frame, s32* history, s32 pos);
-    s32 ReadFrame(s32 count, s32* dst, s32 frame, s32* history, s32 pos);
 
     bool mEnabled;                        // at 0xC
     bool mPitchUp;                        // at 0xD
@@ -635,13 +634,8 @@ static inline void Mix(s32* dst, const s32* src, s32 n) {
 }
 
 
-inline s32 FxVoice::ReadFrame(s32 count, s32* dst, s32 frame, s32* history, s32 pos) {
-    s32 n = FX_FRAME_SAMPLES - pos;
-    if (count <= n) {
-        n = count;
-    }
-    CopyBuffer(GetSample(history, frame, pos), dst, n);
-    return n;
+static inline s32 Min(s32 a, s32 b) {
+    return a <= b ? a : b;
 }
 
 inline void FxVoice::Read(s32 count, s32* dst, s32 frame, s32* history, s32 pos) {
@@ -652,7 +646,8 @@ inline void FxVoice::Read(s32 count, s32* dst, s32 frame, s32* history, s32 pos)
         pos += FX_FRAME_SAMPLES;
     }
     while (count > 0) {
-        s32 n = ReadFrame(count, dst, f, history, pos);
+        s32 n = Min(count, FX_FRAME_SAMPLES - pos);
+        CopyBuffer(GetSample(history, f, pos), dst, n);
         count -= n;
         dst += n;
         pos = 0;
