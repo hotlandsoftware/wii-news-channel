@@ -352,8 +352,9 @@ bool ArticleText::Set(const wchar_t* text, NewsPicture* picture, const math::VEC
         c->mScaleX = 1.0f;
         c->mWordIndex = word;
         if (IsNoBreak(p, mText)) {
-            c->mNext = c + 1;
-            c[1].mPrev = c;
+            TextChar* next = c + 1;
+            c->mNext = next;
+            next->mPrev = c;
         } else {
             word++;
         }
