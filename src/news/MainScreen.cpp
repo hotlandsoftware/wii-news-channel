@@ -592,6 +592,9 @@ void MainScreen::DrawRelated() {
     }
     u8 a = 255.0f * mUnk25C;
     u8 bgAlpha = 220.0f * mUnk25C;
+    // Faded like the other two but never used: the code is gone, but the original
+    // still has the conversion slots of its alpha (State1B694 fades lbl_803575FC instead).
+    ut::Color shadow = sShadowColor;
     ut::Color highlight = gHighlightColor;
     ut::Color sep = gSeparatorColor;
     ut::Color black(0, 0, 0, a);
@@ -611,6 +614,7 @@ void MainScreen::DrawRelated() {
     }
     f32 rowHeight = mUnk24C * fontScale * GetTextScale(lbl_80356970);
     f32 scrollY = mUnk254;
+    shadow.a = shadow.a * mUnk25C;
     highlight.a = highlight.a * mUnk25C;
     sep.a = sep.a * mUnk25C;
 
