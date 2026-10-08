@@ -955,6 +955,12 @@ void SlideShow::CalcTextPos() {
 BOOL SlideShow::CheckInput() {
     bool dragging = false;
     if (!(IsState(&SlideShow::StateZoom) || IsState(&SlideShow::StateMessage))) {
+#ifdef TARGET_PC
+        // PC enhancements (<pc/nav.h>): the slides run; no button takes input.
+        if (PCNavOn()) {
+            PCNavSetContext(PC_NAV_SLIDES);
+        }
+#endif
         if (gRepeatFastAll & 0x1000) {
             mZoomOutPressed = true;
         }
@@ -978,10 +984,9 @@ BOOL SlideShow::CheckInput() {
     if (!IsState(&SlideShow::StateMessage)) {
         UpdateLayoutButtons(mCurLayout, 0x23);
 #ifdef TARGET_PC
-        // PC enhancements (<pc/nav.h>): in an article a "Back" key is "back"
-        // (Continue); while the slides run it is "end".
+        // PC enhancements (<pc/nav.h>): the article of a slide.
         if (PCNavOn()) {
-            PCNavSetContext(IsState(&SlideShow::StateZoom) ? PC_NAV_SCREEN : PC_NAV_SLIDES);
+            PCNavSetContext(PC_NAV_SCREEN);
         }
 #endif
         for (s32 i = 0; i < 4; i++) {

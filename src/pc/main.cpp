@@ -134,8 +134,11 @@ void PrintHelp(const char* program) {
     std::printf("  --mute           no audio device (audio frames still run in real time)\n");
     std::printf("  --audio-dump FILE.wav  write the mixed stereo output of the run to a WAV file\n");
     std::printf("                   (32 kHz, 16 bits; keep it out of the repository, e.g. below build/)\n");
-    std::printf("  --input SCRIPT   scripted remote for automated runs, e.g. \"P0:0@1,A@300\":\n");
-    std::printf("                   point at the centre from frame 1, press A at frame 300\n");
+    std::printf("  --input SCRIPT   scripted input for automated runs, e.g. \"P0:0@1,A@300\":\n");
+    std::printf("                   point at the centre from frame 1, press A at frame 300.\n");
+    std::printf("                   Remote: BUTTON@FRAME[+FRAMES], Px:y@FRAME. Host devices, through\n");
+    std::printf("                   the mapping below: KEY:NAME@F[+N], MOUSE:LEFT|RIGHT|MIDDLE@F[+N],\n");
+    std::printf("                   WHEEL:n@F, WHEELX:n@F, CTRLWHEEL:n@F (src/pc/pc_input.h)\n");
     std::printf("  --contents DIR   the channel's WAD contents, NN.app (default orig/HAGE/contents)\n");
     std::printf("  --nand-dir DIR   directory used as the Wii's NAND (default $NEWSCHANNEL_NAND,\n");
     std::printf("                   ~/.local/share/newschannel/nand)\n");
@@ -164,6 +167,23 @@ void PrintHelp(const char* program) {
     std::printf("  --config FILE    settings file (default ./newschannel.ini if it exists)\n\n");
     std::printf("Settings can also come from the settings file and from NEWSCHANNEL_* environment\n");
     std::printf("variables; see src/pc/pc_config.h. Closing the window shuts the game down.\n");
+    std::printf("\nControls (--boot). The mouse is the pointer.\n");
+    std::printf("  left click, Enter, Space, Z    A            right click, X    B\n");
+    std::printf("  arrow keys    +Control Pad     = and -      PLUS and MINUS (zoom)\n");
+    std::printf("  1, 2          1, 2             H            HOME\n");
+    std::printf("  Esc           HOME, Backspace  B            (purist mode, or keyboard-nav off)\n");
+    std::printf("PC enhancements, on unless --purist or --enhance NAME=0:\n");
+    std::printf("  mouse-scroll    wheel: scroll (one +Control Pad press per notch); sideways:\n");
+    std::printf("                  previous/next; on the globe view, and with Ctrl anywhere: zoom.\n");
+    std::printf("                  Middle button held: B, the game's drag scroll (move the mouse\n");
+    std::printf("                  away from where you pressed)\n");
+    std::printf("  keyboard-nav    Page Up/Down: three steps; Home/End: to the top/bottom;\n");
+    std::printf("                  Esc, Backspace: the on-screen Back button (Continue in a slide's\n");
+    std::printf("                  article, End during the slides, No on a dialog; nothing on the\n");
+    std::printf("                  first page, where it is \"Wii Menu\");\n");
+    std::printf("                  Y, N: Yes, No; Enter: a dialog's button; S: Slide show;\n");
+    std::printf("                  G: Globe; R: reset the globe's tilt\n");
+    std::printf("  fullscreen-key  F11, Alt+Enter: fullscreen\n");
 }
 
 // The value of option argv[*index], which is the next argument.
@@ -193,6 +213,7 @@ void PCSelfTestOS();      // selftest_os.cpp
 void PCSelfTestFiles();   // selftest_files.cpp
 void PCSelfTestBackend(); // selftest_backend.cpp
 void PCSelfTestBoot();    // selftest_boot.cpp
+void PCSelfTestInput();   // selftest_input.cpp
 void PCSelfTestSnd();     // selftest_snd.cpp
 void PCSelfTestLayout();  // selftest_layout.cpp
 void PCSelfTestSndRender(); // selftest_snd.cpp; after PCSelfTestAudio()
@@ -338,6 +359,7 @@ static int RunSelfTest() {
     PCSelfTestGX();
     PCSelfTestDolData();
     PCSelfTestBoot();
+    PCSelfTestInput();
     PCSelfTestSnd();
     PCSelfTestTexDecode();
     PCSelfTestAudio();
@@ -587,9 +609,6 @@ int main(int argc, char** argv) {
 
     if (listEnhancements) {
         std::printf("purist mode: %s\n", PCIsPurist() ? "on (every enhancement off)" : "off");
-        if (PCEnhancementCount() == 0) {
-            std::printf("no enhancements exist yet\n");
-        }
         for (int i = 0; i < PCEnhancementCount(); i++) {
             const PCEnhancementInfo* info = PCEnhancementGetInfo(i);
             std::printf("  %-20s %-3s (default %s)  %s\n", info->key,

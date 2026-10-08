@@ -526,7 +526,18 @@ void PCInputFrame() {
                 navKeys |= k.navKey;
             }
         }
-        if (sSeekButton != 0 && PulsesIdle()) {
+    }
+
+    if (PCNavOn()) {
+        PCNavFrame(navKeys);
+    }
+
+    if (PCEnhanced(PC_ENH_KEYBOARD_NAV) && PulsesIdle()) {
+        if (PCNavWantsA()) {
+            // "Back" during the slides: A opens the slide's article, whose
+            // "end" button the key then presses (<pc/nav.h>).
+            QueuePulses(WPAD_BUTTON_A, 1);
+        } else if (sSeekButton != 0) {
             if (sSeekLeft > 0 && PCNavCanScroll(sSeekButton == WPAD_BUTTON_DOWN)) {
                 sSeekLeft--;
                 QueuePulses(sSeekButton, 1);
@@ -537,10 +548,6 @@ void PCInputFrame() {
     }
 
     AdvancePulses();
-
-    if (PCNavOn()) {
-        PCNavFrame(navKeys);
-    }
 }
 
 void PCInputPoll(s32 chan, PCPadState* state) {

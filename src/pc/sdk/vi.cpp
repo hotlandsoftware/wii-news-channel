@@ -295,14 +295,18 @@ bool PCVIGetKey(int scancode) {
     return scancode >= 0 && scancode < count && keys[scancode];
 }
 
-u32 PCVIToggleFullscreen() {
-    static u32 sCalls;
-    sCalls++;
+static u32 sFullscreenToggles;
+
+void PCVIToggleFullscreen() {
+    sFullscreenToggles++;
     if (s.window != nullptr && !s.hidden) {
         bool fullscreen = (SDL_GetWindowFlags(s.window) & SDL_WINDOW_FULLSCREEN) != 0;
         SDL_SetWindowFullscreen(s.window, !fullscreen);
     }
-    return sCalls;
+}
+
+u32 PCVIGetFullscreenToggles() {
+    return sFullscreenToggles;
 }
 
 const _GXRenderModeObj* PCVIGetRenderMode() {

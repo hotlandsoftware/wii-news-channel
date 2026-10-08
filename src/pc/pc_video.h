@@ -41,8 +41,10 @@ u32 PCVIGetMouseButtons();
 bool PCVIGetKey(int scancode);
 
 // Switches the window between fullscreen (the desktop's mode) and windowed.
-// Does nothing without a visible window. Returns the number of calls so far.
-u32 PCVIToggleFullscreen();
+// Does nothing without a visible window. The second function counts the
+// calls, for the self-test.
+void PCVIToggleFullscreen();
+u32 PCVIGetFullscreenToggles();
 
 // The render mode last given to VIConfigure(), or NULL before the first call.
 const _GXRenderModeObj* PCVIGetRenderMode();

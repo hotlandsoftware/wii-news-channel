@@ -22,7 +22,12 @@ struct State {
     bool canScroll[2]; // its "up" / "down" button was usable when it was recorded
     PCNavContext context;
     u32 contextFrame;
+    int endLeft;       // frames for which "Back" during the slides still waits for the "end" button
 };
+
+// "Back" during the slides waits this long for the article and its "end"
+// button to come up.
+const int kEndFrames = 120;
 
 State s;
 
@@ -55,11 +60,11 @@ PaneButton* FindUsable(Layout* layout, const char* name) {
 u32 PCNavKeysFor(const char* name, PCNavContext context, bool hasBack) {
     if (std::strcmp(name, "back") == 0) {
         // Not on the first page, where the button is "Wii Menu" and ends the
-        // program, and not during the slides, where it does nothing.
-        return context == PC_NAV_TOP || context == PC_NAV_SLIDES ? 0 : PC_NAV_KEY_BACK;
+        // program.
+        return context == PC_NAV_TOP ? 0 : PC_NAV_KEY_BACK;
     }
     if (std::strcmp(name, "end") == 0) {
-        return context == PC_NAV_SLIDES ? PC_NAV_KEY_BACK : 0;
+        return PC_NAV_KEY_END;
     }
     if (std::strcmp(name, "no") == 0) {
         return PC_NAV_KEY_NO | (context == PC_NAV_OTHER && !hasBack ? PC_NAV_KEY_BACK : 0);
@@ -112,12 +117,33 @@ bool PCNavPress(const char* name, u32 button) {
         return false;
     }
     pressed->SetPressed(false); // as CheckButtonTrig() does for a click
+    if (s.keys & PC_NAV_KEY_END) {
+        s.endLeft = 0;
+    }
     return true;
 }
 
 void PCNavFrame(u32 keys) {
     s.frame++;
+    // The slide show takes no button while its slides run: the remote's way
+    // out is A, which opens the slide's article, and "End" there. "Back" does
+    // the same: the input layer presses A (PCNavWantsA()) and the key stays
+    // down, as PC_NAV_KEY_END, until the article's "end" button takes it.
+    if ((keys & PC_NAV_KEY_BACK) && PCNavGetContext() == PC_NAV_SLIDES) {
+        keys &= ~PC_NAV_KEY_BACK;
+        s.endLeft = kEndFrames;
+    } else if (keys != 0) {
+        s.endLeft = 0;
+    }
+    if (s.endLeft > 0) {
+        s.endLeft--;
+        keys |= PC_NAV_KEY_END;
+    }
     s.keys = keys;
+}
+
+bool PCNavWantsA() {
+    return s.endLeft > 0 && PCNavGetContext() == PC_NAV_SLIDES;
 }
 
 PCNavContext PCNavGetContext() {

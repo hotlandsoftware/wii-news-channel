@@ -13,8 +13,8 @@
 //
 // In the other direction the input layer (src/pc/pc_input.cpp) asks two
 // things: which kind of screen is up (the wheel zooms on the globe; "Back"
-// means "End" during the slides and nothing where it would leave the
-// channel), and whether the live layout's "up"/"down" button is enabled
+// leaves the slide show by A and "End", and does nothing where it would leave
+// the channel), and whether the live layout's "up"/"down" button is enabled
 // (Home/End scroll until it is not).
 //
 // Shared source calls these only under TARGET_PC and only when PCNavOn().
@@ -35,19 +35,20 @@ enum PCNavContext {
     PC_NAV_SCREEN, // a headline list, an article, the regional list, an article of the slide show
     PC_NAV_TOP,    // the first page (section list): its "back" button is "Wii Menu"
     PC_NAV_GLOBE,  // the globe view: the wheel zooms
-    PC_NAV_SLIDES, // the slide show while it shows slides: "Back" is its "end" button
+    PC_NAV_SLIDES, // the slide show while it shows slides: no button takes input; "Back" is A, then "end"
 };
 
 // Keys that press an on-screen button by name. One bit each; the input layer
 // reports the ones that went down in a frame.
 enum PCNavKey {
-    PC_NAV_KEY_BACK = 1 << 0,  // "back"; "end" during the slides; "no" on a dialog without "back"
+    PC_NAV_KEY_BACK = 1 << 0,  // "back"; "no" on a dialog without "back"; during the slides PC_NAV_KEY_END
     PC_NAV_KEY_YES = 1 << 1,   // "yes"
     PC_NAV_KEY_NO = 1 << 2,    // "no"
     PC_NAV_KEY_OK = 1 << 3,    // "next" on a dialog (PC_NAV_OTHER): its only button
     PC_NAV_KEY_SLIDE = 1 << 4, // "slide"
     PC_NAV_KEY_GLOBE = 1 << 5, // "earth"
     PC_NAV_KEY_RESET = 1 << 6, // "reset" (globe view)
+    PC_NAV_KEY_END = 1 << 7,   // "end" (slide show); never sent by the input layer, see PCNavFrame()
 };
 
 inline bool PCNavOn() {
@@ -73,6 +74,10 @@ bool PCNavPress(const char* name, u32 button);
 // A new input frame starts (once per KPADRead() of channel 0, which the game
 // calls once per frame). `keys` are the PCNavKey bits that went down.
 void PCNavFrame(u32 keys);
+
+// True while "Back" was pressed during the slides and the slide's article has
+// not come up yet: the input layer presses A, as the remote would.
+bool PCNavWantsA();
 
 // The context of the frame that just ran; PC_NAV_OTHER if no screen reported.
 PCNavContext PCNavGetContext();
