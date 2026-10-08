@@ -384,16 +384,17 @@ bool ArticleText::Set(const wchar_t* text, NewsPicture* picture, const math::VEC
     c->mScaleX = 1.0f;
     c->mWordIndex = word + 1;
 
-    for (c = mChars; c->mChar != 0; c++) {
-        if (c->mPrev == NULL) {
-            f32 width;
+    TextChar* n; // declared ahead of the loop pointer: n is r3, w is r4
+    for (TextChar* w = mChars; w->mChar != 0; w++) {
+        if (w->mPrev == NULL) {
+            f32 width; // declared ahead of space: width is f2, space is f3
             f32 space = gCharSpaceScale;
-            width = c->mScaledWidth;
-            for (TextChar* n = c->mNext; n != NULL; n = n->mNext) {
+            width = w->mScaledWidth;
+            for (n = w->mNext; n != NULL; n = n->mNext) {
                 width += space + n->mScaledWidth;
             }
             f32 scaleX = 1.0f;
-            c->mWordWidth = width * scaleX;
+            w->mWordWidth = width * scaleX;
         }
     }
 
@@ -415,9 +416,9 @@ bool ArticleText::Set(const wchar_t* text, NewsPicture* picture, const math::VEC
         if (mPicture != NULL) {
             mPicTarget.y = y;
         }
-        c = mChars;
-        for (u32 i = 0; i < mCount; i++, c++) {
-            c->mTarget.y = y;
+        u32 i = 0; // the counter comes first (r3), then a pointer of its own (r4)
+        for (TextChar* t = mChars; i < mCount; i++, t++) {
+            t->mTarget.y = y;
         }
     }
 
@@ -461,7 +462,7 @@ void ArticleText::Draw(const math::VEC2* pos, bool clip, f32 alpha, f32 zoom) {
     TextChar* c;
     s32 i = mFirstVisible;
     c = &mChars[i];
-    ut::Color color;
+    ut::Color color; // declared after the pointer is set: the white constant is numbered last (r4)
 
     if (gNewsData->mHeader->unk2C[0] == 0) {
         f32 yOfs = 0.0f;
