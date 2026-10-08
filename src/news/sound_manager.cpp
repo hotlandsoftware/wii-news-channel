@@ -663,14 +663,14 @@ static inline void AddEcho(s32* dst, const s32* echo, s32 n) {
     }
 }
 
-static inline void Fir2(s32* out, const s32* in, const s32* coef, s32 taps) {
-    s32 k;
-    for (s32 i = FX_FRAME_SAMPLES - 1; i >= 0; i--) {
-        s32 sum = 0;
-        for (k = 0; k < taps; k++) {
-            sum += coef[k] * in[i - k];
-        }
-        out[i] = sum / 4096;
+inline void FxVoice::EchoFilter(s32** buffers) {
+    for (s32 ch = 0; ch < 2; ch++) {
+        s32 work[FX_FRAME_SAMPLES + 11];
+        s32 echo[FX_FRAME_SAMPLES + 11];
+        Read(FX_FRAME_SAMPLES + 11, work, 0, mInput[ch], -11);
+        Read(FX_FRAME_SAMPLES + 11, echo, -60, mOutput[ch], -11);
+        AddEcho(work, echo, FX_FRAME_SAMPLES + 11);
+        Fir(buffers[ch], &work[11], mFilterA, 11);
     }
 }
 
@@ -702,14 +702,7 @@ void FxVoice::UpdateBuffer(int channels, void** ppBuffer, u32 size, snd::SampleF
     if (mEnabled) {
         switch (mMode) {
         case MODE_ECHO_FILTER:
-            for (s32 ch = 0; ch < 2; ch++) {
-                s32 echo[FX_FRAME_SAMPLES + 11];
-                s32 work[FX_FRAME_SAMPLES + 11];
-                Read(FX_FRAME_SAMPLES + 11, work, 0, mInput[ch], -11);
-                Read(FX_FRAME_SAMPLES + 11, echo, -60, mOutput[ch], -11);
-                AddEcho(work, echo, FX_FRAME_SAMPLES + 11);
-                Fir2(buffers[ch], &work[11], mFilterA, 11);
-            }
+            EchoFilter(buffers);
             break;
         case MODE_PITCH_DOWN:
             PitchDown(buffers);
