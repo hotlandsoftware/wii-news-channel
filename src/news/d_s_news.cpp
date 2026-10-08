@@ -2003,6 +2003,14 @@ static inline f32 PinDistance(const math::VEC2& a, GlobePin* pin) {
     return math::FSqrt(d.x * d.x + d.y * d.y);
 }
 
+// The pin in a slot of the pin tables.
+// The local matters: in the stack-count loop of Pins_Sort it gives the pin the first register (r3),
+// ahead of the caller's locals.
+static inline GlobePin* GetPin(GlobePin** slot) {
+    GlobePin* pin = *slot;
+    return pin;
+}
+
 void Pins_Sort() {
     Pins_ResetStacks();
     GlobePin** pin = sPins;
@@ -2010,6 +2018,8 @@ void Pins_Sort() {
     BOOL linked;
     u32 i;
     u32 j;
+    GlobePin* q;
+    s32 n;
     if (pin == NULL || sSortedPins == NULL) {
         return;
     }
@@ -2046,11 +2056,11 @@ void Pins_Sort() {
     }
 
     sorted = sSortedPins;
-    for (i = 0; i < sNumPins; i++, sorted++) {
-        GlobePin* p = *sorted;
+    for (u32 k = 0; k < sNumPins; k++, sorted++) {
+        GlobePin* p = GetPin(sorted);
         if (p) {
-            s32 n = 0;
-            for (GlobePin* q = p; q; q = q->mNext) {
+            n = 0;
+            for (q = p; q; q = q->mNext) {
                 n++;
             }
             p->mStackCount = n;
