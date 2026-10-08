@@ -734,25 +734,33 @@ void FxVoice::PitchDown(s32** buffers) {
     }
 }
 
+static inline void Fir(s32* buf, const s32* coef, s32 taps) {
+    for (s32 i = FX_FRAME_SAMPLES - 1; i >= 0; i--) {
+        s32 sum = 0;
+        for (s32 k = 0; k < taps; k++) {
+            sum += coef[k] * buf[i - k];
+        }
+        buf[i] = sum / 4096;
+    }
+}
+
+static inline void Mix(s32* dst, const s32* src, s32 n) {
+    for (s32 i = 0; i < n; i++) {
+        dst[i] = ((dst[i] + src[i]) << 12) / 4096;
+    }
+}
+
+
 void FxVoice::Radio(s32** buffers) {
     s32 work[FX_FRAME_SAMPLES + 21];
     s32 work2[FX_FRAME_SAMPLES + 21];
-    s32 ch;
     s32* p = &work[21];
 
     Read(FX_FRAME_SAMPLES + 21, work, 0, mInput[0], -21);
     Read(FX_FRAME_SAMPLES + 21, work2, 0, mInput[1], -21);
-    for (s32 i = 0; i < FX_FRAME_SAMPLES + 21; i++) {
-        work[i] = ((work[i] + work2[i]) << 12) / 4096;
-    }
+    Mix(work, work2, FX_FRAME_SAMPLES + 21);
 
-    for (s32 i = FX_FRAME_SAMPLES - 1; i >= 0; i--) {
-        s32 sum = 0;
-        for (s32 k = 0; k < 21; k++) {
-            sum += mFilterB[k] * p[i - k];
-        }
-        p[i] = sum / 4096;
-    }
+    Fir(p, mFilterB, 21);
 
     u32 seed = sNoiseSeed;
     for (s32 i = 0; i < FX_FRAME_SAMPLES; i++) {
@@ -760,12 +768,11 @@ void FxVoice::Radio(s32** buffers) {
             seed = seed * 0x80D + 7;
             sNoiseSeed = seed;
         }
-        s32 noise = (s32)((s64)(s32)(seed & 0xFFF) * 0x19A / 4096) + 0xE66;
-        p[i] = p[i] * noise / 4096;
-        work[i + 21] &= ~0x7F;
+        p[i] = p[i] * ((s32)((s64)(s32)(seed & 0xFFF) * 0x19A / 4096) + 0xE66) / 4096;
+        ((u32*)p)[i] &= ~0x7F;
     }
 
-    for (ch = 0; ch < 2; ch++) {
+    for (s32 ch = 0; ch < 2; ch++) {
         CopyBuffer(p, buffers[ch], FX_FRAME_SAMPLES);
     }
 }
