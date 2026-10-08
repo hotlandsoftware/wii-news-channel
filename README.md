@@ -96,6 +96,8 @@ The [`pc-port`](https://github.com/hotlandsoftware/wii-news-channel/tree/pc-port
 
 Not planned on PC: the HOME Menu, the Wii pointer cursor, the Operations Guide viewer (it runs a PowerPC build of Opera).
 
+PC enhancements are being added on top of this. `--purist` switches every one of them off, so the game functions and looks as it does on the console; each enhancement can also be switched individually (`--list-enhancements`).
+
 News comes from [WiiLink](https://www.wiilink24.com/)'s servers, which host the same files Nintendo's did: `http://news.wiilink.ca/v2/1/049/news.bin.00` to `.23` (language 1 = English, country 049 = USA, one file per hour). For now you download them yourself:
 
 ```sh
