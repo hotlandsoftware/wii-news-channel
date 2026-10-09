@@ -124,6 +124,8 @@ file(GLOB PC_AUDIO_SOURCES  CONFIGURE_DEPENDS "${REPO}/src/pc/audio/*.cpp")
 # News: where the downloader gets the news files, the news tool
 # (docs/pc_port.md, "How the channel gets its news")
 file(GLOB PC_NEWS_SOURCES   CONFIGURE_DEPENDS "${REPO}/src/pc/news/*.cpp")
+# Text: sharper glyph sheets (docs/pc_port.md, "Enhancement: sharp text")
+file(GLOB PC_TEXT_SOURCES   CONFIGURE_DEPENDS "${REPO}/src/pc/text/*.cpp")
 # The texture tool derives from ut::ResFont and ut::ArchiveFont to reach their
 # glyph sheets; NW4R is built without RTTI, so there is no typeinfo to refer to.
 set_source_files_properties("${REPO}/src/pc/gx/texdecode_tool.cpp" PROPERTIES
@@ -146,7 +148,7 @@ list(REMOVE_ITEM PC_SDK_SOURCES "${PC_STUBS_FILE}")
 
 add_library(pc_backend OBJECT
     ${PC_SDK_SOURCES} ${PC_LIBC_SOURCES} ${PC_CORE_SOURCES} ${PC_THUNK_SOURCES}
-    ${PC_ENDIAN_SOURCES} ${PC_GX_SOURCES} ${PC_AUDIO_SOURCES} ${PC_NEWS_SOURCES})
+    ${PC_ENDIAN_SOURCES} ${PC_GX_SOURCES} ${PC_AUDIO_SOURCES} ${PC_NEWS_SOURCES} ${PC_TEXT_SOURCES})
 news_backend_options(pc_backend)
 target_link_libraries(pc_backend PUBLIC PkgConfig::SDL3 PkgConfig::CURL PkgConfig::GL)
 

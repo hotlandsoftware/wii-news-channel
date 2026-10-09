@@ -106,6 +106,7 @@ struct Renderer {
     // the sampler state last sent to OpenGL, per unit
     PCGXTexUnit samplerState[8];
     bool samplerMip[8];
+    u32 samplerReplacement[8]; // levels of the replacement texture the sampler was set up for, or 0
     bool samplerValid[8];
 } r;
 
@@ -686,16 +687,18 @@ void ApplyRasterState() {
     }
 }
 
-void ApplySampler(u32 unit, bool mipmapped) {
+void ApplySampler(u32 unit, bool mipmapped, u32 replacementLevels) {
     const PCGXTexUnit& t = gPCGX.tex[unit];
     PCGXTexUnit& last = r.samplerState[unit];
-    if (r.samplerValid[unit] && r.samplerMip[unit] == mipmapped && last.wrapS == t.wrapS && last.wrapT == t.wrapT &&
+    if (r.samplerValid[unit] && r.samplerMip[unit] == mipmapped && r.samplerReplacement[unit] == replacementLevels &&
+        last.wrapS == t.wrapS && last.wrapT == t.wrapT &&
         last.minFilter == t.minFilter && last.magFilter == t.magFilter && last.minLod == t.minLod &&
         last.maxLod == t.maxLod && last.lodBias == t.lodBias) {
         return;
     }
     last = t;
     r.samplerMip[unit] = mipmapped;
+    r.samplerReplacement[unit] = replacementLevels;
     r.samplerValid[unit] = true;
 
     static const GLenum kWrap[4] = {GL_CLAMP_TO_EDGE, GL_REPEAT, GL_MIRRORED_REPEAT, GL_REPEAT};
@@ -714,6 +717,17 @@ void ApplySampler(u32 unit, bool mipmapped) {
     glSamplerParameterf(sampler, GL_TEXTURE_MIN_LOD, t.minLod / 16.0f);
     glSamplerParameterf(sampler, GL_TEXTURE_MAX_LOD, t.maxLod / 16.0f);
     glSamplerParameterf(sampler, GL_TEXTURE_LOD_BIAS, t.lodBias / 32.0f);
+    if (replacementLevels > 1) {
+        // A replacement texture (pc_gx.h) is a larger picture of a texture
+        // that has one level: its own levels are there so that it is filtered
+        // like the source where it is drawn small. The game's filter decides
+        // between nearest and linear; the level of detail is ours.
+        glSamplerParameteri(sampler, GL_TEXTURE_MIN_FILTER,
+                            minFilter == GX_NEAR ? GL_NEAREST_MIPMAP_NEAREST : GL_LINEAR_MIPMAP_LINEAR);
+        glSamplerParameterf(sampler, GL_TEXTURE_MIN_LOD, 0.0f);
+        glSamplerParameterf(sampler, GL_TEXTURE_MAX_LOD, static_cast<GLfloat>(replacementLevels - 1));
+        glSamplerParameterf(sampler, GL_TEXTURE_LOD_BIAS, PCGXTextureReplacementLodBias());
+    }
 }
 
 void BindTextures(u32 mask) {
@@ -723,9 +737,10 @@ void BindTextures(u32 mask) {
         }
         glActiveTexture(GL_TEXTURE0 + unit);
         bool mipmapped = false;
-        GLuint texture = PCGXTextureForUnit(unit, &mipmapped);
+        u32 replacementLevels = 0;
+        GLuint texture = PCGXTextureForUnit(unit, &mipmapped, &replacementLevels);
         glBindTexture(GL_TEXTURE_2D, texture);
-        ApplySampler(unit, mipmapped);
+        ApplySampler(unit, mipmapped, replacementLevels);
     }
     glActiveTexture(GL_TEXTURE0);
     if (r.current->uTexSize >= 0) {

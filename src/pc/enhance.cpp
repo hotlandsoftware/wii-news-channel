@@ -13,6 +13,7 @@ const PCEnhancementInfo kInfo[PC_ENH_COUNT + 1] = {
     {"fullscreen-key", "F11 and Alt+Enter toggle fullscreen", true},
     {"hires", "render at the display's resolution instead of 640x456 stretched (render_scale)", true},
     {"msaa", "multisample anti-aliasing of the frame buffer (msaa)", true},
+    {"sharp-text", "text stays sharp at high resolutions: the fonts' glyphs redrawn with four times the detail", true},
     {nullptr, nullptr, false}, // end of table
 };
 

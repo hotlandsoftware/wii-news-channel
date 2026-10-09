@@ -31,6 +31,8 @@ struct Entry {
     u8 levels;
     u8 hostOrder;
     u8 tlutFormat;
+    u8 replaced;          // the replacer wants this texture (part of the key)
+    u8 replacementLevels; // levels of the replacement that was made; 0: the image itself was uploaded
     u32 tlutHash;
     u32 dataSize;
     u32 dataHash;
@@ -38,6 +40,9 @@ struct Entry {
     u32 lastUsedFrame;
     u32 checkedGeneration;
 };
+
+PCGXTextureReplacer sReplacer;
+bool sHaveReplacer;
 
 enum { kMaxEntries = 1024, kMaxHostOrder = 1024, kUnusedFrames = 600 };
 
@@ -69,8 +74,85 @@ u32 EncodedSize(const Entry& e) {
     return total;
 }
 
+// Halves a picture of `channels` bytes per pixel in place (2x2 averages,
+// rounded to nearest). Width and height are even.
+void HalveInPlace(u8* pixels, u32 width, u32 height, u32 channels) {
+    const u32 w = width / 2, h = height / 2;
+    for (u32 y = 0; y < h; y++) {
+        const u8* a = pixels + (y * 2) * width * channels;
+        const u8* b = a + width * channels;
+        u8* out = pixels + y * w * channels;
+        for (u32 x = 0; x < w * channels; x++) {
+            const u32 from = (x / channels) * 2 * channels + x % channels;
+            out[x] = static_cast<u8>((a[from] + a[from + channels] + b[from] + b[from + channels] + 2) >> 2);
+        }
+    }
+}
+
+// Asks the replacer for a larger picture of the entry's image, whose decoded
+// texels are in sScratch, and uploads it with the levels between its size and
+// the image's. False: there is none, upload the image.
+bool UploadReplacement(Entry& e) {
+    static GLint maxSize;
+    if (maxSize == 0) {
+        glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxSize);
+    }
+    const u32 largest = e.width > e.height ? e.width : e.height;
+    u32 maxScale = 8;
+    while (maxScale > 1 && largest * maxScale > static_cast<u32>(maxSize)) {
+        maxScale /= 2;
+    }
+    if (maxScale < 2) {
+        return false;
+    }
+    u32 scale = 0, channels = 0;
+    u8* pixels = sReplacer.make(e.image, e.format, e.width, e.height, sScratch, maxScale, &scale, &channels, sReplacer.user);
+    if (pixels == nullptr) {
+        return false;
+    }
+    if ((scale != 2 && scale != 4 && scale != 8) || scale > maxScale || (channels != 1 && channels != 2 && channels != 4)) {
+        PCGXWarnOnce("GX: replacement texture with scale %u and %u channels refused", scale, channels);
+        std::free(pixels);
+        return false;
+    }
+    static const GLint kInternal[5] = {0, GL_R8, GL_RG8, 0, GL_RGBA8};
+    static const GLenum kFormat[5] = {0, GL_RED, GL_RG, 0, GL_RGBA};
+    // What a texel of the source format reads as: I, I, I, I or I, I, I, A.
+    static const GLint kSwizzle[5][4] = {{},
+                                         {GL_RED, GL_RED, GL_RED, GL_RED},
+                                         {GL_RED, GL_RED, GL_RED, GL_GREEN},
+                                         {},
+                                         {GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA}};
+    glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, kSwizzle[channels]);
+    u32 w = e.width * scale, h = e.height * scale;
+    u32 level = 0;
+    for (;; level++) {
+        glTexImage2D(GL_TEXTURE_2D, static_cast<GLint>(level), kInternal[channels], static_cast<GLsizei>(w),
+                     static_cast<GLsizei>(h), 0, kFormat[channels], GL_UNSIGNED_BYTE, pixels);
+        if (w == e.width) {
+            break;
+        }
+        HalveInPlace(pixels, w, h, channels);
+        w /= 2;
+        h /= 2;
+    }
+    std::free(pixels);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, static_cast<GLint>(level));
+    e.replacementLevels = static_cast<u8>(level + 1);
+    gPCGX.stats.replacements++;
+    return true;
+}
+
 // `tlut`: the palette of a colour-index texture, as loaded into its slot.
 void Upload(Entry& e, const PCGXTlutSlot* tlut) {
+    if (e.replaced) {
+        // A fresh texture object: a replacement has its own format and
+        // channel order, and the image that follows it must not inherit them.
+        glDeleteTextures(1, &e.texture);
+        glGenTextures(1, &e.texture);
+        e.replacementLevels = 0;
+    }
     glBindTexture(GL_TEXTURE_2D, e.texture);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     const u8* data = static_cast<const u8*>(e.image);
@@ -91,6 +173,10 @@ void Upload(Entry& e, const PCGXTlutSlot* tlut) {
                 sScratch[i * 4 + 2] = 255;
                 sScratch[i * 4 + 3] = 255;
             }
+        }
+        if (ok && e.replaced && UploadReplacement(e)) {
+            gPCGX.stats.textures++;
+            return;
         }
         glTexImage2D(GL_TEXTURE_2D, static_cast<GLint>(level), GL_RGBA8, static_cast<GLsizei>(w), static_cast<GLsizei>(h),
                      0, GL_RGBA, GL_UNSIGNED_BYTE, sScratch);
@@ -288,9 +374,22 @@ void PCGXTextureFrameEnd() {
     PCGXTextureNewGeneration();
 }
 
-u32 PCGXTextureForUnit(u32 unitIndex, bool* mipmapped) {
+void PCGXSetTextureReplacer(const PCGXTextureReplacer* replacer) {
+    sHaveReplacer = replacer != nullptr && replacer->wants != nullptr && replacer->make != nullptr;
+    if (sHaveReplacer) {
+        sReplacer = *replacer;
+    }
+    PCGXTextureNewGeneration();
+}
+
+f32 PCGXTextureReplacementLodBias() {
+    return sHaveReplacer ? sReplacer.lodBias : 0.0f;
+}
+
+u32 PCGXTextureForUnit(u32 unitIndex, bool* mipmapped, u32* replacementLevels) {
     const PCGXTexUnit& unit = gPCGX.tex[unitIndex];
     *mipmapped = false;
+    *replacementLevels = 0;
     if (unit.image == nullptr || unit.width == 0 || unit.height == 0) {
         return 0;
     }
@@ -325,6 +424,13 @@ u32 PCGXTextureForUnit(u32 unitIndex, bool* mipmapped) {
         key.tlutHash = tlut.hash ^ (tlut.count * 2654435761u);
     }
     *mipmapped = key.levels > 1;
+    // A replacement texture (pc_gx.h). The fragment shader has to take the
+    // texture's size from the game and not from OpenGL, which it does in the
+    // variant for a scaled or multisampled frame buffer only.
+    if (sHaveReplacer && key.levels == 1 && !IsColorIndex(unit.format) && PCGXRenderEnhancedSampling() &&
+        sReplacer.wants(unit.image, unit.format, unit.width, unit.height, sReplacer.user)) {
+        key.replaced = 1;
+    }
     const PCGXTlutSlot* tlut = IsColorIndex(unit.format) ? &gPCGX.tluts[unit.tlutSlot] : nullptr;
 
     if (sEntries == nullptr) {
@@ -336,7 +442,7 @@ u32 PCGXTextureForUnit(u32 unitIndex, bool* mipmapped) {
         Entry& e = sEntries[i];
         if (e.image == key.image && e.width == key.width && e.height == key.height && e.format == key.format &&
             e.levels == key.levels && e.hostOrder == key.hostOrder && e.tlutFormat == key.tlutFormat &&
-            e.tlutHash == key.tlutHash) {
+            e.tlutHash == key.tlutHash && e.replaced == key.replaced) {
             found = &e;
             break;
         }
@@ -352,6 +458,7 @@ u32 PCGXTextureForUnit(u32 unitIndex, bool* mipmapped) {
                 Upload(*found, tlut);
             }
         }
+        *replacementLevels = found->replacementLevels;
         return found->texture;
     }
 
@@ -373,5 +480,6 @@ u32 PCGXTextureForUnit(u32 unitIndex, bool* mipmapped) {
     e.checkedGeneration = sGeneration;
     glGenTextures(1, &e.texture);
     Upload(e, tlut);
+    *replacementLevels = e.replacementLevels;
     return e.texture;
 }

@@ -430,7 +430,11 @@ void PCGXRenderInvalidateState();
 
 // The OpenGL texture for a texture unit's image (0 if it has none), decoded
 // and uploaded if needed. *mipmapped: it has more than one level.
-u32 PCGXTextureForUnit(u32 unit, bool* mipmapped);
+// *replacementLevels: 0, or the number of levels of the replacement texture
+// (pc_gx.h) that is returned in place of the image; its level of detail is
+// then the backend's business (PCGXTextureReplacementLodBias()), not the game's.
+u32 PCGXTextureForUnit(u32 unit, bool* mipmapped, u32* replacementLevels);
+f32 PCGXTextureReplacementLodBias();
 void PCGXTextureNewGeneration(); // contents may have changed: check again
 void PCGXTextureFrameEnd();
 bool PCGXTextureIsHostOrder(const void* image);

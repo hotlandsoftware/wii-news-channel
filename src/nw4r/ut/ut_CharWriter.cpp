@@ -1,6 +1,9 @@
 #include <nw4r/ut/ut_CharWriter.h>
 #include <nw4r/ut/ut_Font.h>
 #include <revolution/gx.h>
+#ifdef TARGET_PC
+#include <pc/sharp_text.h>
+#endif
 
 // As tp nw4hbm ut_CharWriter.cpp (accessors out of line), plus GetTextColor,
 // SetScale(f32) and GetFontDescent, which this revision has.
@@ -274,6 +277,12 @@ void CharWriter::LoadTexture(const Glyph& glyph, GXTexMapID slot) {
         GXInitTexObjLOD(&tobj, mFilter.atSmall, mFilter.atLarge, 0.0f, 0.0f, 0.0f, false, false,
                         GX_ANISO_1);
         GXLoadTexObj(&tobj, slot);
+#ifdef TARGET_PC
+        // Enhancement `sharp-text`: tell the PC backend that this texture is a
+        // glyph sheet. Nothing here changes: the glyph, its cell and the
+        // texture the game loads are the font's own.
+        PCSharpTextGlyphSheet(glyph.pTexture, glyph.texFormat, glyph.texWidth, glyph.texHeight);
+#endif
 
         mLoadingTexture = loadInfo;
     }

@@ -26,6 +26,7 @@ enum PCEnhancement {
     PC_ENH_FULLSCREEN_KEY, // F11 and Alt+Enter toggle fullscreen
     PC_ENH_HIRES,          // the EFB at the display's resolution (render_scale, src/pc/pc_config.h)
     PC_ENH_MSAA,           // the EFB multisampled (msaa, src/pc/pc_config.h)
+    PC_ENH_SHARP_TEXT,     // glyph sheets redrawn at four times their resolution (src/pc/text)
     PC_ENH_COUNT
 };
 

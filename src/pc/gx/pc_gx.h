@@ -65,6 +65,43 @@ void PCGXInvalidateTexture(const void* image);
 // are marked automatically). Texture data from files is big-endian.
 void PCGXSetTextureHostOrder(const void* image, bool hostOrder);
 
+// --- Replacement textures --------------------------------------------------------
+
+// A larger picture of a texture, drawn in its place. The game still gives GX
+// the source texture, with its size, format and coordinates; the backend
+// samples the replacement at the same normalised coordinates, so a replacement
+// changes what a texel looks like and nothing else. The source is never
+// modified.
+//
+// The replacement is scale x scale times the source (scale 2, 4 or 8). The
+// backend adds the smaller levels down to the source's size (2x2 averages), so
+// the picture is also filtered correctly where it is drawn smaller than it is.
+//
+// Limits: one replacer; textures with one level and without a palette; and only
+// while the frame buffer is scaled or multisampled (the enhancements `hires`
+// and `msaa`): at the console's resolution the source is drawn, as always.
+struct PCGXTextureReplacer {
+    // Is there a replacement for this texture? Called every time the texture
+    // is looked up for a draw: it has to be cheap.
+    bool (*wants)(const void* image, u32 format, u32 width, u32 height, void* user);
+    // Makes it. Called when the texture is first drawn and again whenever its
+    // texels have changed. `rgba` is the source decoded (width * height * 4
+    // bytes). Returns a malloc()ed image of (width * *scale) x (height * *scale)
+    // pixels with *channels bytes each, which the backend frees: 1 = intensity
+    // (the texel is I, I, I, I, as an I4 or I8 texture gives), 2 = intensity
+    // and alpha (I, I, I, A, as IA4 and IA8), 4 = R, G, B, A. *scale is 2, 4
+    // or 8 and at most maxScale. NULL: no replacement after all.
+    u8* (*make)(const void* image, u32 format, u32 width, u32 height, const u8* rgba, u32 maxScale, u32* scale,
+                u32* channels, void* user);
+    void* user;
+    // Added to the level of detail when the replacement is sampled; below zero
+    // prefers the larger level (sharper, where the picture is drawn smaller).
+    f32 lodBias;
+};
+
+// The replacer (copied), or NULL for none.
+void PCGXSetTextureReplacer(const PCGXTextureReplacer* replacer);
+
 // --- Vertex arrays --------------------------------------------------------------
 
 // Arrays given to GXSetArray() are read in host byte order: the game and NW4R
@@ -92,6 +129,7 @@ struct PCGXStats {
     u32 texCopies;
     u32 programs;    // TEV programs generated so far
     u32 textures;    // textures decoded so far
+    u32 replacements; // replacement textures made so far
 };
 const PCGXStats* PCGXGetStats();
 
