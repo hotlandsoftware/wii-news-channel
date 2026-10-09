@@ -103,6 +103,8 @@ PC enhancements sit on top of this. `--purist` switches every one of them off, s
 | `mouse-scroll` | The wheel scrolls lists and articles and zooms on the globe; Ctrl+wheel changes the text size; holding the middle button scrolls as holding B does. |
 | `keyboard-nav` | Page Up/Down, Home/End, Esc or Backspace for "Back", Y/N on dialogs, S for the slide show, G for the globe, R to reset its tilt. |
 | `fullscreen-key` | F11 and Alt+Enter toggle fullscreen. |
+| `hires` | The picture is rendered at the window's real resolution instead of 640x456 stretched (`--render-scale auto\|1..8`). In 16:9 this also removes the console's horizontal squeeze. The art itself (fonts, photos, the earth map) stays at its original resolution. |
+| `msaa` | Multisample anti-aliasing (`--msaa 0\|2\|4\|8`, default 4): smooth edges on the globe, pins and slanted lines; flat panels and text are left exactly on their pixels. |
 
 Every one of these drives the game's own controls (a wheel notch is a +Control Pad press; "Back" presses the on-screen button), so nothing bypasses the game's logic. Without them the mouse and keyboard are a plain Wii Remote: left click = A, right click = B, arrow keys = +Control Pad, `=`/`-` = PLUS/MINUS.
 
