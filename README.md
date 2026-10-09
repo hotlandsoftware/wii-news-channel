@@ -105,6 +105,7 @@ PC enhancements sit on top of this. `--purist` switches every one of them off, s
 | `fullscreen-key` | F11 and Alt+Enter toggle fullscreen. |
 | `hires` | The picture is rendered at the window's real resolution instead of 640x456 stretched (`--render-scale auto\|1..8`). In 16:9 this also removes the console's horizontal squeeze. The art itself (fonts, photos, the earth map) stays at its original resolution. |
 | `msaa` | Multisample anti-aliasing (`--msaa 0\|2\|4\|8`, default 4): smooth edges on the globe, pins and slanted lines; flat panels and text are left exactly on their pixels. |
+| `sharp-text` | Text stays sharp at any window size: a 4x copy of each font's glyph sheet is rebuilt with smooth edges at run time (from your own WAD's fonts) and drawn in place of the original. Every glyph keeps its exact size and spacing, so no text moves or wraps differently. |
 
 Every one of these drives the game's own controls (a wheel notch is a +Control Pad press; "Back" presses the on-screen button), so nothing bypasses the game's logic. Without them the mouse and keyboard are a plain Wii Remote: left click = A, right click = B, arrow keys = +Control Pad, `=`/`-` = PLUS/MINUS.
 
