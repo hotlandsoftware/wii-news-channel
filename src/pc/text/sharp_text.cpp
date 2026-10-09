@@ -16,6 +16,9 @@
 #include <cstring>
 #include <ctime>
 
+#include <pthread.h>
+#include <unistd.h>
+
 #include <pc/enhance.h>
 #include <revolution/gx.h>
 
@@ -50,7 +53,6 @@ enum { kMaxSheets = 512, kForgetFrames = 600 };
 
 Sheet sSheets[kMaxSheets];
 u32 sNumSheets;
-bool sRegistered;
 PCSharpTextStats sStats;
 
 Sheet* Find(const void* image) {
@@ -140,16 +142,15 @@ void PCSharpTextGlyphSheet(const void* image, u32 format, u32 width, u32 height)
         sheet = &sSheets[sNumSheets++];
         sheet->image = image;
         sStats.sheetsNoted++;
+        // Tell the GX backend whom to ask (again with every new sheet: cheap,
+        // and whoever else set a replacer in between has been replaced).
+        const PCGXTextureReplacer replacer = {Wants, Make, nullptr, kLodBias};
+        PCGXSetTextureReplacer(&replacer);
     }
     sheet->format = static_cast<u8>(format);
     sheet->width = static_cast<u16>(width);
     sheet->height = static_cast<u16>(height);
     sheet->lastFrame = frame;
-    if (!sRegistered) {
-        sRegistered = true;
-        const PCGXTextureReplacer replacer = {Wants, Make, nullptr, kLodBias};
-        PCGXSetTextureReplacer(&replacer);
-    }
 }
 
 const PCSharpTextStats* PCSharpTextGetStats() {
@@ -190,8 +191,9 @@ struct Work {
 };
 
 // The scale x scale values of the enlarged, sharpened picture inside source
-// texel (x, y).
-inline void Block(const Work& work, const f32* t, u32 x, u32 y, f32* out) {
+// texel (x, y). A template so that the loops over the positions have constant
+// bounds: this is where all the time goes.
+template <u32 kPositions> inline void BlockN(const Work& work, const f32* t, u32 x, u32 y, f32* out) {
     const s32 w = static_cast<s32>(work.width), h = static_cast<s32>(work.height);
     f32 rows[5][8];
     for (s32 dy = -2; dy <= 2; dy++) {
@@ -204,19 +206,96 @@ inline void Block(const Work& work, const f32* t, u32 x, u32 y, f32* out) {
             xx = xx < 0 ? 0 : (xx >= w ? w - 1 : xx);
             v[dx + 2] = row[xx];
         }
-        for (u32 j = 0; j < work.scale; j++) {
+        for (u32 j = 0; j < kPositions; j++) {
             const f32* k = work.weights[j];
             rows[dy + 2][j] = v[0] * k[0] + v[1] * k[1] + v[2] * k[2] + v[3] * k[3] + v[4] * k[4];
         }
     }
-    for (u32 i = 0; i < work.scale; i++) {
+    for (u32 i = 0; i < kPositions; i++) {
         const f32* k = work.weights[i];
-        for (u32 j = 0; j < work.scale; j++) {
+        for (u32 j = 0; j < kPositions; j++) {
             f32 value = rows[0][j] * k[0] + rows[1][j] * k[1] + rows[2][j] * k[2] + rows[3][j] * k[3] + rows[4][j] * k[4];
             value = 0.5f + (value - 0.5f) * work.gain;
-            out[i * work.scale + j] = value < 0.0f ? 0.0f : (value > 1.0f ? 1.0f : value);
+            out[i * kPositions + j] = value < 0.0f ? 0.0f : (value > 1.0f ? 1.0f : value);
         }
     }
+}
+
+inline void Block(const Work& work, const f32* t, u32 x, u32 y, f32* out) {
+    switch (work.scale) {
+    case 2:
+        BlockN<2>(work, t, x, y, out);
+        break;
+    case 4:
+        BlockN<4>(work, t, x, y, out);
+        break;
+    default:
+        BlockN<8>(work, t, x, y, out);
+        break;
+    }
+}
+
+const long kMaxThreads = 4;
+
+// One pass over the picture, and the rows of it that one thread does.
+struct Pass {
+    const Work* work;
+    const f32* source;
+    const f32* current; // T
+    f32* next;          // T after this pass; NULL: this is the last pass, which writes the copy
+    const u8* flat;
+    const u8* src;
+    u32 srcStride, srcStep;
+    u8* dst;
+    u32 dstStride, dstStep;
+};
+
+struct Slice {
+    const Pass* pass;
+    u32 firstRow, endRow;
+};
+
+void* RunSlice(void* argument) {
+    const Slice& slice = *static_cast<const Slice*>(argument);
+    const Pass& pass = *slice.pass;
+    const Work& work = *pass.work;
+    const u32 width = work.width, scale = work.scale;
+    f32 block[64];
+    const f32 perBlock = 1.0f / static_cast<f32>(scale * scale);
+    for (u32 y = slice.firstRow; y < slice.endRow; y++) {
+        for (u32 x = 0; x < width; x++) {
+            const u32 index = y * width + x;
+            if (pass.next != nullptr) {
+                if (pass.flat[index]) {
+                    continue;
+                }
+                Block(work, pass.current, x, y, block);
+                f32 sum = 0.0f;
+                for (u32 i = 0; i < scale * scale; i++) {
+                    sum += block[i];
+                }
+                pass.next[index] = pass.current[index] + kFeedback * (pass.source[index] - sum * perBlock);
+                continue;
+            }
+            u8* out = pass.dst + (y * scale) * pass.dstStride + (x * scale) * pass.dstStep;
+            if (pass.flat[index]) {
+                const u8 value = pass.src[y * pass.srcStride + x * pass.srcStep];
+                for (u32 i = 0; i < scale; i++) {
+                    for (u32 j = 0; j < scale; j++) {
+                        out[i * pass.dstStride + j * pass.dstStep] = value;
+                    }
+                }
+                continue;
+            }
+            Block(work, pass.current, x, y, block);
+            for (u32 i = 0; i < scale; i++) {
+                for (u32 j = 0; j < scale; j++) {
+                    out[i * pass.dstStride + j * pass.dstStep] = static_cast<u8>(block[i * scale + j] * 255.0f + 0.5f);
+                }
+            }
+        }
+    }
+    return nullptr;
 }
 
 } // namespace
@@ -286,48 +365,49 @@ bool PCSharpTextUpscale(const u8* src, u32 width, u32 height, u32 srcStride, u32
         }
     }
 
-    f32 block[64];
-    const f32 perBlock = 1.0f / static_cast<f32>(scale * scale);
-    for (u32 iteration = 0; iteration < kIterations; iteration++) {
-        for (u32 y = 0; y < height; y++) {
-            for (u32 x = 0; x < width; x++) {
-                const u32 index = y * width + x;
-                if (flat[index]) {
-                    continue;
-                }
-                Block(work, current, x, y, block);
-                f32 sum = 0.0f;
-                for (u32 i = 0; i < scale * scale; i++) {
-                    sum += block[i];
-                }
-                next[index] = current[index] + kFeedback * (source[index] - sum * perBlock);
+    // The rows of each pass are shared out between a few threads. A pass
+    // reads one picture and writes another, so the result does not depend on
+    // how many there are.
+    Pass pass;
+    pass.work = &work;
+    pass.source = source;
+    pass.flat = flat;
+    pass.src = src;
+    pass.srcStride = srcStride;
+    pass.srcStep = srcStep;
+    pass.dst = dst;
+    pass.dstStride = dstStride;
+    pass.dstStep = dstStep;
+    const long cores = sysconf(_SC_NPROCESSORS_ONLN);
+    u32 threads = cores > kMaxThreads ? kMaxThreads : (cores < 1 ? 1 : static_cast<u32>(cores));
+    if (height < 64 * threads) {
+        threads = 1;
+    }
+    for (u32 iteration = 0; iteration <= kIterations; iteration++) {
+        pass.current = current;
+        pass.next = iteration < kIterations ? next : nullptr; // the last pass writes the copy
+        Slice slices[kMaxThreads];
+        pthread_t ids[kMaxThreads];
+        bool started[kMaxThreads] = {};
+        for (u32 i = 0; i < threads; i++) {
+            slices[i].pass = &pass;
+            slices[i].firstRow = height * i / threads;
+            slices[i].endRow = height * (i + 1) / threads;
+            started[i] = i != 0 && pthread_create(&ids[i], nullptr, RunSlice, &slices[i]) == 0;
+        }
+        for (u32 i = 0; i < threads; i++) {
+            if (!started[i]) {
+                RunSlice(&slices[i]); // the first slice, and any whose thread did not start
+            }
+        }
+        for (u32 i = 0; i < threads; i++) {
+            if (started[i]) {
+                pthread_join(ids[i], nullptr);
             }
         }
         f32* swap = current;
         current = next;
         next = swap;
-    }
-
-    for (u32 y = 0; y < height; y++) {
-        for (u32 x = 0; x < width; x++) {
-            const u32 index = y * width + x;
-            u8* out = dst + (y * scale) * dstStride + (x * scale) * dstStep;
-            if (flat[index]) {
-                const u8 value = src[y * srcStride + x * srcStep];
-                for (u32 i = 0; i < scale; i++) {
-                    for (u32 j = 0; j < scale; j++) {
-                        out[i * dstStride + j * dstStep] = value;
-                    }
-                }
-                continue;
-            }
-            Block(work, current, x, y, block);
-            for (u32 i = 0; i < scale; i++) {
-                for (u32 j = 0; j < scale; j++) {
-                    out[i * dstStride + j * dstStep] = static_cast<u8>(block[i * scale + j] * 255.0f + 0.5f);
-                }
-            }
-        }
     }
     std::free(source);
     std::free(flat);

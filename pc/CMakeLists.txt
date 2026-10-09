@@ -126,6 +126,10 @@ file(GLOB PC_AUDIO_SOURCES  CONFIGURE_DEPENDS "${REPO}/src/pc/audio/*.cpp")
 file(GLOB PC_NEWS_SOURCES   CONFIGURE_DEPENDS "${REPO}/src/pc/news/*.cpp")
 # Text: sharper glyph sheets (docs/pc_port.md, "Enhancement: sharp text")
 file(GLOB PC_TEXT_SOURCES   CONFIGURE_DEPENDS "${REPO}/src/pc/text/*.cpp")
+# Making a sharp copy of a glyph sheet is arithmetic on a few million texels,
+# done while the game waits for its frame: optimised in every build type.
+set_source_files_properties("${REPO}/src/pc/text/sharp_text.cpp" PROPERTIES
+    COMPILE_OPTIONS "-O3")
 # The texture tool derives from ut::ResFont and ut::ArchiveFont to reach their
 # glyph sheets; NW4R is built without RTTI, so there is no typeinfo to refer to.
 set_source_files_properties("${REPO}/src/pc/gx/texdecode_tool.cpp" PROPERTIES

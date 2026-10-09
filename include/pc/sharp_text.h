@@ -41,8 +41,8 @@ struct PCSharpTextStats {
 };
 const PCSharpTextStats* PCSharpTextGetStats();
 
-// The self-tests (selftest_text.cpp): without and with OpenGL.
+// The self-test without OpenGL (selftest_text.cpp); the one with it is in
+// selftest_gx.cpp.
 void PCSelfTestSharpText();
-bool PCSelfTestSharpTextWithContext();
 
 #endif

@@ -23,7 +23,11 @@
 #include <revolution/gx.h>
 #include <revolution/vi.h>
 
+#include <nw4r/ut/ut_CharWriter.h>
+#include <nw4r/ut/ut_Font.h>
 #include <pc/enhance.h>
+#include <pc/files.h>
+#include <pc/sharp_text.h>
 
 #include "gx/gx_internal.h"
 #include "gx/texdecode.h"
@@ -1621,6 +1625,380 @@ void TestEnhancedEfb() {
     *config = saved;
 }
 
+// --- Replacement textures (pc_gx.h) and the enhancement `sharp-text` -------------------
+
+struct TestReplacement {
+    const void* image; // the texture that is replaced
+    int mode;          // what the replacement looks like, below
+    u32 calls;
+    u32 lastMaxScale;
+};
+TestReplacement sReplacement;
+
+bool TestReplacementWants(const void* image, u32, u32, u32, void* user) {
+    return image == static_cast<TestReplacement*>(user)->image;
+}
+
+u8* TestReplacementMake(const void*, u32, u32 width, u32 height, const u8* rgba, u32 maxScale, u32* scale, u32* channels,
+                        void* user) {
+    TestReplacement* test = static_cast<TestReplacement*>(user);
+    test->calls++;
+    test->lastMaxScale = maxScale;
+    const u32 w = width * 4, h = height * 4;
+    switch (test->mode) {
+    case 0: { // one channel, flat: the source's value plus 100
+        u8* out = static_cast<u8*>(std::malloc(w * h));
+        std::memset(out, rgba[0] + 100, w * h);
+        *scale = 4, *channels = 1;
+        return out;
+    }
+    case 1: { // one channel: a chequerboard of single texels of the replacement
+        u8* out = static_cast<u8*>(std::malloc(w * h));
+        for (u32 y = 0; y < h; y++) {
+            for (u32 x = 0; x < w; x++) {
+                out[y * w + x] = ((x ^ y) & 1) ? 255 : 0;
+            }
+        }
+        *scale = 4, *channels = 1;
+        return out;
+    }
+    case 2: { // two channels: intensity 240, alpha 100
+        u8* out = static_cast<u8*>(std::malloc(w * h * 2));
+        for (u32 i = 0; i < w * h; i++) {
+            out[i * 2] = 240, out[i * 2 + 1] = 100;
+        }
+        *scale = 4, *channels = 2;
+        return out;
+    }
+    case 3: { // four channels
+        u8* out = static_cast<u8*>(std::malloc(w * h * 4));
+        for (u32 i = 0; i < w * h; i++) {
+            out[i * 4] = 10, out[i * 4 + 1] = 20, out[i * 4 + 2] = 30, out[i * 4 + 3] = 40;
+        }
+        *scale = 4, *channels = 4;
+        return out;
+    }
+    case 4: // a scale the backend does not take
+        *scale = 3, *channels = 1;
+        return static_cast<u8*>(std::malloc(width * 3 * height * 3));
+    default: // none after all
+        return nullptr;
+    }
+}
+
+// A quad that shows the whole of texture map 0 unblended: the pixel is the
+// texel's colour (`alpha` false) or its alpha as a grey.
+void SetupReplacementDraw(bool alpha) {
+    Setup2D();
+    GXColor white = {255, 255, 255, 255}, black = {0, 0, 0, 0};
+    GXSetTevColor(GX_TEVREG0, white);
+    GXSetTevColor(GX_TEVREG1, black);
+    GXSetTevColorIn(GX_TEVSTAGE0, GX_CC_ZERO, alpha ? GX_CC_TEXA : GX_CC_TEXC, GX_CC_C0, GX_CC_C1);
+    GXSetTevAlphaIn(GX_TEVSTAGE0, GX_CA_ZERO, GX_CA_ZERO, GX_CA_ZERO, GX_CA_A0);
+    GXSetBlendMode(GX_BM_NONE, GX_BL_ONE, GX_BL_ZERO, GX_LO_COPY);
+    GXSetAlphaCompare(GX_ALWAYS, 0, GX_AOP_AND, GX_ALWAYS, 0);
+}
+
+void LoadTestTexture(const void* texels, GXTexFmt format, GXTexFilter filter) {
+    GXTexObj tex;
+    GXInitTexObj(&tex, const_cast<void*>(texels), 16, 16, format, GX_CLAMP, GX_CLAMP, GX_FALSE);
+    GXInitTexObjLOD(&tex, filter, filter, 0.0f, 0.0f, 0.0f, GX_FALSE, GX_FALSE, GX_ANISO_1);
+    GXLoadTexObj(&tex, GX_TEXMAP0);
+}
+
+void TestReplacementTextures() {
+    static u8 i8[16 * 16];      // I8: one byte per texel, whatever the tile order: it is flat
+    static u8 ia8[16 * 16 * 2]; // IA8: alpha, intensity
+    static u8 other[16 * 16];
+    std::memset(i8, 60, sizeof(i8));
+    std::memset(other, 60, sizeof(other));
+    for (u32 i = 0; i < 16 * 16; i++) {
+        ia8[i * 2] = 200, ia8[i * 2 + 1] = 50;
+    }
+    std::memset(&sReplacement, 0, sizeof(sReplacement));
+    sReplacement.image = i8;
+    const PCGXTextureReplacer replacer = {TestReplacementWants, TestReplacementMake, &sReplacement, 0.0f};
+
+    // 1. A frame buffer of twice the console's size. Without a replacer the
+    // texture is itself.
+    PCConfig* config = PCGetConfig();
+    const PCConfig saved = *config;
+    config->aspectRatio = 0; // 4:3: a fixed scale is the same in both directions
+    SetEfb(false, 2, 0);
+    PCGXSetTextureReplacer(nullptr);
+    SetupReplacementDraw(false);
+    ClearEfb(0, 0, 0);
+    SetupReplacementDraw(false);
+    LoadTestTexture(i8, GX_TF_I8, GX_LINEAR);
+    Quad(100.0f, 100.0f, 132.0f, 132.0f);
+    PC_CHECK(RawIs(232, 232, 0x3C3C3C));
+
+    // 2. With one: the replacement's texels, in the same pixels (the quad's
+    // edges are where they were), made once however often it is drawn.
+    PCGXSetTextureReplacer(&replacer);
+    Quad(100.0f, 100.0f, 132.0f, 132.0f);
+    Quad(100.0f, 100.0f, 132.0f, 132.0f);
+    PC_CHECK(sReplacement.calls == 1 && sReplacement.lastMaxScale == 8);
+    PC_CHECK(RawIs(232, 232, 0xA0A0A0) && RawIs(200, 200, 0xA0A0A0) && RawIs(263, 263, 0xA0A0A0));
+    PC_CHECK(RawIs(199, 232, 0) && RawIs(264, 232, 0) && RawIs(232, 199, 0) && RawIs(232, 264, 0));
+    // Another texture with the same texels is not replaced.
+    LoadTestTexture(other, GX_TF_I8, GX_LINEAR);
+    Quad(140.0f, 100.0f, 172.0f, 132.0f);
+    PC_CHECK(RawIs(312, 232, 0x3C3C3C) && sReplacement.calls == 1);
+
+    // 3. New texels in the source: made again, from the new texels.
+    std::memset(i8, 70, sizeof(i8));
+    GXInvalidateTexAll();
+    LoadTestTexture(i8, GX_TF_I8, GX_LINEAR);
+    Quad(100.0f, 100.0f, 132.0f, 132.0f);
+    PC_CHECK(sReplacement.calls == 2 && RawIs(232, 232, 0xAAAAAA));
+
+    // 4. The levels. The replacement is a chequerboard of its own texels:
+    // drawn at one pixel per source texel it is the grey that sixteen of them
+    // average to (not one of them, black or white); drawn at eight pixels per
+    // replacement texel, each texel is itself (the two pixels in its middle
+    // are a sixteenth of the way to its neighbours).
+    sReplacement.mode = 1;
+    std::memset(i8, 71, sizeof(i8));
+    GXInvalidateTexAll();
+    ClearEfb(0, 0, 0);
+    SetupReplacementDraw(false);
+    LoadTestTexture(i8, GX_TF_I8, GX_LINEAR);
+    Quad(100.0f, 100.0f, 108.0f, 108.0f); // 16 texels on 16 pixels
+    PC_CHECK(sReplacement.calls == 3);
+    {
+        bool grey = true;
+        for (int y = 200; y < 216; y++) {
+            for (int x = 200; x < 216; x++) {
+                const u32 value = Raw(x, y) & 0xFF;
+                grey = grey && value >= 126 && value <= 129;
+            }
+        }
+        PC_CHECK(grey);
+    }
+    Quad(200.0f, 100.0f, 456.0f, 356.0f); // 16 texels on 512 pixels: 8 per texel of the replacement
+    PC_CHECK((Raw(400 + 4, 200 + 4) & 0xFF) < 40 && (Raw(400 + 12, 200 + 4) & 0xFF) > 215 &&
+             (Raw(400 + 4, 200 + 12) & 0xFF) > 215 && (Raw(400 + 12, 200 + 12) & 0xFF) < 40 &&
+             (Raw(400 + 508, 200 + 508) & 0xFF) < 40);
+    // The game's filter still chooses between nearest and linear.
+    LoadTestTexture(i8, GX_TF_I8, GX_NEAR);
+    Quad(200.0f, 100.0f, 456.0f, 356.0f);
+    PC_CHECK(RawIs(400 + 7, 200 + 4, 0x000000) && RawIs(400 + 8, 200 + 4, 0xFFFFFF) && RawIs(400 + 7, 200 + 8, 0xFFFFFF));
+
+    // 5. Two channels read as an intensity-alpha texture does, four as RGBA.
+    sReplacement.mode = 2;
+    sReplacement.image = ia8;
+    ClearEfb(0, 0, 0);
+    SetupReplacementDraw(false);
+    LoadTestTexture(ia8, GX_TF_IA8, GX_LINEAR);
+    Quad(100.0f, 100.0f, 132.0f, 132.0f);
+    PC_CHECK(RawIs(232, 232, 0xF0F0F0));
+    SetupReplacementDraw(true);
+    Quad(100.0f, 100.0f, 132.0f, 132.0f);
+    PC_CHECK(RawIs(232, 232, 0x646464));
+    sReplacement.mode = 3;
+    ia8[0] ^= 1;
+    GXInvalidateTexAll();
+    SetupReplacementDraw(false);
+    LoadTestTexture(ia8, GX_TF_IA8, GX_LINEAR);
+    Quad(100.0f, 100.0f, 132.0f, 132.0f);
+    PC_CHECK(RawIs(232, 232, 0x0A141E));
+    SetupReplacementDraw(true);
+    Quad(100.0f, 100.0f, 132.0f, 132.0f);
+    PC_CHECK(RawIs(232, 232, 0x282828));
+
+    // 6. A replacement the backend refuses, and none: the source is drawn.
+    for (int mode = 4; mode <= 5; mode++) {
+        sReplacement.mode = mode;
+        ia8[0] ^= 1;
+        GXInvalidateTexAll();
+        SetupReplacementDraw(false);
+        LoadTestTexture(ia8, GX_TF_IA8, GX_LINEAR);
+        Quad(100.0f, 100.0f, 132.0f, 132.0f);
+        PC_CHECK(RawIs(232, 232, 0x323232));
+        SetupReplacementDraw(true);
+        Quad(100.0f, 100.0f, 132.0f, 132.0f);
+        PC_CHECK(RawIs(232, 232, 0xC8C8C8));
+    }
+
+    // 7. The console's frame buffer (purist mode, or `hires` and `msaa` off):
+    // nobody is asked and the source is drawn.
+    sReplacement.mode = 0;
+    sReplacement.image = i8;
+    std::memset(i8, 72, sizeof(i8));
+    GXInvalidateTexAll();
+    const u32 calls = sReplacement.calls;
+    SetEfb(true, 0, 0);
+    SetupReplacementDraw(false);
+    ClearEfb(0, 0, 0);
+    SetupReplacementDraw(false);
+    LoadTestTexture(i8, GX_TF_I8, GX_LINEAR);
+    Quad(100.0f, 100.0f, 132.0f, 132.0f);
+    PC_CHECK(RawIs(116, 116, 0x484848) && sReplacement.calls == calls);
+    // Multisampled at the console's size it is replaced: the shader takes the
+    // texture's size from the game there.
+    PCGXEfbInfo info;
+    SetEfb(false, 0, 4);
+    PCGXRenderGetEfbInfo(&info);
+    if (info.samples != 0) {
+        SetupReplacementDraw(false);
+        ClearEfb(0, 0, 0);
+        SetupReplacementDraw(false);
+        LoadTestTexture(i8, GX_TF_I8, GX_LINEAR);
+        Quad(100.0f, 100.0f, 132.0f, 132.0f);
+        PC_CHECK(RawIs(116, 116, 0xACACAC) && RawIs(100, 100, 0xACACAC) && RawIs(99, 116, 0) &&
+                 sReplacement.calls == calls + 1);
+    }
+
+    // 8. The replacer taken away: the source again.
+    SetEfb(false, 2, 0);
+    PCGXSetTextureReplacer(nullptr);
+    SetupReplacementDraw(false);
+    LoadTestTexture(i8, GX_TF_I8, GX_LINEAR);
+    Quad(100.0f, 100.0f, 132.0f, 132.0f);
+    PC_CHECK(RawIs(232, 232, 0x484848));
+    PC_CHECK(glGetError() == GL_NO_ERROR);
+    *config = saved;
+}
+
+// What a line of text looks like in the frame buffer: the red channel of the
+// region it was drawn in.
+struct TextPicture {
+    enum { kWidth = 1200, kHeight = 180 }; // at three times the console's resolution; a third of each at one
+    u8 red[kWidth * kHeight];
+    f32 advance; // what CharWriter::Print() returned, added up
+    u64 ink;
+    u32 soft;                       // pixels that are neither background nor full ink
+    int left, top, right, bottom;   // box of the pixels that are more than half ink
+    int anyLeft, anyTop, anyRight, anyBottom; // box of the pixels that are not background
+};
+
+void DrawTextPicture(const nw4r::ut::Font* font, f32 scale, int efbScale, TextPicture* out) {
+    static u8 rgba[TextPicture::kWidth * TextPicture::kHeight * 4];
+    Setup2D();
+    ClearEfb(0, 0, 0);
+    Setup2D();
+    nw4r::ut::CharWriter writer;
+    writer.SetFont(*font);
+    writer.SetupGX();
+    writer.SetScale(scale, scale);
+    writer.SetCursor(20.0f, 100.0f, 0.0f);
+    out->advance = 0.0f;
+    for (const wchar_t* c = L"Slide show Rag&Qy 0123"; *c != 0; c++) {
+        out->advance += writer.Print(static_cast<u16>(*c));
+    }
+    const int width = TextPicture::kWidth / 3 * efbScale, height = TextPicture::kHeight / 3 * efbScale;
+    std::memset(out->red, 0, sizeof(out->red));
+    PC_CHECK(PCGXRenderReadEfb(10 * efbScale, 96 * efbScale, width, height, rgba));
+    out->ink = 0;
+    out->soft = 0;
+    out->left = out->top = out->anyLeft = out->anyTop = 1 << 20;
+    out->right = out->bottom = out->anyRight = out->anyBottom = -1;
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            const u8 value = rgba[(y * width + x) * 4];
+            out->red[y * width + x] = value;
+            out->ink += value;
+            out->soft += value > 40 && value < 215 ? 1 : 0;
+            if (value > 127) {
+                out->left = x < out->left ? x : out->left, out->right = x > out->right ? x : out->right;
+                out->top = y < out->top ? y : out->top, out->bottom = y > out->bottom ? y : out->bottom;
+            }
+            if (value != 0) {
+                out->anyLeft = x < out->anyLeft ? x : out->anyLeft, out->anyRight = x > out->anyRight ? x : out->anyRight;
+                out->anyTop = y < out->anyTop ? y : out->anyTop, out->anyBottom = y > out->anyBottom ? y : out->anyBottom;
+            }
+        }
+    }
+}
+
+struct SharpTextTest {
+    u32 fonts;
+};
+
+// One real font, drawn by nw4r::ut::CharWriter at three times the console's
+// resolution with the enhancement off and on.
+bool TestSharpTextFont(u32, const char* path, const char*, const nw4r::ut::Font* font, const nw4r::ut::FontTextureGlyph*,
+                       const u8*, void* user) {
+    static TextPicture off, on, purist;
+    static_cast<SharpTextTest*>(user)->fonts++;
+    const f32 scale = 0.9f; // the section list's
+    SetEfb(false, 3, 0);
+    PCEnhancementSet("sharp-text", false);
+    const u32 madeBefore = PCSharpTextGetStats()->sheetsMade;
+    DrawTextPicture(font, scale, 3, &off);
+    PC_CHECK(PCSharpTextGetStats()->sheetsMade == madeBefore);
+    PCEnhancementSet("sharp-text", true);
+    DrawTextPicture(font, scale, 3, &on);
+    PC_CHECK(PCSharpTextGetStats()->sheetsMade > madeBefore);
+    const u32 madeOn = PCSharpTextGetStats()->sheetsMade;
+    DrawTextPicture(font, scale, 3, &on); // nothing is made twice
+    PC_CHECK(PCSharpTextGetStats()->sheetsMade == madeOn);
+
+    // The same text in the same place: the same advance to the bit; the box
+    // of the ink within a pixel (a third of a console pixel); nothing drawn
+    // outside what was drawn before; the same amount of ink (seen: 1.0 and
+    // 1.6 % more for the two I4 fonts, 5.5 % for the outlined one, whose white
+    // inside and dark outline are two channels that are now each sharper);
+    // and fewer soft pixels, which is the point (seen: a third of them).
+    PC_CHECK(on.advance == off.advance && off.advance > 100.0f);
+    PC_CHECK(off.right > off.left + 300 && off.bottom > off.top + 30);
+    const bool sameBox = std::abs(on.left - off.left) <= 1 && std::abs(on.right - off.right) <= 1 &&
+                         std::abs(on.top - off.top) <= 1 && std::abs(on.bottom - off.bottom) <= 1;
+    const bool inside = on.anyLeft >= off.anyLeft - 1 && on.anyRight <= off.anyRight + 1 && on.anyTop >= off.anyTop - 1 &&
+                        on.anyBottom <= off.anyBottom + 1;
+    const f64 ratio = static_cast<f64>(on.ink) / static_cast<f64>(off.ink);
+    if (!sameBox || !inside || ratio < 0.92 || ratio > 1.08 || on.soft * 10 > off.soft * 7 ||
+        std::getenv("NEWSCHANNEL_TEXT_LOG") != nullptr) {
+        std::fprintf(stderr, "  %s: box %d,%d-%d,%d / %d,%d-%d,%d, any %d,%d-%d,%d / %d,%d-%d,%d, ink ratio %.4f, soft %u / %u\n",
+                     path, off.left, off.top, off.right, off.bottom, on.left, on.top, on.right, on.bottom, off.anyLeft,
+                     off.anyTop, off.anyRight, off.anyBottom, on.anyLeft, on.anyTop, on.anyRight, on.anyBottom, ratio,
+                     off.soft, on.soft);
+    }
+    PC_CHECK(sameBox);
+    PC_CHECK(inside);
+    PC_CHECK(ratio >= 0.92 && ratio <= 1.08);
+    PC_CHECK(on.soft * 10 <= off.soft * 7);
+
+    // Purist mode with the enhancement's switch on: the frame of "off", to
+    // the pixel, at the console's resolution too.
+    SetEfb(true, 3, 0);
+    DrawTextPicture(font, scale, 1, &purist);
+    SetEfb(false, 0, 0);
+    PCEnhancementSet("sharp-text", false);
+    DrawTextPicture(font, scale, 1, &off);
+    PC_CHECK(std::memcmp(purist.red, off.red, sizeof(off.red)) == 0 && purist.advance == off.advance && off.ink != 0);
+    PCEnhancementSet("sharp-text", true);
+    DrawTextPicture(font, scale, 1, &on); // nothing to replace at this resolution
+    PC_CHECK(std::memcmp(on.red, off.red, sizeof(off.red)) == 0);
+    return true;
+}
+
+void TestSharpText() {
+    if (!PCContentExists(7) || !PCContentExists(9)) {
+        std::printf("self-test (OpenGL): sharp text: no contents; not checked\n");
+        return;
+    }
+    const bool wasOn = PCEnhancementIsSet(PC_ENH_SHARP_TEXT);
+    PCConfig* config = PCGetConfig();
+    const PCConfig saved = *config;
+    config->aspectRatio = 0; // 4:3: a fixed scale is the same in both directions
+    SharpTextTest test = {};
+    // The system font (I4, an archive font), the layouts' font (I4) and the
+    // globe's labels (IA4: white letters with a dark outline).
+    PC_CHECK(PCGXForEachAssetFont("7:wbf1.brfna", TestSharpTextFont, &test) == 1);
+    PC_CHECK(PCGXForEachAssetFont("9:news_layout.arc.LZ/arc/font/font_news.brfnt", TestSharpTextFont, &test) == 1);
+    PC_CHECK(PCGXForEachAssetFont("9:font_weather_city.brfnt.LZ", TestSharpTextFont, &test) == 1);
+    PC_CHECK(test.fonts == 3);
+    PCEnhancementSet("sharp-text", wasOn);
+    PCGXSetTextureReplacer(nullptr);
+    *config = saved;
+    PC_CHECK(glGetError() == GL_NO_ERROR);
+    const PCSharpTextStats* stats = PCSharpTextGetStats();
+    std::printf("self-test (OpenGL): sharp text: %u glyph sheets redrawn in %.1f ms\n", stats->sheetsMade,
+                stats->microseconds / 1000.0);
+}
+
 } // namespace
 
 void PCSelfTestGX() {
@@ -1655,6 +2033,8 @@ bool PCSelfTestGXWithContext() {
     int before = PCSelfTestFailures();
     TestWithContext();
     TestEnhancedEfb();
+    TestReplacementTextures();
+    TestSharpText();
     PCEnhancementSet("hires", wasHires);
     PCEnhancementSet("msaa", wasMsaa);
     PCSetPurist(wasPurist);

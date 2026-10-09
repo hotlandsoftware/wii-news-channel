@@ -39,6 +39,7 @@
 #include "audio/pc_audio.h"
 #include "news/pc_news.h"
 #include "pc_selftest.h"
+#include <pc/sharp_text.h>
 #include "pc_snd_tool.h"
 #include "pc_video.h"
 
@@ -378,6 +379,7 @@ static int RunSelfTest() {
     PCSelfTestInput();
     PCSelfTestSnd();
     PCSelfTestTexDecode();
+    PCSelfTestSharpText(); // text/selftest_text.cpp
     PCSelfTestAudio();
     // Sounds through nw4r::snd's sound system. This starts the sound and task
     // threads, which never end: the process must leave through PCExit().
