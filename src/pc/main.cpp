@@ -99,6 +99,10 @@ void PrintHelp(const char* program) {
     std::printf("  --dump-texture CONTENT:PATH[:INDEX] OUT.png\n");
     std::printf("                   decode one texture to a PNG file (write it outside the repository's\n");
     std::printf("                   tracked files, e.g. below build/)\n");
+    std::printf("  --dump-font CONTENT[:PATH] DIR\n");
+    std::printf("                   write the numbers (NAME.txt), the character table (NAME.tsv) and the\n");
+    std::printf("                   glyph sheets (NAME_NNN.png) of the fonts in a content or file into an\n");
+    std::printf("                   existing directory (same rule: never inside the tracked files)\n");
     std::printf("  --list-sounds [CONTENT:PATH]\n");
     std::printf("                   list the sounds of a sound archive (default 9:rev_news.brsar; the\n");
     std::printf("                   HOME Menu's is 6:HomeButton3/Huf8_HomeButtonSe.brsar) with the wave\n");
@@ -429,6 +433,8 @@ int main(int argc, char** argv) {
     const char* list_textures = nullptr;
     const char* dump_texture = nullptr;
     const char* dump_texture_out = nullptr;
+    const char* dump_font = nullptr;
+    const char* dump_font_out = nullptr;
     const char* list_sounds = nullptr;
     const char* list_news = nullptr;
     const char* render_sounds = nullptr;
@@ -615,6 +621,9 @@ int main(int argc, char** argv) {
             (zoom ? view_model.zoom : view_model.tilt) = level;
         } else if (std::strcmp(arg, "--view-spin") == 0) {
             view_model.spin = static_cast<f32>(std::atof(OptionValue(argc, argv, &i)));
+        } else if (std::strcmp(arg, "--dump-font") == 0) {
+            dump_font = OptionValue(argc, argv, &i);
+            dump_font_out = OptionValue(argc, argv, &i);
         } else if (std::strcmp(arg, "--dump-texture") == 0) {
             dump_texture = OptionValue(argc, argv, &i);
             dump_texture_out = OptionValue(argc, argv, &i);
@@ -667,6 +676,9 @@ int main(int argc, char** argv) {
     // Development tools of the texture codec (gx/texdecode_tool.cpp).
     if (list_textures != nullptr) {
         return PCGXListTexturesMain(list_textures);
+    }
+    if (dump_font != nullptr) {
+        return PCGXDumpFontMain(dump_font, dump_font_out);
     }
     if (dump_texture != nullptr) {
         return PCGXDumpTextureMain(dump_texture, dump_texture_out);

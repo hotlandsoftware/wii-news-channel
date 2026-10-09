@@ -120,6 +120,24 @@ typedef bool (*PCGXAssetTextureFunc)(const PCGXAssetTexture* texture, void* user
 // the content is missing.
 s32 PCGXForEachAssetTexture(const char* spec, PCGXAssetTextureFunc func, void* user);
 
+// The same walk, once per font file (.brfnt, .brfna) instead of per glyph sheet.
+// The font is loaded and valid during the callback only. `has` holds one byte
+// per character code: 1 if the font has the character itself, 0 if it would
+// draw its alternate character.
+namespace nw4r {
+namespace ut {
+class Font;
+struct FontTextureGlyph;
+} // namespace ut
+} // namespace nw4r
+typedef bool (*PCGXAssetFontFunc)(u32 content, const char* path, const char* kind, const nw4r::ut::Font* font,
+                                  const nw4r::ut::FontTextureGlyph* glyphs, const u8* has, void* user);
+s32 PCGXForEachAssetFont(const char* spec, PCGXAssetFontFunc func, void* user);
+
+// `newschannel --dump-font CONTENT[:PATH] DIR`: the numbers, the character table
+// and the glyph sheets of every font the spec names, into an existing directory.
+int PCGXDumpFontMain(const char* spec, const char* outDir);
+
 // `newschannel --dump-texture CONTENT:PATH[:INDEX] OUT.png` (the first match) and
 // `newschannel --list-textures CONTENT[:PATH[:INDEX]]`. Return the process exit status.
 int PCGXDumpTextureMain(const char* spec, const char* outPath);

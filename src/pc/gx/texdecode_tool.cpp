@@ -244,16 +244,30 @@ MEMAllocator sToolAllocator = {&sToolAllocFuncs, nullptr, 0, 0};
 // ut::ResFont and ut::ArchiveFont keep the glyph block to themselves.
 struct ResFontSheets : ut::ResFont {
     const ut::FontTextureGlyph* Glyphs() const { return GetFINF() != nullptr ? GetFINF()->pGlyph : nullptr; }
+    bool Has(u16 c) const { return FindGlyphIndex(c) != GLYPH_INDEX_NOT_FOUND; }
 };
 struct ArchiveFontSheets : ut::ArchiveFont {
     const ut::FontTextureGlyph* Glyphs() const { return GetFINF() != nullptr ? GetFINF()->pGlyph : nullptr; }
+    bool Has(u16 c) const {
+        const u16 index = FindGlyphIndex(c);
+        return index != GLYPH_INDEX_NOT_FOUND && AdjustIndex(index) != GLYPH_INDEX_NOT_FOUND;
+    }
 };
+
+// One byte per character code: does the font have it?
+u8 sFontHas[0x10000];
+template <typename T> void FillFontHas(const T& font) {
+    for (u32 c = 0; c < 0x10000; c++) {
+        sFontHas[c] = font.Has(static_cast<u16>(c)) ? 1 : 0;
+    }
+}
 
 struct Walk {
     const char* filter; // path to visit (a file, a directory or an archive); "" for everything
     s32 index;          // texture of the file to visit, or -1 for all
     PCGXAssetTextureFunc func;
     void* user;
+    PCGXAssetFontFunc fontFunc; // --dump-font: called once per font file instead of per sheet
     s32 content; // index of the content being walked
     s32 visited;
     bool stop;
@@ -281,7 +295,7 @@ bool Selected(const Walk& walk, const char* path) {
 }
 
 void Report(Walk& walk, PCGXAssetTexture& texture) {
-    if (walk.stop || (walk.index >= 0 && static_cast<u32>(walk.index) != texture.index)) {
+    if (walk.func == nullptr || walk.stop || (walk.index >= 0 && static_cast<u32>(walk.index) != texture.index)) {
         return;
     }
     walk.visited++;
@@ -345,8 +359,18 @@ void VisitTPL(Walk& walk, const char* path, void* data, u32 size) {
     }
 }
 
-void VisitSheets(Walk& walk, const char* path, const char* kind, const ut::FontTextureGlyph* glyphs) {
+void VisitSheets(Walk& walk, const char* path, const char* kind, const ut::FontTextureGlyph* glyphs,
+                 const ut::Font* font) {
     if (glyphs == nullptr || glyphs->sheetImage == nullptr) {
+        return;
+    }
+    if (walk.fontFunc != nullptr) {
+        if (!walk.stop) {
+            walk.visited++;
+            if (!walk.fontFunc(static_cast<u32>(walk.content), path, kind, font, glyphs, sFontHas, walk.user)) {
+                walk.stop = true;
+            }
+        }
         return;
     }
     for (u32 i = 0; i < glyphs->sheetNum && !walk.stop; i++) {
@@ -379,7 +403,8 @@ void VisitArchiveFont(Walk& walk, const char* path, void* data) {
     }
     ArchiveFontSheets font;
     if (font.Construct(buffer, need, data, all)) {
-        VisitSheets(walk, path, "RFNA", font.Glyphs());
+        FillFontHas(font);
+        VisitSheets(walk, path, "RFNA", font.Glyphs(), &font);
         font.Destroy();
     }
     std::free(buffer);
@@ -441,7 +466,8 @@ void VisitData(Walk& walk, const char* path, void* data, u32 size) {
     } else if (std::strcmp(format, "RFNT") == 0) {
         ResFontSheets font;
         if (font.SetResource(data)) {
-            VisitSheets(walk, path, "RFNT", font.Glyphs());
+            FillFontHas(font);
+            VisitSheets(walk, path, "RFNT", font.Glyphs(), &font);
         }
     } else if (std::strcmp(format, "RFNA") == 0) {
         VisitArchiveFont(walk, path, data);
@@ -594,12 +620,26 @@ bool ParseSpec(const char* text, Spec* spec) {
 
 } // namespace
 
+namespace {
+s32 ForEachAsset(const char* specText, PCGXAssetTextureFunc func, PCGXAssetFontFunc fontFunc, void* user);
+}
+
 s32 PCGXForEachAssetTexture(const char* specText, PCGXAssetTextureFunc func, void* user) {
+    return func != nullptr ? ForEachAsset(specText, func, nullptr, user) : -1;
+}
+
+s32 PCGXForEachAssetFont(const char* specText, PCGXAssetFontFunc func, void* user) {
+    return func != nullptr ? ForEachAsset(specText, nullptr, func, user) : -1;
+}
+
+namespace {
+
+s32 ForEachAsset(const char* specText, PCGXAssetTextureFunc func, PCGXAssetFontFunc fontFunc, void* user) {
     Spec spec;
-    if (func == nullptr || !ParseSpec(specText, &spec)) {
+    if (!ParseSpec(specText, &spec)) {
         return -1;
     }
-    Walk walk = {spec.path, spec.index, func, user, 0, 0, false};
+    Walk walk = {spec.path, spec.index, func, user, fontFunc, 0, 0, false};
     bool opened = false;
     CNTInit();
     const s32 first = spec.content >= 0 ? spec.content : 0;
@@ -636,6 +676,8 @@ s32 PCGXForEachAssetTexture(const char* specText, PCGXAssetTextureFunc func, voi
     }
     return opened ? walk.visited : -1;
 }
+
+} // namespace
 
 // --- command line ------------------------------------------------------------
 
@@ -730,4 +772,91 @@ int PCGXDumpTextureMain(const char* spec, const char* outPath) {
         return 1;
     }
     return state.ok ? 0 : 1;
+}
+
+// --- `--dump-font` -------------------------------------------------------------
+
+namespace {
+
+struct FontDump {
+    const char* dir;
+    bool ok;
+};
+
+// Everything about one font that the text code can see, as text and pictures:
+//   DIR/<name>.txt        the font's numbers
+//   DIR/<name>.tsv        one row per character the font has
+//   DIR/<name>_NNN.png    the glyph sheets
+bool DumpFont(u32 content, const char* path, const char* kind, const ut::Font* font,
+              const ut::FontTextureGlyph* glyphs, const u8* has, void* user) {
+    FontDump* dump = static_cast<FontDump*>(user);
+    char name[128];
+    std::snprintf(name, sizeof(name), "%s", BaseName(path));
+    if (char* dot = std::strchr(name, '.')) {
+        *dot = '\0';
+    }
+    char file[700];
+    std::snprintf(file, sizeof(file), "%s/%s.txt", dump->dir, name);
+    std::FILE* info = std::fopen(file, "w");
+    std::snprintf(file, sizeof(file), "%s/%s.tsv", dump->dir, name);
+    std::FILE* table = std::fopen(file, "w");
+    if (info == nullptr || table == nullptr) {
+        std::fprintf(stderr, "--dump-font: cannot write to '%s'\n", dump->dir);
+        dump->ok = false;
+        return false;
+    }
+    const u32 fmt = glyphs->sheetFormat & 0x7FFF;
+    std::fprintf(info, "file %u:%s\nkind %s\nwidth %d\nheight %d\nascent %d\ndescent %d\nbaseline %d\n", content, path,
+                 kind, font->GetWidth(), font->GetHeight(), font->GetAscent(), font->GetDescent(), font->GetBaselinePos());
+    std::fprintf(info, "cellWidth %d\ncellHeight %d\nmaxCharWidth %d\nlinefeed %d\nencoding %d\n", font->GetCellWidth(),
+                 font->GetCellHeight(), font->GetMaxCharWidth(), font->GetLineFeed(), static_cast<int>(font->GetEncoding()));
+    std::fprintf(info, "sheetFormat %s\nsheetWidth %u\nsheetHeight %u\nsheetNum %u\nsheetRow %u\nsheetLine %u\n",
+                 PCGXTextureFormatName(fmt), glyphs->sheetWidth, glyphs->sheetHeight, glyphs->sheetNum, glyphs->sheetRow,
+                 glyphs->sheetLine);
+    const ut::CharWidths def = font->GetDefaultCharWidths();
+    std::fprintf(info, "defaultWidths %d %d %d\n", def.left, def.glyphWidth, def.charWidth);
+
+    u32 count = 0;
+    std::fprintf(table, "code\tsheet\tcellX\tcellY\tleft\tglyphWidth\tcharWidth\theight\n");
+    for (u32 code = 0x20; code < 0xFFFF; code++) {
+        if (!has[code]) {
+            continue;
+        }
+        ut::Glyph glyph;
+        font->GetGlyph(&glyph, static_cast<u16>(code));
+        const u32 sheet = static_cast<u32>(static_cast<const u8*>(glyph.pTexture) - glyphs->sheetImage) / glyphs->sheetSize;
+        std::fprintf(table, "%u\t%u\t%u\t%u\t%d\t%u\t%d\t%u\n", code, sheet, glyph.cellX, glyph.cellY, glyph.widths.left,
+                     glyph.widths.glyphWidth, glyph.widths.charWidth, glyph.height);
+        count++;
+    }
+    std::fprintf(info, "characters %u\n", count);
+    std::fclose(info);
+    std::fclose(table);
+    for (u32 i = 0; i < glyphs->sheetNum; i++) {
+        std::snprintf(file, sizeof(file), "%s/%s_%03u.png", dump->dir, name, i);
+        if (!PCGXDumpTexture(file, glyphs->sheetImage + i * glyphs->sheetSize, fmt, glyphs->sheetWidth, glyphs->sheetHeight,
+                             nullptr, 0, 0, false)) {
+            dump->ok = false;
+        }
+    }
+    std::printf("%u:%s: %s, %u characters, %u sheets of %ux%u %s, cell %dx%d -> %s/%s.*\n", content, path, kind, count,
+                glyphs->sheetNum, glyphs->sheetWidth, glyphs->sheetHeight, PCGXTextureFormatName(fmt), font->GetCellWidth(),
+                font->GetCellHeight(), dump->dir, name);
+    return true;
+}
+
+} // namespace
+
+int PCGXDumpFontMain(const char* spec, const char* outDir) {
+    FontDump dump = {outDir, true};
+    const s32 count = PCGXForEachAssetFont(spec, DumpFont, &dump);
+    if (count < 0) {
+        std::fprintf(stderr, "--dump-font: bad argument '%s' or no contents in '%s'\n", spec, PCGetContentsDir());
+        return 2;
+    }
+    if (count == 0) {
+        std::fprintf(stderr, "--dump-font: no font matches '%s'\n", spec);
+        return 1;
+    }
+    return dump.ok ? 0 : 1;
 }
