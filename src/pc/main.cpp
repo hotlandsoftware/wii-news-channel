@@ -201,6 +201,10 @@ void PrintHelp(const char* program) {
     std::printf("  hires           the game draws at the display's resolution (--render-scale)\n");
     std::printf("                  instead of 640x456 stretched to the window\n");
     std::printf("  msaa            multisample anti-aliasing (--msaa)\n");
+    std::printf("  sharp-text      text stays sharp at high resolutions: each glyph sheet of the\n");
+    std::printf("                  fonts is drawn from a copy with four times its resolution, made\n");
+    std::printf("                  when the sheet is first used. Layout and metrics do not change.\n");
+    std::printf("                  Acts with hires or msaa on. NEWSCHANNEL_TEXT_LOG=1 logs each copy\n");
 }
 
 // The value of option argv[*index], which is the next argument.

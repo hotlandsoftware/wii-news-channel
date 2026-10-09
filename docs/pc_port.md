@@ -35,6 +35,7 @@ Contents:
 26. [Screen shape](#26-screen-shape)
 27. [Enhancements: mouse wheel and keyboard](#27-enhancements-mouse-wheel-and-keyboard)
 28. [Enhancements: resolution and anti-aliasing](#28-enhancements-resolution-and-anti-aliasing)
+29. [Enhancement: sharp text](#29-enhancement-sharp-text)
 
 ## 1. Decisions
 
@@ -88,6 +89,8 @@ src/pc/                     PC-only sources
   snd_tool.cpp              `--list-sounds`: every sound followed down to its samples (section 19)
   snd_render.cpp            `--render-sounds`, `--dump-waves`, `--snd-stress`: sounds played without the
                             game, reference waves, the thread stress test (section 20)
+  text/                     the enhancement `sharp-text`: glyph sheets redrawn at four times their
+                            resolution (section 29)
   news/                     where the downloader gets the news files (a directory; HTTP later),
                             `--list-news`, the news self-test (section 21)
   g3d_tool.cpp              `--view-model`: the globe drawn by the game's own code, without the news
@@ -275,6 +278,7 @@ Run it whenever the set of files in the build or the backend changes. If two bra
 | `tools/extract_wad.py --contents` | Section 3. |
 | `newschannel --list-textures CONTENT[:PATH[:INDEX]]` | Lists the textures of a content, or of a file or directory in it: size, format, palette, wrap, filter, mipmap levels (section 17). |
 | `newschannel --dump-texture CONTENT:PATH[:INDEX] OUT.png` | Decodes one texture to a PNG. Never commit the output (R12). |
+| `newschannel --dump-font CONTENT[:PATH] DIR` | Writes, for every font the argument names, `DIR/NAME.txt` (width, height, ascent, baseline, cell, sheet layout, number of characters), `DIR/NAME.tsv` (one row per character the font has: code, sheet, cell position, left, glyph width, character width) and the glyph sheets `DIR/NAME_NNN.png` (section 29). `DIR` must exist. Never commit the output (R12). |
 | `newschannel --view-model CONTENT:PATH [--view-rot LAT,LON] [--view-zoom 0..9] [--view-tilt 0..10] [--view-spin DEG]` | Runs the game's start-up, loads a model file as the game loads the globe and draws it with the game's `Globe`, `Model`, `Camera` and `GlobeDots` (section 22). With `--no-window --frames N --screenshot K --screenshot-dir DIR` it writes a picture; without `--frames` it runs until the window is closed. Exit status 1 if the GX command stream lost step. Never commit the pictures (R12). |
 | `newschannel --list-sounds [CONTENT:PATH]` | Lists the sounds of a sound archive (default `9:rev_news.brsar`; the HOME Menu's is `6:HomeButton3/Huf8_HomeButtonSe.brsar`): type, file, notes, and format, sample rate, length, loop and data offset of the wave each one plays, and the sound's volume, player and priority (section 19). Exit status 1 if a sound does not resolve. |
 | `newschannel --render-sounds DIR [CONTENT:PATH] [--sound ID] [--seconds S]` | Plays every sound of a sound archive (or one) through the real playback path, on a manual clock, into `DIR/NNN_LABEL.wav` (section 20). With `NEWSCHANNEL_AX_LOG=DIR/ax.log` the run can be checked by `snd_verify.py render`. Never commit the output (R12). |
@@ -871,7 +875,7 @@ build/pc/newschannel --boot --no-window --nand-dir build/nand --frames 900 \
 
 | File | Contents |
 | --- | --- |
-| `gx/pc_gx.h` | what other PC code may call: `PCGXPresent()`, `PCGXRetrace()`, screenshots, `PCGXInvalidateTexture()`, `PCGXSetTextureHostOrder()`, `PCGXSetArrayBigEndian()`, `PCGXExecuteList()`, statistics, the self-tests |
+| `gx/pc_gx.h` | what other PC code may call: `PCGXPresent()`, `PCGXRetrace()`, screenshots, `PCGXInvalidateTexture()`, `PCGXSetTextureHostOrder()`, `PCGXSetTextureReplacer()` (section 29), `PCGXSetArrayBigEndian()`, `PCGXExecuteList()`, statistics, the self-tests |
 | `gx/gx_internal.h` | the state (`PCGXState gPCGX`), register numbers, the interfaces between the files below |
 | `gx/gx_state.cpp` | BP, CP and XF registers: `PCGXLoadBP/CP/XF()`, the BP mask, decoding of the registers that feed non-register state (TEV colours, texture units, palettes, copies) |
 | `gx/gx_api.cpp` | the SDK API: every function composes the SDK's register values and loads them; `GXInit()` sets the SDK's default state |
@@ -2021,7 +2025,7 @@ No bypass was added. The one left is the pointer effect (section 15, `TODO(miles
 
 ## 24. Purist mode and enhancements
 
-`newschannel --purist` runs the game as it functions and looks on the console: every PC enhancement is off (R13). Without `--purist` the enhancements that are switched on apply; `--list-enhancements` shows them, `--enhance NAME[=0|1]` and `enhance.NAME = 0|1` in the config file switch one. The enhancements that exist: `mouse-scroll`, `keyboard-nav` and `fullscreen-key` (section 27), `hires` and `msaa` (section 28). An enhancement can have a number behind it (`render_scale`, `msaa`): those are settings of `PCConfig` (`src/pc/pc_config.h`) that are only read where `PCEnhanced()` is true, and `--list-enhancements` prints them.
+`newschannel --purist` runs the game as it functions and looks on the console: every PC enhancement is off (R13). Without `--purist` the enhancements that are switched on apply; `--list-enhancements` shows them, `--enhance NAME[=0|1]` and `enhance.NAME = 0|1` in the config file switch one. The enhancements that exist: `mouse-scroll`, `keyboard-nav` and `fullscreen-key` (section 27), `hires` and `msaa` (section 28), `sharp-text` (section 29). An enhancement can have a number behind it (`render_scale`, `msaa`): those are settings of `PCConfig` (`src/pc/pc_config.h`) that are only read where `PCEnhanced()` is true, and `--list-enhancements` prints them.
 
 | Piece | Where |
 | --- | --- |
@@ -2372,7 +2376,7 @@ Drawing at a higher resolution adds no detail to a texture. What the art is made
 
 | What | Its resolution | At 1080p |
 | --- | --- | --- |
-| Fonts | small glyphs on I4 sheets (128x1024 and 256x512 sheets, section 17) | smooth and clean, but soft: bilinear enlargement of small glyphs. The gain is that they are no longer enlarged twice (texture to 640x456, then to the window) |
+| Fonts | small glyphs on I4 sheets (128x1024 and 256x512 sheets, section 17) | smooth and clean, but soft: bilinear enlargement of small glyphs. The gain is that they are no longer enlarged twice (texture to 640x456, then to the window). The enhancement `sharp-text` (section 29) is what makes them sharp |
 | News photos | small JPEGs, a few hundred pixels wide at most | where the game reduces them (the lists' thumbnails, the cards on the globe) more of the photo is seen than at 640x456; in an article it is the photo enlarged |
 | The globe's surface | 28 pieces of 1024x1024, CMPR | much more detail than the console's frame shows, down to the block edges of the compression along coast lines at the closest zoom |
 | Paper background | 608x456 CMPR | enlarged; its grain hides it |
@@ -2396,10 +2400,236 @@ Drawing at a higher resolution adds no detail to a texture. What the art is made
 
 | What | Why |
 | --- | --- |
-| A larger or filtered texture for fonts and art (texture replacement, scaling filters) | another enhancement; this one only stops throwing resolution away |
+| A larger or filtered texture for art (texture replacement, scaling filters) | another enhancement; this one only stops throwing resolution away. For the fonts it is done: `sharp-text`, section 29, which also brought the general mechanism (`PCGXSetTextureReplacer()`) |
 | Exact area filter for the reduced `GXCopyTex` data at scales that are not powers of two | the buffer is not what is shown while the kept copy is valid; flat areas and ramps are exact |
 | Kept copies for intensity and copy-only formats, for depth copies | nothing uses them (depth copies are not implemented at all, section 16) |
 | The inset of rule 4 for art that needs it | no screen of this game does; a game whose sheets had no spare texel would |
 | Supersampling as an anti-aliasing mode of its own | `render_scale` above the window's size does it (the present reduces in steps) |
 | Anything for the pointer effect, the HOME Menu | not drawn (section 24) |
 | Seen on a display | every picture here was a file, reduced or enlarged for reading: motion (the EFB following a resize, shimmer of the globe while it turns, the bars sliding at a non-integer scale) was not watched |
+
+## 29. Enhancement: sharp text
+
+One enhancement (R13), on by default and off in purist mode: `sharp-text` (`--enhance sharp-text=0|1`, `enhance.sharp-text = 0|1`).
+With `hires` (section 28) the game's text is drawn at the display's resolution, but from the fonts' own glyph sheets, enlarged: at 1920x1080 a glyph texel covers up to three pixels.
+With `sharp-text` every glyph sheet is drawn from a copy of four times its resolution, made from the sheet itself when it is first used.
+The fonts, their metrics, the glyph cells and every coordinate the game computes are untouched; what changes is the picture behind a glyph.
+
+### What was reported, and what it is
+
+At about 1080p some text looked sharp (the rows of a headline list) and some soft (the labels of the button bars, the section list, the first page in general), all in what looks like one sans typeface.
+The guess was fonts of very different resolution. That is not it: the fonts' glyph cells are 28 to 37 texels high, all much the same.
+What differs is **the scale each kind of text is drawn at**, and with it how many pixels one texel of a glyph becomes:
+
+| Text | Font | Drawn scale | Pixels per glyph texel at 1080p / 1440p / 2160p | Seen as |
+| --- | --- | --- | --- | --- |
+| Rows of a headline list, article headline | `wbf1` | 0.72 | 1.7 / 2.3 / 3.4 | "fantastic, very sharp" |
+| Rows of the section list | `wbf1` | 0.90 | 2.1 / 2.8 / 4.3 | soft |
+| Labels of the button bars ("Back", "Slide show", "Text Zoom") | `font_news` | 1.00 | 2.4 / 3.2 / 4.7 | soft |
+| "Updated hh:mm ago" on the first page | `font_news_date` | 1.00 | 2.4 / 3.2 / 4.7 | soft |
+| Buttons and date of a dialog | `font_news` | 1.25 | 3.0 / 3.9 / 5.9 | soft |
+
+The frame of a 16:9 window of 1080, 1440 or 2160 lines is 2.37, 3.16 or 4.74 times the console's 456 lines, in both directions (`render_scale = auto`).
+A bilinear enlargement by 1.7 still reads as sharp; from about 2 it reads as soft. So the text the owner called sharp becomes soft too at 1440p, and everything is soft at 2160p: every font needs the treatment, not only the "small" ones.
+
+### The fonts
+
+From `newschannel --dump-font` (section 6). "Cell" is the glyph cell in texels (width x height); every font is a bitmap font without kerning, encoded UTF-16.
+
+| Font | File | Format | Cell | Sheets | Characters | Typeface | Used by |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `gSysFont` | content 7, `wbf1.brfna` (archive font, sheets Huffman-compressed) | I4 | 30x36 (font 32x38, ascent 31) | 70 of 128x1024, 108 cells each | 7361: Latin (196 below U+0250, on sheets 3, 68, 69), Greek, Cyrillic, kana, kanji | a sans (the Wii system's gothic) | the game's own text: `TextButton`, `HeadlineList`, `Ticker`, `ArticleText`, `SlideShow`, `MainScreen`, `SaveData`, `LanguageSelect` |
+| `gArticleFont` | content 7, `wbf2.brfna` | I4 | 31x33 (font 34x37, ascent 29) | 64 of 256x512, 120 cells each | 7361, the same set (Latin on sheets 3, 37, 63) | a serif (mincho) | article body text, the slide show's body text |
+| layout font | content 9, `news_layout.arc.LZ/arc/font/font_news.brfnt` | I4 | 24x28 (font 24x28, ascent 23) | 22 of 128x1024, 175 cells each | 3773 (153 Latin, all on sheet 0) | the same sans as `wbf1` at 0.78 of its size, a little heavier | every `nw4r::lyt` text box: bar buttons, dialogs, the connection and error screens |
+| `gHeaderFont` | content 9, `font_news_date.brfnt.LZ` | I4 | 32x37 (font 30x37, ascent 30) | 16 of 256x128, 21 cells each | 329 (145 Latin) | a bold serif | "Updated hh:mm ago" on the first page |
+| `gCityFont` | content 9, `font_weather_city.brfnt.LZ` | IA4 | 27x31 (font 27x31, ascent 24) | 14 of 256x1024, 288 cells each | 3863 (196 Latin, on sheet 0) | a bold sans, white with a dark translucent outline (intensity: the letter; alpha: letter 15/15, outline 9/15) | place names on the globe, "Image owned by NASA" |
+| `sTimeFont` | content 9, `font_weather_time.brfnt.LZ` or `font_weather_timeWW.brfnt.LZ` | IA4 | 31x40 or 20x24 | 2 of 64x128 or 6 of 64x32 | 12 or 16: digits | large outlined digits | loaded by `d_scene.cpp`; nothing on the screens of this channel was seen to draw with it (it comes from the Forecast Channel, as the file names say) |
+| HOME Menu | content 6, `RevoIpl_UtrilloProGrecoStd_M_32_I4.brfnt` in each `homeBtn` archive | I4 | 29x31 | 14 of 32x256 | 107 | - | the HOME Menu, which does not open (section 24) |
+
+The error archive embedded in the DOL (section 10) has no font of its own that these screens use: the connection error screen draws with `font_news`.
+
+### Where each kind of text comes from
+
+Measured from `NEWSCHANNEL_GX_LOG` of each screen in purist mode, 4:3: the height of a glyph's quad in EFB pixels over the height of its cell in texels ("scale"). One texel is then `scale x 2.37` pixels at 1080p; its inverse is the "source texels per drawn pixel".
+
+| Screen | Element | Font | Scale | Texels per pixel at 1080p |
+| --- | --- | --- | --- | --- |
+| Every screen | bar buttons ("Wii Menu", "Back", "Slide show", "Globe", "Text Zoom", "Zoom", "End", "Continue") | `font_news` | 1.00 | 0.42 |
+| Date dialog | question (white on the panel) | `font_news` | 1.00 | 0.42 |
+| | date and time | `wbf1` | 1.00 | 0.42 |
+| | "Yes", "No" | `font_news` | 1.25 | 0.34 |
+| Connection screen | "One moment, please..." | `font_news` | 1.00 | 0.42 |
+| Connection error | the message, "Error Code: 051099" | `font_news` | 1.00 | 0.42 |
+| | "Back to the Wii Menu" | `font_news` | 1.25 | 0.34 |
+| Section list | "Updated hh:mm ago" | `font_news_date` | 1.00 | 0.42 |
+| | "News Channel" under it | `wbf1` | 0.50 | 0.84 |
+| | "Select a Section" | `wbf1` | 0.80 | 0.53 |
+| | the sections (the one under the pointer white with a shadow: two copies, one unit apart) | `wbf1` | 0.90 | 0.47 |
+| Headline list, regional list | title ("National News") | `wbf1` | 1.00 | 0.42 |
+| | rows | `wbf1` | 0.72 (default; larger with "Text Zoom") | 0.59 |
+| | place of a regional row | `wbf1` | 0.58 | 0.73 |
+| Article | "Updated hh:mm ago" (grey) | `wbf1` | 0.60 | 0.70 |
+| | headline | `wbf1` | 0.72; 0.90 in the slide show's article | 0.59 |
+| | body, at the four text sizes | `wbf2` | 0.72 (default), 0.80, 0.96 seen | 0.59 |
+| | caption | `wbf1` | 0.50, 0.56 with larger text | 0.84 |
+| | place beside the article's globe | `font_weather_city` | 0.83 | 0.51 |
+| Globe view | place labels, "Image owned by NASA" | `font_weather_city` | 0.75 | 0.56 |
+| | label under the pointer | `font_weather_city` | 0.90 | 0.47 |
+| Slide show | section name, top right (white over a black copy) | `wbf1` | 0.75 | 0.56 |
+| | headline, typed letter by letter | `wbf1` | 0.90 | 0.47 |
+| | place | `font_weather_city` | 0.90 | 0.47 |
+
+In 4:3 the layout is 608 units on 640 EFB pixels, so a glyph is 1.053 times as wide in EFB pixels as it is high; with `render_scale = auto` the window undoes that, and on screen a texel is the same size in both directions.
+So at 1080p nothing has more than 0.84 texels per pixel, the "sharp" rows have 0.59 and the "soft" ones 0.42 to 0.47; at 2160p everything is below 0.42.
+
+### Approaches
+
+Three were looked at on the real glyphs, in enlarged crops.
+
+**A. Glyphs of a larger font in place of a small font's.** Only one pair is the same typeface: `font_news` is `wbf1` at 0.78 of its size. For the 153 Latin characters both have, the `wbf1` glyph scaled so that its ink box is the `font_news` glyph's ink box overlaps it by 0.80 (intersection over union of coverage, median; 0.69 at the tenth percentile, which is what two 4-bit rasters of one outline give), with 8 % less ink: `font_news` is slightly heavier. The same comparison of `wbf2` with `font_news` gives 0.55, of `wbf2` with `font_news_date` 0.64 with 24 % less ink (the header font is a bold face), of `wbf1` with `font_weather_city` 0.51. Rejected:
+
+- it would help one font, by a factor of 1.29 (36 texels of cell height for 28): the bar labels would have 0.54 texels per pixel at 1080p, still under the rows that look sharp, and nothing at all at 1440p;
+- the larger font is the one that is soft itself wherever it is drawn at 0.9 or 1.0 (the section list, titles), so the larger font needs approach B anyway;
+- every glyph would need its own fit (ink box, weight), 3619 characters of `font_news` beyond Latin included, and the header and globe fonts have no larger sibling.
+
+**B. A sharper copy of each sheet, made from the sheet.** A glyph sheet is not a blurred picture of its glyphs: each texel says how much of it the glyph covers, in 16 steps, so the grey of an edge texel says where in the texel the edge is. A copy at four times the resolution can put the edge there. Chosen, for every font. Variants tried at four times, on `wbf1`, `wbf2`, `font_news` and `font_weather_city`:
+
+| Variant | Result |
+| --- | --- |
+| Bicubic enlargement | as soft as the bilinear enlargement it replaces |
+| Bicubic, then contrast about one half (x2, x4) | clean, smooth outlines, but the weight changes: the copy averaged over a source texel differs from the source by up to 0.35 of full coverage; serif hairlines that cover less than half of their texels thin out or break |
+| Iterative back-projection with sharpening, the correction given to the copy's texels directly | the right weight (averages within 0.02), but rough edges: the correction is applied per block of 4x4 |
+| **The correction fed back into the picture that is enlarged** (below) | smooth outlines as the second, the weight of the third (averages within 0.06 on real sheets, 0.001 on average), hairlines kept at their weight |
+| Sharpening towards the local minimum and maximum instead of 0 and 1, for channels with more than two levels (the outline in the alpha of `font_weather_city`) | a visible grid and double contours in the outline. Not used: such a channel is enlarged without sharpening |
+
+**C. The sharper font through `nw4r::ut`'s own scaling** (give the text writer `wbf1` where a layout asks for `font_news`, with the scale changed to match). The same objections as A, and it changes what the game measures with (advances are whole texels of each font; 0.78 of a `wbf1` advance is not the `font_news` advance), so strings would wrap and truncate differently. Rejected.
+
+### The copy
+
+`PCSharpTextUpscale()` in `src/pc/text/sharp_text.cpp`, per channel:
+
+```
+T = the sheet                                  (a picture at the sheet's size)
+8 times:
+    H = sharpen(enlarge(T))                    (Catmull-Rom bicubic; sharpen: contrast x3 about one half, clamped)
+    T = T + 0.7 * (sheet - average of H over each source texel)
+copy = sharpen(enlarge(T))
+```
+
+Enlarging bicubically keeps outlines smooth curves; the sharpening makes the edge steep (one to two copy texels wide); the feedback moves each edge to where the sheet's greys put it. A stroke that covers 40 % of its texels stays, 40 % as wide.
+A texel whose neighbours two texels each way all have its value (most of a sheet) is copied without arithmetic. The rows of each pass are shared between up to four threads; a pass reads one picture and writes another, so the result does not depend on the threads. The file is compiled with `-O3` in every build type.
+
+| Sheet format | Channels of the copy | How |
+| --- | --- | --- |
+| I4, I8 | one (the texel reads I, I, I, I, section 17) | as a coverage |
+| IA4, IA8 | two (I, I, I, A) | intensity as a coverage; alpha enlarged with the same feedback but without the sharpening: it is a letter inside an outline or shadow, several levels with soft steps |
+| anything else | - | not replaced |
+
+So the white letters of the globe's labels get sharp edges and their dark outline keeps its soft outer edge.
+
+### How it hooks in
+
+| Piece | Where |
+| --- | --- |
+| "This texture is a glyph sheet": one call, `PCSharpTextGlyphSheet(texture, format, width, height)` | `nw4r::ut::CharWriter::LoadTexture()` (`src/nw4r/ut/ut_CharWriter.cpp`, under `TARGET_PC`), after its `GXLoadTexObj()`. Every glyph the game or a layout draws goes through it (`TextWriterBase`, `lyt::TextBox`, the game's writers). It is the only edit to shared source |
+| The list of glyph sheets, the replacer, the copy | `src/pc/text/sharp_text.cpp`, `include/pc/sharp_text.h` |
+| Replacement textures | `src/pc/gx/gx_texture.cpp`, `gx_render.cpp`; `PCGXSetTextureReplacer()` in `gx/pc_gx.h` |
+
+`PCEnhanced(PC_ENH_SHARP_TEXT)` is tested in `PCSharpTextGlyphSheet()` and in the replacer's `wants`: with the enhancement off nothing is noted, nobody is asked, and the texture cache takes the path it took before.
+
+**Replacement textures** are a general mechanism of the GX backend, with nothing about fonts in it. A replacer is two functions:
+
+- `wants(image, format, width, height)`: is there a replacement for this texture? Asked at every lookup of a texture for a draw; here it is "the pointer is in the list of glyph sheets with this format and size".
+- `make(image, format, width, height, rgba, maxScale, &scale, &channels)`: returns a `malloc()`ed picture of `scale` (2, 4 or 8) times the size with 1, 2 or 4 channels. Called when the texture is first drawn and again when its texels have changed (the cache's checksum, section 16).
+
+The cache entry of a replaced texture holds the replacement (as `GL_R8` or `GL_RG8` with a swizzle that makes it read as the source's format does, or `GL_RGBA8`) with the levels down to the source's size, each the 2x2 average of the one above. The game still loads the source texture with its size and its coordinates; the fragment shader of a scaled or multisampled frame buffer already takes a texture's size from the game and not from OpenGL (section 28, for the kept EFB copies), so the replacement is sampled at the same normalised coordinates and nothing else changes. The game's filter still chooses between nearest and linear; the level of detail is computed from the replacement's size, with the replacer's bias (-0.5 here: where a glyph is drawn smaller than its copy, half a level towards the larger picture, which was compared with an exact area filter in enlarged crops and is closer to it than the unbiased blend, without visible aliasing).
+
+Limits of the mechanism: one replacer; textures with one level and without a palette; and only while the frame buffer is scaled or multisampled (`hires` or `msaa` on). At the console's 640x528 without multisampling the old shader is used, which asks OpenGL for the size, and the source is drawn: there a glyph has more texels than pixels anyway.
+
+A sheet stays in the list while text is drawn from it and is forgotten after 600 frames without (as the texture cache forgets its entries), so a pointer the game has freed and reused is not taken for a sheet.
+
+### Nothing the game measures changes
+
+- No font code is touched: `GetGlyph()`, `GetCharWidths()`, the cell positions, `CharWriter::PrintGlyph()`'s quads and texture coordinates are the same code with the same data. The game's sheets are read, never written.
+- `--selftest`: for all seven fonts, every character code from 0 to 0xFFFF: the glyph (sheet, cell, widths, height, texture size and format), `GetCharWidths()`, `GetCharWidth()`, the font's numbers, and `CalcStringWidth()` of two strings at three scales are identical with the enhancement on, off, and in purist mode.
+- On the screens (below) the GX logs of on and off are the same text: every primitive, vertex and texture coordinate.
+
+### Results
+
+All with one day's files from disk, `--date` of that day, a fresh `--nand-dir`, `--no-window --screenshot-window`, `hires` and `msaa` on in both runs; "off" is `--enhance sharp-text=0`. The tour: date dialog, connection screen, section list, headline list (the row under the pointer scrolling), an article with a location, larger text, the globe view, back, the headline list at the larger size, the slide show (section name, place, typed headline); and without news the connection error screen. Window sizes 1920x1080, 2560x1440 and 3840x2160 (16:9) and 1280x960 (`--4:3`).
+
+**Layout.**
+
+| Check | 1280x960 | 1920x1080 | 2560x1440 | 3840x2160 |
+| --- | --- | --- | --- | --- |
+| GX log of the 16 tour frames and 3 error-screen frames, on against off (12103 and 291 primitives; 11049 in 4:3) | identical | identical | identical | identical |
+| Largest displacement of a block of text (phase correlation of on against off over each block of differing pixels) | 0.16 px | 0.16 px | 0.26 px | 0.78 px |
+| Farthest differing pixel from an edge of the off picture, in pixels | 3.2 | 5.0 | 4.2 | 9.0 |
+| Share of the picture's pixels that differ by more than 16 of 255 | 0.1 to 3.3 % | 0.1 to 4.1 % | 0.1 to 4.4 % | 0.1 to 4.6 % |
+
+The displacement is a fraction of a screen pixel everywhere (0.78 px at 2160p is 0.16 of a console pixel, the noise of the measurement on a block of two letters). The differing pixels are the fringes of glyphs: the largest distances from an edge are faded text, whose edges are too faint to count as edges. Two runs of "off" give the same files, pixel for pixel, so every difference is the enhancement.
+What the game wrapped and truncated is in the logs: the same glyphs at the same positions, the "…" of the cut headlines included.
+
+**Sharpness.** Looked at in before/after crops, enlarged two to four times; at 1920x1080 each of these, at the other three sizes a selection of them (the section list, bar labels, article, slide show and error screen): the bar labels ("Back", "Slide show", "Wii Menu", "Text Zoom"), the section list with its highlighted row (white text over its shadow copy), "Updated hh:mm ago" and "News Channel", the headline rows and the title, the article's headline, grey "Updated" line, serif body at two text sizes and caption, the place beside the globe, the globe view's labels and "Image owned by NASA", the slide show's section name, place and typed headline, the dialog's question, date and buttons, "One moment, please..." at full and at half brightness, the error text and its button. At 1080p and 1440p all of it has edges about a pixel wide, as the headline rows had at 1080p before; the rows themselves are sharper than they were. At 2160p a copy texel is 0.6 to 1.5 pixels: clearly sharper than before (a source texel was 2.4 to 5.9 pixels), with edges one to two pixels wide on the largest text.
+
+Looked for and not found: a glyph cut at the edge of its cell, a neighbour's ink at the edge of a glyph (the copy of a cell depends on the two texels around it, the spare texel between cells is as empty as it was), text of another weight (the amount of ink of a line of text changes by 1 to 1.6 % for the I4 fonts, 5.5 % for the outlined one), a seam in the shadow copies, a difference in translucent or fading text other than its edges, anything in the row that scrolls under the pointer or in the headline that is typed out.
+
+### Costs
+
+| What | Measured |
+| --- | --- |
+| Making a copy | 5 to 7 ms for a 128x1024 sheet, 3 to 4 ms for 256x128, 6 to 10 ms for 256x512, 26 to 29 ms for the two channels of a 256x1024 sheet (16 hardware threads, four used). A debug build of the rest makes no difference: the file is always optimised |
+| When | when a sheet is first drawn from: three at the first frame with text, the header font's five with the section list, two of the serif font and the globe font's one with the first article. The tour above made 11 copies in 81 ms altogether; the frame that draws the first place name on the globe takes 29 ms longer, once |
+| Texture memory | a copy and its levels are 1.33 bytes per copy texel and channel: 2.8 MiB for a 128x1024 sheet, 11 MiB for the globe font's. The 11 of the tour: 29 MiB, in place of 4 MiB of decoded sheets. They are freed with their cache entries, 600 frames after the last use |
+| Text in a script with many sheets (Japanese: up to 70 and 64 sheets of the two archive fonts) | 2.8 MiB and 6 ms per sheet used, up to 370 MiB if every sheet of both were on screen within ten seconds. Not measured: the US channel's news is Latin |
+| CPU time of a run | 1900 frames of the tour at 1920x1080: 20.9 s with, 20.8 s without (the difference is noise) |
+| Main memory | work space of three floats and a byte per source texel while a copy is made; nothing is kept |
+
+`NEWSCHANNEL_TEXT_LOG=1` prints a line per copy made, with its time and frame.
+
+### Self-tests
+
+`newschannel --selftest` (`src/pc/text/selftest_text.cpp`):
+
+- the copy of known shapes: refused arguments; flat sheets stay flat; a disc at scales 2, 4 and 8 gives its sheet back when averaged (within 6 of 255), has less than half the edge texels of a plain enlargement, has the disc's area within 1 %, and is the same bytes when made twice; a hairline of 0.4 texels keeps its weight; a step between two levels in a channel that is not a coverage keeps both levels; strides and channel steps;
+- purist mode and the switch: a glyph sheet is only noted while the enhancement is on, once, and only in a format that is a coverage;
+- with the contents: the metrics of all seven fonts (above); the sheets with Latin characters of each (23 sheets) are redrawn twice with identical bytes and give the sheet back when averaged (coverage channels within 15 of 255 and 0.3 on average for the worst sheet).
+
+`newschannel --selftest-gl` (`TestReplacementTextures()` and `TestSharpText()` in `selftest_gx.cpp`):
+
+- replacement textures with a test replacer: the replacement's texels appear in exactly the pixels of the quad; made once however often it is drawn, again when the source's texels change; another texture with the same texels is not replaced; a chequerboard of replacement texels is the grey of its average at one pixel per source texel and itself at eight pixels per texel; nearest and linear; one, two and four channels read as their formats; a refused or absent replacement draws the source; the console's frame buffer asks nobody; a multisampled one at the console's size does; the replacer removed;
+- `wbf1`, `font_news` and `font_weather_city` drawn by `nw4r::ut::CharWriter` at three times the console's resolution, off and on: the same advance to the bit, the box of the ink within one pixel, nothing drawn outside what was drawn before, the same ink within 8 %, at most 0.7 of the soft pixels (seen: a third); in purist mode, and at the console's resolution with the enhancement on, the frame of "off" to the pixel.
+
+`pc/tools/purist_check.py`: unchanged for the three baselines (4:3, `--aspect 16:9`, `--news-dir` with the files' date). The Wii build is byte-identical and `wii_report_diff.py` reports no differences.
+
+### Limits
+
+| What | Why |
+| --- | --- |
+| Four times, not more | at 2160p the largest text (dialog buttons, scale 1.25) has 0.68 copy texels per pixel. Eight times would be four times the memory and time; `kScale` in `sharp_text.cpp` is the one number |
+| The outer edge of an outline or shadow that is in a font's alpha (`font_weather_city`) stays soft | sharpening a channel of several levels made contours (above). The letter inside is sharp |
+| Detail that is not in the sheet | the copy has the sheet's information and no more: a corner is as round as 16 levels of coverage of a 28 to 37 texel glyph say, small counters (the eye of an "e" at 28 texels) are plausible, not exact. At 2160p a glyph is still a 4x picture of a small bitmap, not an outline font |
+| Text drawn with a font in another format (RGB5A3, RGBA8), `ut::RomFont` | not a coverage; none in this channel |
+| Text that is a picture | none on the screens seen: every label is drawn from a font |
+| `hires` and `msaa` both off | nothing is replaced (above); at 640x456 there is nothing to gain |
+| A sheet the game decompresses into again (an archive font loading other glyph groups) | made again from the new texels, like any texture whose checksum changes; the game loads all groups once |
+| The first frame that uses a sheet waits for its copy | 3 to 29 ms, once per sheet (above); not moved to a thread of its own |
+| Seen on a display | every picture here was a file. What to look at on a real screen: the bar labels and the section list beside a headline row at 1080p; the serif body text at the smallest size (hairlines); the globe's labels while the globe turns; the typed headline of the slide show; and a 1440p or 2160p display, where nothing was sharp before |
+
+### What is still soft on the first page, and why
+
+With the text sharp, what remains soft on the section list is art, and all of it for one reason: the layouts were drawn for 608x456, one texel per layout unit, so at 1080p every texel of every picture is 2.4 pixels (bilinear), as the text's were. From the GX log of the screen:
+
+| Element | Texture | At 1080p |
+| --- | --- | --- |
+| Paper background | 608x456 CMPR | 2.4 pixels per texel, and block-compressed; its grain hides most of it |
+| The title box's striped band (under "Updated...") | 8x22 IA4, stretched across | each stripe is one texel, 2.4 pixels high with soft edges |
+| The dotted band behind "Select a Section" | 608x56 IA8 and 64x56 IA4 | the dots are one or two texels: soft blobs |
+| The section rows (plates with a bevel) | 180x56 IA8, stretched to 2.6 times its width | 2.4 pixels per texel down, 5.9 across: the bevel lines and the corners are soft |
+| The highlight of the row under the pointer | 8x28 IA8 | a gradient: enlarges well |
+| The bars' buttons | strips of 8x80 IA8 | gradients enlarge well; the dark and light border lines are one texel, 2.4 pixels with soft edges |
+| The scroll arrows, the "+" and "−" of "Text Zoom" | 36x20 and 26x26 IA4 | small pictures enlarged 2.4 times: the arrow's slanted edges are visibly soft |
+| The plate pattern | 8x8 I4, repeated | 4.7 pixels per texel down |
+
+None of it is replaced: that would be new art (or an upscaler for pictures, which have no coverage to reconstruct from), and is another enhancement. The mechanism for it exists now (`PCGXSetTextureReplacer()`).
+On the other screens the same holds for the icons (page, globe, the source logo), the photos (section 28) and the green belt of the slide show.

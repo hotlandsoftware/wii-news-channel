@@ -33,8 +33,8 @@ const u32 kScale = 4;
 
 // Where the copy is drawn smaller than it is, the level of detail is moved
 // half a level towards the larger picture: sharper than the middle of two
-// levels, and still without visible aliasing (looked at; section "Sampling"
-// of the document).
+// levels, and still without visible aliasing (looked at; docs/pc_port.md,
+// section 29).
 const f32 kLodBias = -0.5f;
 
 // --- which textures are glyph sheets ---------------------------------------------
